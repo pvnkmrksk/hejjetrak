@@ -35,3 +35,38 @@ The SVG preview bounds its path memory at 100000 points by decimating older poin
 Desktop recording uses epoch-numbered data, quality and config files in a new directory. Applying settings resets the estimator and starts a new epoch. The screen path can decimate older points without changing streamed numeric data. The legacy `save_raw`/`save_debug` parameters encode real videos: default H.264 AVI, XVID AVI, MPEG-4 MP4, MJPEG/raw AVI or explicit H.264 MP4 (`vid_codec : h264_mp4`). Shared calibrated debug recording includes input/rim/exclusions/axes/contact trace and actual maps/path. H.264 uses High profile with independent frames (GOP1); compressed payloads may be larger than inter-frame encoding. Source FPS comes from metadata or prefetched PTS; no frames/RGB are dropped by inference. Encoded files remain `.partial` until finalization and never overwrite another recording. H.264 encoding preserves even display dimensions through standard SPS cropping; odd 4:2:0 H.264 dimensions fail explicitly. Segmented OpenDML AVI preserves indexes and frames across 4 GiB boundaries. UDP sends the upstream `FT, ` prefix and a 25-column row, without delivery guarantees.
 
 Serial and UDP receive the same accepted-only newline-terminated `FT, ` plus full 25-column row, including the independent sequence counter. Serial defaults to 115200 baud, 8-N-1, no flow control. Output failures remain visible and do not manufacture measurements. Headless summary separates tracked, relocalized, initializing and rejected counts. Native GUI JSONL acknowledgments are queued; inspect actual revision/frame/advance/recording status before reporting completion.
+
+## Simultaneous UDP and ZeroMQ PUB
+
+Hejjetrak can publish the same accepted measurement over UDP and ZeroMQ at the same time. Set the ordinary `sock_host`/`sock_port` for UDP and these additional legacy-text fields for ZeroMQ:
+
+```text
+zmq_host           : 127.0.0.1
+zmq_port           : 9871
+zmq_queue_capacity : 256
+```
+
+`zmq_port : -1` or `0` disables the publisher. `zmq_host` is a loopback bind address: `localhost`, `127.0.0.1`, other loopback IPs, or `::1`. The TCP endpoint is a **PUB bind**; subscribers connect to it. Each ZeroMQ message contains exactly one UTF-8 frame: the identical newline-terminated `FT, ` prefix and complete 25-column row used for UDP and serial. There is no multipart topic, JSON wrapper, added column or coordinate conversion. A subscriber can filter on the byte prefix `FT, `. Rejected measurements remain in `all-frames.dat` and `quality.csv` and are omitted from both live transports, preserving the legacy decision.
+
+The publisher implements ZMTP entirely in Rust (`zeromq`); it does not link libzmq or launch another process. A dedicated worker owns the socket. Tracking submits the already formatted row with a nonblocking bounded queue operation. Capacity defaults to 256 rows and accepts 1–4096; a row is limited to 16 KiB. A full queue discards that live row and reports the drop while numeric data recording continues. UDP and ZeroMQ are independent best-effort outputs: one output's failure does not turn a measurement into zero motion or stop the numerical engine.
+
+The output status includes the endpoint, queue capacity/current length, enqueued rows, completed PUB send attempts (`published`), application discards (`dropped`), failure count, worker state and last error. `published` does **not** mean a subscriber received or acknowledged a row. Like normal ZeroMQ PUB/SUB, subscribers joining late miss earlier messages; subscription setup takes time, and there is no replay. Subscriber or network losses below the application queue are not included in `dropped`. The independently sampled counters can briefly reflect different instants.
+
+A transport send has a 25 ms deadline. A stalled send stops and closes the publisher, so a cancelled partial ZMTP frame is never reused; tracking continues and status identifies the failure. Reapply the output configuration to restart it. Closing a publisher drains queued rows for at most approximately 75 ms before discarding any remainder; runtime teardown has a further 50 ms bound. Neither closing nor a completed run guarantees subscriber delivery. A port already in use fails configuration with the exact endpoint and a request to choose another port.
+
+The root `VR1.txt`–`VR4.txt` files keep the original BR1–BR4 camera IDs (`0, 2, 4, 6`) and saved calibrations. Their UDP ports are `1111`–`1114` and PUB ports are `9871`–`9874`, all on localhost. These are device-specific saved calibrations, **not** a claim that a different camera or resolution is calibrated. Check source dimensions and draw/refit geometry for the actual setup. Opening another instance selects the next existing numbered configuration. When no next file exists, the copy increments its numeric camera ID, enabled UDP/PUB ports and `rust_instance_name`; a video path stays a video path and disabled outputs stay disabled. Copies have no saved path, so saving cannot overwrite the parent configuration. Port or label-number overflow fails explicitly.
+
+For an optional external Python subscriber (Python/pyzmq is not an application dependency):
+
+```python
+import zmq
+
+context = zmq.Context()
+subscriber = context.socket(zmq.SUB)
+subscriber.setsockopt_string(zmq.SUBSCRIBE, "FT, ")
+subscriber.connect("tcp://127.0.0.1:9871")
+while True:
+    message = subscriber.recv_string()
+    columns = message.removeprefix("FT, ").strip().split(",")
+    assert len(columns) == 25
+```

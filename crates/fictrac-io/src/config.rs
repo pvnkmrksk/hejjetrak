@@ -60,6 +60,11 @@ pub fn load_config_text(text: &str, width: usize, height: usize) -> Result<Loade
         });
     }
     let mut values = legacy(text)?;
+    crate::zmq_output::ZmqSettings::parse(
+        values.get("zmq_port").map(String::as_str),
+        values.get("zmq_host").map(String::as_str),
+        values.get("zmq_queue_capacity").map(String::as_str),
+    )?;
     let mut config = Config {
         width,
         height,
@@ -237,6 +242,7 @@ pub fn load_config_text(text: &str, width: usize, height: usize) -> Result<Loade
     // These settings are executed by the common runtime/frontends, not the numerical core.
     for key in [
         "src_fps",
+        "rust_instance_name",
         "sphere_map_fn",
         "c2a_cnrs_xy",
         "c2a_cnrs_yz",
@@ -250,6 +256,9 @@ pub fn load_config_text(text: &str, width: usize, height: usize) -> Result<Loade
         "vid_codec",
         "sock_host",
         "sock_port",
+        "zmq_host",
+        "zmq_port",
+        "zmq_queue_capacity",
         "com_port",
         "com_baud",
     ] {

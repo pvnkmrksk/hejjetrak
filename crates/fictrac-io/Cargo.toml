@@ -18,6 +18,8 @@ oxideav-mp4.workspace = true
 oxideav-avi = "=0.0.10"
 image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "bmp", "pnm"] }
 serial2 = { version = "0.2.38", features = ["unix"] }
+zeromq = { version = "=0.6.0", default-features = false, features = ["tokio-runtime", "tcp-transport"] }
+tokio = { version = "1", features = ["rt", "sync", "net", "time"] }
 
 [target.'cfg(unix)'.dev-dependencies]
 rustix = { version = "1.1.5", features = ["pty", "termios", "fs"] }

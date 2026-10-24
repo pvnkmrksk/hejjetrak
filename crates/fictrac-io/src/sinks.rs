@@ -1,4 +1,4 @@
-//! Native serial and UDP FicTrac row outputs. Failures are reported per sink.
+//! Native serial, UDP and bounded Rust ZMQ PUB FicTrac row outputs.
 use crate::{ConfigDocument, Error, Result, write_dat};
 use fictrac_core::TrackRow;
 use std::{
@@ -9,17 +9,31 @@ use std::{
 pub struct OutputSinks {
     udp: Option<(UdpSocket, SocketAddr)>,
     serial: Option<serial2::SerialPort>,
+    zmq: Option<crate::zmq_output::ZmqOutput>,
 }
 impl OutputSinks {
+    pub fn disabled() -> Self {
+        Self {
+            udp: None,
+            serial: None,
+            zmq: None,
+        }
+    }
     /// Use an already configured native serial port (also useful for PTY harnesses).
     pub fn from_serial_port(port: serial2::SerialPort) -> Self {
         Self {
             udp: None,
             serial: Some(port),
+            zmq: None,
         }
     }
     /// Open explicitly configured outputs; disabled ports are never contacted.
     pub fn from_config(document: &ConfigDocument) -> Result<Self> {
+        let zmq_settings = crate::zmq_output::ZmqSettings::parse(
+            document.get("zmq_port"),
+            document.get("zmq_host"),
+            document.get("zmq_queue_capacity"),
+        )?;
         let port = document
             .get("sock_port")
             .map(str::parse::<i32>)
@@ -77,7 +91,10 @@ impl OutputSinks {
         } else {
             None
         };
-        Ok(Self { udp, serial })
+        let zmq = zmq_settings
+            .map(crate::zmq_output::ZmqOutput::start)
+            .transpose()?;
+        Ok(Self { udp, serial, zmq })
     }
     /// Rejected frames are omitted, matching upstream logData.
     /// One complete newline-terminated `FT, ` record, identical for serial and UDP.
@@ -103,9 +120,26 @@ impl OutputSinks {
         {
             errors.push(format!("serial output: {error}"));
         }
+        if let Some(zmq) = &mut self.zmq {
+            errors.extend(zmq.enqueue(packet));
+        }
         errors
     }
-    pub fn active(&self) -> bool {
-        self.udp.is_some() || self.serial.is_some()
+    pub fn status(&self) -> OutputStatus {
+        OutputStatus {
+            udp_enabled: self.udp.is_some(),
+            serial_enabled: self.serial.is_some(),
+            zmq: self.zmq.as_ref().map(|z| z.status()),
+        }
     }
+    pub fn active(&self) -> bool {
+        self.udp.is_some() || self.serial.is_some() || self.zmq.is_some()
+    }
+}
+
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct OutputStatus {
+    pub udp_enabled: bool,
+    pub serial_enabled: bool,
+    pub zmq: Option<crate::zmq_output::ZmqOutputStatus>,
 }

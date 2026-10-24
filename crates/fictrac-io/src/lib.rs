@@ -32,8 +32,9 @@ mod sinks;
 mod templates;
 pub use debug_render::{render_calibrated_debug_rgb, render_debug_rgb};
 pub use recording::{RecordingCodec, VideoRecorder};
-pub use sinks::OutputSinks;
+pub use sinks::{OutputSinks, OutputStatus};
 pub use templates::{load_sphere_map, save_sphere_map};
+pub use zmq_output::ZmqOutputStatus;
 
 mod mp4_recording;
 
@@ -46,3 +47,5 @@ mod avi_segments;
 mod avi_mux;
 
 pub mod h264_crop;
+
+mod zmq_output;

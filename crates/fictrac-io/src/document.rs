@@ -170,6 +170,45 @@ impl ConfigDocument {
                 .ok_or_else(|| Error::Config("camera ID overflow".into()))?;
             next.set("src_fn", &id.to_string())?;
         }
+        for key in ["sock_port", "zmq_port"] {
+            if let Some(value) = self.get(key) {
+                let port = value.parse::<i32>().map_err(|_| {
+                    Error::Config(format!(
+                        "{key} must be an integer before copying this instance"
+                    ))
+                })?;
+                if port > 0 {
+                    let next_port =
+                        port.checked_add(1).filter(|n| *n <= 65535).ok_or_else(|| {
+                            Error::Config(format!(
+                                "cannot increment {key}: port 65535 has no next port"
+                            ))
+                        })?;
+                    next.set(key, &next_port.to_string())?;
+                }
+            }
+        }
+        let label = self.get("rust_instance_name").or_else(|| {
+            path.and_then(|p| p.file_stem())
+                .and_then(|s| s.to_str())
+                .filter(|s| s.starts_with("VR") || s.starts_with("BR"))
+        });
+        if let Some(label) = label {
+            let split = label.trim_end_matches(|c: char| c.is_ascii_digit()).len();
+            let name = if split < label.len() {
+                let index = label[split..]
+                    .parse::<u32>()
+                    .ok()
+                    .and_then(|n| n.checked_add(1))
+                    .ok_or_else(|| {
+                        Error::Config("instance label number cannot be incremented".into())
+                    })?;
+                format!("{}{index}", &label[..split])
+            } else {
+                format!("{label} 2")
+            };
+            next.set("rust_instance_name", &name)?;
+        }
         // File sources remain files. Copy gets no path, so Save cannot overwrite its parent.
         Ok((next, None))
     }
@@ -215,6 +254,10 @@ impl DocumentHistory {
 }
 pub fn parameter_description(key: &str) -> (&'static str, &'static str) {
     match key {
+        "rust_instance_name" => (
+            "Instance",
+            "Human-readable instance name. Copied VR instances increment their label, enabled UDP/ZMQ ports and numeric camera ID; video paths remain paths.",
+        ),
         "src_fn" => (
             "Input",
             "Camera index or video path. File sources remain file sources in copied instances.",
@@ -295,6 +338,14 @@ pub fn parameter_description(key: &str) -> (&'static str, &'static str) {
         "sock_host" | "sock_port" => (
             "Output",
             "UDP destination for accepted full 25-column rows prefixed FT, . Port -1/0 disables. Errors are surfaced without stopping numerical tracking.",
+        ),
+        "zmq_host" | "zmq_port" => (
+            "Output",
+            "Pure Rust ZeroMQ PUB bind on localhost. Port -1/0 disables; use a unique port per instance (VR1..4: 9871..9874). A single UTF-8 frame contains the identical accepted FT, 25-column row sent over UDP.",
+        ),
+        "zmq_queue_capacity" => (
+            "Output",
+            "Bounded asynchronous ZMQ queue capacity, 1..4096 (default 256). Overflow drops live messages and reports counters; tracking and numeric evidence continue.",
         ),
         "com_port" | "com_baud" => (
             "Output",
