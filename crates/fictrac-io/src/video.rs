@@ -467,51 +467,102 @@ pub(crate) fn video_rgb(
     width: usize,
     height: usize,
 ) -> Result<Vec<u8>> {
+    validate_size(width, height)?;
     let y = frame
         .planes
         .first()
         .ok_or_else(|| Error::Video("missing luma".into()))?;
-    let mut rgb = Vec::with_capacity(width * height * 3);
+    if y.stride < width {
+        return Err(Error::Video(
+            "invalid luma stride: smaller than display width".into(),
+        ));
+    }
+    let luma_end = (height - 1)
+        .checked_mul(y.stride)
+        .and_then(|offset| offset.checked_add(width))
+        .ok_or_else(|| Error::Video("luma dimensions overflow".into()))?;
+    if luma_end > y.data.len() {
+        return Err(Error::Video("truncated luma".into()));
+    }
     let uv = frame.planes.get(1).zip(frame.planes.get(2));
-    for row in 0..height {
-        for col in 0..width {
-            let yy = f64::from(
-                *y.data
-                    .get(row * y.stride + col)
-                    .ok_or_else(|| Error::Video("truncated luma".into()))?,
-            );
-            let (u, v) = if let Some((u, v)) = uv {
-                if u.stride == 0 || v.stride == 0 {
-                    return Err(Error::Video("invalid chroma stride".into()));
-                }
-                let chroma_height = u.data.len() / u.stride;
-                let chroma_row = row * chroma_height / height;
-                let chroma_col = col * u.stride / width;
-                let index = chroma_row * u.stride + chroma_col;
-                (
-                    f64::from(
-                        *u.data
-                            .get(index)
-                            .ok_or_else(|| Error::Video("truncated chroma".into()))?,
-                    ) - 128.0,
-                    f64::from(
-                        *v.data
-                            .get(index)
-                            .ok_or_else(|| Error::Video("truncated chroma".into()))?,
-                    ) - 128.0,
-                )
-            } else {
-                (0.0, 0.0)
-            };
-            let l = 1.164383 * (yy - 16.0);
-            rgb.extend(
-                [
-                    l + 1.596027 * v,
-                    l - 0.391762 * u - 0.812968 * v,
-                    l + 2.017232 * u,
-                ]
-                .map(|v| v.round().clamp(0.0, 255.0) as u8),
-            );
+    let mut chroma_columns = Vec::new();
+    let mut chroma_rows = Vec::new();
+    if let Some((u, v)) = uv {
+        if u.stride == 0 || v.stride == 0 {
+            return Err(Error::Video("invalid chroma stride".into()));
+        }
+        // Preserve the established adapter's sampling exactly: U's stride and
+        // complete-row count determine the index used in BOTH chroma planes.
+        // Do not substitute display_width/2 or V's stride for this convention.
+        let chroma_height = u.data.len() / u.stride;
+        if chroma_height == 0 {
+            return Err(Error::Video("truncated chroma: no complete row".into()));
+        }
+        let last_row = (height - 1)
+            .checked_mul(chroma_height)
+            .map(|value| value / height)
+            .ok_or_else(|| Error::Video("chroma row dimensions overflow".into()))?;
+        let last_col = (width - 1)
+            .checked_mul(u.stride)
+            .map(|value| value / width)
+            .ok_or_else(|| Error::Video("chroma column dimensions overflow".into()))?;
+        let chroma_end = last_row
+            .checked_mul(u.stride)
+            .and_then(|offset| offset.checked_add(last_col))
+            .and_then(|offset| offset.checked_add(1))
+            .ok_or_else(|| Error::Video("chroma dimensions overflow".into()))?;
+        if chroma_end > u.data.len() || chroma_end > v.data.len() {
+            return Err(Error::Video("truncated chroma".into()));
+        }
+        chroma_columns.try_reserve_exact(width).map_err(|error| {
+            Error::Video(format!("cannot allocate chroma column lookup: {error}"))
+        })?;
+        chroma_rows
+            .try_reserve_exact(height)
+            .map_err(|error| Error::Video(format!("cannot allocate chroma row lookup: {error}")))?;
+        chroma_columns.extend((0..width).map(|col| col * u.stride / width));
+        chroma_rows.extend((0..height).map(|row| row * chroma_height / height * u.stride));
+    }
+    // All dimensions, reachable plane offsets and allocation sizes are checked
+    // before allocating RGB. Tables retain each original f64 multiplication;
+    // in particular green remains (l - 0.391762*u) - 0.812968*v.
+    let bytes = width
+        .checked_mul(height)
+        .and_then(|pixels| pixels.checked_mul(3))
+        .ok_or_else(|| Error::Video("RGB allocation dimensions overflow".into()))?;
+    let mut rgb = Vec::new();
+    rgb.try_reserve_exact(bytes)
+        .map_err(|error| Error::Video(format!("cannot allocate RGB frame: {error}")))?;
+    rgb.resize(bytes, 0);
+    let luma: [f64; 256] = std::array::from_fn(|value| 1.164383 * (value as f64 - 16.0));
+    let red: [f64; 256] = std::array::from_fn(|value| 1.596027 * (value as f64 - 128.0));
+    let green_u: [f64; 256] = std::array::from_fn(|value| 0.391762 * (value as f64 - 128.0));
+    let green_v: [f64; 256] = std::array::from_fn(|value| 0.812968 * (value as f64 - 128.0));
+    let blue: [f64; 256] = std::array::from_fn(|value| 2.017232 * (value as f64 - 128.0));
+    for (row, output) in rgb.chunks_exact_mut(width * 3).enumerate() {
+        let y_offset = row * y.stride;
+        let y_row = &y.data[y_offset..y_offset + width];
+        if let Some((u, v)) = uv {
+            let offset = chroma_rows[row];
+            for ((pixel, &yy), &col) in output
+                .as_chunks_mut::<3>()
+                .0
+                .iter_mut()
+                .zip(y_row)
+                .zip(&chroma_columns)
+            {
+                let uu = usize::from(u.data[offset + col]);
+                let vv = usize::from(v.data[offset + col]);
+                let l = luma[usize::from(yy)];
+                pixel[0] = (l + red[vv]).round().clamp(0.0, 255.0) as u8;
+                pixel[1] = (l - green_u[uu] - green_v[vv]).round().clamp(0.0, 255.0) as u8;
+                pixel[2] = (l + blue[uu]).round().clamp(0.0, 255.0) as u8;
+            }
+        } else {
+            for (pixel, &yy) in output.as_chunks_mut::<3>().0.iter_mut().zip(y_row) {
+                let value = luma[usize::from(yy)].round().clamp(0.0, 255.0) as u8;
+                pixel.fill(value);
+            }
         }
     }
     Ok(rgb)
@@ -546,4 +597,129 @@ pub fn rgb_tracking_frame(
         pixels,
         frame.timestamp_ms(),
     )?)
+}
+
+#[cfg(test)]
+mod rgb_tests {
+    use super::video_rgb;
+    use oxideav_core::{VideoFrame, VideoPlane};
+
+    // Deliberately retain the original per-pixel arithmetic and indexing as an
+    // independent scalar reference. Call only with valid, bounded fixtures.
+    fn scalar(frame: &VideoFrame, width: usize, height: usize) -> Vec<u8> {
+        let y = &frame.planes[0];
+        let uv = frame.planes.get(1).zip(frame.planes.get(2));
+        let mut rgb = Vec::with_capacity(width * height * 3);
+        for row in 0..height {
+            for col in 0..width {
+                let yy = f64::from(y.data[row * y.stride + col]);
+                let (u, v) = if let Some((u, v)) = uv {
+                    let chroma_height = u.data.len() / u.stride;
+                    let chroma_row = row * chroma_height / height;
+                    let chroma_col = col * u.stride / width;
+                    let index = chroma_row * u.stride + chroma_col;
+                    (
+                        f64::from(u.data[index]) - 128.0,
+                        f64::from(v.data[index]) - 128.0,
+                    )
+                } else {
+                    (0.0, 0.0)
+                };
+                let l = 1.164383 * (yy - 16.0);
+                rgb.extend(
+                    [
+                        l + 1.596027 * v,
+                        l - 0.391762 * u - 0.812968 * v,
+                        l + 2.017232 * u,
+                    ]
+                    .map(|value| value.round().clamp(0.0, 255.0) as u8),
+                );
+            }
+        }
+        rgb
+    }
+    fn plane(stride: usize, bytes: usize, salt: usize) -> VideoPlane {
+        VideoPlane {
+            stride,
+            data: (0..bytes)
+                .map(|index| ((index * 73 + salt * 29) % 256) as u8)
+                .collect(),
+        }
+    }
+    #[test]
+    fn optimized_rgb_matches_scalar_bytes_for_padded_and_unequal_stride_planes()
+    -> Result<(), Box<dyn std::error::Error>> {
+        for (width, height, y_stride, u_stride, v_stride, chroma_rows, extra) in [
+            (16, 16, 16, 8, 8, 8, 0),
+            (17, 19, 23, 13, 9, 7, 3),
+            (31, 33, 35, 17, 21, 16, 0),
+            (256, 256, 257, 129, 131, 127, 11),
+        ] {
+            let frame = VideoFrame {
+                pts: None,
+                planes: vec![
+                    plane(y_stride, (height - 1) * y_stride + width, 1),
+                    plane(u_stride, u_stride * chroma_rows + extra, 2),
+                    plane(v_stride, u_stride * chroma_rows + extra, 3),
+                ],
+            };
+            assert_eq!(
+                video_rgb(&frame, width, height)?,
+                scalar(&frame, width, height)
+            );
+        }
+        Ok(())
+    }
+    #[test]
+    fn optimized_mono_matches_scalar_for_every_luma_value() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let mut frame = VideoFrame {
+            pts: None,
+            planes: vec![plane(256, 256 * 16, 0)],
+        };
+        assert_eq!(video_rgb(&frame, 256, 16)?, scalar(&frame, 256, 16));
+        // Preserve the original mono fallback when a complete U/V pair is absent.
+        frame.planes.push(plane(128, 128 * 8, 2));
+        assert_eq!(video_rgb(&frame, 256, 16)?, scalar(&frame, 256, 16));
+        Ok(())
+    }
+    #[test]
+    fn malformed_rgb_planes_and_dimensions_fail_before_output_allocation() {
+        let valid = VideoFrame {
+            pts: None,
+            planes: vec![
+                plane(16, 16 * 16, 0),
+                plane(8, 8 * 8, 1),
+                plane(8, 8 * 8, 2),
+            ],
+        };
+        for (index, stride, bytes) in [
+            (0, 0, 256),
+            (0, 15, 256),
+            (0, usize::MAX, 256),
+            (0, 16, 255),
+            (1, 0, 64),
+            (2, 0, 64),
+            (1, 8, 7),
+            (2, 8, 63),
+        ] {
+            let mut invalid = valid.clone();
+            invalid.planes[index] = plane(stride, bytes, 0);
+            assert!(video_rgb(&invalid, 16, 16).is_err());
+        }
+        assert!(
+            video_rgb(
+                &VideoFrame {
+                    pts: None,
+                    planes: vec![]
+                },
+                16,
+                16
+            )
+            .is_err()
+        );
+        for (width, height) in [(0, 16), (16, 0), (8193, 16), (8192, 8192), (usize::MAX, 16)] {
+            assert!(video_rgb(&valid, width, height).is_err());
+        }
+    }
 }

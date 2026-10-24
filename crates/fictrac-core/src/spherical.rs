@@ -35,6 +35,9 @@ impl SphereTemplate {
 }
 pub(crate) struct MapTracker {
     sampler: Diagnostics,
+    // Fixed ROI-to-atlas rays: preserve the exact per-site quaternion transform,
+    // computing it once per calibration instead of every optimizer evaluation.
+    atlas_sites: Vec<Option<DVec3>>,
     solver: Bobyqa,
     settings: MapSettings,
     bound: f64,
@@ -69,8 +72,14 @@ impl MapTracker {
         let solver =
             Bobyqa::new(3, solver_config).map_err(|e| Error::Config(format!("BOBYQA: {e}")))?;
         let template = sampler.map.clone();
+        let atlas_sites = sampler
+            .points
+            .iter()
+            .map(|site| site.map(|(p, _)| sampler.basis * p))
+            .collect();
         Ok(Self {
             sampler,
+            atlas_sites,
             solver,
             settings,
             bound: config.max_rotation,
@@ -148,10 +157,9 @@ impl MapTracker {
             };
         }
         let objective = AtlasObjective {
-            sites,
+            sites: &self.atlas_sites,
             roi: &roi,
             map: &self.sampler.map,
-            basis,
             width: self.sampler.map_width,
             height: self.sampler.map_height,
             count,
@@ -228,10 +236,9 @@ fn acceptable(error: f64, threshold: f64) -> bool {
     error.is_finite() && error < 1e11 && (threshold < 0.0 || error <= threshold)
 }
 struct AtlasObjective<'a> {
-    sites: &'a [Option<(DVec3, [f64; 2])>],
+    sites: &'a [Option<DVec3>],
     roi: &'a [u8],
     map: &'a [u8],
-    basis: DQuat,
     width: usize,
     height: usize,
     count: usize,
@@ -243,11 +250,11 @@ impl AtlasObjective<'_> {
         let mut count = 0;
         let mut good = 0;
         for i in (0..self.sites.len()).step_by(stride) {
-            let Some((p, _)) = self.sites[i] else {
+            let Some(p) = self.sites[i] else {
                 continue;
             };
             count += 1;
-            let value = self.map[map_index(inverse * (self.basis * p), self.width, self.height)];
+            let value = self.map[map_index(inverse * p, self.width, self.height)];
             if value == 128 {
                 continue;
             }
