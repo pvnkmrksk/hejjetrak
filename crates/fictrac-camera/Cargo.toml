@@ -7,6 +7,7 @@ license.workspace = true
 [dependencies]
 fictrac-core.workspace = true
 thiserror.workspace = true
+serde.workspace = true
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
 objc2-foundation = { version = "0.3", features = ["NSArray", "NSString", "NSDictionary", "NSObject", "NSError"] }
@@ -20,6 +21,8 @@ dispatch2 = "0.3"
 nokhwa = { version = "0.10.11", default-features = false, features = ["input-msmf"] }
 [target.'cfg(target_os = "linux")'.dependencies]
 nokhwa = { version = "0.10.11", default-features = false, features = ["input-v4l"] }
+[dev-dependencies]
+serde_json.workspace = true
 [lints.rust]
 unsafe_code = "deny"
 [lints.clippy]
