@@ -1,6 +1,7 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 mod calibration;
 mod control;
+mod icons;
 mod runtime;
 mod session;
 mod ui;
@@ -11,10 +12,20 @@ use session::Session;
 use std::{path::PathBuf, time::Instant};
 #[derive(Parser)]
 #[command(
+    name = "hejjetrak",
     version,
-    about = "Native FicTrac configuration, video and camera tracking"
+    about = "Native spherical motion tracking, compatible with FicTrac"
 )]
 struct Args {
+    /// Preview size in logical pixels, e.g. 480x360.
+    #[arg(long, value_parser = parse_size)]
+    window_size: Option<Pair>,
+    /// Top-left window location in logical pixels, e.g. 0,24.
+    #[arg(long, value_parser = parse_position, allow_hyphen_values = true)]
+    window_position: Option<Pair>,
+    /// Tile columns x rows, e.g. --windows 16 --grid 4x4.
+    #[arg(long, value_parser = parse_grid)]
+    grid: Option<Pair>,
     #[arg(short, long)]
     config: Option<PathBuf>,
     #[arg(long, default_value_t = 1)]
@@ -35,7 +46,7 @@ struct Args {
     #[arg(long)]
     control_stdio: bool,
 }
-fn default_config() -> Result<PathBuf, String> {
+fn resource(relative: &str) -> Result<PathBuf, String> {
     let mut roots = vec![];
     if let Ok(exe) = std::env::current_exe()
         && let Some(parent) = exe.parent()
@@ -49,12 +60,74 @@ fn default_config() -> Result<PathBuf, String> {
     roots.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."));
     roots
         .into_iter()
-        .map(|p| p.join("examples/upstream-config.txt"))
+        .map(|p| p.join(relative))
         .find(|p| p.is_file())
-        .ok_or_else(|| {
-            "Cannot find bundled examples/upstream-config.txt; select a config with --config PATH"
-                .into()
-        })
+        .ok_or_else(|| format!("Cannot find bundled {relative}; provide --config PATH"))
+}
+fn default_config() -> Result<PathBuf, String> {
+    resource("VR1.txt").or_else(|_| resource("examples/upstream-config.txt"))
+}
+fn fallback_document(source: &ConfigDocument) -> Result<ConfigDocument, String> {
+    let path = resource("examples/upstream-config.txt")?;
+    let mut fallback =
+        ConfigDocument::parse(std::fs::read_to_string(path).map_err(|e| e.to_string())?)
+            .map_err(|e| e.to_string())?;
+    fallback
+        .set(
+            "src_fn",
+            &resource("examples/sample.mp4")?.to_string_lossy(),
+        )
+        .map_err(|e| e.to_string())?;
+    for (key, value) in source.fields().filter(|(key, _)| {
+        key.starts_with("zmq_")
+            || key.starts_with("sock_")
+            || key.starts_with("com_")
+            || matches!(
+                *key,
+                "rust_instance_name" | "output_fn" | "save_raw" | "save_debug" | "vid_codec"
+            )
+    }) {
+        fallback.set(key, value).map_err(|e| e.to_string())?;
+    }
+    Ok(fallback)
+}
+#[derive(Clone, Copy, Debug)]
+struct Pair(f32, f32);
+fn parse_pair(value: &str, separator: char) -> Result<Pair, String> {
+    let (x, y) = value.split_once(separator).ok_or("Expected two numbers")?;
+    let pair = Pair(
+        x.parse().map_err(|_| "Invalid first coordinate")?,
+        y.parse().map_err(|_| "Invalid second coordinate")?,
+    );
+    if !pair.0.is_finite() || !pair.1.is_finite() {
+        return Err("Coordinates must be finite".into());
+    }
+    Ok(pair)
+}
+fn parse_size(value: &str) -> Result<Pair, String> {
+    let pair = parse_pair(value, 'x')?;
+    if !(240.0..=8192.0).contains(&pair.0) || !(180.0..=8192.0).contains(&pair.1) {
+        return Err("Window size must be 240x180 through 8192x8192".into());
+    }
+    Ok(pair)
+}
+fn parse_position(value: &str) -> Result<Pair, String> {
+    let pair = parse_pair(value, ',')?;
+    if pair.0.abs() > 1_000_000.0 || pair.1.abs() > 1_000_000.0 {
+        return Err("Window position must be within ±1000000 logical pixels".into());
+    }
+    Ok(pair)
+}
+fn parse_grid(value: &str) -> Result<Pair, String> {
+    let pair = parse_pair(value, 'x')?;
+    if pair.0.fract() != 0.0
+        || pair.1.fract() != 0.0
+        || !(1.0..=16.0).contains(&pair.0)
+        || !(1.0..=16.0).contains(&pair.1)
+    {
+        return Err("Grid dimensions must be integers 1..16".into());
+    }
+    Ok(pair)
 }
 struct Desktop {
     sessions: Vec<Session>,
@@ -64,16 +137,41 @@ struct Desktop {
     requested_screenshot: bool,
     last_state: Instant,
     control: Option<control::Bridge>,
+    window_size: Pair,
+    window_origin: Pair,
+    tile_columns: usize,
 }
 impl Desktop {
     fn new(cc: &eframe::CreationContext<'_>, args: Args) -> Result<Self, String> {
         cc.egui_ctx.set_visuals(egui::Visuals::dark());
-        let path = args.config.clone().map(Ok).unwrap_or_else(default_config)?;
+        let path = args.config.clone().map(Ok).unwrap_or_else(|| {
+            if args.control_stdio {
+                resource("examples/upstream-config.txt")
+            } else {
+                default_config()
+            }
+        })?;
         let doc = ConfigDocument::parse(std::fs::read_to_string(&path).map_err(|e| e.to_string())?)
             .map_err(|e| e.to_string())?;
-        let mut first = Session::new(1, doc, Some(path));
-        let result = first.start();
-        first.report(result);
+        let mut first = Session::new(1, doc.clone(), Some(path.clone()));
+        if args.config.is_none() && !args.control_stdio {
+            first.startup_fallback = Some(fallback_document(&doc)?);
+            if let Some(camera) = first.cameras.first() {
+                first.fields(&[("src_fn", camera.id.to_string())])?;
+                first.changed = None;
+            }
+        }
+        let result = if first.worker.is_some() {
+            Ok(())
+        } else {
+            first.start()
+        };
+        if let Err(error) = &result {
+            first.use_fallback(error);
+        }
+        if first.worker.is_none() {
+            first.report(result);
+        }
         if args.control_stdio {
             first.paused = true;
             first.send(runtime::Command::Pause(true));
@@ -83,6 +181,34 @@ impl Desktop {
         } else {
             None
         };
+        let monitor = cc
+            .egui_ctx
+            .input(|i| i.viewport().monitor_size)
+            .unwrap_or(egui::vec2(1440.0, 900.0));
+        let grid = args
+            .grid
+            .unwrap_or(Pair((monitor.x / 520.0).floor().max(1.0), 1.0));
+        let window_size = args.window_size.unwrap_or_else(|| {
+            if args.grid.is_some() {
+                Pair(
+                    (monitor.x / grid.0 - 8.0).max(240.0),
+                    ((monitor.y - 50.0) / grid.1 - 32.0).max(180.0),
+                )
+            } else {
+                Pair(520.0, 480.0)
+            }
+        });
+        let window_origin = args.window_position.unwrap_or(Pair(12.0, 36.0));
+        cc.egui_ctx
+            .send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(
+                window_size.0,
+                window_size.1,
+            )));
+        cc.egui_ctx
+            .send_viewport_cmd(egui::ViewportCommand::OuterPosition(egui::pos2(
+                window_origin.0,
+                window_origin.1,
+            )));
         let mut app = Self {
             sessions: vec![first],
             next_id: 2,
@@ -91,6 +217,9 @@ impl Desktop {
             requested_screenshot: false,
             last_state: Instant::now() - std::time::Duration::from_secs(1),
             control,
+            window_size,
+            window_origin,
+            tile_columns: grid.0 as usize,
         };
         for _ in 1..app.args.windows.clamp(1, 16) {
             app.spawn_from(app.sessions.len() - 1);
@@ -102,7 +231,16 @@ impl Desktop {
             self.sessions[index].error = "At most 16 active instances".into();
             return;
         }
-        let result = self.sessions[index].document().and_then(|mut doc| {
+        let document = if !self.sessions[index].fallback_notice.is_empty()
+            && let Some(path) = &self.sessions[index].path
+        {
+            std::fs::read_to_string(path)
+                .map_err(|e| e.to_string())
+                .and_then(|text| ConfigDocument::parse(text).map_err(|e| e.to_string()))
+        } else {
+            self.sessions[index].document()
+        };
+        let result = document.and_then(|mut doc| {
             let mut path = self.sessions[index].path.clone();
             for _ in 0..16 {
                 let (next, next_path) = doc
@@ -134,13 +272,27 @@ impl Desktop {
                     .path
                     .clone()
                     .or(self.sessions[index].source_base.clone());
+                let fallback = if self.args.config.is_none()
+                    && !self.args.control_stdio
+                    && doc.get("src_fn").is_some_and(|v| v.parse::<u32>().is_ok())
+                {
+                    fallback_document(&doc).ok()
+                } else {
+                    None
+                };
                 let mut next = Session::new(self.next_id, doc, path);
+                next.startup_fallback = fallback;
                 if next.path.is_none() {
                     next.source_base = anchor;
                 }
                 self.next_id += 1;
                 let result = next.start();
-                next.report(result);
+                if let Err(error) = &result {
+                    next.use_fallback(error);
+                }
+                if next.worker.is_none() {
+                    next.report(result);
+                }
                 self.sessions.push(next);
             }
             Err(e) => self.sessions[index].error = e,
@@ -154,14 +306,20 @@ impl eframe::App for Desktop {
             self.control = Some(bridge);
         }
         self.sessions[0].show(ctx);
-        for session in self.sessions.iter_mut().skip(1) {
+        for (index, session) in self.sessions.iter_mut().enumerate().skip(1) {
             let id = egui::ViewportId::from_hash_of(("fictrac", session.id));
             ctx.show_viewport_immediate(
                 id,
                 egui::ViewportBuilder::default()
-                    .with_title(format!("FicTrac · instance {}", session.id))
-                    .with_inner_size([1420.0, 940.0])
-                    .with_min_inner_size([1000.0, 700.0]),
+                    .with_title(format!("hejjetrak · VR{}", session.id))
+                    .with_inner_size([self.window_size.0, self.window_size.1])
+                    .with_position([
+                        self.window_origin.0
+                            + (index % self.tile_columns) as f32 * (self.window_size.0 + 8.0),
+                        self.window_origin.1
+                            + (index / self.tile_columns) as f32 * (self.window_size.1 + 32.0),
+                    ])
+                    .with_min_inner_size([240.0, 180.0]),
                 |ctx, class| {
                     session.native_window = class != egui::ViewportClass::Embedded;
                     session.show(ctx);
@@ -237,7 +395,7 @@ impl eframe::App for Desktop {
         if self.last_state.elapsed().as_millis() > 400
             && let Some(path) = &self.args.state_output
         {
-            let instances:Vec<_>=self.sessions.iter().map(|s|serde_json::json!({"id":s.id,"frames":s.snapshot.frames,"source":s.source_edit,"config_path":s.path,"paused":s.snapshot.paused,"native_window":s.native_window,"revision":s.snapshot.revision,"notice":s.snapshot.notice,"error":s.error,"config_text":s.history.text})).collect();
+            let instances:Vec<_>=self.sessions.iter().map(|s|serde_json::json!({"id":s.id,"frames":s.snapshot.frames,"source":s.source_edit,"config_path":s.path,"paused":s.snapshot.paused,"native_window":s.native_window,"window_rect":s.window_rect,"revision":s.snapshot.revision,"notice":s.snapshot.notice,"error":s.error,"config_text":s.history.text})).collect();
             let value = serde_json::json!({"instances":instances,"elapsed_seconds":elapsed});
             match serde_json::to_vec_pretty(&value)
                 .map_err(|e| e.to_string())
@@ -253,8 +411,27 @@ impl eframe::App for Desktop {
         }
     }
 }
+fn app_icon() -> Result<egui::IconData, String> {
+    let icon = image::load_from_memory(include_bytes!("../../../assets/hejjetrak.png"))
+        .map_err(|e| format!("Bundled application icon: {e}"))?
+        .into_rgba8();
+    Ok(egui::IconData {
+        width: icon.width(),
+        height: icon.height(),
+        rgba: icon.into_raw(),
+    })
+}
 fn run() -> Result<(), String> {
     let args = Args::parse();
+    if !(1..=16).contains(&args.windows) {
+        return Err("--windows must be 1..16".into());
+    }
+    if args
+        .grid
+        .is_some_and(|g| args.windows > (g.0 * g.1) as usize)
+    {
+        return Err("Grid has fewer cells than requested windows".into());
+    }
     if args.camera_list || args.probe_camera.is_some() {
         for camera in fictrac_camera::list_cameras().map_err(|e| e.to_string())? {
             println!("{}: {}", camera.id, camera.name);
@@ -295,14 +472,15 @@ fn run() -> Result<(), String> {
     }
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("FicTrac · native Rust")
-            .with_inner_size([1480.0, 960.0])
-            .with_min_inner_size([1000.0, 700.0]),
+            .with_title("hejjetrak · VR1")
+            .with_icon(app_icon()?)
+            .with_inner_size([520.0, 480.0])
+            .with_min_inner_size([240.0, 180.0]),
         renderer: eframe::Renderer::Wgpu,
         ..Default::default()
     };
     eframe::run_native(
-        "FicTrac",
+        "hejjetrak",
         options,
         Box::new(move |cc| {
             Desktop::new(cc, args)
@@ -316,7 +494,7 @@ fn main() -> std::process::ExitCode {
     match run() {
         Ok(()) => std::process::ExitCode::SUCCESS,
         Err(e) => {
-            eprintln!("FicTrac: {e}");
+            eprintln!("hejjetrak: {e}");
             std::process::ExitCode::FAILURE
         }
     }

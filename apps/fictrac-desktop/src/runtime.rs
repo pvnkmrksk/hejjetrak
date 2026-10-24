@@ -16,6 +16,21 @@ use std::{
     time::{Duration, Instant},
 };
 type Result<T> = std::result::Result<T, String>;
+pub fn recording_root() -> PathBuf {
+    let user = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME"));
+    if let Some(user) = user {
+        return PathBuf::from(user)
+            .join(if cfg!(target_os = "macos") {
+                "Movies"
+            } else {
+                "Videos"
+            })
+            .join("hejjetrak");
+    }
+    std::env::current_dir()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join("hejjetrak-recordings")
+}
 fn tracking_frame(frame: GrayFrame, rgb: &[u8], doc: &ConfigDocument) -> Result<GrayFrame> {
     if doc.get("rust_engine") == Some("pairwise") {
         return Ok(frame);
@@ -44,11 +59,20 @@ pub struct Snapshot {
     pub pose_history: Arc<Vec<[f64; 3]>>,
     pub frames: u64,
     pub notice: String,
+    pub command_error: Option<String>,
     pub ended: bool,
     pub paused: bool,
     pub advance_remaining: usize,
     pub processing_fps: f64,
+    pub processing_ms: f64,
+    pub actual_fps: f64,
+    pub source_fps: f64,
+    pub headroom_percent: f64,
+    pub camera: Option<fictrac_camera::CameraCapabilities>,
+    pub outputs: Option<fictrac_io::OutputStatus>,
+    pub record_options: Option<fictrac_control::RecordOptions>,
     pub dropped: u64,
+    pub dropped_running: u64,
     pub revision: u64,
     pub recording: bool,
     pub recording_directory: Option<PathBuf>,
@@ -62,6 +86,9 @@ pub enum Command {
     LoadMap(PathBuf),
     SaveMap(PathBuf),
     Record(PathBuf),
+    RecordOptions(PathBuf, fictrac_control::RecordOptions),
+    CameraRefresh,
+    CameraControl(fictrac_camera::CameraControlRequest),
     StopRecord,
     Realtime(bool),
 }
@@ -160,9 +187,31 @@ impl Input {
                 v.enable_color();
                 Ok(Self::File(Box::new(v)))
             }
-            SourceSpec::Camera(id) => fictrac_camera::Camera::open(id, doc.number("src_fps", -1.0))
-                .map(Self::Camera)
-                .map_err(|e| e.to_string()),
+            SourceSpec::Camera(id) => {
+                let width = doc.number("rust_camera_width", 0.0);
+                let height = doc.number("rust_camera_height", 0.0);
+                let fps = doc.number("src_fps", -1.0);
+                let camera = if width > 0.0 || height > 0.0 {
+                    if !width.is_finite()
+                        || !height.is_finite()
+                        || width.fract() != 0.0
+                        || height.fract() != 0.0
+                    {
+                        return Err("Camera dimensions must be finite integers".into());
+                    }
+                    fictrac_camera::Camera::open_with_format(
+                        id,
+                        fictrac_camera::CameraFormatRequest {
+                            width: width as usize,
+                            height: height as usize,
+                            fps: if fps > 0.0 { Some(fps) } else { None },
+                        },
+                    )
+                } else {
+                    fictrac_camera::Camera::open(id, fps)
+                };
+                camera.map(Self::Camera).map_err(|e| e.to_string())
+            }
         }
     }
     fn next(&mut self) -> Result<Option<(GrayFrame, Vec<u8>, u64)>> {
@@ -239,6 +288,24 @@ fn run(
     let mut input = Input::open(source, &doc)?;
     let mut engine_state: Option<Engine> = None;
     let mut snapshot = Snapshot::default();
+    match &mut input {
+        Input::Camera(camera) => match camera.capabilities() {
+            Ok(capabilities) => {
+                snapshot.source_fps = capabilities.current_format.fps.unwrap_or(0.0);
+                snapshot.camera = Some(capabilities);
+            }
+            Err(error) => snapshot.notice = format!("Camera controls unavailable: {error}"),
+        },
+        Input::File(video) => {
+            snapshot.source_fps = if doc.number("src_fps", -1.0) > 0.0 {
+                doc.number("src_fps", -1.0)
+            } else {
+                video.info.fps.unwrap_or(0.0)
+            }
+        }
+    }
+    let mut last_completed: Option<Instant> = None;
+    let mut last_timestamp: Option<f64> = None;
     let mut paused = false;
     let mut step = false;
     let mut step_remaining: usize = 0;
@@ -247,9 +314,11 @@ fn run(
     let mut path = vec![];
     let mut contact_trace = vec![];
     let mut pose_history = vec![];
+    let mut manual_record_options: Option<fictrac_control::RecordOptions> = None;
     let mut recorder: Option<Recorder> = if doc.boolean("save_raw") || doc.boolean("save_debug") {
         let recorder = Recorder::automatic(&doc)?;
         snapshot.recording = true;
+        snapshot.record_options = Some(fictrac_control::RecordOptions::from_document(&doc));
         snapshot.recording_directory = Some(recorder.directory.clone());
         Some(recorder)
     } else {
@@ -259,6 +328,7 @@ fn run(
     let mut wall_origin = Instant::now();
     let mut source_origin = None;
     let mut last_sequence = 0;
+    let mut skip_gap = true;
     let mut playback_origin_frame = 0;
     let mut last_camera_frame = Instant::now();
     let mut last_source_time: Option<f64> = None;
@@ -270,19 +340,25 @@ fn run(
         for cmd in rx.try_iter() {
             match cmd {
                 Command::Configure(next, revision) => {
-                    let same_sinks = ["sock_port", "sock_host", "com_port", "com_baud"]
-                        .iter()
-                        .all(|key| doc.get(key) == next.get(key));
-                    if !same_sinks {
-                        // Release an exclusive serial handle before reopening changed settings.
-                        drop(sinks);
-                        sinks = OutputSinks::from_config(&next).map_err(|e| e.to_string())?;
+                    if let Err(error) = sinks.reconfigure(&doc, &next) {
+                        snapshot.notice = format!("Configuration rejected: {error}");
+                        snapshot.command_error = Some(snapshot.notice.clone());
+                        continue;
                     }
+                    snapshot.command_error = None;
                     doc = next;
+                    if let Input::File(video) = &input {
+                        snapshot.source_fps = if doc.number("src_fps", -1.0) > 0.0 {
+                            doc.number("src_fps", -1.0)
+                        } else {
+                            video.info.fps.unwrap_or(0.0)
+                        };
+                    }
                     snapshot.revision = revision;
                     needs_config = true;
                 }
                 Command::Pause(p) => {
+                    skip_gap = true;
                     paused = p;
                     snapshot.paused = p;
                     step = false;
@@ -290,8 +366,10 @@ fn run(
                     snapshot.advance_remaining = 0;
                     wall_origin = Instant::now();
                     source_origin = None;
+                    last_completed = None;
                 }
                 Command::Advance(frames) => {
+                    skip_gap = true;
                     if !(1..=10000).contains(&frames) {
                         snapshot.notice = "Advance requires 1..10000 frames".into();
                         continue;
@@ -306,6 +384,7 @@ fn run(
                     snapshot.paused = true;
                 }
                 Command::Step => {
+                    skip_gap = true;
                     step_remaining = step_remaining
                         .checked_add(1)
                         .filter(|n| *n <= 160000)
@@ -371,19 +450,59 @@ fn run(
                         Err(e) => e,
                     };
                 }
+                Command::CameraRefresh => {
+                    snapshot.notice = match &mut input {
+                        Input::Camera(camera) => match camera.capabilities() {
+                            Ok(c) => {
+                                snapshot.camera = Some(c);
+                                "Camera controls refreshed".into()
+                            }
+                            Err(e) => e.to_string(),
+                        },
+                        _ => "Camera controls require a live camera source".into(),
+                    };
+                }
+                Command::CameraControl(request) => {
+                    snapshot.notice = match &mut input {
+                        Input::Camera(camera) => match camera.set_control(request) {
+                            Ok(c) => {
+                                snapshot.camera = Some(c);
+                                "Camera setting applied and read back".into()
+                            }
+                            Err(e) => e.to_string(),
+                        },
+                        _ => "Camera controls require a live camera source".into(),
+                    };
+                }
+                Command::RecordOptions(dir, options) => {
+                    manual_record_options = Some(options);
+                    let effective = options.recording_document(&doc)?;
+                    if let Some(mut old) = recorder.take() {
+                        old.finish()?;
+                    }
+                    snapshot.recording_directory = Some(dir.clone());
+                    recorder = Some(Recorder::new(dir, &effective)?);
+                    snapshot.recording = true;
+                    snapshot.record_options = Some(options);
+                }
                 Command::Record(dir) => {
+                    manual_record_options = None;
                     if let Some(mut old) = recorder.take() {
                         old.finish()?;
                     }
                     snapshot.recording_directory = Some(dir.clone());
                     recorder = Some(Recorder::new(dir, &doc)?);
                     snapshot.recording = true;
+                    snapshot.record_options =
+                        Some(fictrac_control::RecordOptions::from_document(&doc));
                 }
                 Command::StopRecord => {
+                    manual_record_options = None;
                     if let Some(mut r) = recorder.take() {
                         r.finish()?;
                     }
                     snapshot.recording = false;
+                    snapshot.record_options = None;
                 }
                 Command::Realtime(r) => {
                     realtime = r;
@@ -422,7 +541,10 @@ fn run(
             snapshot.path = Arc::new(vec![]);
             snapshot.row = None;
             if let Some(r) = &mut recorder {
-                r.epoch(&doc)?;
+                let effective = manual_record_options
+                    .map(|o| o.recording_document(&doc))
+                    .transpose()?;
+                r.epoch(effective.as_ref().unwrap_or(&doc))?;
             } else if doc.boolean("save_raw") || doc.boolean("save_debug") {
                 let created = Recorder::automatic(&doc)?;
                 snapshot.recording = true;
@@ -453,6 +575,7 @@ fn run(
                 snapshot.row = Some(row);
             }
         }
+        snapshot.outputs = Some(sinks.status());
         if (paused && !step) || ended {
             *shared
                 .lock()
@@ -460,7 +583,14 @@ fn run(
             thread::sleep(Duration::from_millis(8));
             continue;
         }
+        let work_tick = Instant::now();
         let frame = input.next()?;
+        let input_wait = if matches!(input, Input::Camera(_)) {
+            work_tick.elapsed()
+        } else {
+            Duration::ZERO
+        };
+        let mut pace_wait = Duration::ZERO;
         let Some((frame, rgb, sequence)) = frame else {
             if matches!(input, Input::Camera(_)) {
                 if last_camera_frame.elapsed() > Duration::from_secs(5) {
@@ -468,6 +598,7 @@ fn run(
                 }
                 continue;
             }
+            snapshot.outputs = Some(sinks.status());
             snapshot.path = Arc::new(path.clone());
             snapshot.contact_trace = Arc::new(contact_trace.clone());
             snapshot.pose_history = Arc::new(pose_history.clone());
@@ -522,10 +653,23 @@ fn run(
         let frame = tracking_frame(frame, &rgb, &doc)?;
         last_camera_frame = Instant::now();
         if sequence > 0 {
-            snapshot.dropped += sequence.saturating_sub(last_sequence).saturating_sub(1);
+            let skipped = sequence.saturating_sub(last_sequence).saturating_sub(1);
+            snapshot.dropped += skipped;
+            if !skip_gap {
+                snapshot.dropped_running += skipped;
+            }
+            skip_gap = false;
             last_sequence = sequence;
         }
+        if let Some(previous) = last_timestamp {
+            let interval = frame.timestamp_ms() - previous;
+            if interval > 0.0 && interval < 10_000.0 && snapshot.source_fps <= 0.0 {
+                snapshot.source_fps = 1000.0 / interval;
+            }
+        }
+        last_timestamp = Some(frame.timestamp_ms());
         if realtime && matches!(input, Input::File(_)) {
+            let pacing_tick = Instant::now();
             if source_origin.is_none() {
                 playback_origin_frame = snapshot.frames;
             }
@@ -539,6 +683,7 @@ fn run(
             while wall_origin.elapsed().as_secs_f64() < due && !stop.load(Ordering::Acquire) {
                 thread::sleep(Duration::from_millis(2));
             }
+            pace_wait = pacing_tick.elapsed();
         }
         let tick = Instant::now();
         if needs_config {
@@ -601,6 +746,7 @@ fn run(
                 snapshot.notice = format!("Tracking continues; {error}");
             }
         }
+        snapshot.outputs = Some(sinks.status());
         let publish = last_publish.elapsed() > Duration::from_millis(30) || step;
         let debug = engine_state.as_mut().map(|e| {
             e.tracker
@@ -636,6 +782,35 @@ fn run(
                 .unwrap_or_else(std::sync::PoisonError::into_inner) = snapshot.clone();
             return Err(snapshot.notice);
         }
+        let now = Instant::now();
+        if let Some(previous) = last_completed {
+            let dt = now.duration_since(previous).as_secs_f64();
+            if dt > 0.0 && dt < 2.0 {
+                let fps = 1.0 / dt;
+                snapshot.actual_fps = if snapshot.actual_fps > 0.0 {
+                    snapshot.actual_fps * 0.85 + fps * 0.15
+                } else {
+                    fps
+                };
+            }
+        }
+        last_completed = Some(now);
+        let elapsed = work_tick
+            .elapsed()
+            .saturating_sub(input_wait)
+            .saturating_sub(pace_wait)
+            .as_secs_f64()
+            * 1000.0;
+        snapshot.processing_ms = if snapshot.processing_ms > 0.0 {
+            snapshot.processing_ms * 0.85 + elapsed * 0.15
+        } else {
+            elapsed
+        };
+        snapshot.headroom_percent = if snapshot.source_fps > 0.0 {
+            100.0 * (1.0 - snapshot.processing_ms * snapshot.source_fps / 1000.0)
+        } else {
+            0.0
+        };
         if publish {
             snapshot.path = Arc::new(path.clone());
             snapshot.contact_trace = Arc::new(contact_trace.clone());
@@ -685,10 +860,7 @@ impl Recorder {
             .and_then(|v| std::path::Path::new(v).file_name())
             .and_then(|v| v.to_str())
             .unwrap_or("fictrac");
-        Self::new(
-            PathBuf::from("runs").join(format!("{base}-desktop-{stamp}")),
-            doc,
-        )
+        Self::new(recording_root().join(format!("{base}-{stamp}")), doc)
     }
     fn new(directory: PathBuf, doc: &ConfigDocument) -> Result<Self> {
         if let Some(p) = directory.parent() {
@@ -1058,6 +1230,46 @@ mod tests {
             3
         );
         fs::remove_dir_all(directory).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    #[test]
+    fn occupied_publisher_edit_keeps_native_tracker_source_and_queue_alive() -> Result<()> {
+        let busy = std::net::TcpListener::bind("127.0.0.1:0").map_err(|e| e.to_string())?;
+        let (source, doc) = fixture().map_err(|e| e.to_string())?;
+        let worker = Worker::start(source, doc.clone(), true)?;
+        wait_for(&worker, |s| s.frames >= 3)?;
+        worker.send(Command::Pause(true))?;
+        let before = wait_for(&worker, |s| s.paused)?;
+        let previous = before.row.as_ref().ok_or("Missing measured row")?;
+        let mut invalid = doc.clone();
+        invalid
+            .set(
+                "zmq_port",
+                &busy
+                    .local_addr()
+                    .map_err(|e| e.to_string())?
+                    .port()
+                    .to_string(),
+            )
+            .map_err(|e| e.to_string())?;
+        worker.send(Command::Configure(invalid, 9))?;
+        let rejected = wait_for(&worker, |s| s.command_error.is_some())?;
+        assert_eq!(rejected.frames, before.frames);
+        assert_eq!(rejected.revision, 0);
+        assert!(!rejected.ended);
+        assert!(rejected.notice.contains("rollback succeeded"));
+        worker.send(Command::Step)?;
+        let advanced = wait_for(&worker, |s| s.frames == before.frames + 1)?;
+        let row = advanced
+            .row
+            .as_ref()
+            .ok_or("Missing row after rejected output edit")?;
+        assert_eq!(row.frame, previous.frame + 1);
+        assert_eq!(row.sequence, previous.sequence + 1);
+        assert!(row.timestamp_ms > previous.timestamp_ms);
+        worker.send(Command::Configure(doc, 10))?;
+        let restored = wait_for(&worker, |s| s.revision == 10)?;
+        assert!(restored.command_error.is_none());
         Ok(())
     }
 }

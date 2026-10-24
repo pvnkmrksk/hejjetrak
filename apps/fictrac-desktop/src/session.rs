@@ -7,7 +7,6 @@ pub enum Tool {
     Inspect,
     Rim,
     Exclude,
-    Forward,
     Square,
     Edit,
 }
@@ -24,11 +23,23 @@ pub struct Session {
     pub snapshot: Snapshot,
     pub error: String,
     pub source_edit: String,
-    pub raw_tab: bool,
+    pub show_settings: bool,
+    pub show_diagnostics: bool,
+    pub show_overlays: bool,
+    pub cameras: Vec<fictrac_camera::CameraInfo>,
+    pub camera_edit: Option<fictrac_camera::CameraFormatRequest>,
+    pub camera_error: String,
+    pub record_raw: bool,
+    pub record_debug: bool,
+    pub startup_fallback: Option<ConfigDocument>,
+    pub fallback_notice: String,
+    pub temporary_config: bool,
     pub paused: bool,
     pub realtime: bool,
     pub tool: Tool,
     pub points: Vec<[f64; 2]>,
+    pub square_slots: Option<[Option<[f64; 2]>; 4]>,
+    pub window_rect: Option<[f32; 4]>,
     pub plane: String,
     pub full_image: bool,
     pub changed: Option<Instant>,
@@ -43,7 +54,6 @@ pub struct Session {
     pub status: String,
     pub auto_apply: bool,
     pub pending_drag: Option<(usize, usize)>,
-    pub drag_start: Option<[f64; 2]>,
     pub recording_path: String,
 }
 impl Session {
@@ -63,11 +73,23 @@ impl Session {
             snapshot: Snapshot::default(),
             error: String::new(),
             source_edit,
-            raw_tab: false,
+            show_settings: false,
+            show_diagnostics: false,
+            show_overlays: false,
+            cameras: fictrac_camera::list_cameras().unwrap_or_default(),
+            camera_edit: None,
+            camera_error: String::new(),
+            record_raw: true,
+            record_debug: false,
+            startup_fallback: None,
+            fallback_notice: String::new(),
+            temporary_config: false,
             paused: false,
             realtime: true,
             tool: Tool::Inspect,
             points: vec![],
+            square_slots: None,
+            window_rect: None,
             plane: "xy".into(),
             full_image: false,
             changed: None,
@@ -82,9 +104,74 @@ impl Session {
             status: String::new(),
             auto_apply: true,
             pending_drag: None,
-            drag_start: None,
-            recording_path: format!("runs/gui-{id}"),
+            recording_path: crate::runtime::recording_root()
+                .join(format!("VR{id}"))
+                .to_string_lossy()
+                .into_owned(),
         }
+    }
+    pub fn use_fallback(&mut self, reason: &str) {
+        if let Some(doc) = self.startup_fallback.take() {
+            self.history = DocumentHistory::new(doc.text().to_owned());
+            self.source_edit = doc.get("src_fn").unwrap_or("").to_owned();
+            self.temporary_config = true;
+            self.saved = self.history.text.clone();
+            self.fallback_notice = format!("Camera unavailable ({reason}); playing sample video");
+            let result = self.start();
+            self.report(result);
+        }
+    }
+    pub fn camera_format(
+        &mut self,
+        request: fictrac_camera::CameraFormatRequest,
+    ) -> Result<(), String> {
+        request.validate().map_err(|e| e.to_string())?;
+        if self.source_edit.parse::<u32>().is_err() {
+            return Err("Camera format requires a live camera source".into());
+        }
+        if let Some(caps) = &self.snapshot.camera {
+            let supported = caps.formats.iter().any(|f| {
+                f.width == request.width
+                    && f.height == request.height
+                    && request.fps.is_none_or(|fps| {
+                        f.frame_rates
+                            .iter()
+                            .any(|r| fps >= r.min_fps - 1e-6 && fps <= r.max_fps + 1e-6)
+                    })
+            });
+            if !supported {
+                return Err("Requested dimensions/rate are not advertised by this camera; refresh camera controls".into());
+            }
+        }
+        self.fields(&[
+            ("rust_camera_width", request.width.to_string()),
+            ("rust_camera_height", request.height.to_string()),
+            ("src_fps", request.fps.unwrap_or(-1.0).to_string()),
+        ])?;
+        self.start()
+    }
+    pub fn refresh_cameras(&mut self) {
+        match fictrac_camera::list_cameras() {
+            Ok(cameras) => {
+                self.cameras = cameras;
+                self.camera_error.clear();
+            }
+            Err(error) => self.camera_error = error.to_string(),
+        }
+    }
+    pub fn begin_recording(&mut self) {
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let path = PathBuf::from(&self.recording_path).join(format!("take-{stamp}"));
+        self.send(Command::RecordOptions(
+            path,
+            fictrac_control::RecordOptions {
+                raw: self.record_raw,
+                debug: self.record_debug,
+            },
+        ));
     }
     pub fn document(&self) -> Result<ConfigDocument, String> {
         ConfigDocument::parse(self.history.text.clone()).map_err(|e| e.to_string())
@@ -111,6 +198,7 @@ impl Session {
             fictrac_camera::request_permission().map_err(|e| e.to_string())?;
         }
         self.worker = None;
+        self.camera_edit = None;
         self.snapshot = Snapshot::default();
         self.revision = 0;
         self.textures.clear();
@@ -164,7 +252,7 @@ impl Session {
     }
     pub fn save(&mut self, as_new: bool) -> Result<(), String> {
         let mut doc = self.document()?;
-        let path = if as_new || self.path.is_none() {
+        let path = if as_new || self.path.is_none() || self.temporary_config {
             rfd::FileDialog::new()
                 .add_filter("FicTrac config", &["txt"])
                 .set_file_name("config.txt")
@@ -200,18 +288,28 @@ impl Session {
         self.path = Some(path.clone());
         self.source_base = Some(path);
         self.disk_conflict = false;
+        self.temporary_config = false;
         self.status = "Configuration saved".into();
         Ok(())
     }
     pub fn update(&mut self) {
         if let Some(worker) = &self.worker {
             self.snapshot = worker.latest();
+            if let Some(error) = &self.snapshot.command_error {
+                self.error = error.clone();
+            }
+        }
+        if self.snapshot.ended && self.snapshot.frames == 0 && self.startup_fallback.is_some() {
+            let reason = self.snapshot.notice.clone();
+            self.use_fallback(&reason);
+        } else if self.snapshot.frames > 0 {
+            self.startup_fallback = None;
         }
         if self.auto_apply && self.changed.is_some_and(|t| t.elapsed().as_millis() > 400) {
             let r = self.apply();
             self.report(r);
         }
-        if self.last_disk_check.elapsed().as_millis() > 600 {
+        if !self.temporary_config && self.last_disk_check.elapsed().as_millis() > 600 {
             self.last_disk_check = Instant::now();
             if let Some(path) = &self.path
                 && let Ok(text) = fs::read_to_string(path)

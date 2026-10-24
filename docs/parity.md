@@ -12,9 +12,9 @@ Assessed against pvnkmrksk/fictrac commit `10fc4472af1fc9062b9bf5a92738e835b98cc
 | Missing motion | Rejected frames explicitly retained in quality/all-frame data; successful relocalisation sets absolute pose with zero relative motion |
 | Legacy axes and 25-column data | ROI export basis, original signs/units, principal Rodrigues orientation, independent sequence counter; supplied reference gates unchanged |
 | Legacy accepted-only output | `.dat`, serial and UDP emit accepted rows; companion all-frame output prevents missing decisions from being hidden |
-| Calibration | Shared rim/masks/forward/square operations; saved values precede refitting, corner-only fallback; XY/YZ/XZ and fisheye/pinhole tests |
+| Calibration | Shared rim/masks/forward/square operations; graphical corner replacement preserves order; F reflected-seed bounded alternate-pose refit differs from NLopt and can report no alternate branch; saved values retain precedence |
 | Config/file state | Lossless comments/unknown fields/CRLF, raw/field synchronization, history, external conflict guard; transactional agent edits |
-| Multi-instance | Independent native windows and headless sessions; BR/VR selection, numeric-camera fallback, preserved video paths; four-window native agent run |
+| Multi-instance | Independent native windows/headless sessions; VR/BR files, incremented camera IDs/ports, preserved video paths; explicit window size/position and up to 16 grid cells |
 | Full CLI | Conventional commands plus legacy positional config invocation; structured status, schema, all numerical/calibration/recording operations through JSONL |
 | AI agent control | JSONL and MCP stdio over shared controller; native GUI JSONL over displayed sessions; actual 299-command native run and full-video headless transcript |
 | Video inputs | H.264 MP4/MOV/AVI (including B-frame ordering), MPEG-4 Part 2 MP4/MOV/AVI, MJPEG/raw AVI and mono/420 Y4M |
@@ -22,9 +22,15 @@ Assessed against pvnkmrksk/fictrac commit `10fc4472af1fc9062b9bf5a92738e835b98cc
 | Video codec boundaries | Segmented OpenDML AVI supports >4 GiB offsets; H.264 encodes even dimensions with SPS cropping; odd H.264 4:2:0 dimensions fail explicitly; exotic profiles/formats remain outside tested coverage |
 | Serial/UDP | Native Rust serial2 and datagram sinks with original prefix/full row; actual OS pseudo-terminal and loopback tests; physical serial hardware untested |
 | Camera | Built-in FaceTime HD camera: actual 640×480, nominal 30 fps, 126 native GUI agent commands, pause/step/config, two 62-frame H.264 recordings, source switch and reopen; physical sphere accuracy/iPhone/industrial SDKs unverified |
-| Native platforms | Mac GUI/CLI executed locally; Windows desktop and Linux CLI cross-checks pass; Linux GUI headers absent on Mac; native other-OS execution unverified |
-| Packaging | Local ad hoc signed development app with dependency notices; installers/Developer ID signing/notarization/releases deferred |
+| Native platforms | Mac GUI/CLI executed locally; GitHub-hosted Windows/Linux/Mac ARM+Intel full tests and synthetic CLI execution passed at the POC checkpoint; their GUI visual behavior and other-OS camera hardware remain unverified |
+| Packaging | Public source/releases and GitHub Actions archives; Mac ad hoc signing and dependency notices. POC ZIP timestamp failure repaired in the patch packager. No installer, Developer ID notarization or Windows Authenticode signing |
 
 A protocol request accepted into a GUI worker queue is not proof the action completed. Clients poll revision/frame/advance/recording/notice state and validate files. Synchronous headless commands expose the same numerical operations; playback and OS-window scheduling differ deliberately.
 
 The 300-frame sample benchmark checks aligned per-frame Rodrigues deltas, path and wrapped heading with unchanged declared tolerances. Neither that reference nor synthetic renderer tests provide physical ground truth for arbitrary experiments. Numerical optimizer differences, untested hardware, codec/container limits, timing and platform differences above prevent a claim of full drop-in parity. All unsupported codec requests fail explicitly rather than silently substituting another codec.
+
+## Compact desktop and transport additions
+
+The default preview hides config and diagnostics. A separate native inspector exposes the same canonical config and shared-core calibration actions. Source images and diagnostic panels use uniform scaling and letterboxing; cropping uses the calibrated pinhole/fisheye projection. Native pointer regressions cover active-tool isolation, nearest-point deletion and preserved square corner order. Camera controls are capability-based: exact formats/rates and readback are implemented, but support for manual exposure/gain depends on the backend and device. See camera-controls.md.
+
+ZeroMQ is a pure Rust localhost PUB with a bounded worker queue, alongside UDP/serial. PUB startup/subscriber reconnect loss and overload are observable, not guaranteed delivery. Accepted-row wire compatibility is verified independently with libzmq; full rejected-frame evidence remains in files. Busy-port edits roll back outputs while retaining the numerical source state.

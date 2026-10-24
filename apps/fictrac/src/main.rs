@@ -16,8 +16,9 @@ type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
 #[derive(Parser)]
 #[command(
+    name = "hejjetrak-cli",
     version,
-    about = "Native Rust FicTrac tracking, calibration and local agent control"
+    about = "hejjetrak: native Rust tracking, FicTrac compatibility and agent control"
 )]
 struct Cli {
     #[command(subcommand)]

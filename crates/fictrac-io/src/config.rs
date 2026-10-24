@@ -243,6 +243,8 @@ pub fn load_config_text(text: &str, width: usize, height: usize) -> Result<Loade
     for key in [
         "src_fps",
         "rust_instance_name",
+        "rust_camera_width",
+        "rust_camera_height",
         "sphere_map_fn",
         "c2a_cnrs_xy",
         "c2a_cnrs_yz",

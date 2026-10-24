@@ -1,41 +1,38 @@
 # hejjetrak
 
-A native Rust rebuild of FicTrac with a native desktop GUI and a headless CLI. The tracker, H.264 decoder, calibration tools and GUI are Rust. Camera capture uses operating-system APIs; there is no OpenCV, NLopt, FFmpeg executable, webview, Python runtime or model download in application execution. No administrator privileges are needed.
+Native Rust spherical-motion tracking, rebuilt from [FicTrac](https://github.com/pvnkmrksk/fictrac). One numerical engine serves a compact desktop app, command line, JSONL agents and MCP stdio. Video decoding and recording are Rust; capture uses native OS APIs. No OpenCV, FFmpeg executable, webview, Python runtime or administrator access is needed to run it.
 
-The GUI shows the traditional input / thresholded sphere / warped difference / instant map / path / accumulated map layout. Open a video or camera, draw the ball rim and exclusion polygons, set the forward direction or calibrate from a square, and edit the original FicTrac configuration alongside its raw text. The file representation preserves unknown parameters, comments and formatting. Undo/redo works across graphical, field and text edits.
+![Compact native ball preview](docs/images/preview.png)
 
-The recorded-video system now includes global relocalisation, sphere templates, bad-frame recovery, native serial/UDP output, raw/debug recording, a complete headless command frontend, JSONL agent control and a local MCP server. Agents can also control the actual native GUI through `--control-stdio`. Both use the same tracking, calibration and codec implementations. See [agent control](docs/agent-control.md).
+Download [platform archives](https://github.com/pvnkmrksk/hejjetrak/releases): macOS Apple Silicon/Intel, Windows x64 and Linux x64. Extract the archive and launch **hejjetrak**; the Mac archive contains **hejjetrak.app**. The command-line executable is **hejjetrak-cli**. Cargo package/binary names remain `fictrac` and `fictrac-desktop` for existing scripts. macOS archives are ad hoc signed, not notarized; Windows executables are unsigned.
 
-**Compatibility boundary:** this is not a claim of bit-identical or unrestricted parity. Rust BOBYQA/global multistart differs from upstream NLopt. All five original recording codecs are implemented, including segmented OpenDML AVI. The supplied H.264 video workflow is regression-tested against the original output; the built-in Mac camera is now tested at 640×480 and nominal 30 fps, including raw/debug recording and reopening. See [the precise parity matrix](docs/parity.md) and [validation evidence](docs/validation.md).
+**Scientific boundary:** this is a rebuild with measured compatibility, not bit-identical or unrestricted parity. Rust BOBYQA/global search differs from upstream NLopt. The supplied 300-frame video is checked against the supplied original `.dat`, and synthetic known-motion sequences check rotation accuracy. Native Mac camera acquisition/recording is tested; tracking a physical ball on the live camera and Windows/Linux camera hardware remain unverified. See [parity](docs/parity.md), [validation](docs/validation.md) and [output semantics](docs/output.md).
 
-![Initial v0.1 native desktop](docs/images/poc-v0.1.png)
+## Desktop
 
-Download platform archives from [Releases](https://github.com/pvnkmrksk/hejjetrak/releases). The first public version is v0.1.0; earlier local validation labels describe internal prototype iterations. Archives include the sample, configs, documentation and dependency license notices. macOS builds are ad hoc signed, not notarized; Windows builds are not Authenticode signed.
+The normal view is a uniformly scaled crop around the ball, measured contact trajectory and a small path inset. Images keep their original pixel aspect ratio in preview and diagnostics. The toolbar keeps **reset** and **record** available even in a 240×180 preview. Hover controls and the status strip for explanations.
 
-## Run the desktop
+- **Source** already lists cameras; click one to connect. Refresh rescans devices. Open or drop a video to play it at source speed. Ordinary startup tries the first enumerated camera; an opening/no-frame failure falls back to the bundled sample. An explicitly selected configuration is honored. Automatic fallback uses a temporary sample calibration and retains the instance's output ports; it never rewrites the rig file.
+- **Reset** clears the pose/map/path while retaining source time and integrated displacement. Rejected intervals remain explicitly unmeasured. **Record** starts/stops immediately; its chevron selects raw video, processed diagnostics, both or data only. Every take also retains accepted `.dat`, all-frame numeric data and quality CSV. Configured `save_raw`/`save_debug` still start recording automatically. Default recordings go under your Movies/Videos `hejjetrak` folder; choose another folder in the inspector.
+- **Settings** opens a separate native inspector, leaving the preview unobstructed. Groups cover source/camera, graphical calibration, geometry, tracking/quality, outputs and exact config text. The document preserves unknown fields, comments, spacing and line endings. Config fields, graphical edits and text share undo/redo. Save is explicit; external conflicts are preserved.
+- **Calibration** pauses the source. Ball rim and exclusion tools add points only to the selected geometry; right-click deletes the nearest point, and Move points drags saved geometry. Fit the rim with three or more points; finish an exclusion with Enter. Lab square uses TL → TR → BR → BL in XY/YZ/XZ. Its corners stay visible; replacing a corner preserves its position in the legacy order. **F** performs a reflected-seed alternate pose refit; a distinct valid branch is not guaranteed and failure leaves the file intact. The shared forward-vector command remains available to existing agents.
+- **Diagnostics** reveals the six traditional FicTrac panels. Calibration outlines/axes and the full image are separate view toggles, hidden by default. The status strip shows delivered FPS and processing milliseconds; its tooltip distinguishes fit time, the full worker pipeline, source budget, capture skips and output ports. Lost tracking is shown explicitly. Pauses are excluded from the running-drop count.
+- Camera settings expose advertised native resolutions/rates with readback and supported exposure/gain controls. Unsupported controls explain why they are unavailable. The tested built-in Mac camera does not expose writable exposure controls through its public AVFoundation interface. [Camera details](docs/camera-controls.md).
 
-Install [Rust](https://rustup.rs/) 1.95 or later. Windows needs the standard Visual Studio linker/build tools. Linux needs the usual desktop development packages for Wayland/X11 and camera access. Cargo fetches dependencies on the first build; the resulting executable needs no Rust installation.
+`VR1.txt`–`VR4.txt` retain the original BR calibrations and camera IDs. They enable localhost UDP **1111–1114** and ZeroMQ PUB **9871–9874** simultaneously. New windows follow the next existing VR/BR config; after those, copies increment numeric camera ID, enabled ports and instance name. Video paths remain video paths. These rig calibrations must match your actual camera and resolution before their motion is interpreted scientifically.
+
+To build locally, install [Rust](https://rustup.rs/) 1.95 or later, then:
 
 ```sh
 cargo run --release --locked
+cargo run --release --locked -- --config examples/upstream-config.txt
+cargo run --release --locked -- --windows 16 --grid 4x4
+cargo run --release --locked -- --config VR1.txt --window-size 480x360 --window-position=0,24
 ```
 
-The included 384 × 288 sample opens automatically. Or select a configuration:
+`--window-size` and `--window-position` use logical pixels. Without a size override, `--grid` derives cell sizes from the monitor; new windows otherwise place themselves beside existing ones. Sixteen native windows are supported; sustained sixteen-camera throughput depends on source, recording mode and hardware. Windows source builds require the usual Visual Studio linker, and Linux source builds need desktop/camera development headers. Prebuilt executables need no Rust installation.
 
-```sh
-cargo run --release --locked -- --config examples/upstream-config.txt --windows 4
-```
-
-Use the built `target/release/fictrac-desktop` (`.exe` on Windows) directly after building. A local development macOS app, when created in this workspace, is `target/local/FicTrac.app`. It is locally ad hoc signed and tied to the current workspace's sample assets; packaging and distribution are a later step.
-
-- **Open video** or drop a supported video onto a window to begin processing. **Cameras** lists devices; enter a numeric ID and connect. macOS requires Camera permission. A changed resolution needs its own calibration.
-- **New window** selects the next existing BR/VR configuration or numbered config. Otherwise it copies the current config and increments only numeric camera IDs. Video paths stay video paths. **Open four** creates four independent native windows.
-- **Ball rim**: click at least three rim points, then fit. **Exclude**: draw a polygon and finish with Enter. **Forward**: drag in the input panel. **Square**: select XY/YZ/XZ, then click top-left, top-right, bottom-right, bottom-left. Calibration tools pause the stream. **Move points** adjusts saved geometry.
-- Parameters and **Raw config** share one document. Auto-apply waits briefly for editing; applying calibration starts a new tracking epoch. **Save** writes explicitly. External edits reload when the document is clean; a dirty conflict is shown and never silently overwritten.
-- **Record** writes accepted-row `.dat`, full `all-frames.dat`, quality CSV and config for each epoch, plus actual raw/debug videos selected by `save_raw`, `save_debug` and `vid_codec`. Enabling video output also starts a new automatic recording directory. H.264 AVI is the original default; XVID AVI, MPEG-4 MP4, MJPEG/raw AVI and explicit `h264_mp4` are also available. H.264 recording uses High profile with independent frames to avoid costly inter-frame search; this trades compression for CPU throughput. Encoders finalize on stop/close; incomplete videos remain `.partial`.
-- Shift+R resets pose/path while retaining source count and integrated displacement. Escape closes through the normal unsaved-change flow.
-
-Input supports 8-bit H.264 and MPEG-4 Part 2 MP4/MOV/AVI, MJPEG/raw AVI and mono/420 Y4M. H.264 recording supports even dimensions using standard SPS cropping; other supported codecs can preserve odd dimensions. Native camera adapters use AVFoundation on macOS, Media Foundation on Windows and V4L2 on Linux. Live acquisition, recording and reopening are verified on the built-in FaceTime HD camera at 640×480. Physical sphere accuracy, iPhone/industrial cameras and native Windows/Linux execution remain unverified.
+See [the UI design and command mapping](docs/ui-design.md) and [agent control](docs/agent-control.md). The first public POC is v0.1.0; v0.1.1 contains the compact interface, camera controls, ZMQ and ZIP timestamp repair. Earlier v0.2/v0.3 validation names were internal prototype labels.
 
 ## CLI and the upstream benchmark
 
@@ -85,7 +82,7 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
 ```
 
-The engine has no UI, filesystem, network or codec dependencies. [Architecture](docs/architecture.md) explains the boundaries, informed by PhotoCraft's engine-first approach. CI is configured for native macOS/Windows/Linux builds; release results are recorded separately after execution. [Validation](docs/validation.md) distinguishes local results, cross-compilation and unverified hardware.
+The engine has no UI, filesystem, network or codec dependencies. [Architecture](docs/architecture.md) explains the boundaries, informed by PhotoCraft's engine-first approach. GitHub Actions has executed native Windows, Linux and both Mac architecture builds, tests and the synthetic CLI demo. Camera hardware and GUI visual checks remain scoped to the tested Mac. [Validation](docs/validation.md) distinguishes local results, cross-compilation and unverified hardware.
 
 ## Attribution
 

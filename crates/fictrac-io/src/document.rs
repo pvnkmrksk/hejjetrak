@@ -258,6 +258,14 @@ pub fn parameter_description(key: &str) -> (&'static str, &'static str) {
             "Instance",
             "Human-readable instance name. Copied VR instances increment their label, enabled UDP/ZMQ ports and numeric camera ID; video paths remain paths.",
         ),
+        "rust_camera_width" | "rust_camera_height" => (
+            "Camera",
+            "Exact native capture dimensions. Select only advertised formats; a format change reopens the camera and requires matching calibration.",
+        ),
+        "src_fps" => (
+            "Input",
+            "Positive frame rate overrides the source clock; nonpositive uses native metadata or capture timestamps. GUI playback is paced to the selected source clock.",
+        ),
         "src_fn" => (
             "Input",
             "Camera index or video path. File sources remain file sources in copied instances.",
@@ -310,10 +318,6 @@ pub fn parameter_description(key: &str) -> (&'static str, &'static str) {
         "rust_engine" => (
             "Tracking",
             "spherical (legacy default) or pairwise. Pairwise uses photometric luminance fitting with its separately documented error scale.",
-        ),
-        "src_fps" => (
-            "Input",
-            "Positive values override file playback and tracking timestamps with a uniform frame clock, or request the camera rate. Nonpositive values retain source timing.",
         ),
         "fisheye" | "cam_model" => (
             "Geometry",

@@ -1,11 +1,11 @@
 """Build-time archive assembly; never used by the Rust application."""
 import json
-import os
 from pathlib import Path
 import platform
 import plistlib
 import shutil
 import subprocess
+import zipfile
 
 root = Path(__file__).resolve().parent.parent
 system = platform.system()
@@ -23,6 +23,9 @@ if system == 'Darwin':
     resource.mkdir()
     info = plistlib.loads((root / 'apps/fictrac-desktop/Info.plist').read_bytes())
     info['CFBundleExecutable'] = 'hejjetrak'
+    if (root / 'assets/hejjetrak.icns').is_file():
+        info['CFBundleIconFile'] = 'hejjetrak.icns'
+        shutil.copy2(root / 'assets/hejjetrak.icns', resource / 'hejjetrak.icns')
     (app / 'Info.plist').write_bytes(plistlib.dumps(info))
 else:
     binary = resource = stage
@@ -54,5 +57,13 @@ for package in sorted((root / 'third-party-source').iterdir()):
 if system == 'Darwin':
     subprocess.run(['codesign', '--force', '--deep', '--sign', '-', str(stage / 'hejjetrak.app')], check=True)
     subprocess.run(['codesign', '--verify', '--deep', '--strict', str(stage / 'hejjetrak.app')], check=True)
-archive = shutil.make_archive(str(root / 'dist' / name), 'zip' if system in ('Darwin', 'Windows') else 'gztar', root_dir=stage.parent, base_dir=stage.name)
+if system in ('Darwin', 'Windows'):
+    archive = root / 'dist' / (name + '.zip')
+    # Cargo registry source archives use reproducible pre-1980 mtimes. Keep their
+    # notice content intact while clamping only ZIP's unrepresentable metadata.
+    with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED, strict_timestamps=False) as output:
+        for path in sorted(stage.rglob('*')):
+            output.write(path, path.relative_to(stage.parent))
+else:
+    archive = shutil.make_archive(str(root / 'dist' / name), 'gztar', root_dir=stage.parent, base_dir=stage.name)
 print(archive)

@@ -308,12 +308,12 @@ fn status(s: &mut Session) -> Value {
     if let Some(worker) = &s.worker {
         s.snapshot = worker.latest();
     }
-    json!({"session":s.id,"source":s.source_edit,"config_path":s.path,"native_window":s.native_window,"realtime":s.realtime,
+    json!({"session":s.id,"source":s.source_edit,"config_path":s.path,"native_window":s.native_window,"window_rect":s.window_rect,"realtime":s.realtime,
         "frames":s.snapshot.frames,"revision":s.snapshot.revision,"requested_revision":s.revision,
         "paused":s.snapshot.paused,"ended":s.snapshot.ended,"recording":s.snapshot.recording,
         "last_row":s.snapshot.row,"notice":s.snapshot.notice,"error":s.error,"status":s.status,
         "dirty":s.history.text!=s.saved,"disk_conflict":s.disk_conflict,"worker_active":s.worker.is_some(),
-        "processing_fps":s.snapshot.processing_fps,"dropped":s.snapshot.dropped,
+        "processing_fps":s.snapshot.processing_fps,"command_error":s.snapshot.command_error,"dropped_running":s.snapshot.dropped_running,"dropped":s.snapshot.dropped,
         "advance_remaining":s.snapshot.advance_remaining,"recording_directory":s.snapshot.recording_directory,
         "record_options":s.snapshot.record_options,"camera":s.snapshot.camera,"outputs":s.snapshot.outputs,
         "processing_ms":s.snapshot.processing_ms,"actual_fps":s.snapshot.actual_fps,"source_fps":s.snapshot.source_fps,"headroom_percent":s.snapshot.headroom_percent,
