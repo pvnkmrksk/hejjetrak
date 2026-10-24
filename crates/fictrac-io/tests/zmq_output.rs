@@ -106,6 +106,66 @@ fn occupied_pub_port_is_actionable_and_disabled_pub_opens_no_socket() -> TestRes
     Ok(())
 }
 #[test]
+fn reconfigure_reuses_healthy_outputs_and_restores_previous_pub_after_busy_port() -> TestResult {
+    let old_port = port()?;
+    let mut old = ConfigDocument::parse(format!("zmq_port:{old_port}\n"))?;
+    let mut sinks = OutputSinks::from_config(&old)?;
+    assert!(sinks.write(&row()).is_empty());
+    sinks.reconfigure(&old, &old)?;
+    assert_eq!(sinks.status().zmq.ok_or("missing publisher")?.enqueued, 1);
+
+    let busy = TcpListener::bind("127.0.0.1:0")?;
+    let mut replacement = ConfigDocument::parse(old.text().into())?;
+    replacement.set("zmq_port", &busy.local_addr()?.port().to_string())?;
+    let error = sinks
+        .reconfigure(&old, &replacement)
+        .err()
+        .ok_or("busy replacement unexpectedly succeeded")?;
+    assert!(
+        error
+            .to_string()
+            .contains("previous output settings restored")
+    );
+    let restored = sinks.status().zmq.ok_or("publisher was lost on rollback")?;
+    assert_eq!(restored.endpoint, format!("tcp://127.0.0.1:{old_port}"));
+    assert!(restored.worker_alive);
+    assert_eq!(restored.failures, 0);
+
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+    runtime.block_on(async {
+        let mut subscriber = zeromq::SubSocket::new();
+        subscriber.connect(&restored.endpoint).await?;
+        subscriber.subscribe("FT, ").await?;
+        let deadline = Instant::now() + Duration::from_secs(2);
+        loop {
+            assert!(sinks.write(&row()).is_empty());
+            if let Ok(message) =
+                tokio::time::timeout(Duration::from_millis(20), subscriber.recv()).await
+            {
+                let message = message?;
+                let mut expected = b"FT, ".to_vec();
+                write_dat(&mut expected, &row())?;
+                assert_eq!(message.get(0).ok_or("empty row")?.as_ref(), expected);
+                break;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "restored publisher must send rows"
+            );
+        }
+        Ok::<(), Box<dyn std::error::Error>>(())
+    })?;
+    old.set("zmq_port", "-1")?;
+    sinks.reconfigure(
+        &ConfigDocument::parse(format!("zmq_port:{old_port}\n"))?,
+        &old,
+    )?;
+    assert!(!sinks.active());
+    Ok(())
+}
+#[test]
 fn zmq_parameters_validate_losslessly_without_entering_the_core() -> TestResult {
     let base = include_str!("../../../examples/upstream-config.txt");
     for (key, value) in [

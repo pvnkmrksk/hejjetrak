@@ -182,6 +182,10 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
         "kind",
         "plane",
     ] {
+        // Legacy field edits use string values; camera controls use driver-native numbers.
+        if command == "camera_set" && key == "value" {
+            continue;
+        }
         if let Some(value) = object.get(key)
             && !value.is_string()
         {

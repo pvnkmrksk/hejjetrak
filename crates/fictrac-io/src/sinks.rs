@@ -19,6 +19,49 @@ impl OutputSinks {
             zmq: None,
         }
     }
+    /// Reuse healthy outputs when their settings are unchanged. Otherwise close
+    /// exclusive handles before reopening them, restoring the previous settings
+    /// if the replacement fails. A failed rollback leaves outputs disabled and
+    /// is explicitly reported; numerical/session state belongs to the caller.
+    pub fn reconfigure(&mut self, old: &ConfigDocument, new: &ConfigDocument) -> Result<()> {
+        let unchanged = [
+            "sock_host",
+            "sock_port",
+            "com_port",
+            "com_baud",
+            "zmq_host",
+            "zmq_port",
+            "zmq_queue_capacity",
+        ]
+        .iter()
+        .all(|key| old.get(key) == new.get(key));
+        let healthy = self.zmq.as_ref().is_none_or(|output| {
+            let status = output.status();
+            status.worker_alive && status.failures == 0
+        });
+        if unchanged && healthy {
+            return Ok(());
+        }
+        let previous = std::mem::replace(self, Self::disabled());
+        drop(previous);
+        match Self::from_config(new) {
+            Ok(outputs) => {
+                *self = outputs;
+                Ok(())
+            }
+            Err(error) => match Self::from_config(old) {
+                Ok(outputs) => {
+                    *self = outputs;
+                    Err(Error::Config(format!(
+                        "output configuration failed: {error}; rollback succeeded; previous output settings restored"
+                    )))
+                }
+                Err(rollback) => Err(Error::Config(format!(
+                    "output configuration failed: {error}; rollback failed: {rollback}; outputs are disabled; reapply a valid output configuration"
+                ))),
+            },
+        }
+    }
     /// Use an already configured native serial port (also useful for PTY harnesses).
     pub fn from_serial_port(port: serial2::SerialPort) -> Self {
         Self {

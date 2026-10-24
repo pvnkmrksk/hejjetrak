@@ -157,23 +157,6 @@ impl Session {
     fn replace(&mut self, text: String, history: DocumentHistory) -> Result<()> {
         let old_document = ConfigDocument::parse(self.history.text.clone()).map_err(display)?;
         let new_document = ConfigDocument::parse(text.clone()).map_err(display)?;
-        let same_sinks = [
-            "sock_host",
-            "sock_port",
-            "com_port",
-            "com_baud",
-            "zmq_host",
-            "zmq_port",
-            "zmq_queue_capacity",
-        ]
-        .iter()
-        .all(|key| old_document.get(key) == new_document.get(key))
-            && self
-                .sinks
-                .status()
-                .zmq
-                .as_ref()
-                .is_none_or(|output| output.worker_alive && output.failures == 0);
         let mut next =
             Self::prepare_with_sinks(text, self.path.clone(), self.source_base.clone(), false)?;
         next.history = history;
@@ -218,34 +201,20 @@ impl Session {
                 next.rows.push(row);
             }
         }
+        self.sinks
+            .reconfigure(&old_document, &new_document)
+            .map_err(display)?;
         if let Some(recording) = self.recording.take() {
-            recording.finish()?;
+            if let Err(error) = recording.finish() {
+                let rollback = self.sinks.reconfigure(&new_document, &old_document);
+                return Err(format!(
+                    "Recording finalization failed: {error}; output rollback: {rollback:?}"
+                ));
+            }
             next.warnings
                 .push("recording closed because configuration began a new epoch".into());
         }
-        if same_sinks {
-            std::mem::swap(&mut next.sinks, &mut self.sinks);
-        } else {
-            let old = std::mem::replace(&mut self.sinks, fictrac_io::OutputSinks::disabled());
-            drop(old);
-            match fictrac_io::OutputSinks::from_config(&new_document) {
-                Ok(sinks) => next.sinks = sinks,
-                Err(error) => {
-                    match fictrac_io::OutputSinks::from_config(&old_document) {
-                        Ok(previous) => self.sinks = previous,
-                        Err(rollback) => {
-                            self.warnings.push(format!("Output change failed and previous outputs could not reopen: {rollback}"));
-                            return Err(format!(
-                                "Output configuration failed: {error}; restoring previous outputs also failed: {rollback}"
-                            ));
-                        }
-                    }
-                    return Err(format!(
-                        "Output configuration failed; previous outputs restored: {error}"
-                    ));
-                }
-            }
-        }
+        std::mem::swap(&mut next.sinks, &mut self.sinks);
         if next.input == self.input {
             std::mem::swap(&mut next.source, &mut self.source);
         }
