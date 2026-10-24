@@ -1,0 +1,15 @@
+[package]
+name = "fictrac-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+glam.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+bobyqa = "=0.3.2"
+
+[lints]
+workspace = true

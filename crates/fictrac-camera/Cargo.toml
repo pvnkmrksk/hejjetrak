@@ -1,0 +1,28 @@
+[package]
+name = "fictrac-camera"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+[dependencies]
+fictrac-core.workspace = true
+thiserror.workspace = true
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSArray", "NSString", "NSDictionary", "NSObject", "NSError"] }
+objc2-av-foundation = { version = "0.3", features = ["AVCaptureDevice", "AVCaptureSession", "AVCaptureInput", "AVCaptureOutput", "AVCaptureVideoDataOutput", "AVMediaFormat", "objc2-core-media", "objc2-core-video", "dispatch2", "block2"] }
+objc2-core-media = "0.3"
+objc2-core-video = "0.3"
+objc2-core-foundation = "0.3"
+block2 = "0.6"
+dispatch2 = "0.3"
+[target.'cfg(target_os = "windows")'.dependencies]
+nokhwa = { version = "0.10.11", default-features = false, features = ["input-msmf"] }
+[target.'cfg(target_os = "linux")'.dependencies]
+nokhwa = { version = "0.10.11", default-features = false, features = ["input-v4l"] }
+[lints.rust]
+unsafe_code = "deny"
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"

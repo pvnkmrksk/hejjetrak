@@ -1,0 +1,27 @@
+## FicTrac v2.1.1 config file (build date Aug 21 2023)
+c2a_cnrs_xy      : { 345, 210, 231, 211, 238, 120, 344, 120 }
+c2a_cnrs_yz      : { 175, 10, 158, 10, 158, 24, 172, 25 }
+c2a_r            : { 0.611454, -0.456283, -1.459566 }
+c2a_src          : c2a_cnrs_yz
+c2a_t            : { 0.367086, -6.541617, 17.597703 }
+do_display       : y
+max_bad_frames   : -1
+opt_bound        : 0.35
+opt_do_global    : n
+opt_max_err      : -1.000000
+opt_max_evals    : 50
+opt_tol          : 0.001
+q_factor         : 6
+roi_c            : { -0.007760, -0.019844, 0.999773 }
+roi_circ         : { 93, 49, 68, 97, 72, 149, 125, 200, 221, 179, 243, 149, 221, 47 }
+roi_ignr         : { { 110, 13, 94, 33, 101, 56, 115, 95, 159, 101, 192, 103, 218, 84, 223, 38, 224, 9 } }
+roi_r            : 0.321057
+save_debug       : n
+save_raw         : n
+sock_host        : 127.0.0.1
+sock_port        : 1113
+src_fn           : 4
+src_fps          : -1.000000
+thr_ratio        : 1.25
+thr_win_pc       : 0.25
+vfov             : 47

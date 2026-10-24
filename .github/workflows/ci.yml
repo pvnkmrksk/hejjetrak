@@ -1,0 +1,42 @@
+name: Rust portability and regression checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Linux development libraries
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev libxkbcommon-dev libwayland-dev libclang-dev
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --locked
+      - run: cargo build --workspace --release --locked
+      - run: cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120
+      # Include dependency sources and license texts in downloadable artifacts.
+      - run: cargo vendor --locked third-party-source
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fictrac-${{ runner.os }}-${{ runner.arch }}
+          path: |
+            target/release/fictrac
+            target/release/fictrac.exe
+            target/release/fictrac-desktop
+            target/release/fictrac-desktop.exe
+            examples/
+            README.md
+            LICENSE
+            ATTRIBUTION.md
+            THIRD_PARTY.md
+            docs/
+            third-party-source/
+          if-no-files-found: error

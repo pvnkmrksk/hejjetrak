@@ -1,0 +1,26 @@
+[package]
+name = "fictrac-io"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+fictrac-core.workspace = true
+glam.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+oxideav-core.workspace = true
+oxideav-h264.workspace = true
+oxideav-mpeg4video = "=0.1.8"
+oxideav-mp4.workspace = true
+oxideav-avi = "=0.0.10"
+image = { version = "0.25.10", default-features = false, features = ["png", "jpeg", "bmp", "pnm"] }
+serial2 = { version = "0.2.38", features = ["unix"] }
+
+[target.'cfg(unix)'.dev-dependencies]
+rustix = { version = "1.1.5", features = ["pty", "termios", "fs"] }
+
+[lints]
+workspace = true

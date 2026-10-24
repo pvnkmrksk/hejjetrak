@@ -1,0 +1,6 @@
+{"id":"open","command":"open","args":{"config":"examples/benchmark/config.txt","input":"examples/sample.mp4"}}
+{"id":"track","command":"run","session":1,"args":{"frames":1000}}
+{"id":"status","command":"status","session":1}
+{"id":"export","command":"export","session":1,"args":{"directory":"runs/agent-example"}}
+{"id":"snapshot","command":"snapshot","session":1,"args":{"directory":"runs/agent-example-images"}}
+{"id":"done","command":"close","session":1}
