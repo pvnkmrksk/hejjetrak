@@ -82,7 +82,8 @@ pub fn request_schema() -> Value {
             object(json!({"path":path()}), &["path"]),
         ));
     }
-    for command in ["record_start", "snapshot", "export"] {
+    variants.push(descriptor("record_start",object(json!({"directory":path(),"record_options":object(json!({"raw":{"type":"boolean"},"debug":{"type":"boolean"}}),&["raw","debug"])}),&["directory"])));
+    for command in ["snapshot", "export"] {
         variants.push(descriptor(
             command,
             object(json!({"directory":path()}), &["directory"]),
@@ -103,9 +104,15 @@ pub fn request_schema() -> Value {
         object(json!({"kind":{"const":"exclude"},"points":points(3,256)}),&["kind","points"]),
         object(json!({"kind":{"const":"remove_exclusion"}}),&["kind"]),
         object(json!({"kind":{"const":"forward"},"start":point(),"end":point()}),&["kind","start","end"]),
+        object(json!({"kind":{"const":"square_cycle"}}),&["kind"]),
         object(json!({"kind":{"const":"square"},"plane":{"enum":["xy","yz","xz"]},"points":points(4,4)}),&["kind","plane","points"])
     ]});
     variants.push(descriptor("calibrate", calibration));
+    variants.push(descriptor("view",object(json!({"settings":{"type":"boolean"},"diagnostics":{"type":"boolean"},"overlays":{"type":"boolean"},"full_image":{"type":"boolean"}}),&[])));
+    variants.push(descriptor("camera_status", none()));
+    variants.push(descriptor("camera_format",object(json!({"width":{"type":"integer","minimum":16,"maximum":8192},"height":{"type":"integer","minimum":16,"maximum":8192},"fps":{"type":["number","null"],"minimum":0.1,"maximum":1000}}),&["width","height"])));
+    variants.push(descriptor("camera_set",json!({"oneOf":[object(json!({"control":{"const":"exposure_mode"},"mode":{"enum":["automatic","locked"]}}),&["control","mode"]),object(json!({"control":{"enum":["exposure","gain"]},"value":{"type":"number"}}),&["control","value"])]})));
+
     json!({"$schema":"https://json-schema.org/draft/2020-12/schema","title":"FicTrac request","type":"object","oneOf":variants})
 }
 /// Reject misspelled arguments instead of silently accepting agent intent loss.
@@ -120,7 +127,12 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
         "replace_config" => &["text"],
         "source" => &["input"],
         "save_config" | "map_load" | "map_save" => &["path"],
-        "record_start" | "snapshot" | "export" => &["directory"],
+        "record_start" => &["directory", "record_options"],
+        "snapshot" | "export" => &["directory"],
+        "view" => &["settings", "diagnostics", "overlays", "full_image"],
+        "camera_status" => &[],
+        "camera_format" => &["width", "height", "fps"],
+        "camera_set" => &["control", "mode", "value"],
         "step" | "run" => &["frames"],
         "rows" => &["offset", "limit"],
         "calibrate" => &["kind", "points", "start", "end", "plane"],
@@ -135,7 +147,14 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
             return Err(format!("unknown args.{key} for {command}"));
         }
     }
-    for key in ["discard", "enabled"] {
+    for key in [
+        "discard",
+        "enabled",
+        "settings",
+        "diagnostics",
+        "overlays",
+        "full_image",
+    ] {
         if let Some(value) = object.get(key)
             && !value.is_boolean()
         {
@@ -169,5 +188,67 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
             return Err(format!("args.{key} must be a string"));
         }
     }
+    if let Some(options) = object.get("record_options") {
+        serde_json::from_value::<crate::RecordOptions>(options.clone())
+            .map_err(|e| format!("args.record_options: {e}"))?;
+    }
+    if command == "camera_set" {
+        match object.get("control").and_then(Value::as_str) {
+            Some("exposure_mode") => {
+                if !matches!(
+                    object.get("mode").and_then(Value::as_str),
+                    Some("automatic" | "locked")
+                ) || object.contains_key("value")
+                {
+                    return Err("exposure_mode requires mode automatic or locked".into());
+                }
+            }
+            Some("exposure" | "gain") => {
+                if !object.get("value").is_some_and(Value::is_number) || object.contains_key("mode")
+                {
+                    return Err("exposure/gain require a numeric value in the device-advertised unit and range".into());
+                }
+            }
+            _ => return Err("camera control must be exposure_mode, exposure or gain".into()),
+        }
+    }
+    if command == "camera_format" {
+        for key in ["width", "height"] {
+            if !object
+                .get(key)
+                .and_then(Value::as_u64)
+                .is_some_and(|n| (16..=8192).contains(&n))
+            {
+                return Err(format!("args.{key} must be an integer 16..8192"));
+            }
+        }
+        if object["width"]
+            .as_u64()
+            .zip(object["height"].as_u64())
+            .is_some_and(|(width, height)| width * height > 8_000_000)
+        {
+            return Err("camera format exceeds 8 million pixels".into());
+        }
+        if let Some(fps) = object.get("fps")
+            && !fps.is_null()
+            && !fps.as_f64().is_some_and(|v| (0.1..=1000.).contains(&v))
+        {
+            return Err("args.fps must be null for automatic or a number 0.1..1000".into());
+        }
+    }
     Ok(())
+}
+
+/// The recorded-video controller does not advertise native-only actions.
+pub fn headless_request_schema() -> Value {
+    let mut schema = request_schema();
+    if let Some(variants) = schema["oneOf"].as_array_mut() {
+        variants.retain(|v| {
+            !matches!(
+                v["properties"]["command"]["const"].as_str(),
+                Some("view" | "camera_status" | "camera_set" | "camera_format")
+            )
+        });
+    }
+    schema
 }

@@ -38,6 +38,10 @@ const COMMANDS: &[&str] = &[
     "realtime",
     "calibrate",
     "record_start",
+    "view",
+    "camera_status",
+    "camera_set",
+    "camera_format",
     "record_stop",
     "map_load",
     "map_save",
@@ -310,7 +314,10 @@ fn status(s: &mut Session) -> Value {
         "last_row":s.snapshot.row,"notice":s.snapshot.notice,"error":s.error,"status":s.status,
         "dirty":s.history.text!=s.saved,"disk_conflict":s.disk_conflict,"worker_active":s.worker.is_some(),
         "processing_fps":s.snapshot.processing_fps,"dropped":s.snapshot.dropped,
-        "advance_remaining":s.snapshot.advance_remaining,"recording_directory":s.snapshot.recording_directory})
+        "advance_remaining":s.snapshot.advance_remaining,"recording_directory":s.snapshot.recording_directory,
+        "record_options":s.snapshot.record_options,"camera":s.snapshot.camera,"outputs":s.snapshot.outputs,
+        "processing_ms":s.snapshot.processing_ms,"actual_fps":s.snapshot.actual_fps,"source_fps":s.snapshot.source_fps,"headroom_percent":s.snapshot.headroom_percent,
+        "view":{"settings":s.show_settings,"diagnostics":s.show_diagnostics,"overlays":s.show_overlays,"full_image":s.full_image}})
 }
 fn send(s: &mut Session, command: Command) -> Result<Value> {
     s.worker
@@ -350,6 +357,21 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
             s.worker = None;
             s.closed = true;
             Ok(json!({"queued":true,"closed":s.id}))
+        }
+        "calibrate" if a.get("kind").and_then(Value::as_str) == Some("square_cycle") => {
+            if let Some(worker) = &s.worker {
+                s.snapshot = worker.latest();
+            }
+            let image = s
+                .snapshot
+                .image
+                .as_ref()
+                .ok_or("Square cycle needs a current source image")?;
+            let (doc, calibration) =
+                fictrac_control::cycle_square_document(&s.document()?, image.width, image.height)?;
+            let mut result = edited(s, doc)?;
+            result["calibration"] = serde_json::to_value(calibration).map_err(display)?;
+            Ok(result)
         }
         "set" | "source" | "replace_config" | "calibrate" => {
             let mut doc = s.document()?;
@@ -460,7 +482,13 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
             if path.exists() {
                 return Err("recording directory must be new".into());
             }
-            send(s, Command::Record(path))
+            if let Some(options) = fictrac_control::record_options(a)? {
+                let mut result = send(s, Command::RecordOptions(path, options))?;
+                result["requested_record_options"] = json!(options);
+                Ok(result)
+            } else {
+                send(s, Command::Record(path))
+            }
         }
         "record_stop" => send(s, Command::StopRecord),
         "map_load" => {
@@ -478,6 +506,43 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
                 return Err("sphere-map output must be new".into());
             }
             send(s, Command::SaveMap(path))
+        }
+        "view" => {
+            if let Some(value) = a.get("settings").and_then(Value::as_bool) {
+                s.show_settings = value;
+            }
+            if let Some(value) = a.get("diagnostics").and_then(Value::as_bool) {
+                s.show_diagnostics = value;
+            }
+            if let Some(value) = a.get("overlays").and_then(Value::as_bool) {
+                s.show_overlays = value;
+            }
+            if let Some(value) = a.get("full_image").and_then(Value::as_bool) {
+                s.full_image = value;
+            }
+            Ok(status(s))
+        }
+        "camera_status" | "camera_set" | "camera_format" => {
+            if !matches!(
+                s.document()?
+                    .source(s.path.as_deref().or(s.source_base.as_deref()))
+                    .map_err(display)?,
+                SourceSpec::Camera(_)
+            ) {
+                return Err("Video inputs have no live camera controls; connect a numeric camera source first".into());
+            }
+            match command {
+                "camera_status" => send(s, Command::CameraRefresh),
+                "camera_set" => {
+                    let request = serde_json::from_value(a.clone()).map_err(display)?;
+                    send(s, Command::CameraControl(request))
+                }
+                _ => {
+                    let request = serde_json::from_value(a.clone()).map_err(display)?;
+                    s.camera_format(request)?;
+                    Ok(json!({"queued":true,"status":status(s)}))
+                }
+            }
         }
         "snapshot" => snapshot(s, Path::new(string(a, "directory")?)),
         _ => Err(format!(
@@ -840,6 +905,9 @@ mod tests {
             requested_screenshot: false,
             last_state: std::time::Instant::now(),
             control: None,
+            tile_columns: 2,
+            window_origin: crate::Pair(12., 36.),
+            window_size: crate::Pair(520., 480.),
         };
         let request =
             serde_json::from_value(json!({"id":"root-close","command":"close","session":1}))?;
@@ -858,6 +926,14 @@ mod tests {
                 .iter()
                 .any(|v| v == "calibrate")
         );
+        let history = app.sessions[0].history.text.clone();
+        let previous = app.sessions[0].show_settings;
+        let invalid_view = serde_json::from_value(
+            json!({"id":"bad-view","command":"view","session":1,"args":{"settings":!previous,"overlays":"false"}}),
+        )?;
+        assert!(!Bridge::execute(&mut app, invalid_view).ok);
+        assert_eq!(app.sessions[0].show_settings, previous);
+        assert_eq!(app.sessions[0].history.text, history);
         Ok(())
     }
     #[test]
@@ -941,6 +1017,118 @@ mod tests {
         assert!(execute_session(&mut s, "close", &json!({})).is_err());
         execute_session(&mut s, "close", &json!({"discard":true}))?;
         assert!(s.closed);
+        Ok(())
+    }
+    #[test]
+    fn view_controls_and_live_camera_errors_are_explicit_without_document_edits() -> TestResult {
+        let mut s = session()?;
+        let before = s.history.text.clone();
+        let result = execute_session(
+            &mut s,
+            "view",
+            &json!({"settings":true,"diagnostics":true,"overlays":false,"full_image":true}),
+        )?;
+        assert_eq!(result["view"]["settings"], true);
+        assert_eq!(result["view"]["diagnostics"], true);
+        assert_eq!(result["view"]["overlays"], false);
+        assert_eq!(result["view"]["full_image"], true);
+        assert_eq!(s.history.text, before);
+        for (command, args) in [
+            ("camera_status", json!({})),
+            ("camera_set", json!({"control":"gain","value":1.})),
+            ("camera_format", json!({"width":640,"height":480,"fps":30.})),
+        ] {
+            let error = execute_session(&mut s, command, &args)
+                .err()
+                .ok_or("video camera command unexpectedly succeeded")?;
+            assert!(error.contains("Video inputs have no live camera controls"));
+            assert_eq!(s.history.text, before);
+        }
+        Ok(())
+    }
+    #[test]
+    fn native_record_options_track_real_video_without_config_or_revision_reset() -> TestResult {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let mut doc = ConfigDocument::parse(fs::read_to_string(
+            root.join("examples/benchmark/config.txt"),
+        )?)?;
+        doc.set(
+            "src_fn",
+            &root.join("examples/sample.mp4").to_string_lossy(),
+        )?;
+        doc.set("vid_codec", "mjpg")?;
+        let mut s = Session::new(1, doc, None);
+        s.realtime = false;
+        s.start()?;
+        s.worker
+            .as_ref()
+            .ok_or("worker missing")?
+            .send(Command::Pause(true))?;
+        s.worker
+            .as_ref()
+            .ok_or("worker missing")?
+            .send(Command::Advance(3))?;
+        fn wait(
+            s: &mut Session,
+            predicate: impl Fn(&crate::runtime::Snapshot) -> bool,
+        ) -> Result<()> {
+            let start = std::time::Instant::now();
+            loop {
+                s.snapshot = s.worker.as_ref().ok_or("worker gone")?.latest();
+                if predicate(&s.snapshot) {
+                    return Ok(());
+                }
+                if s.snapshot.ended {
+                    return Err(format!("worker ended: {}", s.snapshot.notice));
+                }
+                if start.elapsed().as_secs() > 15 {
+                    return Err(format!("worker timed out: {}", s.snapshot.notice));
+                }
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+        }
+        wait(&mut s, |snapshot| {
+            snapshot.frames >= 3 && snapshot.advance_remaining == 0
+        })?;
+        let before = s.history.text.clone();
+        let revision = s.revision;
+        let directory = temp()?.join("record");
+        let record = execute_session(
+            &mut s,
+            "record_start",
+            &json!({"directory":directory,"record_options":{"raw":true,"debug":false}}),
+        )?;
+        assert_eq!(record["requested_record_options"]["raw"], true);
+        wait(&mut s, |snapshot| {
+            snapshot.recording
+                && snapshot.record_options
+                    == Some(fictrac_control::RecordOptions {
+                        raw: true,
+                        debug: false,
+                    })
+        })?;
+        let frames = s.snapshot.frames;
+        execute_session(&mut s, "step", &json!({"frames":2}))?;
+        wait(&mut s, |snapshot| {
+            snapshot.frames >= frames + 2 && snapshot.advance_remaining == 0
+        })?;
+        execute_session(&mut s, "record_stop", &json!({}))?;
+        wait(&mut s, |snapshot| !snapshot.recording)?;
+        assert_eq!(s.history.text, before);
+        assert_eq!(s.revision, revision);
+        let media = directory.join("epoch-0000-media/raw.avi");
+        assert!(media.is_file());
+        let mut source = fictrac_io::VideoSource::open(&media)?;
+        let mut count = 0;
+        while let Some(frame) = source.next_frame()? {
+            assert_eq!((frame.width(), frame.height()), (384, 288));
+            count += 1;
+        }
+        assert_eq!(count, 2);
+        let last = s.snapshot.row.as_ref().ok_or("last tracking row missing")?;
+        assert!(last.timestamp_ms >= 4. * 1000. / 30.);
+        s.worker = None;
+        fs::remove_dir_all(directory.parent().ok_or("temp parent missing")?)?;
         Ok(())
     }
 }

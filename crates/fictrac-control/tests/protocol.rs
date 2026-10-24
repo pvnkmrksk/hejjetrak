@@ -364,3 +364,253 @@ fn realtime_is_typed_and_paces_explicit_runs_without_changing_numerics() -> Resu
     request(&mut c, "close", Some(id), json!({"discard":true}))?;
     Ok(())
 }
+
+#[test]
+fn instant_record_selectors_preserve_real_video_tracking_and_canonical_config() -> Result {
+    let temp = Temp::new()?;
+    let mut c = Controller::new();
+    let id = open(&mut c)?;
+    let reference = open(&mut c)?;
+    for session in [id, reference] {
+        request(
+            &mut c,
+            "set",
+            Some(session),
+            json!({"key":"vid_codec","value":"mjpg"}),
+        )?;
+        request(&mut c, "run", Some(session), json!({"frames":3}))?;
+    }
+    let canonical = request(&mut c, "config", Some(id), json!({}))?;
+    let epoch = request(&mut c, "status", Some(id), json!({}))?["epoch"].clone();
+    for (index, (raw, debug)) in [(true, false), (false, true), (true, true), (false, false)]
+        .into_iter()
+        .enumerate()
+    {
+        let directory = temp.0.join(format!("selection-{index}"));
+        let status = request(
+            &mut c,
+            "record_start",
+            Some(id),
+            json!({"directory":directory,"record_options":{"raw":raw,"debug":debug}}),
+        )?;
+        assert_eq!(status["record_options"], json!({"raw":raw,"debug":debug}));
+        assert_eq!(status["epoch"], epoch);
+        request(&mut c, "run", Some(id), json!({"frames":2}))?;
+        request(&mut c, "run", Some(reference), json!({"frames":2}))?;
+        request(&mut c, "record_stop", Some(id), json!({}))?;
+        assert_eq!(directory.join("raw.avi").is_file(), raw);
+        assert_eq!(directory.join("debug.avi").is_file(), debug);
+        assert_eq!(
+            fs::read_to_string(directory.join("all-frames.dat"))?
+                .lines()
+                .count(),
+            2
+        );
+        let effective =
+            fictrac_io::ConfigDocument::parse(fs::read_to_string(directory.join("config.txt"))?)?;
+        assert_eq!(effective.boolean("save_raw"), raw);
+        assert_eq!(effective.boolean("save_debug"), debug);
+        for (name, enabled, dimensions) in [
+            ("raw.avi", raw, (384, 288)),
+            ("debug.avi", debug, (640, 480)),
+        ] {
+            if enabled {
+                let mut source = fictrac_io::VideoSource::open(&directory.join(name))?;
+                let mut count = 0;
+                while let Some(frame) = source.next_frame()? {
+                    assert_eq!((frame.width(), frame.height()), dimensions);
+                    count += 1;
+                }
+                assert_eq!(count, 2);
+            }
+        }
+        assert_eq!(request(&mut c, "config", Some(id), json!({}))?, canonical);
+        let actual = request(&mut c, "status", Some(id), json!({}))?;
+        let expected = request(&mut c, "status", Some(reference), json!({}))?;
+        assert_eq!(actual["last_row"], expected["last_row"]);
+        assert_eq!(actual["total_frames"], expected["total_frames"]);
+    }
+    let bad = c.execute(Request {
+        id: json!("bad-options"),
+        command: "record_start".into(),
+        session: Some(id),
+        args: json!({"directory":temp.0.join("bad"),"record_options":{"raw":"yes","debug":false}}),
+    });
+    assert!(!bad.ok);
+    assert!(!temp.0.join("bad").exists());
+    Ok(())
+}
+#[test]
+fn square_cycle_failure_is_atomic_while_real_video_continues() -> Result {
+    let mut c = Controller::new();
+    let id = open(&mut c)?;
+    let offset = 144. / (22.5f64.to_radians().tan()) * 0.1;
+    let points = [
+        192. + offset,
+        144. - offset,
+        192. + offset,
+        144. + offset,
+        192. - offset,
+        144. + offset,
+        192. - offset,
+        144. - offset,
+    ];
+    request(
+        &mut c,
+        "set",
+        Some(id),
+        json!({"fields":{"c2a_r":"{0,0,0}","c2a_t":"{0,0,5}","c2a_src":"c2a_cnrs_xy","c2a_cnrs_xy":serde_json::to_string(&points)?}}),
+    )?;
+    request(&mut c, "run", Some(id), json!({"frames":3}))?;
+    let config = request(&mut c, "config", Some(id), json!({}))?;
+    let status = request(&mut c, "status", Some(id), json!({}))?;
+    let result = c.execute(Request {
+        id: json!("cycle"),
+        command: "calibrate".into(),
+        session: Some(id),
+        args: json!({"kind":"square_cycle"}),
+    });
+    assert!(!result.ok);
+    assert!(
+        result
+            .error
+            .is_some_and(|e| e.message.contains("no distinct accurate square pose"))
+    );
+    assert_eq!(request(&mut c, "config", Some(id), json!({}))?, config);
+    assert_eq!(request(&mut c, "status", Some(id), json!({}))?, status);
+    let continued = request(&mut c, "step", Some(id), json!({}))?;
+    assert!(
+        (continued["status"]["last_row"]["timestamp_ms"]
+            .as_f64()
+            .ok_or("no timestamp")?
+            - 100.)
+            .abs()
+            < 1e-9
+    );
+    Ok(())
+}
+#[test]
+fn native_only_controls_are_typed_and_not_advertised_for_headless_sessions() -> Result {
+    let schema = fictrac_control::headless_request_schema();
+    let variants = schema["oneOf"].as_array().ok_or("missing variants")?;
+    assert!(!variants.iter().any(|v| matches!(
+        v["properties"]["command"]["const"].as_str(),
+        Some("view" | "camera_status" | "camera_set" | "camera_format")
+    )));
+    let mut c = Controller::new();
+    for (command, args) in [
+        ("view", json!({"settings":false})),
+        ("camera_status", json!({})),
+        (
+            "camera_set",
+            json!({"control":"exposure_mode","mode":"locked"}),
+        ),
+        ("camera_format", json!({"width":640,"height":480,"fps":30})),
+    ] {
+        fictrac_control::validate_request_arguments(command, &args)?;
+        let response = c.execute(Request {
+            id: json!(command),
+            command: command.into(),
+            session: Some(1),
+            args,
+        });
+        assert!(!response.ok);
+        assert!(
+            response
+                .error
+                .is_some_and(|error| error.message.contains("native desktop session"))
+        );
+    }
+    assert!(
+        fictrac_control::validate_request_arguments(
+            "camera_set",
+            &json!({"control":"exposure","value":"10ms"})
+        )
+        .is_err()
+    );
+    assert!(
+        fictrac_control::validate_request_arguments("view", &json!({"overlays":"false"})).is_err()
+    );
+    fictrac_control::validate_request_arguments(
+        "camera_format",
+        &json!({"width":640,"height":480,"fps":null}),
+    )?;
+    fictrac_control::validate_request_arguments(
+        "camera_set",
+        &json!({"control":"exposure","value":-6.}),
+    )?;
+    assert!(
+        fictrac_control::validate_request_arguments(
+            "camera_format",
+            &json!({"width":8192,"height":8192})
+        )
+        .is_err()
+    );
+    Ok(())
+}
+
+#[test]
+fn live_output_actor_survives_parameter_edits_undo_and_video_rewind() -> Result {
+    let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+    let port = listener.local_addr()?.port();
+    drop(listener);
+    let mut c = Controller::new();
+    let id = open(&mut c)?;
+    request(
+        &mut c,
+        "set",
+        Some(id),
+        json!({"fields":{"zmq_host":"127.0.0.1","zmq_port":port.to_string(),"zmq_queue_capacity":"8"}}),
+    )?;
+    let before = request(&mut c, "run", Some(id), json!({"frames":3}))?;
+    let enqueued = before["status"]["outputs"]["zmq"]["enqueued"]
+        .as_u64()
+        .ok_or("ZMQ status missing")?;
+    assert!(enqueued >= 1);
+    request(
+        &mut c,
+        "set",
+        Some(id),
+        json!({"key":"thr_ratio","value":"1.2"}),
+    )?;
+    request(&mut c, "undo", Some(id), json!({}))?;
+    let after = request(&mut c, "step", Some(id), json!({}))?;
+    assert!(
+        after["status"]["outputs"]["zmq"]["enqueued"]
+            .as_u64()
+            .ok_or("lost ZMQ actor")?
+            > enqueued
+    );
+    request(&mut c, "rewind", Some(id), json!({}))?;
+    let continued = request(&mut c, "step", Some(id), json!({}))?;
+    assert!(
+        continued["status"]["outputs"]["zmq"]["enqueued"]
+            .as_u64()
+            .ok_or("lost ZMQ on rewind")?
+            > enqueued
+    );
+    let document = request(&mut c, "config", Some(id), json!({}))?;
+    let status = request(&mut c, "status", Some(id), json!({}))?;
+    let invalid = c.execute(Request {
+        id: json!("bad-output"),
+        command: "set".into(),
+        session: Some(id),
+        args: json!({"key":"zmq_port","value":"70000"}),
+    });
+    assert!(!invalid.ok);
+    assert_eq!(request(&mut c, "config", Some(id), json!({}))?, document);
+    assert_eq!(
+        request(&mut c, "status", Some(id), json!({}))?["last_row"],
+        status["last_row"]
+    );
+    let next = request(&mut c, "step", Some(id), json!({}))?;
+    assert!(
+        (next["status"]["last_row"]["timestamp_ms"]
+            .as_f64()
+            .ok_or("clock lost after output rollback")?
+            - 1000. / 30.)
+            .abs()
+            < 1e-9
+    );
+    Ok(())
+}

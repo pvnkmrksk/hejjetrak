@@ -4,6 +4,33 @@ use fictrac_core::{Config, DebugViews, GrayFrame, TrackRow};
 use fictrac_io::{ConfigDocument, RecordingCodec, VideoRecorder};
 use std::path::Path;
 
+/// Transient recording selection. Canonical configuration and tracker state stay unchanged.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RecordOptions {
+    pub raw: bool,
+    pub debug: bool,
+}
+impl RecordOptions {
+    pub fn from_document(document: &ConfigDocument) -> Self {
+        Self {
+            raw: document.boolean("save_raw"),
+            debug: document.boolean("save_debug"),
+        }
+    }
+    /// A recording saves its effective selection without rewriting the user's document.
+    pub fn recording_document(self, document: &ConfigDocument) -> Result<ConfigDocument> {
+        let mut effective = document.clone();
+        effective
+            .set("save_raw", if self.raw { "y" } else { "n" })
+            .map_err(display)?;
+        effective
+            .set("save_debug", if self.debug { "y" } else { "n" })
+            .map_err(display)?;
+        Ok(effective)
+    }
+}
+
 pub struct MediaRecorders {
     raw: Option<VideoRecorder>,
     debug: Option<VideoRecorder>,
@@ -125,6 +152,7 @@ pub fn gray_rgb(frame: &GrayFrame) -> Vec<u8> {
         .collect()
 }
 pub(crate) struct Recording {
+    options: RecordOptions,
     dat: std::fs::File,
     all: std::fs::File,
     quality: std::fs::File,
@@ -152,12 +180,16 @@ impl Recording {
         file.write_all(doc.text().as_bytes()).map_err(display)?;
         let media = MediaRecorders::create(directory, doc, config, fps)?;
         Ok(Self {
+            options: RecordOptions::from_document(doc),
             dat,
             all,
             quality,
             media,
             path: vec![],
         })
+    }
+    pub(crate) fn options(&self) -> RecordOptions {
+        self.options
     }
     pub(crate) fn write(
         &mut self,

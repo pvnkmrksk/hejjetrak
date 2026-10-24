@@ -4,8 +4,8 @@ mod recording;
 mod schema;
 use fictrac_core::{Config, DebugViews, Diagnostics, GrayFrame, TrackRow, Tracker};
 use fictrac_io::{ConfigDocument, DocumentHistory, SourceSpec, VideoSource, load_config_text};
-pub use recording::{MediaRecorders, gray_rgb};
-pub use schema::request_schema;
+pub use recording::{MediaRecorders, RecordOptions, gray_rgb};
+pub use schema::{headless_request_schema, request_schema};
 pub fn validate_request_arguments(command: &str, args: &Value) -> Result<()> {
     schema::validate_arguments(command, args)
 }
@@ -80,6 +80,14 @@ struct Session {
 }
 impl Session {
     fn prepare(text: String, path: Option<PathBuf>, source_base: Option<PathBuf>) -> Result<Self> {
+        Self::prepare_with_sinks(text, path, source_base, true)
+    }
+    fn prepare_with_sinks(
+        text: String,
+        path: Option<PathBuf>,
+        source_base: Option<PathBuf>,
+        open_sinks: bool,
+    ) -> Result<Self> {
         let doc = ConfigDocument::parse(text.clone()).map_err(display)?;
         let input = match doc
             .source(source_base.as_deref().or(path.as_deref()))
@@ -103,7 +111,11 @@ impl Session {
                 .load_sphere_template(fictrac_io::load_sphere_map(&template).map_err(display)?)
                 .map_err(display)?;
         }
-        let sinks = fictrac_io::OutputSinks::from_config(&doc).map_err(display)?;
+        let sinks = if open_sinks {
+            fictrac_io::OutputSinks::from_config(&doc).map_err(display)?
+        } else {
+            fictrac_io::OutputSinks::disabled()
+        };
         let diagnostics = Diagnostics::new(
             loaded.config.clone(),
             doc.number("q_factor", 6.) as usize,
@@ -140,15 +152,34 @@ impl Session {
         })
     }
     fn status(&self, id: u64) -> Value {
-        json!({"session":id,"source":self.input,"config_path":self.path,"paused":self.paused,"realtime":self.realtime,"ended":self.ended,"epoch":self.epoch,"frames":self.rows.len(),"total_frames":self.total_frames,"last_row":self.rows.last(),"video":self.source.info,"warnings":self.warnings,"recording":self.recording.is_some(),"sinks_active":self.sinks.active()})
+        json!({"session":id,"source":self.input,"config_path":self.path,"paused":self.paused,"realtime":self.realtime,"ended":self.ended,"epoch":self.epoch,"frames":self.rows.len(),"total_frames":self.total_frames,"last_row":self.rows.last(),"video":self.source.info,"warnings":self.warnings,"recording":self.recording.is_some(),"record_options":self.recording.as_ref().map(|r|r.options()),"sinks_active":self.sinks.active(),"outputs":self.sinks.status()})
     }
     fn replace(&mut self, text: String, history: DocumentHistory) -> Result<()> {
-        let mut next = Self::prepare(text, self.path.clone(), self.source_base.clone())?;
+        let old_document = ConfigDocument::parse(self.history.text.clone()).map_err(display)?;
+        let new_document = ConfigDocument::parse(text.clone()).map_err(display)?;
+        let same_sinks = [
+            "sock_host",
+            "sock_port",
+            "com_port",
+            "com_baud",
+            "zmq_host",
+            "zmq_port",
+            "zmq_queue_capacity",
+        ]
+        .iter()
+        .all(|key| old_document.get(key) == new_document.get(key))
+            && self
+                .sinks
+                .status()
+                .zmq
+                .as_ref()
+                .is_none_or(|output| output.worker_alive && output.failures == 0);
+        let mut next =
+            Self::prepare_with_sinks(text, self.path.clone(), self.source_base.clone(), false)?;
         next.history = history;
         next.realtime = self.realtime;
         next.epoch = self.epoch + 1;
         if next.input == self.input {
-            std::mem::swap(&mut next.source, &mut self.source);
             next.total_frames = self.total_frames;
             next.emitted_timestamp = self.emitted_timestamp;
             next.source_timestamp = self.source_timestamp;
@@ -191,6 +222,32 @@ impl Session {
             recording.finish()?;
             next.warnings
                 .push("recording closed because configuration began a new epoch".into());
+        }
+        if same_sinks {
+            std::mem::swap(&mut next.sinks, &mut self.sinks);
+        } else {
+            let old = std::mem::replace(&mut self.sinks, fictrac_io::OutputSinks::disabled());
+            drop(old);
+            match fictrac_io::OutputSinks::from_config(&new_document) {
+                Ok(sinks) => next.sinks = sinks,
+                Err(error) => {
+                    match fictrac_io::OutputSinks::from_config(&old_document) {
+                        Ok(previous) => self.sinks = previous,
+                        Err(rollback) => {
+                            self.warnings.push(format!("Output change failed and previous outputs could not reopen: {rollback}"));
+                            return Err(format!(
+                                "Output configuration failed: {error}; restoring previous outputs also failed: {rollback}"
+                            ));
+                        }
+                    }
+                    return Err(format!(
+                        "Output configuration failed; previous outputs restored: {error}"
+                    ));
+                }
+            }
+        }
+        if next.input == self.input {
+            std::mem::swap(&mut next.source, &mut self.source);
         }
         *self = next;
         Ok(())
@@ -376,6 +433,15 @@ impl Controller {
     fn dispatch(&mut self, r: Request) -> Result<Value> {
         let a = &r.args;
         schema::validate_arguments(&r.command, a)?;
+        if matches!(
+            r.command.as_str(),
+            "view" | "camera_status" | "camera_set" | "camera_format"
+        ) {
+            return Err(format!(
+                "{} requires a native desktop session; this headless controller processes recorded video and has no live camera or rendered view",
+                r.command
+            ));
+        }
         match r.command.as_str() {
             "schema" | "discover" => return Ok(schema()),
             "sessions" => {
@@ -448,6 +514,7 @@ impl Controller {
             }
             "set" | "source" | "replace_config" | "calibrate" => {
                 let mut doc = ConfigDocument::parse(s.history.text.clone()).map_err(display)?;
+                let mut calibration_result = None;
                 match r.command.as_str() {
                     "set" => {
                         if let Some(fields) = a.get("fields").and_then(Value::as_object) {
@@ -471,6 +538,13 @@ impl Controller {
                             ConfigDocument::parse(string(a, "text")?.to_owned()).map_err(display)?
                     }
                     "calibrate" => match string(a, "kind")? {
+                        "square_cycle" => {
+                            let (next, result) =
+                                cycle_square_document(&doc, s.config.width, s.config.height)?;
+                            doc = next;
+                            calibration_result =
+                                Some(serde_json::to_value(result).map_err(display)?);
+                        }
                         "rim" => {
                             let points = points(a)?;
                             let sphere = fictrac_core::calibration::fit_rim(&s.config, &points)
@@ -546,7 +620,11 @@ impl Controller {
                     _ => {}
                 }
                 s.edit(doc)?;
-                Ok(s.status(id))
+                let mut result = s.status(id);
+                if let Some(calibration) = calibration_result {
+                    result["calibration"] = calibration;
+                }
+                Ok(result)
             }
             "undo" | "redo" => {
                 let mut history = s.history.clone();
@@ -600,14 +678,19 @@ impl Controller {
             }
             "rewind" => {
                 let history = s.history.clone();
-                let mut next =
-                    Session::prepare(history.text.clone(), s.path.clone(), s.source_base.clone())?;
+                let mut next = Session::prepare_with_sinks(
+                    history.text.clone(),
+                    s.path.clone(),
+                    s.source_base.clone(),
+                    false,
+                )?;
                 next.history = history;
                 next.realtime = s.realtime;
                 next.epoch = s.epoch + 1;
                 if let Some(recording) = s.recording.take() {
                     recording.finish()?;
                 }
+                std::mem::swap(&mut next.sinks, &mut s.sinks);
                 *s = next;
                 Ok(s.status(id))
             }
@@ -626,7 +709,10 @@ impl Controller {
                 if s.recording.is_some() {
                     return Err("recording already active; stop it before starting another".into());
                 }
-                let doc = ConfigDocument::parse(s.history.text.clone()).map_err(display)?;
+                let canonical = ConfigDocument::parse(s.history.text.clone()).map_err(display)?;
+                let options =
+                    record_options(a)?.unwrap_or_else(|| RecordOptions::from_document(&canonical));
+                let doc = options.recording_document(&canonical)?;
                 let requested = doc.number("src_fps", -1.);
                 let fps = if requested > 0. {
                     requested
@@ -847,7 +933,7 @@ pub fn serve(reader: &mut impl BufRead, writer: &mut impl Write) -> Result<()> {
     Ok(())
 }
 pub fn schema() -> Value {
-    json!({"name":"fictrac-control","capabilities":{"input_formats":["H264 or MPEG4 Visual MP4/MOV","H264/XVID/MJPEG/raw AVI including OpenDML","8-bit mono/420 Y4M"],"recording_codecs":{"h264":"H264 AVI","xvid":"MPEG4 Visual AVI / XVID","mpg4":"MPEG4 Visual MP4","mjpg":"MJPEG AVI","raw":"uncompressed AVI","h264_mp4":"H264 MP4"},"h264_display_dimensions":"even dimensions 16..8192; macroblock edge padding and normative SPS cropping preserve display geometry","sphere_map_output_formats":["PNG","BMP","PGM"],"native_camera_in_this_controller":false},"json_schema":request_schema(),"protocol_version":PROTOCOL_VERSION,"transport":"JSONL stdin/stdout; one request and one response per line","request":{"id":"any JSON value returned unchanged","command":"command name","session":"integer session ID except discovery/open/sessions","args":"object"},"response":{"id":"request ID","ok":"boolean","result":"object or null","error":"{code,message} or null"},"semantics":{"execution":"synchronous, deterministic; start arms a session; step/run advance frames; no hidden background loop","configuration":"validated atomically; successful edits preserve current video position and begin a new tracking epoch; source changes or rewind reopen the source","writes":"all output files/directories must be new; no overwrite","live_camera":"desktop native capture; headless agent controller currently accepts recorded video","limits":{"sessions":16,"request_bytes":MAX_REQUEST_BYTES,"frames_per_command":10000,"rows_per_session":MAX_ROWS}},"commands":[
+    json!({"name":"fictrac-control","capabilities":{"input_formats":["H264 or MPEG4 Visual MP4/MOV","H264/XVID/MJPEG/raw AVI including OpenDML","8-bit mono/420 Y4M"],"recording_codecs":{"h264":"H264 AVI","xvid":"MPEG4 Visual AVI / XVID","mpg4":"MPEG4 Visual MP4","mjpg":"MJPEG AVI","raw":"uncompressed AVI","h264_mp4":"H264 MP4"},"h264_display_dimensions":"even dimensions 16..8192; macroblock edge padding and normative SPS cropping preserve display geometry","sphere_map_output_formats":["PNG","BMP","PGM"],"native_camera_in_this_controller":false},"json_schema":headless_request_schema(),"protocol_version":PROTOCOL_VERSION,"transport":"JSONL stdin/stdout; one request and one response per line","request":{"id":"any JSON value returned unchanged","command":"command name","session":"integer session ID except discovery/open/sessions","args":"object"},"response":{"id":"request ID","ok":"boolean","result":"object or null","error":"{code,message} or null"},"semantics":{"execution":"synchronous, deterministic; start arms a session; step/run advance frames; no hidden background loop","configuration":"validated atomically; successful edits preserve current video position and begin a new tracking epoch; source changes or rewind reopen the source","writes":"all output files/directories must be new; no overwrite","live_camera":"desktop native capture; headless agent controller currently accepts recorded video","limits":{"sessions":16,"request_bytes":MAX_REQUEST_BYTES,"frames_per_command":10000,"rows_per_session":MAX_ROWS}},"commands":[
         {"name":"discover","args":{}},{"name":"schema","args":{}},{"name":"sessions","args":{}},
         {"name":"open","args":{"config":"path to legacy config OR text string","text":"optional literal config","input":"optional video override"}},
         {"name":"new_instance","args":{},"description":"select next existing BR/VR config or clone; increment numeric camera source only"},
@@ -855,7 +941,7 @@ pub fn schema() -> Value {
         {"name":"set","args":{"key":"legacy field name","value":"legacy value string","fields":"optional object of field:value strings for atomic batch"}},
         {"name":"replace_config","args":{"text":"complete legacy document"}},
         {"name":"source","args":{"input":"video file path"}},
-        {"name":"calibrate","args":{"kind":"rim|exclude|remove_exclusion|forward|square","points":"[[x,y],...] source pixels; square TL,TR,BR,BL","start":"[x,y] for forward","end":"[x,y] for forward","plane":"xy|yz|xz for square"}},
+        {"name":"calibrate","args":{"kind":"rim|exclude|remove_exclusion|forward|square|square_cycle","points":"[[x,y],...] source pixels; square TL,TR,BR,BL","start":"[x,y] for forward","end":"[x,y] for forward","plane":"xy|yz|xz for square"}},
         {"name":"undo","args":{}},{"name":"redo","args":{}},
         {"name":"save_config","args":{"path":"new output file"}},
         {"name":"start","args":{}},{"name":"pause","args":{}},
@@ -867,7 +953,7 @@ pub fn schema() -> Value {
         {"name":"rows","args":{"offset":"default0","limit":"1..10000 default100"}},
         {"name":"snapshot","args":{"directory":"new directory; input and four diagnostic PGM images"}},
         {"name":"export","args":{"directory":"new directory; dat, quality, config and path SVG"}},
-        {"name":"record_start","args":{"directory":"new directory; dat, all-frames, quality, config and configured raw/debug videos"}},
+        {"name":"record_start","args":{"directory":"new directory; dat, all-frames, quality, config and raw/debug videos","record_options":"optional {raw:boolean,debug:boolean}; transient override without config edits or tracker reset"}},
         {"name":"record_stop","args":{}},
         {"name":"map_save","args":{"path":"new sphere template PGM/PNG path"}},
         {"name":"map_load","args":{"path":"saved sphere template"}},
@@ -959,7 +1045,7 @@ pub fn serve_mcp(reader: &mut impl BufRead, writer: &mut impl Write) -> Result<(
             "ping" => Ok(json!({})),
             _ if !initialized => Err((-32002, "initialize before using tools".to_owned())),
             "tools/list" => {
-                let mut input_schema = request_schema();
+                let mut input_schema = headless_request_schema();
                 if let Some(variants) = input_schema["oneOf"].as_array_mut() {
                     for variant in variants {
                         if let Some(properties) = variant["properties"].as_object_mut() {
@@ -1035,4 +1121,44 @@ fn create_directory(path: &Path) -> Result<()> {
         fs::create_dir_all(parent).map_err(display)?;
     }
     fs::create_dir(path).map_err(display)
+}
+
+/// Parse the transient raw/debug selector shared with the native worker bridge.
+pub fn record_options(args: &Value) -> Result<Option<RecordOptions>> {
+    args.get("record_options")
+        .map(|value| serde_json::from_value(value.clone()).map_err(display))
+        .transpose()
+}
+/// Preserve corner correspondence and c2a_src while applying the shared F re-fit.
+pub fn cycle_square_document(
+    document: &ConfigDocument,
+    width: usize,
+    height: usize,
+) -> Result<(ConfigDocument, fictrac_core::calibration::SquarePoseCycle)> {
+    let source = document
+        .get("c2a_src")
+        .ok_or("Square cycling requires a saved c2a_src; fit a square first")?;
+    let plane = source
+        .strip_prefix("c2a_cnrs_")
+        .filter(|p| matches!(*p, "xy" | "yz" | "xz"))
+        .ok_or(
+            "F cycling requires c2a_cnrs_xy, c2a_cnrs_yz or c2a_cnrs_xz; select a square first",
+        )?;
+    let values: Vec<f64> = document.vector(source).map_err(display)?;
+    if values.len() != 8 {
+        return Err("Saved square must contain four x/y corner pairs".into());
+    }
+    let points = values.as_chunks::<2>().0;
+    let translation = document.vector("c2a_t").map_err(display)?;
+    let config = load_config_text(document.text(), width, height)
+        .map_err(display)?
+        .config;
+    let result = fictrac_core::calibration::cycle_square_pose(&config, plane, points, translation)
+        .map_err(display)?;
+    let mut next = document.clone();
+    next.set("c2a_r", &legacy(result.camera_to_lab)?)
+        .map_err(display)?;
+    next.set("c2a_t", &legacy(result.translation)?)
+        .map_err(display)?;
+    Ok((next, result))
 }
