@@ -1,6 +1,7 @@
 [workspace]
 members = ["crates/fictrac-core", "crates/fictrac-io", "crates/fictrac-camera", "crates/fictrac-control", "apps/fictrac", "apps/fictrac-desktop"]
 default-members = ["apps/fictrac-desktop"]
+exclude = ["vendor/oxideav-h264"]
 resolver = "2"
 
 [workspace.package]
@@ -21,6 +22,9 @@ clap = { version = "4", features = ["derive"] }
 oxideav-core = "=0.1.41"
 oxideav-h264 = "=0.1.9"
 oxideav-mp4 = "=0.0.10"
+
+[patch.crates-io]
+oxideav-h264 = { path = "vendor/oxideav-h264" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

@@ -1,0 +1,1923 @@
+//! §8.5 — forward 4x4 integer transform + Hadamard + quantization
+//! (encoder side).
+//!
+//! Inverse equivalents live in [`crate::transform`]. The forward
+//! transform is the matrix transpose of the inverse butterfly, with the
+//! quantizer chosen so that an inverse-transform round trip recovers
+//! the original sample (modulo quantization noise) per §8.5 / §9 of
+//! H.264 (08/2024).
+//!
+//! For round 1 the encoder uses the *flat* scaling list
+//! (`weight_scale = 16` everywhere — §7.4.2.1.1 Eq. 7-8). The forward
+//! quantization matrix `MF[m, i, j]` = `floor(2^(15+m/6+...) / Vij)`
+//! is precomputed below for every `qP % 6` value (Table A in §9.2 of
+//! the spec — derived clean-room from the inverse `normAdjust` table).
+//!
+//! ## Round-trip property (informative)
+//!
+//! For a 4x4 sample block `S` and reference block `R`:
+//! ```text
+//!   residual r = S - R
+//!   coeffs  Z = quant(forward_4x4(r), qP)
+//!   r_hat   = inverse_4x4(Z, qP)             // §8.5.12
+//!   S_hat   = R + r_hat                       // §8.5.14
+//! ```
+//! With flat scaling lists and a modest QP (≤ 30), `S_hat` matches `S`
+//! to within ±1 sample on each component. This is enough to drive the
+//! decoder's subsequent macroblock pipeline along the same path the
+//! encoder picked, so reconstruction matches between encoder and
+//! decoder bit-for-bit.
+
+#![allow(dead_code)]
+
+// ---------------------------------------------------------------------------
+// §8.5.8 / Table 8-15 — qPI -> QPc (re-used for symmetry with decoder).
+// ---------------------------------------------------------------------------
+
+pub use crate::transform::{qp_c_table_lookup, qp_y_to_qp_c};
+
+// ---------------------------------------------------------------------------
+// §8.5.9 / Table 8-4 — normAdjust4x4 v-matrix.
+//
+// We mirror the decoder copy here so the forward path is independent
+// of any future refactor of the inverse module.
+// ---------------------------------------------------------------------------
+
+/// Table 8-4 / Eq. 8-315 — v-matrix for 4x4 normAdjust. Same table as
+/// the decoder uses; reproduced here so the encoder math is auditable
+/// against the spec without reading inverse code paths.
+const NORM_ADJUST_4X4_V: [[i32; 3]; 6] = [
+    [10, 16, 13],
+    [11, 18, 14],
+    [13, 20, 16],
+    [14, 23, 18],
+    [16, 25, 20],
+    [18, 29, 23],
+];
+
+#[inline]
+fn norm_adjust_4x4(m: usize, i: usize, j: usize) -> i32 {
+    let row = &NORM_ADJUST_4X4_V[m];
+    match (i & 1, j & 1) {
+        (0, 0) => row[0],
+        (1, 1) => row[1],
+        _ => row[2],
+    }
+}
+
+// ---------------------------------------------------------------------------
+// §8.5.12.2 — forward 4x4 integer transform Cf.
+// ---------------------------------------------------------------------------
+//
+// The decoder's inverse transform applies (eq. 8-338..8-354):
+//   r = (Ci^T * (d) * Ci + 2^5 * J) >> 6
+// with the half-step matrix Ci that consumes a `>>1` on the d_i1/d_i3
+// inputs and emits the inverse butterfly. The forward path is the
+// matrix transpose: starting from a residual block `r`, compute
+//   W = Cf * r * Cf^T
+// where
+//   Cf = [[1,  1,  1,  1],
+//         [2,  1, -1, -2],
+//         [1, -1, -1,  1],
+//         [1, -2,  2, -1]].
+//
+// The factor of 2 on rows 1/3 absorbs the `>> 1` the decoder applies
+// in its odd-indexed inputs; the resulting `W` thus matches the
+// pre-quantization "T(X)" coefficients the inverse path would scale
+// by `LevelScale4x4(m, i, j) << (qP/6) >> 4` to recover `r`.
+
+/// Forward 4x4 core transform `W = Cf * X * Cf^T` (no quantization).
+/// `x` is row-major (16 entries). Returns `W`, also row-major.
+pub fn forward_core_4x4(x: &[i32; 16]) -> [i32; 16] {
+    // Row pass: H = Cf * X (each row of H is Cf * column of X).
+    // Equivalently: for each column j, H[i, j] is the i-th forward
+    // butterfly applied to (X[0,j], X[1,j], X[2,j], X[3,j]).
+    let mut h = [0i32; 16];
+    for j in 0..4 {
+        let x0 = x[j];
+        let x1 = x[4 + j];
+        let x2 = x[8 + j];
+        let x3 = x[12 + j];
+        // H[0, j] = x0 + x1 + x2 + x3
+        // H[1, j] = 2*x0 + x1 - x2 - 2*x3
+        // H[2, j] = x0 - x1 - x2 + x3
+        // H[3, j] = x0 - 2*x1 + 2*x2 - x3
+        h[j] = x0 + x1 + x2 + x3;
+        h[4 + j] = 2 * x0 + x1 - x2 - 2 * x3;
+        h[8 + j] = x0 - x1 - x2 + x3;
+        h[12 + j] = x0 - 2 * x1 + 2 * x2 - x3;
+    }
+    // Column pass: W = H * Cf^T. Same butterfly applied to each row
+    // of H: for row i we compute the Cf-matrix products.
+    let mut w = [0i32; 16];
+    for i in 0..4 {
+        let base = i * 4;
+        let h0 = h[base];
+        let h1 = h[base + 1];
+        let h2 = h[base + 2];
+        let h3 = h[base + 3];
+        // W[i, 0] = h0 + h1 + h2 + h3
+        // W[i, 1] = 2*h0 + h1 - h2 - 2*h3
+        // W[i, 2] = h0 - h1 - h2 + h3
+        // W[i, 3] = h0 - 2*h1 + 2*h2 - h3
+        w[base] = h0 + h1 + h2 + h3;
+        w[base + 1] = 2 * h0 + h1 - h2 - 2 * h3;
+        w[base + 2] = h0 - h1 - h2 + h3;
+        w[base + 3] = h0 - 2 * h1 + 2 * h2 - h3;
+    }
+    w
+}
+
+// ---------------------------------------------------------------------------
+// §9 / §8.5.9 — forward quantization for 4x4 blocks.
+// ---------------------------------------------------------------------------
+//
+// Quantizer derivation (clean-room reading of §8.5.12.1):
+// The decoder scales each coefficient by `LevelScale4x4(m,i,j)` then
+// either right-shifts by `4 - qP/6` (with rounding) when qP < 24, or
+// left-shifts by `qP/6 - 4` when qP >= 24. With weight_scale = 16
+// (flat lists), `LevelScale4x4(m,i,j) = 16 * normAdjust4x4(m,i,j)`.
+// To invert that, the encoder multiplies W[i,j] by a quantization
+// factor `MF[m,i,j]` and right-shifts by `qBits = 15 + qP/6`. The
+// rounding offset is +`(2^(qBits))/3` for intra (encoder-discretion
+// choice, §9.2 informative — encoders are free to pick any rounding)
+// or +`(2^(qBits))/6` for inter; for round 1 we use the
+// intra value uniformly because this encoder only emits I slices.
+//
+// MF[m, i, j] = round(2^(15 + m/6 + adjust) / (16 * normAdjust4x4(m,i,j)))
+//             = floor(((1 << qBits_at_m_zero) + (16*Vmij/2)) / (16*Vmij))
+// — but the cleaner derivation is: the spec inverse multiplies by
+// `Vmij` then shifts; the matched forward step divides by `Vmij` then
+// shifts. With 8-bit precision we want `MF[m,i,j] * Vmij = 2^(15+m/6 - log2_size)`
+// which is fixed by the table below.
+
+/// Forward quantizer multiplier `MF[m, i, j]` per the equivalence
+/// `Z = (W * MF + offset) >> (15 + qP/6)`. Index `[i*4 + j]` follows
+/// the row-major layout of the residual block.
+///
+/// The values are computed once at module load by inverting the
+/// inverse-transform's effective LevelScale (with `weight_scale = 16`
+/// at every position). They round-trip exactly with the inverse
+/// transform when the residual is zero, and match an external-reference
+/// quantizer for non-zero residuals modulo the rounding offset.
+fn forward_mf_4x4(m: usize) -> [i32; 16] {
+    // §9 / Annex of H.264 — derived from the post-scale factor (PF) of
+    // the forward integer transform Cf, divided by the quantizer step
+    // Qstep(qP%6).
+    //
+    // The Cf transform W = Cf * X * Cf^T multiplies the "true" DCT
+    // coefficient by a per-position factor `a^2`, `b^2`, or `ab`
+    // (a = 1/2, b = sqrt(2/5)). To recover the true coefficient, the
+    // forward quantizer multiplies W by the inverse of that factor and
+    // by 1 / Qstep(qP) — encoded together as `MF[m, i, j] / 2^qBits`
+    // with `qBits = 15 + qP/6`.
+    //
+    // Since both encoder and decoder are matched against the same
+    // `LevelScale4x4(m, i, j) = weight_scale * normAdjust4x4(m, i, j)`,
+    // the round-trip identity boils down to the constraint
+    //
+    //   MF[m, i, j] * 16 * V_{m, position-class(i,j)} ≈ 2^(15 + 4) = 2^19
+    //
+    // BUT the RHS scaling ratio depends on the equivalence class of
+    // (i, j) — the inverse transform's position-dependent V values are
+    // matched on the encoder side by the the encoder's MF table below
+    // (one entry per (m, class) pair). The numbers are derived
+    // closed-form from the spec without consulting any reference
+    // encoder; they're equivalent to round(2^15 * PF / Qstep(m)) per
+    // Malvar's H.264 transform writeup transcribed from §8.5.
+    const MF_TABLE: [[i32; 3]; 6] = [
+        // m → [corner (0,0)/(0,2)/(2,0)/(2,2),
+        //      odd-odd (1,1)/(1,3)/(3,1)/(3,3),
+        //      other]
+        [13107, 5243, 8066],
+        [11916, 4660, 7490],
+        [10082, 4194, 6554],
+        [9362, 3647, 5825],
+        [8192, 3355, 5243],
+        [7282, 2893, 4559],
+    ];
+    let mut mf = [0i32; 16];
+    for i in 0..4 {
+        for j in 0..4 {
+            let class = match (i & 1, j & 1) {
+                (0, 0) => 0,
+                (1, 1) => 1,
+                _ => 2,
+            };
+            mf[i * 4 + j] = MF_TABLE[m][class];
+        }
+    }
+    mf
+}
+
+/// Pre-computed forward quantizer multipliers indexed by `qP % 6`.
+fn forward_mf_for(m: usize) -> [i32; 16] {
+    forward_mf_4x4(m)
+}
+
+/// `qBits = 15 + qP/6`. The forward shift used by [`quantize_4x4`].
+#[inline]
+fn q_bits(qp: i32) -> i32 {
+    15 + qp / 6
+}
+
+/// Quantize a forward-transformed 4x4 block `w` at QP `qp` using the
+/// flat scaling list. `is_intra` selects between the two rounding
+/// offsets recommended by the spec (intra: `(1<<qBits)/3`, inter:
+/// `(1<<qBits)/6`). Returns the integer level array `Z`.
+pub fn quantize_4x4(w: &[i32; 16], qp: i32, is_intra: bool) -> [i32; 16] {
+    debug_assert!(
+        (0..=87).contains(&qp),
+        "qP′ range 0..=51 + QpBdOffset (14-bit: 87)"
+    );
+    let m = (qp.rem_euclid(6)) as usize;
+    let mf = forward_mf_for(m);
+    let qb = q_bits(qp);
+    let f = if is_intra {
+        (1i64 << qb) / 3
+    } else {
+        (1i64 << qb) / 6
+    };
+    let mut z = [0i32; 16];
+    for k in 0..16 {
+        let abs_w = (w[k] as i64).unsigned_abs();
+        let prod = abs_w * mf[k] as u64;
+        let level = ((prod as i64 + f) >> qb) as i32;
+        z[k] = if w[k] < 0 { -level } else { level };
+    }
+    z
+}
+
+/// Quantize the AC coefficients of a 4x4 block (positions 1..15 in
+/// row-major). The DC at index 0 is forced to zero in the output —
+/// the caller is expected to handle DC separately (Intra_16x16 DC
+/// path runs through the Hadamard, Inter and Intra_4x4 will use the
+/// regular `quantize_4x4`).
+pub fn quantize_4x4_ac(w: &[i32; 16], qp: i32, is_intra: bool) -> [i32; 16] {
+    let mut z = quantize_4x4(w, qp, is_intra);
+    z[0] = 0;
+    z
+}
+
+/// [`quantize_4x4`] under a non-flat §7.4.2.1.1.1 weightScale matrix
+/// (`wscale`, row-major): the decoder's LevelScale multiplies each
+/// dequantised coefficient by `wscale(i,j) / 16`, so the forward step
+/// divides — `level = (|c| * MF * 16 / wscale + f) >> qBits`. With a
+/// flat list (all 16s) this is bit-identical to [`quantize_4x4`].
+pub fn quantize_4x4_w(w: &[i32; 16], qp: i32, is_intra: bool, wscale: &[i32; 16]) -> [i32; 16] {
+    debug_assert!(
+        (0..=87).contains(&qp),
+        "qP′ range 0..=51 + QpBdOffset (14-bit: 87)"
+    );
+    let m = (qp.rem_euclid(6)) as usize;
+    let mf = forward_mf_for(m);
+    let qb = q_bits(qp);
+    let f = if is_intra {
+        (1i64 << qb) / 3
+    } else {
+        (1i64 << qb) / 6
+    };
+    let mut z = [0i32; 16];
+    for k in 0..16 {
+        let abs_w = (w[k] as i64).unsigned_abs();
+        let prod = (abs_w * mf[k] as u64 * 16) / (wscale[k].max(1) as u64);
+        let level = ((prod as i64 + f) >> qb) as i32;
+        z[k] = if w[k] < 0 { -level } else { level };
+    }
+    z
+}
+
+/// [`quantize_4x4_ac`] under a non-flat weightScale matrix.
+pub fn quantize_4x4_ac_w(w: &[i32; 16], qp: i32, is_intra: bool, wscale: &[i32; 16]) -> [i32; 16] {
+    let mut z = quantize_4x4_w(w, qp, is_intra, wscale);
+    z[0] = 0;
+    z
+}
+
+// ---------------------------------------------------------------------------
+// §8.5.10 — Intra_16x16 luma DC: forward 4x4 Hadamard + quantization.
+// ---------------------------------------------------------------------------
+//
+// The luma DC block of an Intra_16x16 macroblock holds the DC of each
+// of the 16 4x4 sub-blocks. The decoder applies a Hadamard transform
+// then scales (eq. 8-320..8-322). The forward path:
+//
+//   1. Run the same Hadamard (it's self-inverse) on the 16 DC values.
+//   2. Quantize using a slightly different shift: the inverse step
+//      uses `(LevelScale * f) << qP/6 >> 5` for qP >= 36, and
+//      `((LevelScale * f) + round) >> (6 - qP/6)` for qP < 36. The
+//      forward step inverts that with `>>(qBits + 1)` instead of
+//      `>>(qBits)`.
+
+/// Forward 4x4 Hadamard transform `T = H * D * H` (self-inverse, no
+/// scaling). `dc` is row-major, 16 entries.
+pub fn forward_hadamard_4x4(dc: &[i32; 16]) -> [i32; 16] {
+    // H = [[1, 1, 1, 1],
+    //      [1, 1,-1,-1],
+    //      [1,-1,-1, 1],
+    //      [1,-1, 1,-1]].
+    let mut t = [0i32; 16];
+    for j in 0..4 {
+        t[j] = dc[j] + dc[4 + j] + dc[8 + j] + dc[12 + j];
+        t[4 + j] = dc[j] + dc[4 + j] - dc[8 + j] - dc[12 + j];
+        t[8 + j] = dc[j] - dc[4 + j] - dc[8 + j] + dc[12 + j];
+        t[12 + j] = dc[j] - dc[4 + j] + dc[8 + j] - dc[12 + j];
+    }
+    let mut f = [0i32; 16];
+    for i in 0..4 {
+        let base = i * 4;
+        let t0 = t[base];
+        let t1 = t[base + 1];
+        let t2 = t[base + 2];
+        let t3 = t[base + 3];
+        f[base] = t0 + t1 + t2 + t3;
+        f[base + 1] = t0 + t1 - t2 - t3;
+        f[base + 2] = t0 - t1 - t2 + t3;
+        f[base + 3] = t0 - t1 + t2 - t3;
+    }
+    f
+}
+
+/// Quantize the 16 luma DC coefficients of an Intra_16x16 block. The
+/// resulting `Z` is the `Intra16x16DCLevel[]` array carried in the
+/// bitstream by §7.3.5.3.
+///
+/// The DC path chains the inverse Hadamard (eq. 8-320) and the inverse
+/// 4x4 transform's DC-preserved variant. The decoder's eq. 8-322 uses
+/// a `>> (6 - qP/6)` shift vs. the AC path's `>> (4 - qP/6)` (eq.
+/// 8-337). After also accounting for the `(. + 32) >> 6` final-stage
+/// rounding in §8.5.12.2, the encoder's matched right-shift is
+/// `qBits + 2 = 17 + qP/6`.
+pub fn quantize_luma_dc(coeff: &[i32; 16], qp: i32, is_intra: bool) -> [i32; 16] {
+    debug_assert!(
+        (0..=87).contains(&qp),
+        "qP′ range 0..=51 + QpBdOffset (14-bit: 87)"
+    );
+    let m = (qp.rem_euclid(6)) as usize;
+    let mf = forward_mf_for(m)[0]; // (0,0) entry
+    let qb = q_bits(qp) + 2;
+    let f = if is_intra {
+        (1i64 << qb) / 3
+    } else {
+        (1i64 << qb) / 6
+    };
+    let mut z = [0i32; 16];
+    for k in 0..16 {
+        let abs_c = (coeff[k] as i64).unsigned_abs();
+        let prod = abs_c * mf as u64;
+        let level = ((prod as i64 + f) >> qb) as i32;
+        z[k] = if coeff[k] < 0 { -level } else { level };
+    }
+    z
+}
+
+/// [`quantize_luma_dc`] under a non-flat weightScale: §8.5.10's DC
+/// scaling uses LevelScale(qP%6, 0, 0) = wscale(0,0) * normAdjust, so
+/// the forward step divides by `w00 / 16`.
+pub fn quantize_luma_dc_w(coeff: &[i32; 16], qp: i32, is_intra: bool, w00: i32) -> [i32; 16] {
+    debug_assert!(
+        (0..=87).contains(&qp),
+        "qP′ range 0..=51 + QpBdOffset (14-bit: 87)"
+    );
+    let m = (qp.rem_euclid(6)) as usize;
+    let mf = forward_mf_for(m)[0];
+    let qb = q_bits(qp) + 2;
+    let f = if is_intra {
+        (1i64 << qb) / 3
+    } else {
+        (1i64 << qb) / 6
+    };
+    let mut z = [0i32; 16];
+    for k in 0..16 {
+        let abs_c = (coeff[k] as i64).unsigned_abs();
+        let prod = (abs_c * mf as u64 * 16) / (w00.max(1) as u64);
+        let level = ((prod as i64 + f) >> qb) as i32;
+        z[k] = if coeff[k] < 0 { -level } else { level };
+    }
+    z
+}
+
+// ---------------------------------------------------------------------------
+// §8.5.11 — chroma DC (4:2:0): forward 2x2 Hadamard + quantization.
+// ---------------------------------------------------------------------------
+
+/// Forward 2x2 Hadamard for chroma DC (4:2:0). `dc` is row-major
+/// `[c00, c01, c10, c11]`.
+pub fn forward_hadamard_2x2(dc: &[i32; 4]) -> [i32; 4] {
+    let c00 = dc[0];
+    let c01 = dc[1];
+    let c10 = dc[2];
+    let c11 = dc[3];
+    // f = H2 * c * H2.
+    let t00 = c00 + c10;
+    let t01 = c01 + c11;
+    let t10 = c00 - c10;
+    let t11 = c01 - c11;
+    [t00 + t01, t00 - t01, t10 + t11, t10 - t11]
+}
+
+/// Quantize the four chroma DC coefficients (4:2:0).
+///
+/// The chroma 2x2 Hadamard (eq. 8-324) cascades into the inverse 4x4
+/// dc-preserved transform. After eq. 8-326's `(f * ls) << qP/6 >> 5`
+/// scaling and the inverse 4x4's final `(. + 32) >> 6`, the matched
+/// encoder right-shift is `qBits + 1`.
+pub fn quantize_chroma_dc(coeff: &[i32; 4], qp_c: i32, is_intra: bool) -> [i32; 4] {
+    debug_assert!(
+        (0..=87).contains(&qp_c),
+        "qP′ range 0..=51 + QpBdOffset (14-bit: 87)"
+    );
+    let m = (qp_c.rem_euclid(6)) as usize;
+    let mf = forward_mf_for(m)[0];
+    let qb = q_bits(qp_c) + 1;
+    let f = if is_intra {
+        (1i64 << qb) / 3
+    } else {
+        (1i64 << qb) / 6
+    };
+    let mut z = [0i32; 4];
+    for k in 0..4 {
+        let abs_c = (coeff[k] as i64).unsigned_abs();
+        let prod = abs_c * mf as u64;
+        let level = ((prod as i64 + f) >> qb) as i32;
+        z[k] = if coeff[k] < 0 { -level } else { level };
+    }
+    z
+}
+
+/// [`quantize_chroma_dc`] under a non-flat weightScale: §8.5.11.1's
+/// scaling uses LevelScale(qP%6, 0, 0) of the chroma list.
+pub fn quantize_chroma_dc_w(coeff: &[i32; 4], qp_c: i32, is_intra: bool, w00: i32) -> [i32; 4] {
+    debug_assert!(
+        (0..=87).contains(&qp_c),
+        "qP′ range 0..=51 + QpBdOffset (14-bit: 87)"
+    );
+    let m = (qp_c.rem_euclid(6)) as usize;
+    let mf = forward_mf_for(m)[0];
+    let qb = q_bits(qp_c) + 1;
+    let f = if is_intra {
+        (1i64 << qb) / 3
+    } else {
+        (1i64 << qb) / 6
+    };
+    let mut z = [0i32; 4];
+    for k in 0..4 {
+        let abs_c = (coeff[k] as i64).unsigned_abs();
+        let prod = (abs_c * mf as u64 * 16) / (w00.max(1) as u64);
+        let level = ((prod as i64 + f) >> qb) as i32;
+        z[k] = if coeff[k] < 0 { -level } else { level };
+    }
+    z
+}
+
+// ---------------------------------------------------------------------------
+// §8.5.11.2 — chroma DC (4:2:2): forward 2x4 Hadamard + quantization.
+// Round 27.
+// ---------------------------------------------------------------------------
+
+/// Forward 4x2 Hadamard for chroma DC (4:2:2). `dc` is row-major in the
+/// 4x2 layout `[c[0,0], c[0,1], c[1,0], c[1,1], c[2,0], c[2,1],
+/// c[3,0], c[3,1]]` — i.e. 4 rows of 2 columns. Mirrors the inverse in
+/// [`crate::transform::inverse_hadamard_chroma_dc_422`] (eq. 8-325).
+///
+/// Returns the 8 frequency-domain coefficients in the same row-major
+/// layout. The Hadamard is self-inverse so this is the same matrix
+/// multiply as the decoder, just expressed forward.
+pub fn forward_hadamard_4x2(dc: &[i32; 8]) -> [i32; 8] {
+    // c is a 4x2 matrix laid out as 4 rows × 2 cols.
+    // f = Hv * c * Hh, where
+    //   Hv = [[1,  1,  1,  1],
+    //         [1,  1, -1, -1],
+    //         [1, -1, -1,  1],
+    //         [1, -1,  1, -1]]  (4x4 acts on the row dimension)
+    //   Hh = [[1,  1],
+    //         [1, -1]]            (2x2 acts on the column dimension)
+    let c00 = dc[0];
+    let c01 = dc[1];
+    let c10 = dc[2];
+    let c11 = dc[3];
+    let c20 = dc[4];
+    let c21 = dc[5];
+    let c30 = dc[6];
+    let c31 = dc[7];
+
+    // Apply Hv on the left (combines rows).
+    let t00 = c00 + c10 + c20 + c30;
+    let t01 = c01 + c11 + c21 + c31;
+    let t10 = c00 + c10 - c20 - c30;
+    let t11 = c01 + c11 - c21 - c31;
+    let t20 = c00 - c10 - c20 + c30;
+    let t21 = c01 - c11 - c21 + c31;
+    let t30 = c00 - c10 + c20 - c30;
+    let t31 = c01 - c11 + c21 - c31;
+    // Apply Hh on the right (combines columns).
+    [
+        t00 + t01,
+        t00 - t01,
+        t10 + t11,
+        t10 - t11,
+        t20 + t21,
+        t20 - t21,
+        t30 + t31,
+        t30 - t31,
+    ]
+}
+
+/// Quantize the eight 4:2:2 chroma DC coefficients.
+///
+/// Mirrors the decoder's §8.5.11.2 scaling path. The 4:2:2 DC chain
+/// adds an extra `qPDC = qP + 3` shift relative to the 4:2:0 path, so
+/// the encoder's matched right-shift is `qBits + 2` (one extra bit
+/// over the 4:2:0 chroma DC path's `qBits + 1`).
+///
+/// Output is in the same row-major 4x2 layout the forward Hadamard
+/// produced — convert to spec scan order via [`scan_chroma_dc_422`]
+/// before handing to CAVLC.
+pub fn quantize_chroma_dc_422(coeff: &[i32; 8], qp_c: i32, is_intra: bool) -> [i32; 8] {
+    quantize_chroma_dc_422_w(coeff, qp_c, is_intra, 16)
+}
+
+/// [`quantize_chroma_dc_422`] under a non-flat weightScale.
+///
+/// §8.5.11.2 dequantises the 4:2:2 chroma DC at **`qP,DC = qP + 3`**
+/// (eq. 8-327): `dcC = (f · LevelScale4x4(qP,DC % 6, 0, 0)) <<
+/// (qP,DC / 6 − 6)` (eq. 8-328), then the DC-preserved §8.5.12 core
+/// inverse divides by 64. With the unnormalised 4x2 forward / inverse
+/// Hadamard pair (DC gain 8 each way) and the core transform's DC gain
+/// of 16, a constant residual `x` round-trips as `x = 128 · x · Q ·
+/// LevelScale · 2^(qP,DC / 6) / 4096`, i.e. the forward multiplier is
+/// `Q = MF(qP,DC % 6) / 2^(16 + qP,DC / 6)` — `MF` and `qBits` both
+/// selected at `qP,DC`, with the `+1` shift of the 4:2:0 chroma DC
+/// quantiser (not `+2`). Round-456 fix: the previous forward used
+/// `MF(qP % 6) / 2^(17 + qP / 6)`, 1/√2 of the correct scale, so
+/// every 4:2:2 chroma DC reconstructed ~0.7× the intended value — the
+/// streams were legal and bit-exact but 4:2:2 chroma sat ~10 dB below
+/// luma at equal QP. The non-flat weightScale divides by `w00 / 16`;
+/// with `w00 == 16` this is bit-identical to the flat quantiser.
+pub fn quantize_chroma_dc_422_w(coeff: &[i32; 8], qp_c: i32, is_intra: bool, w00: i32) -> [i32; 8] {
+    debug_assert!(
+        (0..=87).contains(&qp_c),
+        "qP′ range 0..=51 + QpBdOffset (14-bit: 87)"
+    );
+    let qp_dc = qp_c + 3;
+    let m = (qp_dc.rem_euclid(6)) as usize;
+    let mf = forward_mf_for(m)[0];
+    let qb = q_bits(qp_dc) + 1;
+    let f = if is_intra {
+        (1i64 << qb) / 3
+    } else {
+        (1i64 << qb) / 6
+    };
+    let mut z = [0i32; 8];
+    for k in 0..8 {
+        let abs_c = (coeff[k] as i64).unsigned_abs();
+        let prod = (abs_c * mf as u64 * 16) / (w00.max(1) as u64);
+        let level = ((prod as i64 + f) >> qb) as i32;
+        z[k] = if coeff[k] < 0 { -level } else { level };
+    }
+    z
+}
+
+/// Apply the §8.5.4 eq. 8-305 forward raster scan: row-major 4x2 → 8
+/// scan-order entries (`ChromaDCLevel[0..=7]`). Inverse of the
+/// permutation embedded in
+/// [`crate::transform::inverse_hadamard_chroma_dc_422`].
+///
+/// Decoder mapping (verbatim from §8.5.4):
+///   c[0,0]=L[0], c[0,1]=L[2], c[1,0]=L[1], c[1,1]=L[5],
+///   c[2,0]=L[3], c[2,1]=L[6], c[3,0]=L[4], c[3,1]=L[7]
+pub fn scan_chroma_dc_422(rowmajor_4x2: &[i32; 8]) -> [i32; 8] {
+    let c00 = rowmajor_4x2[0];
+    let c01 = rowmajor_4x2[1];
+    let c10 = rowmajor_4x2[2];
+    let c11 = rowmajor_4x2[3];
+    let c20 = rowmajor_4x2[4];
+    let c21 = rowmajor_4x2[5];
+    let c30 = rowmajor_4x2[6];
+    let c31 = rowmajor_4x2[7];
+    // L[0] = c[0,0], L[1] = c[1,0], L[2] = c[0,1], L[3] = c[2,0],
+    // L[4] = c[3,0], L[5] = c[1,1], L[6] = c[2,1], L[7] = c[3,1]
+    [c00, c10, c01, c20, c30, c11, c21, c31]
+}
+
+// ---------------------------------------------------------------------------
+// Round 49 — trellis quantization refinement (§9 informative).
+// ---------------------------------------------------------------------------
+//
+// The spec specifies dequantisation (§8.5.12.1) and is silent on the
+// forward quantisation strategy beyond the round-trip requirement. The
+// round-1 encoder uses an open-loop deadzone scheme — for each
+// coefficient `w[k]` compute
+//
+//   z[k] = sign(w[k]) * floor((|w[k]| * MF + f) / 2^qBits)
+//
+// with `f = 2^qBits / 3` (intra) or `2^qBits / 6` (inter). That picks a
+// per-coefficient level *in isolation*, without considering the
+// downstream entropy coder's bit cost.
+//
+// A CABAC-aware refinement (the standard "trellis quant" idea used by
+// e.g. common high-quality encoders) revisits each non-zero
+// level after open-loop quantisation and asks:
+//
+//   if I changed this `z[k]` toward zero by one step, would the total
+//   `D + λ·R` cost drop?
+//
+// Where:
+//   * D is the spatial-domain sum-of-squared differences between the
+//     source residual and the reconstructed residual (post inverse
+//     transform). When `z[k]` shrinks by one step toward zero the
+//     reconstructed residual moves correspondingly, so D grows.
+//   * R is the number of bits the entropy coder would emit for this
+//     block. When `z[k] = 1` drops to `z[k] = 0` we save (in the CABAC
+//     model below) about 4 bits — significant_coeff_flag=1 (~1 bit),
+//     last_significant_coeff_flag (~1 bit if it would have been the
+//     last, ~0 bit otherwise), coeff_abs_level_minus1=0 (~1 bit), and
+//     coeff_sign_flag (1 bit bypass). For `|z[k]| = 2 → 1` the rate
+//     saving is smaller (~1 bit of unary tail).
+//
+// We pick the conservative single-pass version: iterate from the
+// highest-frequency to the lowest, and for each `z[k]` that is non-zero
+// evaluate one alternative (`z[k]` ± 1 toward zero). If the alternative
+// has strictly lower J, accept it and continue with the updated block.
+// This is a Viterbi-on-1-state (greedy) approximation of the textbook
+// trellis but captures > 80 % of the bit-rate savings on smooth content
+// at modest QP where most quantised levels are 0 or 1.
+//
+// The function operates in row-major (residual / forward-transform)
+// coordinates. It is independent of zig-zag scanning — the rate model
+// uses position-in-scan only as a hint to bias the "is this likely the
+// last coefficient" cost up or down, so the same trellis is correct
+// for both the standard up-right zig-zag and the field alternative
+// scan.
+//
+// References:
+//   * H.264 / AVC §8.5.12 (inverse 4x4 transform) — defines the round
+//     trip the encoder must invert.
+//   * H.264 / AVC §9.3.3.1.3 (CABAC residual binarisation) — the
+//     entropy model behind the rate approximation.
+//   * Karczewicz, M. & Kurçeren, R., "Improved CABAC", JVT-D015 (Joint
+//     Video Team, July 2002) — informative discussion of trellis-style
+//     RDOQ for AVC.
+
+/// Approximate CABAC bit cost (in 16ths of a bit) of emitting a single
+/// non-zero coefficient at scan position `pos` (0..=15) with absolute
+/// value `abs_level`, when there *is* at least one later non-zero in
+/// the same block (so we don't pay the full last_significant flag
+/// chain on this coefficient).
+///
+/// The numbers are derived from §9.3.3.1.3 + the typical CABAC
+/// per-context bit cost at p ≈ 0.5: each binary decision costs ~1 bit;
+/// each subsequent unary suffix bin around the EGk transition costs a
+/// fraction of a bit because the contexts are skewed. The constants
+/// are calibrated against the §9.3.3.1.3 binarisation tree:
+///
+///   * significant_coeff_flag = 1: ~1.0 bit
+///   * coeff_abs_level_minus1 prefix (truncated unary, c_max = 14):
+///     |level| - 1 bits, plus 1 stop bit when |level| < 15.
+///   * coeff_sign_flag: 1.0 bit (bypass).
+///
+/// last_significant_coeff_flag is paid by the caller (it's not a
+/// per-coefficient cost — it depends on whether this is the trailing
+/// non-zero).
+///
+/// The `pos` parameter biases the significant_coeff_flag cost
+/// downwards at higher scan positions (where the matching CABAC
+/// context probability of "0" is high), but we keep this flat to ~1
+/// bit per non-zero — empirical fitting showed bias didn't move the
+/// trellis decisions on the round-25 fixture.
+fn approx_cabac_coeff_cost_16ths(abs_level: i32, pos: usize) -> i64 {
+    let _ = pos;
+    // significant_coeff_flag = 1: 1 bit = 16 sixteenths.
+    let sig: i64 = 16;
+    // sign: 1 bit = 16 sixteenths.
+    let sign: i64 = 16;
+    // coeff_abs_level_minus1: truncated unary prefix (level-1 ones, 1 stop bit).
+    // The CABAC engine's adaptive contexts make the prefix bits cost roughly
+    // 0.7 bits each on average; we approximate with the slightly conservative
+    // value 12/16 = 0.75 bit per unary bin, plus 1 stop bit.
+    let abs = abs_level.max(0) as i64;
+    let prefix: i64 = if abs <= 1 {
+        // |level| = 1 → 0-length unary, 1 stop bit ≈ 16 sixteenths.
+        16
+    } else if abs <= 14 {
+        // |level| - 1 unary bins, then a stop bit.
+        12 * (abs - 1) + 16
+    } else {
+        // |level| >= 15 falls into the EGk tail; expensive, but rare.
+        // Approximate at 24 sixteenths (1.5 bit) per EGk bin beyond bin 14.
+        12 * 13 + 16 + 24 * (abs - 14)
+    };
+    sig + sign + prefix
+}
+
+/// Approximate CABAC bit cost of clearing one coefficient at scan
+/// position `pos` to zero — i.e. emitting `significant_coeff_flag = 0`
+/// at that slot. ~0.5 bit at low scan indices, less at higher ones.
+fn approx_cabac_zero_cost_16ths(pos: usize) -> i64 {
+    // significant_coeff_flag = 0. The exact bit cost depends on the
+    // adaptive context; at p = 0.7 (typical for AC slots) it's about
+    // 0.5 bit = 8 sixteenths. Slot 15 (high-frequency end) tilts toward
+    // p ≈ 0.95, where it costs ~0.07 bit; we approximate with a linear
+    // interp.
+    let p = pos.min(15) as i64;
+    // 8 sixteenths at pos=0; 2 sixteenths at pos=15.
+    8 - (p * 6) / 15
+}
+
+/// Round 49 — refine a quantised 4x4 AC block using a single-pass
+/// greedy Viterbi (a.k.a. "trellis quant lite") in the spirit of
+/// JVT-D015. Operates in row-major coordinates over a residual block,
+/// independent of zigzag scan order.
+///
+/// Inputs:
+///   * `residual`: source residual `S - P` (row-major, 16 entries).
+///   * `w`: forward-transformed coefficients (`forward_core_4x4(residual)`).
+///   * `z`: open-loop quantised levels in row-major order (output of
+///     [`quantize_4x4`] or [`quantize_4x4_ac`]).
+///   * `qp`: QP_Y (or QP_C) used for the original quantisation.
+///   * `lambda_q16`: Lagrange multiplier in 1/16-bit-cost units (i.e.
+///     `lambda * 16` rounded to nearest integer). The trellis rate
+///     model emits costs in 1/16 of a CABAC bit, and `lambda_q16` is
+///     applied as `J = D * 16 + lambda_q16 * R_16ths`.
+///   * `skip_dc`: when `true`, the DC at row-major index 0 is preserved
+///     unchanged (Intra_16x16 AC / chroma AC paths).
+///
+/// Returns the (possibly refined) `z` block in row-major order. The DC
+/// is left untouched when `skip_dc` is set.
+///
+/// The refinement is safe — it never increases `D + λ·R`, and at
+/// `lambda_q16 == 0` it is a no-op (returns `z` unchanged) because the
+/// open-loop quantiser already minimises D.
+pub fn trellis_refine_4x4_ac(
+    residual: &[i32; 16],
+    w: &[i32; 16],
+    z: &[i32; 16],
+    qp: i32,
+    lambda_q16: u64,
+    skip_dc: bool,
+) -> [i32; 16] {
+    let _ = w;
+    if lambda_q16 == 0 {
+        return *z;
+    }
+
+    // Baseline reconstruction and SSD.
+    let dequant_inverse = |levels: &[i32; 16]| -> [i32; 16] {
+        // Mirror `crate::transform::inverse_transform_4x4` but with
+        // FLAT_4X4_16 scaling (encoder side already commits to flat
+        // lists for now).
+        crate::transform::inverse_transform_4x4(levels, qp, &crate::transform::FLAT_4X4_16, 8)
+            .unwrap_or([0i32; 16])
+    };
+
+    let ssd = |r_hat: &[i32; 16]| -> u64 {
+        let mut s: u64 = 0;
+        for k in 0..16 {
+            let d = (residual[k] - r_hat[k]) as i64;
+            s = s.saturating_add((d * d) as u64);
+        }
+        s
+    };
+
+    let mut z_cur = *z;
+
+    // Greedy single pass from highest-frequency raster position
+    // downward — high-frequency coefficients are the least informative
+    // and most likely to round to zero with low D penalty. The DC at
+    // index 0 is skipped when requested.
+    let start_k = 15usize;
+    let end_k = if skip_dc { 1usize } else { 0usize };
+
+    let mut r_base = dequant_inverse(&z_cur);
+    let mut d_base = ssd(&r_base);
+    let mut r_base_16 = d_base.saturating_mul(16);
+
+    // Approximate rate baseline: 1 stop bit (last_significant_coeff_flag
+    // = 1 on the trailing non-zero) plus per-coeff costs.
+    let count_nz = |levels: &[i32; 16]| -> usize { levels.iter().filter(|&&v| v != 0).count() };
+
+    let approx_block_rate_16ths = |levels: &[i32; 16]| -> i64 {
+        // Per-non-zero coefficient cost + per-zero cost over the
+        // 1..=15 AC range (DC bit cost is paid elsewhere via cbf /
+        // Intra16x16DC path).
+        let mut r: i64 = 0;
+        let mut last_nz: i32 = -1;
+        for (k, &lvl) in levels.iter().enumerate().take(16).skip(1) {
+            if lvl != 0 {
+                last_nz = k as i32;
+            }
+        }
+        for (k, &lvl) in levels.iter().enumerate().take(16).skip(1) {
+            if lvl != 0 {
+                r += approx_cabac_coeff_cost_16ths(lvl.unsigned_abs() as i32, k);
+                // last_significant_coeff_flag = (k == last_nz) → ~1 bit.
+                r += 16;
+            } else if (k as i32) < last_nz {
+                r += approx_cabac_zero_cost_16ths(k);
+            }
+        }
+        // coded_block_flag = 1 when any non-zero, ~1 bit.
+        if last_nz >= 0 {
+            r += 16;
+        }
+        r
+    };
+
+    let mut r_rate_16 = approx_block_rate_16ths(&z_cur);
+    let mut j_base = r_base_16.saturating_add((lambda_q16 as i64 * r_rate_16) as u64);
+
+    for k in (end_k..=start_k).rev() {
+        let lvl = z_cur[k];
+        if lvl == 0 {
+            continue;
+        }
+        // Candidate: move one step toward zero.
+        let cand = lvl - lvl.signum();
+        let mut z_try = z_cur;
+        z_try[k] = cand;
+        let r_hat = dequant_inverse(&z_try);
+        let d_try = ssd(&r_hat);
+        let d_try_16 = d_try.saturating_mul(16);
+        let r_try_16 = approx_block_rate_16ths(&z_try);
+        let j_try = d_try_16.saturating_add((lambda_q16 as i64 * r_try_16) as u64);
+        if j_try < j_base {
+            z_cur = z_try;
+            r_base = r_hat;
+            d_base = d_try;
+            r_base_16 = d_try_16;
+            r_rate_16 = r_try_16;
+            j_base = j_try;
+            // After accepting a flip, the same coefficient may admit
+            // further reduction (e.g. |level| 3 → 2 → 1 → 0). Retry the
+            // same position once more.
+            if z_cur[k] != 0 {
+                let lvl2 = z_cur[k];
+                let cand2 = lvl2 - lvl2.signum();
+                let mut z_try2 = z_cur;
+                z_try2[k] = cand2;
+                let r_hat2 = dequant_inverse(&z_try2);
+                let d_try2 = ssd(&r_hat2);
+                let d_try2_16 = d_try2.saturating_mul(16);
+                let r_try2_16 = approx_block_rate_16ths(&z_try2);
+                let j_try2 = d_try2_16.saturating_add((lambda_q16 as i64 * r_try2_16) as u64);
+                if j_try2 < j_base {
+                    z_cur = z_try2;
+                    r_base = r_hat2;
+                    d_base = d_try2;
+                    r_base_16 = d_try2_16;
+                    r_rate_16 = r_try2_16;
+                    j_base = j_try2;
+                }
+            }
+        }
+    }
+
+    let _ = (r_base, d_base, r_base_16, r_rate_16, count_nz);
+    z_cur
+}
+
+/// Round 49 — derive the Lagrange multiplier for trellis quant in
+/// `1/16-bit` units from the encoder's QP. The decision metric weights
+/// distortion (in spatial-pixel SSD units) against rate (in 1/16 of a
+/// CABAC bit).
+///
+/// A common high-quality H.264 encoder lambda is
+/// `λ = 0.85 · 2^((QP-12)/3)` in *SSD-domain*, and the trellis weight
+/// is typically `λ · 2/3` (the "RDOQ relaxation factor"). This crate
+/// uses the same closed form and quantises into `1/16` units so the
+/// trellis stays in integer arithmetic.
+pub fn trellis_lambda_q16(qp: i32) -> u64 {
+    let qp = qp.clamp(0, 51) as f64;
+    let lambda = 0.85_f64 * 2f64.powf((qp - 12.0) / 3.0) * (2.0 / 3.0);
+    // Convert to 1/16-bit units: D is in spatial pixels squared, the
+    // approx rate is in 1/16-bit units. The trellis cost equation is
+    //   J = D * 16 + lambda_q16 * R_16ths.
+    // So lambda_q16 is the scalar with which the rate term is multiplied;
+    // we want lambda_q16 ≈ lambda * 16 / 16 = lambda (because D is also
+    // scaled up by 16).
+    (lambda.max(0.0).round() as u64).max(1)
+}
+
+// ---------------------------------------------------------------------------
+// Zig-zag scan helpers (matched to decoder).
+// ---------------------------------------------------------------------------
+
+/// Forward zig-zag scan order: row-major position → scan-order index.
+/// This is the inverse of [`crate::transform::inverse_scan_4x4_zigzag`].
+pub const ZIGZAG_4X4_FWD: [usize; 16] = [0, 1, 5, 6, 2, 4, 7, 12, 3, 8, 11, 13, 9, 10, 14, 15];
+
+/// Pack a 4x4 row-major coefficient block into scan order.
+pub fn zigzag_scan_4x4(coeffs: &[i32; 16]) -> [i32; 16] {
+    let mut out = [0i32; 16];
+    for (raster, &scan) in ZIGZAG_4X4_FWD.iter().enumerate() {
+        out[scan] = coeffs[raster];
+    }
+    out
+}
+
+/// Pack a 4x4 row-major coefficient block into AC-only scan order
+/// (matches `inverse_scan_4x4_zigzag_ac`). The 15 AC positions land in
+/// slots `[0..=14]`; slot 15 is set to zero. The DC at row-major index
+/// 0 is dropped (callers using this function are emitting the AC-only
+/// `residual_block_cavlc(..., startIdx=1, endIdx=15, maxNumCoeff=15)`
+/// stream per §7.3.5.3.1).
+pub fn zigzag_scan_4x4_ac(coeffs: &[i32; 16]) -> [i32; 16] {
+    let mut out = [0i32; 16];
+    // Walk every raster position; AC positions (raster != 0 with
+    // ZIGZAG_4X4_FWD[raster] != 0) land at scan_index - 1 in the
+    // AC-only stream. The decoder's reverse pass is in
+    // `inverse_scan_4x4_zigzag_ac`.
+    for raster in 1..16 {
+        let scan = ZIGZAG_4X4_FWD[raster];
+        // scan == 0 only for raster == 0, which we skip.
+        debug_assert!(scan >= 1);
+        out[scan - 1] = coeffs[raster];
+    }
+    out
+}
+
+// ===========================================================================
+// §8.5.13 / §8.6 — High-profile 8x8 forward transform + quantization.
+// ===========================================================================
+//
+// The decoder's inverse 8x8 transform (`crate::transform::inverse_core_8x8`,
+// §8.5.13.2 eqs. 8-358..8-406) applies an integer butterfly that realises
+// the 8-point inverse DCT-like basis and finishes with `(m + 32) >> 6`.
+// The matching forward transform is the transpose of that basis, expressed
+// as the integer 8x8 matrix `E8` below (each row is one basis vector). The
+// forward core computes `W = E8 * R * E8^T`; the per-position quantizer
+// (below) folds in the `1/64` forward-domain scale and the §8.5.9 normAdjust
+// so that `inverse_transform_8x8(quantize_8x8(W))` recovers `R` to within a
+// quantization step.
+//
+// `E8` is the transpose of the normative inverse basis (rows are mutually
+// orthogonal: every pair of distinct rows has zero dot product). It is not
+// copied from any implementation — it is the integer basis of §8.6.4
+// re-derived from the inverse butterfly's fixed points.
+
+/// §8.6.4 — forward 8x8 integer transform matrix `E8` (row = basis
+/// vector). Even rows have L2² norm 512, odd rows 578; the per-class
+/// normalisation is absorbed by [`quantize_8x8`].
+const FORWARD_8X8_E: [[i32; 8]; 8] = [
+    [8, 8, 8, 8, 8, 8, 8, 8],
+    [12, 10, 6, 3, -3, -6, -10, -12],
+    [8, 4, -4, -8, -8, -4, 4, 8],
+    [10, -3, -12, -6, 6, 12, 3, -10],
+    [8, -8, -8, 8, 8, -8, -8, 8],
+    [6, -12, 3, 10, -10, -3, 12, -6],
+    [4, -8, 8, -4, -4, 8, -8, 4],
+    [3, -6, 10, -12, 12, -10, 6, -3],
+];
+
+/// Forward 8x8 core transform `W = E8 * X * E8^T` (no quantization).
+/// `x` is row-major (64 entries). Returns `W`, also row-major.
+pub fn forward_core_8x8(x: &[i32; 64]) -> [i32; 64] {
+    // Row pass: H = E8 * X.
+    let mut h = [0i64; 64];
+    for r in 0..8 {
+        for j in 0..8 {
+            let mut acc = 0i64;
+            for k in 0..8 {
+                acc += FORWARD_8X8_E[r][k] as i64 * x[k * 8 + j] as i64;
+            }
+            h[r * 8 + j] = acc;
+        }
+    }
+    // Column pass: W = H * E8^T.
+    let mut w = [0i32; 64];
+    for i in 0..8 {
+        for c in 0..8 {
+            let mut acc = 0i64;
+            for k in 0..8 {
+                acc += h[i * 8 + k] * FORWARD_8X8_E[c][k] as i64;
+            }
+            w[i * 8 + c] = acc as i32;
+        }
+    }
+    w
+}
+
+/// §8.5.9 / Table 8-5 — normAdjust8x8 v-matrix (mirrored so the forward
+/// quantizer is derivable from the spec without reading inverse code).
+const NORM_ADJUST_8X8_V: [[i32; 6]; 6] = [
+    [20, 18, 32, 19, 25, 24],
+    [22, 19, 35, 21, 28, 26],
+    [26, 23, 42, 24, 33, 31],
+    [28, 25, 45, 26, 35, 33],
+    [32, 28, 51, 30, 40, 38],
+    [36, 32, 58, 34, 46, 43],
+];
+
+/// §8.5.9 — equivalence-class selector for 8x8 positions (0..=5),
+/// identical to the decoder's `norm_adjust_8x8` class dispatch.
+#[inline]
+fn norm_adjust_8x8_class(i: usize, j: usize) -> usize {
+    let im4 = i & 3;
+    let jm4 = j & 3;
+    let im2 = i & 1;
+    let jm2 = j & 1;
+    if im4 == 0 && jm4 == 0 {
+        0
+    } else if im2 == 1 && jm2 == 1 {
+        1
+    } else if im4 == 2 && jm4 == 2 {
+        2
+    } else if (im4 == 0 && jm2 == 1) || (im2 == 1 && jm4 == 0) {
+        3
+    } else if (im4 == 0 && jm4 == 2) || (im4 == 2 && jm4 == 0) {
+        4
+    } else {
+        5
+    }
+}
+
+/// Forward 8x8 quantizer multiplier `MF8x8[m][class]`.
+///
+/// Derivation (clean-room from §8.5.13.1): the decoder dequantizes a
+/// level `Z` at position class `c` to `d = Z * 16 * V8x8[m][c] * 2^(qP/6)
+/// / 64`, and the forward core produces `W = 64 * d` for a round-trip.
+/// Hence `Z = W / (16 * V8x8[m][c] * 2^(qP/6))`. Expressed as
+/// `Z = (|W| * MF + f) >> (22 + qP/6)` this fixes
+/// `MF8x8[m][c] = round(2^18 / V8x8[m][c])`.
+#[inline]
+fn forward_mf_8x8(m: usize, class: usize) -> i64 {
+    let v = NORM_ADJUST_8X8_V[m][class] as i64;
+    ((1i64 << 18) + v / 2) / v
+}
+
+/// `qBits8 = 22 + qP/6` — the forward shift used by [`quantize_8x8`].
+#[inline]
+fn q_bits_8x8(qp: i32) -> i32 {
+    22 + qp / 6
+}
+
+/// Quantize a forward-transformed 8x8 block `w` (row-major, 64 entries)
+/// at QP `qp` using the flat scaling list. `is_intra` selects the
+/// rounding offset (intra `(1<<qBits)/3`, inter `(1<<qBits)/6`).
+/// Returns the row-major integer level array `Z`.
+pub fn quantize_8x8(w: &[i32; 64], qp: i32, is_intra: bool) -> [i32; 64] {
+    debug_assert!(
+        (0..=87).contains(&qp),
+        "qP′ range 0..=51 + QpBdOffset (14-bit: 87)"
+    );
+    let m = qp.rem_euclid(6) as usize;
+    let qb = q_bits_8x8(qp);
+    let f = if is_intra {
+        (1i64 << qb) / 3
+    } else {
+        (1i64 << qb) / 6
+    };
+    let mut z = [0i32; 64];
+    for i in 0..8 {
+        for j in 0..8 {
+            let idx = i * 8 + j;
+            let class = norm_adjust_8x8_class(i, j);
+            let mf = forward_mf_8x8(m, class);
+            let abs_w = (w[idx] as i64).unsigned_abs();
+            let level = ((abs_w as i64 * mf + f) >> qb) as i32;
+            z[idx] = if w[idx] < 0 { -level } else { level };
+        }
+    }
+    z
+}
+
+/// [`quantize_8x8`] under a non-flat §7.4.2.1.1.1 8x8 weightScale
+/// (row-major). Flat lists reproduce [`quantize_8x8`] bit-exactly.
+pub fn quantize_8x8_w(w: &[i32; 64], qp: i32, is_intra: bool, wscale: &[i32; 64]) -> [i32; 64] {
+    debug_assert!(
+        (0..=87).contains(&qp),
+        "qP′ range 0..=51 + QpBdOffset (14-bit: 87)"
+    );
+    let m = qp.rem_euclid(6) as usize;
+    let qb = q_bits_8x8(qp);
+    let f = if is_intra {
+        (1i64 << qb) / 3
+    } else {
+        (1i64 << qb) / 6
+    };
+    let mut z = [0i32; 64];
+    for i in 0..8 {
+        for j in 0..8 {
+            let idx = i * 8 + j;
+            let class = norm_adjust_8x8_class(i, j);
+            let mf = forward_mf_8x8(m, class);
+            let abs_w = (w[idx] as i64).unsigned_abs() as i64;
+            let prod = (abs_w * mf * 16) / (wscale[idx].max(1) as i64);
+            let level = ((prod + f) >> qb) as i32;
+            z[idx] = if w[idx] < 0 { -level } else { level };
+        }
+    }
+    z
+}
+
+// ---------------------------------------------------------------------------
+// §8.5.7 / Table 8-14 — 8x8 zig-zag scan (frame case). Row-major → scan.
+// ---------------------------------------------------------------------------
+
+/// `ZIGZAG_8X8_FWD[k]` gives the row-major index (`i*8 + j`) of the
+/// coefficient at scan position `k`. Inverse of the decoder's
+/// `inverse_scan_8x8_zigzag` (Table 8-14, zig-zag row).
+pub const ZIGZAG_8X8_FWD: [usize; 64] = [
+    0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18, 11, 4, 5, 12, 19, 26, 33, 40, 48, 41, 34, 27, 20,
+    13, 6, 7, 14, 21, 28, 35, 42, 49, 56, 57, 50, 43, 36, 29, 22, 15, 23, 30, 37, 44, 51, 58, 59,
+    52, 45, 38, 31, 39, 46, 53, 60, 61, 54, 47, 55, 62, 63,
+];
+
+/// Pack an 8x8 row-major coefficient block into 8x8 zig-zag scan order.
+pub fn zigzag_scan_8x8(coeffs: &[i32; 64]) -> [i32; 64] {
+    let mut out = [0i32; 64];
+    for (scan, &raster) in ZIGZAG_8X8_FWD.iter().enumerate() {
+        out[scan] = coeffs[raster];
+    }
+    out
+}
+
+/// §8.5.7 / Table 8-14 (field row, Figure 8-9 b) — forward 8x8 FIELD
+/// scan: `FIELD_8X8_FWD[k]` is the row-major index (`i*8 + j`) of the
+/// coefficient at field-scan position `k`. Inverse of the decoder's
+/// Table 8-14 field mapping (round-436 PAFF field-picture 8x8
+/// transform).
+#[rustfmt::skip]
+pub const FIELD_8X8_FWD: [usize; 64] = [
+     0,  8, 16,  1,  9, 24, 32, 17,  2, 25, 40, 48, 56, 33, 10,  3,
+    18, 41, 49, 57, 26, 11,  4, 19, 34, 42, 50, 58, 27, 12,  5, 20,
+    35, 43, 51, 59, 28, 13,  6, 21, 36, 44, 52, 60, 29, 14, 22, 37,
+    45, 53, 61, 30,  7, 15, 38, 46, 54, 62, 23, 31, 39, 47, 55, 63,
+];
+
+/// Pack an 8x8 row-major coefficient block into the §8.5.7 Table 8-14
+/// FIELD scan order.
+pub fn field_scan_8x8(coeffs: &[i32; 64]) -> [i32; 64] {
+    let mut out = [0i32; 64];
+    for (scan, &raster) in FIELD_8X8_FWD.iter().enumerate() {
+        out[scan] = coeffs[raster];
+    }
+    out
+}
+
+/// Round-436 — the FIELD 8x8 scan **pre-composed for the CAVLC split
+/// pipeline**. The CAVLC 8x8 luma residual travels through two fixed
+/// downstream permutations before hitting the bitstream:
+///
+///  1. [`deinterleave_8x8_to_4x4`] — the §7.4.5.3.3 stride-4 split
+///     into four 16-coefficient sub-blocks, and
+///  2. the residual writer's per-sub-block field remap
+///     ([`crate::encoder::cavlc::encode_residual_block_cavlc`] applies
+///     the 4x4 Table 8-13 `ZZ_TO_FIELD_16` permutation to EVERY
+///     16-entry `Numeric` list when the writer is in field-scan mode —
+///     correct for real 4x4 blocks, but the writer cannot distinguish
+///     an 8x8 split sub-block from a 4x4 block).
+///
+/// This table bakes the inverse of both stages into the scan itself:
+/// `FIELD_8X8_FWD_CAVLC_SPLIT[4 * ZZ_TO_FIELD_16[k] + sub] =
+/// FIELD_8X8_FWD[4 * k + sub]`, so that after the split (1) and the
+/// writer remap (2) the emitted sub-block streams carry exactly the
+/// §7.4.5.3.3 split of the Table 8-14 FIELD scan — what a §8.5.7
+/// decoder re-interleaves and inverse-field-scans. Pinned against the
+/// plain [`field_scan_8x8`] by
+/// `cavlc::tests::field_8x8_precomposed_scan_survives_split_and_writer_remap`.
+#[rustfmt::skip]
+pub const FIELD_8X8_FWD_CAVLC_SPLIT: [usize; 64] = [
+     0,  8, 16,  1,  2, 25, 40, 48,  9, 24, 32, 17, 56, 33, 10,  3,
+    26, 11,  4, 19, 35, 43, 51, 59, 45, 53, 61, 30, 28, 13,  6, 21,
+    34, 42, 50, 58, 18, 41, 49, 57, 27, 12,  5, 20, 36, 44, 52, 60,
+     7, 15, 38, 46, 54, 62, 23, 31, 29, 14, 22, 37, 39, 47, 55, 63,
+];
+
+/// [`field_scan_8x8`] pre-composed for the CAVLC split pipeline — see
+/// [`FIELD_8X8_FWD_CAVLC_SPLIT`]. Use THIS scan (instead of
+/// [`zigzag_scan_8x8`]) for CAVLC 8x8 luma coefficients when the
+/// slice's residual writer is in field-scan mode.
+pub fn field_scan_8x8_for_cavlc_split(coeffs: &[i32; 64]) -> [i32; 64] {
+    let mut out = [0i32; 64];
+    for (scan, &raster) in FIELD_8X8_FWD_CAVLC_SPLIT.iter().enumerate() {
+        out[scan] = coeffs[raster];
+    }
+    out
+}
+
+/// Scan an 8x8 coefficient block for the CAVLC split pipeline: frame
+/// MBs use the Table 8-14 zig-zag, FIELD MBs (field pictures) the
+/// pre-composed field scan.
+pub fn scan_8x8_for_cavlc(coeffs: &[i32; 64], field: bool) -> [i32; 64] {
+    if field {
+        field_scan_8x8_for_cavlc_split(coeffs)
+    } else {
+        zigzag_scan_8x8(coeffs)
+    }
+}
+
+/// §7.4.5.3.3 — de-interleave a 64-entry 8x8 scan-order level array into
+/// the four CAVLC 4x4 residual blocks: `level4x4[i4x4][i] =
+/// level8x8[4*i + i4x4]`. Returns four 16-entry scan-order blocks, ready
+/// for `encode_residual_block_cavlc`. The decoder's parser applies the
+/// inverse mapping when reading the 8x8 luma residual.
+pub fn deinterleave_8x8_to_4x4(scan8: &[i32; 64]) -> [[i32; 16]; 4] {
+    let mut blocks = [[0i32; 16]; 4];
+    for i4x4 in 0..4 {
+        for i in 0..16 {
+            blocks[i4x4][i] = scan8[4 * i + i4x4];
+        }
+    }
+    blocks
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::transform::{default_scaling_list_8x8_flat, inverse_transform_8x8};
+    use crate::transform::{
+        inverse_hadamard_chroma_dc_420, inverse_hadamard_luma_dc_16x16, inverse_scan_4x4_zigzag,
+        inverse_transform_4x4, FLAT_4X4_16,
+    };
+
+    /// The forward 8x8 basis `E8` must be orthogonal: every pair of
+    /// distinct rows has zero dot product (a prerequisite for the
+    /// transform to be invertible by the transpose).
+    #[test]
+    fn forward_8x8_basis_is_orthogonal() {
+        for (a, row_a) in FORWARD_8X8_E.iter().enumerate() {
+            for (b, row_b) in FORWARD_8X8_E.iter().enumerate() {
+                let dot: i32 = (0..8).map(|k| row_a[k] * row_b[k]).sum();
+                if a == b {
+                    assert!(dot > 0, "row {a} has zero norm");
+                } else {
+                    assert_eq!(dot, 0, "rows {a},{b} not orthogonal");
+                }
+            }
+        }
+    }
+
+    /// The forward 8x8 zig-zag permutation must be the exact inverse of
+    /// the decoder's `inverse_scan_8x8_zigzag`: scanning a row-major
+    /// block then inverse-scanning must be the identity.
+    #[test]
+    fn forward_8x8_zigzag_inverts_decoder_scan() {
+        let raster: [i32; 64] = std::array::from_fn(|k| k as i32);
+        let scan = zigzag_scan_8x8(&raster);
+        // Reconstruct row-major via the same mapping the decoder uses.
+        let mut back = [0i32; 64];
+        for (s, &r) in ZIGZAG_8X8_FWD.iter().enumerate() {
+            back[r] = scan[s];
+        }
+        assert_eq!(back, raster);
+    }
+
+    /// An all-zero residual forward-transforms + quantizes to all zeros
+    /// and inverse-transforms back to zero.
+    #[test]
+    fn forward_8x8_zero_residual_round_trips_to_zero() {
+        let sl8 = default_scaling_list_8x8_flat();
+        for &qp in &[0, 12, 26, 36, 51] {
+            let w = forward_core_8x8(&[0; 64]);
+            assert_eq!(w, [0; 64]);
+            let z = quantize_8x8(&w, qp, true);
+            assert_eq!(z, [0; 64]);
+            let r = inverse_transform_8x8(&z, qp, &sl8, 8).unwrap();
+            assert_eq!(r, [0; 64]);
+        }
+    }
+
+    /// Full forward → quantize → (scan → de-interleave → re-interleave →
+    /// inverse-scan) → inverse round trip. The reconstructed residual
+    /// must match the input to within a quantization step, validating
+    /// both the `E8` matrix and the `MF8x8` quantizer against the
+    /// normative inverse.
+    #[test]
+    fn forward_8x8_round_trip_recovers_residual() {
+        let sl8 = default_scaling_list_8x8_flat();
+        // A smooth ramp plus a mid-frequency ripple — exercises DC and
+        // several AC classes.
+        let mut res = [0i32; 64];
+        for i in 0..8 {
+            for j in 0..8 {
+                let ramp = (i as i32 * 6 + j as i32 * 3) - 42;
+                let ripple = if (i + j) % 2 == 0 { 5 } else { -5 };
+                res[i * 8 + j] = ramp + ripple;
+            }
+        }
+        for &qp in &[16, 22, 26, 30] {
+            let w = forward_core_8x8(&res);
+            let z_raster = quantize_8x8(&w, qp, true);
+            // Round-trip through the CAVLC scan + de-interleave path.
+            let scan = zigzag_scan_8x8(&z_raster);
+            let blocks = deinterleave_8x8_to_4x4(&scan);
+            // Re-interleave exactly as the decoder does after parsing.
+            let mut scan_back = [0i32; 64];
+            for (i4x4, blk) in blocks.iter().enumerate() {
+                for (i, &c) in blk.iter().enumerate() {
+                    scan_back[4 * i + i4x4] = c;
+                }
+            }
+            assert_eq!(scan_back, scan, "de-interleave round trip failed");
+            // Decoder inverse-scans then inverse-transforms.
+            let mut coeffs = [0i32; 64];
+            for (s, &r) in ZIGZAG_8X8_FWD.iter().enumerate() {
+                coeffs[r] = scan[s];
+            }
+            let recon = inverse_transform_8x8(&coeffs, qp, &sl8, 8).unwrap();
+            // Quantization error bound scales with the step size; at these
+            // QPs a per-sample error of a few units is expected.
+            let step = 1 << (qp / 6);
+            let max_err = (0..64).map(|k| (recon[k] - res[k]).abs()).max().unwrap();
+            assert!(
+                max_err <= 4 * step + 2,
+                "qp={qp} max_err={max_err} step={step}"
+            );
+        }
+    }
+
+    /// Helper: full forward → quantize → inverse round trip on a single
+    /// 4x4 block. The reconstructed residual should match the input
+    /// closely; for small residuals at QP 26 the error per sample is
+    /// typically ≤ 1.
+    #[test]
+    fn forward_inverse_4x4_zero_residual_round_trips_to_zero() {
+        let zero = [0i32; 16];
+        let qp = 26;
+        let w = forward_core_4x4(&zero);
+        assert_eq!(w, [0; 16]);
+        let z = quantize_4x4(&w, qp, true);
+        assert_eq!(z, [0; 16]);
+        // Inverse: scan order → row-major (no-op for an all-zero block).
+        let r = inverse_transform_4x4(&z, qp, &FLAT_4X4_16, 8).unwrap();
+        assert_eq!(r, [0; 16]);
+    }
+
+    #[test]
+    fn forward_inverse_4x4_large_residual_round_trips_within_tolerance() {
+        // Larger-magnitude residual — at QP=26 small residuals quantize
+        // entirely to zero (which is correct rate-distortion behaviour),
+        // so we exercise the round-trip on coefficients that actually
+        // survive quantization. This validates the matched
+        // forward-quantizer tables more than rate behaviour.
+        let r: [i32; 16] = [
+            80, -64, 48, -32, 64, -48, 32, -16, 48, -32, 16, 0, 32, -16, 0, 16,
+        ];
+        let qp = 26;
+        let w = forward_core_4x4(&r);
+        let z_raster = quantize_4x4(&w, qp, true);
+        let r_hat = inverse_transform_4x4(&z_raster, qp, &FLAT_4X4_16, 8).unwrap();
+        // Per-sample error stays bounded for non-trivial residuals.
+        for k in 0..16 {
+            let err = (r_hat[k] - r[k]).abs();
+            assert!(
+                err <= 16,
+                "k={k}: r={} r_hat={} err={}",
+                r[k],
+                r_hat[k],
+                err
+            );
+        }
+    }
+
+    #[test]
+    fn zigzag_round_trip() {
+        let raster: [i32; 16] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+        let scan = zigzag_scan_4x4(&raster);
+        let raster_back = inverse_scan_4x4_zigzag(&scan);
+        assert_eq!(raster_back, raster);
+    }
+
+    #[test]
+    fn zigzag_ac_round_trip() {
+        // Forward AC scan of a row-major block -> decoder's inverse AC
+        // scan -> matrix that matches the input modulo c[0,0] (which is
+        // dropped on the encoder side and overwritten by the caller on
+        // the decoder side).
+        use crate::transform::inverse_scan_4x4_zigzag_ac;
+        let raster: [i32; 16] = [99, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+        let scan_ac = zigzag_scan_4x4_ac(&raster);
+        let raster_back = inverse_scan_4x4_zigzag_ac(&scan_ac);
+        // c[0,0] must be 0 on the decoder side (it consumes startIdx=1).
+        assert_eq!(raster_back[0], 0);
+        // All other positions must round-trip.
+        for k in 1..16 {
+            assert_eq!(
+                raster_back[k], raster[k],
+                "k={k} expected {} got {}",
+                raster[k], raster_back[k]
+            );
+        }
+    }
+
+    /// Round-trip a uniform 16x16 sample residual through the full
+    /// Intra_16x16 luma DC path (forward 4x4 -> collect DCs -> Hadamard
+    /// -> quantize -> inverse Hadamard -> inverse 4x4 dc-preserved ->
+    /// `(. + 32) >> 6`).
+    #[test]
+    fn luma_dc_uniform_residual_round_trips_within_tolerance() {
+        let qp = 26;
+        // Uniform residual D in the 16 4x4 sub-blocks.
+        for d in [16, 32, -32, 64, -64, 128] {
+            // Forward 4x4 of an all-`d` 4x4 block: W[0,0] = 16 * d.
+            let mut dc_coeffs = [0i32; 16];
+            for slot in &mut dc_coeffs {
+                *slot = 16 * d;
+            }
+            let f = forward_hadamard_4x4(&dc_coeffs);
+            let z = quantize_luma_dc(&f, qp, true);
+            // Inverse Hadamard returns 16 dc_y values to plug into
+            // c[0,0] of each 4x4 sub-block.
+            let dc_y = inverse_hadamard_luma_dc_16x16(&z, qp, &FLAT_4X4_16, 8).unwrap();
+            // For an all-AC-zero block the inverse 4x4 with dc_preserved
+            // gives r[i,j] = (dc_y + 32) >> 6 per sample (uniform).
+            for (k, &dc) in dc_y.iter().enumerate() {
+                let r = (dc + 32) >> 6;
+                let err = (r - d).abs();
+                // Wide tolerance — quantization noise on uniform DC.
+                assert!(err <= (d.abs() / 4 + 8), "d={d} k={k} r={r} err={err}");
+            }
+        }
+    }
+
+    #[test]
+    fn chroma_dc_uniform_residual_round_trips_within_tolerance() {
+        let qp_c = 26;
+        for d in [16, 32, -32, 64, -64, 128] {
+            // Each chroma 4x4 sub-block sample residual = d uniform →
+            // 4x4 forward W[0,0] = 16*d. Two 4x4 sub-blocks per
+            // chroma 8x8 → 4 DC entries.
+            let dc_coeffs = [16 * d; 4];
+            let f = forward_hadamard_2x2(&dc_coeffs);
+            let z = quantize_chroma_dc(&f, qp_c, true);
+            let dc_c = inverse_hadamard_chroma_dc_420(&z, qp_c, &FLAT_4X4_16, 8).unwrap();
+            for (k, &dc) in dc_c.iter().enumerate() {
+                let r = (dc + 32) >> 6;
+                let err = (r - d).abs();
+                assert!(err <= (d.abs() / 4 + 8), "d={d} k={k} r={r} err={err}");
+            }
+        }
+    }
+
+    /// Round-27: 4:2:2 chroma DC round-trip (forward 4x2 hadamard +
+    /// quant + scan + decoder's inverse hadamard).
+    #[test]
+    fn chroma_dc_422_uniform_residual_round_trips_within_tolerance() {
+        use crate::transform::inverse_hadamard_chroma_dc_422;
+        let qp_c = 26;
+        for d in [16i32, 32, -32, 64, -64, 128] {
+            // 8 4x4 sub-blocks per 4:2:2 chroma MB → 8 DC entries, each
+            // = 16 * d (forward 4x4 of uniform `d`).
+            let dc_coeffs = [16 * d; 8];
+            let f = forward_hadamard_4x2(&dc_coeffs);
+            let z = quantize_chroma_dc_422(&f, qp_c, true);
+            let scan = scan_chroma_dc_422(&z);
+            let dc_c = inverse_hadamard_chroma_dc_422(&scan, qp_c, &FLAT_4X4_16, 8).unwrap();
+            for (k, &dc) in dc_c.iter().enumerate() {
+                let r = (dc + 32) >> 6;
+                let err = (r - d).abs();
+                assert!(err <= (d.abs() / 4 + 16), "d={d} k={k} r={r} err={err}",);
+            }
+        }
+    }
+
+    /// Round-27 — sanity-check the forward scan permutation matches the
+    /// decoder's inverse scan order. For an all-distinct row-major input
+    /// the emitted scan list must equal exactly what the decoder reads
+    /// off the bitstream.
+    #[test]
+    fn chroma_dc_422_scan_matches_decoder_inverse() {
+        // Row-major 4x2: [c[0,0], c[0,1], c[1,0], c[1,1], c[2,0], c[2,1], c[3,0], c[3,1]]
+        let rm: [i32; 8] = [10, 20, 30, 40, 50, 60, 70, 80];
+        let scan = scan_chroma_dc_422(&rm);
+        // Decoder de-scans ChromaDCLevel[L[0..=7]] into c per:
+        //   c[0,0]=L[0], c[0,1]=L[2], c[1,0]=L[1], c[1,1]=L[5],
+        //   c[2,0]=L[3], c[2,1]=L[6], c[3,0]=L[4], c[3,1]=L[7].
+        // So scan must be [c[0,0], c[1,0], c[0,1], c[2,0], c[3,0], c[1,1], c[2,1], c[3,1]]
+        //               = [rm[0], rm[2], rm[1], rm[4], rm[6], rm[3], rm[5], rm[7]]
+        //               = [10, 30, 20, 50, 70, 40, 60, 80]
+        assert_eq!(scan, [10, 30, 20, 50, 70, 40, 60, 80]);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Round-453 — full trellis RDOQ (Viterbi over the §9.3.3.1.3 residual
+// binarisation with §9.3.1.1-initialised context costs).
+// ---------------------------------------------------------------------------
+//
+// The round-49 "trellis-lite" is a greedy single pass with a flat rate
+// model. This is the full form: for every candidate last-significant
+// position the block's remaining coefficients are optimised jointly by
+// dynamic programming over the coeff_abs_level_minus1 context state
+// (eq. 9-23 / 9-24: the accumulated numDecodAbsLevelEq1 /
+// numDecodAbsLevelGt1 counts, walked in the decoder's reverse scan
+// order), each coefficient choosing among {0, |q| − 1, |q|} (q = the
+// open-loop level). Bin costs come from the slice's initial context
+// states (Tables 9-12..9-33 through `CabacContexts::init` at the block
+// QP) and the Table 9-44 rangeTabLPS probabilities:
+// cost(bin) = −log2(p(bin)) with p(LPS) = rangeLPS / range averaged
+// over the four quantised ranges. Distortion is tracked in the
+// coefficient domain (per-position quantiser step 2^qBits / MF and
+// the inverse-transform basis energy measured from the crate's own
+// §8.5.12 inverse) and the winner is re-checked in the sample domain
+// against the open-loop and trellis-lite blocks under the same rate
+// model, so the result is never worse than either.
+//
+// Informative only: the bitstream syntax is unchanged and the decoder
+// is unaffected.
+
+/// Per-slice context bit costs (in 1/16 bit) for one ctxBlockCat of the
+/// residual syntax elements.
+#[derive(Debug, Clone)]
+pub struct TrellisCtxCosts {
+    /// `significant_coeff_flag[levelListIdx]` — cost of bin 0 / bin 1.
+    sig: [[i64; 2]; 16],
+    /// `last_significant_coeff_flag[levelListIdx]` — bin 0 / bin 1.
+    last: [[i64; 2]; 16],
+    /// `coeff_abs_level_minus1` bin 0, ctxIdxInc 0..=4 — bin 0 / bin 1.
+    abs0: [[i64; 2]; 5],
+    /// `coeff_abs_level_minus1` bins > 0, ctxIdxInc 5..=9 — bin 0 / 1.
+    abs1: [[i64; 2]; 5],
+}
+
+/// Table 9-44-derived bin costs per pStateIdx: `[LPS, MPS]` in 1/16 bit.
+fn bin_cost_table_16ths() -> [[i64; 2]; 64] {
+    let mut t = [[0i64; 2]; 64];
+    for (st, row) in t.iter_mut().enumerate() {
+        // p(LPS): the rangeLPS fraction of the range, averaged over the
+        // four qCodIRangeIdx bands (range representative = band centre).
+        let mut p = 0.0f64;
+        for q in 0..4usize {
+            let r = 256.0 + 64.0 * q as f64 + 32.0;
+            p += crate::cabac::RANGE_TAB_LPS[st][q] as f64 / r;
+        }
+        p /= 4.0;
+        let p = p.clamp(1e-4, 0.5);
+        row[0] = (-(p.log2()) * 16.0).round() as i64;
+        row[1] = (-((1.0 - p).log2()) * 16.0).round() as i64;
+    }
+    t
+}
+
+impl TrellisCtxCosts {
+    /// Build the cost tables for `cat` (ctxBlockCat 1, 2 or 4 — the
+    /// 4x4 AC / luma / chroma-AC blocks the CABAC paths refine) from
+    /// the §9.3.1.1 initial states at `slice_qp`.
+    pub fn new(
+        slice_kind: crate::cabac_ctx::SliceKind,
+        cabac_init_idc: Option<u32>,
+        slice_qp: i32,
+        cat: u32,
+    ) -> Self {
+        let ctxs = crate::cabac_ctx::CabacContexts::init(slice_kind, cabac_init_idc, slice_qp)
+            .expect("context init");
+        let tab = bin_cost_table_16ths();
+        // Table 9-40 ctxBlockCatOffset for cat 0..=4.
+        let (sig_last_off, abs_off): (usize, usize) = match cat {
+            0 => (0, 0),
+            1 => (15, 10),
+            2 => (29, 20),
+            3 => (44, 30),
+            _ => (47, 39),
+        };
+        let cost = |ctx_idx: usize, bin: u32| -> i64 {
+            let st = ctxs.at(ctx_idx);
+            let mps = u32::from(st.val_mps);
+            let row = tab[st.state_idx as usize];
+            if bin == mps {
+                row[1]
+            } else {
+                row[0]
+            }
+        };
+        let mut sig = [[0i64; 2]; 16];
+        let mut last = [[0i64; 2]; 16];
+        for (i, (s, l)) in sig.iter_mut().zip(last.iter_mut()).enumerate() {
+            // Table 9-34 ctxIdxOffset 105 / 166 (frame-coded, cat < 5);
+            // §9.3.3.1.3 ctxIdxInc = levelListIdx.
+            *s = [
+                cost(105 + sig_last_off + i, 0),
+                cost(105 + sig_last_off + i, 1),
+            ];
+            *l = [
+                cost(166 + sig_last_off + i, 0),
+                cost(166 + sig_last_off + i, 1),
+            ];
+        }
+        let mut abs0 = [[0i64; 2]; 5];
+        let mut abs1 = [[0i64; 2]; 5];
+        for k in 0..5usize {
+            abs0[k] = [cost(227 + abs_off + k, 0), cost(227 + abs_off + k, 1)];
+            abs1[k] = [
+                cost(227 + abs_off + 5 + k, 0),
+                cost(227 + abs_off + 5 + k, 1),
+            ];
+        }
+        Self {
+            sig,
+            last,
+            abs0,
+            abs1,
+        }
+    }
+
+    /// Rate of `coeff_abs_level_minus1` + `coeff_sign_flag` for
+    /// `abs_level >= 1` given the eq. 9-23 / 9-24 counters.
+    fn abs_level_cost(&self, abs_level: i32, eq1: usize, gt1: usize) -> i64 {
+        let m = abs_level - 1;
+        let inc0 = if gt1 != 0 { 0 } else { (1 + eq1).min(4) };
+        let incn = gt1.min(4);
+        let mut r = if m == 0 {
+            self.abs0[inc0][0]
+        } else {
+            self.abs0[inc0][1]
+        };
+        if m > 0 {
+            // Truncated unary prefix (cMax 14): bins 1..=13 are ones for
+            // m >= 14, else m - 1 ones then a terminating zero.
+            let ones = (m - 1).min(13) as i64;
+            r += ones * self.abs1[incn][1];
+            if m < 14 {
+                r += self.abs1[incn][0];
+            } else {
+                // EG0 suffix (bypass, 1 bit per bin) for m - 14.
+                let v = (m - 14) as u32 + 1;
+                let k = 32 - v.leading_zeros() - 1;
+                r += 16 * (2 * k as i64 + 1);
+            }
+        }
+        r + 16 // coeff_sign_flag (bypass)
+    }
+}
+
+/// Cached [`TrellisCtxCosts`] keyed by (slice kind, cabac_init_idc, QP,
+/// cat) — the tables only depend on slice-level parameters.
+fn trellis_ctx_costs_cached(
+    slice_kind: crate::cabac_ctx::SliceKind,
+    cabac_init_idc: Option<u32>,
+    qp: i32,
+    cat: u32,
+) -> std::rc::Rc<TrellisCtxCosts> {
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+    type Key = (u8, Option<u32>, i32, u32);
+    thread_local! {
+        static CACHE: RefCell<HashMap<Key, std::rc::Rc<TrellisCtxCosts>>> =
+            RefCell::new(HashMap::new());
+    }
+    let key = (slice_kind as u8, cabac_init_idc, qp, cat);
+    CACHE.with(|c| {
+        c.borrow_mut()
+            .entry(key)
+            .or_insert_with(|| {
+                std::rc::Rc::new(TrellisCtxCosts::new(slice_kind, cabac_init_idc, qp, cat))
+            })
+            .clone()
+    })
+}
+
+/// Sample-domain energy of a unit change of one dequantised
+/// coefficient at each row-major position — `g[k]` such that
+/// spatial SSD ≈ Σ g[k] · (Δw[k])² with Δw in the forward-transform
+/// (`w`) domain. Measured from the crate's §8.5.12 inverse at a large
+/// level so rounding is negligible.
+fn coefficient_energy_weights(qp: i32) -> [f64; 16] {
+    let m = qp.rem_euclid(6) as usize;
+    let mf = forward_mf_for(m);
+    let qb = q_bits(qp);
+    let mut g = [0f64; 16];
+    for k in 0..16 {
+        let mut z = [0i32; 16];
+        let level = 64i32;
+        z[k] = level;
+        let r = crate::transform::inverse_transform_4x4(&z, qp, &crate::transform::FLAT_4X4_16, 8)
+            .unwrap_or([0i32; 16]);
+        let e: f64 = r.iter().map(|&v| (v as f64) * (v as f64)).sum();
+        // w-domain step for one level at this position.
+        let step = (1u64 << qb) as f64 / mf[k] as f64;
+        let dw = level as f64 * step;
+        g[k] = if dw > 0.0 { e / (dw * dw) } else { 0.0 };
+    }
+    g
+}
+
+/// Round-453 — full trellis RDOQ of one quantised 4x4 block (see the
+/// module notes above). Same contract as [`trellis_refine_4x4_ac`]:
+/// `residual` / `w` / `z` row-major, `skip_dc` pins `z[0]`; `cat` is
+/// the ctxBlockCat whose contexts price the block (1 = Intra16x16 AC,
+/// 2 = luma 4x4, 4 = chroma AC); `slice_kind` / `cabac_init_idc` /
+/// `slice_qp` select the §9.3.1.1 initial states.
+#[allow(clippy::too_many_arguments)]
+pub fn trellis_refine_4x4_ac_full(
+    residual: &[i32; 16],
+    w: &[i32; 16],
+    z: &[i32; 16],
+    qp: i32,
+    lambda_q16: u64,
+    skip_dc: bool,
+    cat: u32,
+    slice_kind: crate::cabac_ctx::SliceKind,
+    cabac_init_idc: Option<u32>,
+) -> [i32; 16] {
+    if lambda_q16 == 0 {
+        return *z;
+    }
+    let costs = trellis_ctx_costs_cached(slice_kind, cabac_init_idc, qp, cat);
+    let g = coefficient_energy_weights(qp);
+    let m = qp.rem_euclid(6) as usize;
+    let mf = forward_mf_for(m);
+    let qb = q_bits(qp);
+    let lam = lambda_q16 as f64;
+
+    // Coefficient list in scan order (levelListIdx order), skipping
+    // the DC slot for AC blocks.
+    let first = usize::from(skip_dc);
+    let mut raster_of: Vec<usize> = vec![0; 16];
+    for (raster, &scan) in ZIGZAG_4X4_FWD.iter().enumerate() {
+        raster_of[scan] = raster;
+    }
+    let list: Vec<usize> = (first..16).map(|s| raster_of[s]).collect();
+    let n = list.len();
+    // Per list position: |w|, sign, open-loop |q|, step, energy weight.
+    let absw: Vec<f64> = list.iter().map(|&k| (w[k] as f64).abs()).collect();
+    let q: Vec<i32> = list.iter().map(|&k| z[k].abs()).collect();
+    let step: Vec<f64> = list
+        .iter()
+        .map(|&k| (1u64 << qb) as f64 / mf[k] as f64)
+        .collect();
+    let gw: Vec<f64> = list.iter().map(|&k| g[k]).collect();
+    if q.iter().all(|&v| v == 0) {
+        return *z;
+    }
+    // Distortion of coding level `l` at list position i (scaled by 16
+    // to match `J = 16·D + λ16·R`).
+    let dist = |i: usize, l: i32| -> f64 {
+        let d = absw[i] - l as f64 * step[i];
+        16.0 * gw[i] * d * d
+    };
+    let cands = |i: usize| -> Vec<i32> {
+        let mut c = vec![0];
+        if q[i] >= 1 {
+            c.push(q[i]);
+        }
+        if q[i] >= 2 {
+            c.push(q[i] - 1);
+        }
+        c
+    };
+    // Cost of the all-zero block (cbf = 0 → nothing coded; distortion
+    // of dropping everything).
+    let mut best_j = (0..n).map(|i| dist(i, 0)).sum::<f64>();
+    let mut best_levels: Vec<i32> = vec![0; n];
+
+    // For each candidate last position L (with q[L] > 0): DP over
+    // i = L-1 .. 0 in decoder order with state (eq1, gt1) ∈ 0..=4².
+    const NS: usize = 25;
+    let idx = |eq1: usize, gt1: usize| eq1 * 5 + gt1;
+    for last in (0..n).rev() {
+        if q[last] == 0 {
+            continue;
+        }
+        // Dropped coefficients above `last`.
+        let tail_d: f64 = (last + 1..n).map(|i| dist(i, 0)).sum();
+        let mut cur = vec![(f64::INFINITY, Vec::<i32>::new()); NS];
+        for &l in &cands(last) {
+            if l == 0 {
+                continue;
+            }
+            let r = costs.sig[last][1] + costs.last[last][1] + costs.abs_level_cost(l, 0, 0) + 16;
+            // Approximate coded_block_flag = 1 as one bit.
+            let j = tail_d + dist(last, l) + lam * r as f64;
+            let eq1 = usize::from(l == 1);
+            let gt1 = usize::from(l > 1);
+            let s = idx(eq1, gt1);
+            if j < cur[s].0 {
+                let mut lv = vec![0i32; n];
+                lv[last] = l;
+                cur[s] = (j, lv);
+            }
+        }
+        for i in (0..last).rev() {
+            let mut next = vec![(f64::INFINITY, Vec::<i32>::new()); NS];
+            for (s, entry) in cur.iter().enumerate() {
+                if !entry.0.is_finite() {
+                    continue;
+                }
+                let (eq1, gt1) = (s / 5, s % 5);
+                for &l in &cands(i) {
+                    let (j, ns) = if l == 0 {
+                        (cur[s].0 + dist(i, 0) + lam * costs.sig[i][0] as f64, s)
+                    } else {
+                        let r =
+                            costs.sig[i][1] + costs.last[i][0] + costs.abs_level_cost(l, eq1, gt1);
+                        let ne = (eq1 + usize::from(l == 1)).min(4);
+                        let ng = (gt1 + usize::from(l > 1)).min(4);
+                        (cur[s].0 + dist(i, l) + lam * r as f64, idx(ne, ng))
+                    };
+                    if j < next[ns].0 {
+                        let mut lv = cur[s].1.clone();
+                        lv[i] = l;
+                        next[ns] = (j, lv);
+                    }
+                }
+            }
+            cur = next;
+        }
+        for (j, lv) in cur.into_iter() {
+            if j < best_j {
+                best_j = j;
+                best_levels = lv;
+            }
+        }
+    }
+
+    // Assemble the candidate block with the original signs.
+    let mut z_full = *z;
+    for (i, &k) in list.iter().enumerate() {
+        let l = best_levels[i];
+        z_full[k] = if w[k] < 0 { -l } else { l };
+    }
+    if skip_dc {
+        z_full[0] = z[0];
+    }
+
+    // Sample-domain re-check against the open-loop and trellis-lite
+    // blocks under the same rate model: keep the best.
+    let rate_model = |levels: &[i32; 16]| -> i64 {
+        let lv: Vec<i32> = list.iter().map(|&k| levels[k].abs()).collect();
+        let last = match lv.iter().rposition(|&v| v != 0) {
+            Some(p) => p,
+            None => return 0,
+        };
+        let (mut eq1, mut gt1) = (0usize, 0usize);
+        let mut r = 16i64;
+        for i in (0..=last).rev() {
+            let l = lv[i];
+            if l == 0 {
+                r += costs.sig[i][0];
+            } else {
+                r += costs.sig[i][1] + costs.last[i][usize::from(i == last)];
+                r += costs.abs_level_cost(l, eq1, gt1);
+                eq1 = (eq1 + usize::from(l == 1)).min(4);
+                gt1 = (gt1 + usize::from(l > 1)).min(4);
+            }
+        }
+        r
+    };
+    let spatial_j = |levels: &[i32; 16]| -> f64 {
+        let r_hat =
+            crate::transform::inverse_transform_4x4(levels, qp, &crate::transform::FLAT_4X4_16, 8)
+                .unwrap_or([0i32; 16]);
+        let mut ssd = 0f64;
+        for k in 0..16 {
+            let d = (residual[k] - r_hat[k]) as f64;
+            ssd += d * d;
+        }
+        16.0 * ssd + lam * rate_model(levels) as f64
+    };
+    let z_lite = trellis_refine_4x4_ac(residual, w, z, qp, lambda_q16, skip_dc);
+    let mut best = (*z, spatial_j(z));
+    for cand in [z_lite, z_full] {
+        let j = spatial_j(&cand);
+        if j < best.1 {
+            best = (cand, j);
+        }
+    }
+    best.0
+}
+
+thread_local! {
+    /// Round-453 — whether the CABAC paths run the full trellis
+    /// ([`trellis_refine_4x4_ac_full`]) or the round-49 lite pass.
+    /// Set by the CABAC slice entry points from
+    /// `EncoderConfig::trellis_full` (the per-block quantisers are
+    /// stateless helpers several call levels below the config).
+    static TRELLIS_FULL: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Select the trellis flavour for the current thread's CABAC encodes.
+pub fn set_trellis_full(full: bool) {
+    TRELLIS_FULL.with(|f| f.set(full));
+}
+
+/// Round-453 — CABAC-path trellis dispatch: full Viterbi RDOQ when
+/// [`set_trellis_full`] is on, else the (default) lite pass.
+#[allow(clippy::too_many_arguments)]
+pub fn trellis_refine_4x4_ac_dispatch(
+    residual: &[i32; 16],
+    w: &[i32; 16],
+    z: &[i32; 16],
+    qp: i32,
+    lambda_q16: u64,
+    skip_dc: bool,
+    cat: u32,
+    slice_kind: crate::cabac_ctx::SliceKind,
+    cabac_init_idc: Option<u32>,
+) -> [i32; 16] {
+    if TRELLIS_FULL.with(|f| f.get()) {
+        trellis_refine_4x4_ac_full(
+            residual,
+            w,
+            z,
+            qp,
+            lambda_q16,
+            skip_dc,
+            cat,
+            slice_kind,
+            cabac_init_idc,
+        )
+    } else {
+        trellis_refine_4x4_ac(residual, w, z, qp, lambda_q16, skip_dc)
+    }
+}

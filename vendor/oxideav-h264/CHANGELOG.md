@@ -1,0 +1,4389 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.9](https://github.com/OxideAV/oxideav-h264/compare/v0.1.8...v0.1.9) - 2026-10-14
+
+### Other
+
+- encoder deep: Intra_4x4 (I_NxN) at 8/10/12/14-bit — §8.3.1 block-sequential prediction through the bit-depth-aware predict_4x4, §8.3.1.1 predicted-mode coding, §8.5.15 V/H DPCM under bypass, §8.3.4.5 4:4:4 planes, CAVLC + CABAC, per-MB λ·SAD election vs Intra_16x16; registry intra_4x4 option (default on); CABAC 4x4-plane emitter honours the current MB's intra flag for the §9.3.3.1.1.9 cond term; 8 layouts × CAVLC/CABAC lossy + lossless bit-exact in ours, byte-exact in the black-box reference
+- registry encoder: every High-family input layout (8-bit 4:2:2/4:4:4/grey, 10/12-bit 4:2:0/4:2:2/4:4:4/grey) via a streaming DeepSession under the §A.2 minimum or explicit profile, lossless / transform_8x8 / deblock / format=avcc options; avcc module (ISO/IEC 14496-15 §5.3.2.1 record builder + parser + sample framing); shared Encoder::parameter_sets; deep lossless signalled 244 per §A.2.5–A.2.7; both-direction gates per layout incl. black-box byte identity
+- §7.4.3 idr_pic_id — per-session counter on IDR access units (Encoder::set_idr_pic_id, session rotation, CAVLC + CABAC IDR headers); decoder-side parse gates over gop=1 / mixed / B / rate-controlled streams; 8-bit 4:2:0 registry streams pinned byte-identical
+- apply the SPS frame cropping window to output frames
+- raw Annex-B byte-stream demuxer (.h264 / .264 / .avc)
+- 8x8 transform at 10/12/14-bit (§8.5.13 at QP′ past 51, §7.4.5.3.3 CAVLC split, cat-5 CABAC residual, transform_size_8x8_flag contexts, §8.5.13 bypass identity under lossless)
+- 8x8 transform in CABAC MBAFF (transform_size_8x8_flag under Table 6-4 A/B contexts, cat-5 residuals under Table 9-43 frame/field columns, §8.5.7 field 8x8 scan, §8.7 8x8-edge deblock skip)
+- CABAC at 10/12/14-bit (shared mbaff_cabac emission helpers, eq. 9-22 NumC8x8 4:2:2 DC contexts, cat 6..12 4:4:4 planes, eq. 9-5 init at negative QP); decoder: CABAC coeff_abs_level_minus1 UEG0 escape cap sized for 2^(7+BitDepth) levels; fuzz: mbaff_cabac_roundtrip + deep_roundtrip targets
+- 10/12/14-bit encoder (encoder::deep) — QP′ = QP + QpBdOffset scaling past 51, §8.5.8 chroma QP, depth-aware intra/MC/§8.7 deblock, 4:2:0/4:2:2/4:4:4, negative QP_Y; lossless qpprime_y_zero_transform_bypass (§8.5.10/8.5.11/8.5.12 identities + §8.5.15 DPCM, interop mode); fix 4:2:2 chroma DC quantiser qP,DC = qP + 3 (eq. 8-327)
+- CABAC MBAFF frame encoding (§9.3.3.1.1.2 mb_field_decoding_flag ctx, §9.3.3.1.1.1 skip ctx under §7.4.4 inference, eq. 9-12/9-15/9-16 field↔frame ref_idx/|mvd| scaling, Table 6-4 CBP/CBF probes, Table 9-34 field residual contexts + §8.5.6 field scan)
+
+### Added
+
+- encoder: **§7.4.3 `idr_pic_id`** (round 475) — `Encoder::set_idr_pic_id` / `with_idr_pic_id` / `idr_pic_id` on the stateless encoder (both CAVLC and CABAC IDR paths write it), and `EncoderSession` (hence the registry encoder) rotates a per-session counter in `0..=65535` per IDR access unit, so two consecutive IDR access units never share the value. Before, every IDR carried `idr_pic_id = 0` and an all-IDR stream (`gop=1`, the HEIF `avcs` image-sequence shape) read, under the §7.4.1.2.4 first-VCL-NAL test, as redundant slices of ONE picture. `integration_idr_pic_id` parses the produced streams with the crate's own slice-header parser over `gop=1` / mixed IDR-P / B mini-GOP / rate-controlled sessions (one picture out per IDR in our decoder and in a black-box reference decoder); `integration_registry_bit_identity` pins the pre-round 8-bit 4:2:0 registry streams (CAVLC / CABAC / B / CBR / VBR, single-IDR) byte-for-byte. The batch sequence encoders (`deep`, `field`, `mbaff*`, `multiref`, `slices`, `sp`, `scp`) emit exactly one IDR per sequence and are unaffected.
+- registry encoder: **every High-family input layout** (round 475) — `h264_encoder::make_encoder` accepts `Yuv422P` / `Yuv444P` / `Gray8` / `Yuv420P10Le` / `Yuv422P10Le` / `Yuv444P10Le` / `Gray10Le` / `Yuv420P12Le` / `Yuv422P12Le` / `Yuv444P12Le` / `Gray12Le` next to `Yuv420P` (declared on the registry descriptor via `CodecCapabilities::accepted_pixel_formats`, `h264_encoder::accepted_pixel_formats()`); 8-bit 4:2:0 (grey coded as 4:2:0 with constant chroma) keeps the Baseline / Main session with IDR / P / B + rate control, byte-identical streams; every other layout rides the new streaming `encoder::deep::DeepSession` (IDR + P pictures, Intra_16x16 / P_Skip / P_L0_16x16 / Intra_16x16 fallback, CAVLC or CABAC, fixed QP, optional 8x8 transform, deblocking on/off) under the §A.2.4 – §A.2.7 minimum profile (High 100 / High 10 / High 4:2:2 / High 4:4:4 Predictive) or an explicit one. New options: `profile` (`auto` / `baseline` / `main` / `high` / `high10` / `high422` / `high444`; a profile that does not admit the layout is refused), `lossless` (High 4:4:4 Predictive transform bypass at QP′Y = 0 — reconstruction equals the source, `lossless_interop` mode), `transform_8x8`, `deblock`, `format` (`annexb` / `avcc`). Output `CodecParameters` carry the coded `pixel_format` (and, with `format=avcc`, the `AVCDecoderConfigurationRecord` in `extradata` while packets become 4-byte length-prefixed samples without parameter sets / filler). `H264EncoderOptions` is now `#[non_exhaustive]` (`new()`). Gates (`integration_registry_layouts`): every layout × CAVLC / CABAC decodes in our decoder within the lossy bound and **byte-identically in a black-box reference decoder**; lossless 4:2:2 / 4:4:4 / 10-bit / 12-bit / grey exact in both; `avcC` extradata + samples decode identically to the Annex B stream; §A.2 rejections.
+- encoder `deep`: **Intra_4x4 (I_NxN) at 8 / 10 / 12 / 14 bit** (`DeepSession::with_intra_4x4`, registry option `intra_4x4`, default on) — §8.3.1.2 block-sequential prediction through the decoder's own bit-depth-aware `predict_4x4` (`1 << (BitDepth − 1)` DC default, Clip1 at depth, the §6.4.11.4 / Table 6-3 top-right availability incl. mbAddrC and the never-available blocks 3 / 7 / 11 / 13 / 15), §8.3.1.1 `predIntra4x4PredMode` (`prev_intra4x4_pred_mode_flag` / `rem_intra4x4_pred_mode`), per-block 4x4 residual at QP′ or the §8.5.15 V / H DPCM under transform bypass, §8.3.4.5 4:4:4 chroma planes coded like luma with the luma modes, CAVLC (`write_i_nxn_mb_chroma` / `write_i4x4_mb_444`) and CABAC (ctxIdx 68 / 69 pred modes, cat-2 residuals) emission; per macroblock I_NxN competes with Intra_16x16 on `Σ (SAD + mode bits · λ)`. Gates (`integration_deep_intra4x4`): 8 layouts × CAVLC / CABAC lossy + 4 layouts lossless, bit-exact in our decoder and byte-exact in the black-box reference decoder; measured on a detailed 64x48 picture at QP 26: 10-bit 4:2:0 3588 → 3446 B at +0.03 dB (CAVLC), 3468 → 3233 B (CABAC); lossless 10-bit 4:2:2 19844 → 17168 B, 12-bit 4:4:4 49572 → 33308 B, 14-bit 4:2:0 28948 → 25006 B.
+- `avcc` module: ISO/IEC 14496-15 §5.3.2.1 `AvcDecoderConfigurationRecord` builder (`from_parameter_sets` / `from_annex_b` — profile / compatibility byte / highest level / chroma format / bit depths derived from the SPSs per §5.3.2.1.1, trailer for every profile other than 66 / 77 / 88 per the 2024 syntax, `bit_depth_*_minus8` bounded to 0..=4) and parser (`parse`, tolerant of the truncated High-family trailer), plus `annex_b_to_length_prefixed` sample framing. The decoder's `consume_extradata` now applies the same 2024 trailer rule.
+- `encoder::deep::DeepSession` — streaming driver over the high-bit-depth encoder: SPS / PPS fixed at construction (`parameter_sets_annex_b`), one `encode_picture(kind, frame_num, poc, idr_pic_id)` per picture (`DeepPictureKind::{Idr, I, P}`), `min_profile_idc` / `profile_admits` (§A.2.4 – §A.2.7). `encode_deep_sequence` is a byte-identical wrapper over it.
+- `Encoder::parameter_sets` / `parameter_sets_annex_b` and `EncoderSession::parameter_sets_annex_b` — the SPS / PPS the IDR access units carry, available before the first picture (one builder shared by the CAVLC and CABAC IDR paths).
+- encoder: **CABAC MBAFF** frame encoding (`encoder::mbaff_cabac`, round 456) — every §9.3.3.1.1.x context increment resolved through the decoder's own §6.4.10 / §6.4.12.2 Table 6-4 neighbour machinery: `mb_field_decoding_flag` (ctxIdx 70..=72 from the neighbouring pairs), `mb_skip_flag` under the §7.4.4 pair-flag inference (a top MB's skip context is derived under the inferred flag; the pair flag rides the first coded MB and retro-patches a skipped top), eq. 9-12 `refIdxZeroFlagN` thresholds and eq. 9-15/9-16 vertical |mvd| scaling across frame/field boundaries, per-bin Table 6-4 `coded_block_pattern` probes, §6.4.11.4/.5 `coded_block_flag` block neighbours across pair boundaries, the Table 9-34 FIELD `significant_coeff_flag` / `last_significant_coeff_flag` context families (277 / 338) with the §8.5.6 field scan on field MBs, and `end_of_slice_flag` after bottom MBs only. I pictures Intra_16x16, P pictures P_Skip / P_L0_16x16 (+ optional Intra_16x16 fallback). 10 gates bit-exact in our decoder and byte-exact in a black-box reference decoder.
+- encoder CABAC syntax: `encode_residual_block_cabac_field` (frame/field selector) and the MBAFF `cbp_luma_mbaff` probe path in `encode_coded_block_pattern` (decoder mirror).
+- encoder: **8x8 transform in CABAC MBAFF** (`MbaffCabacConfig::transform_8x8`, High profile) — `transform_size_8x8_flag` under the §9.3.3.1.1.10 Table 6-4 A/B contexts with mixed frame/field neighbours, ctxBlockCat-5 residuals under the Table 9-43 FRAME and FIELD `significant_coeff_flag` ctxIdxInc columns (ctxIdxOffset 402/417 vs 436/451), the §8.5.7 Table 8-14 field 8x8 scan on field MBs, the §8.7 8x8-internal-edge deblock skip; 2 gates bit-exact in our decoder + byte-exact in the black-box reference decoder.
+- encoder: **high-bit-depth encoder** (`encoder::deep`, round 456) — 10 / 12 / 14-bit `u16` sources at 4:2:0 / 4:2:2 / 4:4:4 under High 10 (110) / High 4:2:2 (122) / High 4:4:4 Predictive (244): every stage runs the decoder's bit-depth-aware processes (`QP′ = QP + QpBdOffset` scaling with the forward quantiser extended past 51, §8.5.8 chroma QP with the `−QpBdOffsetC` clip, `1 << (BitDepth − 1)` intra DC defaults, Clip1 at the sample range, §8.4.2.2 interpolation at depth, §8.7 deblocking with α/β/tC0 scaled by `1 << (BitDepth − 8)` via the new `deblock_recon_deep`), negative QP_Y down to `−QpBdOffsetY`; I pictures Intra_16x16, P pictures P_Skip / P_L0_16x16 (+ Intra_16x16 fallback), CAVLC. 9 gates (10/12/14-bit × 4:2:0 / 4:2:2 / 4:4:4, QP_Y = −30 at 14-bit, deblock on/off) bit-exact in our decoder, byte-exact in a black-box reference decoder, and PSNR-checked against the source at each depth.
+- encoder: **lossless coding** (`DeepConfig::lossless`, `build_sps_rbsp_with_bypass`) — SPS `qpprime_y_zero_transform_bypass_flag = 1` at QP′Y == 0: §8.5.10 eq. 8-319 / §8.5.11 eq. 8-323 (with the 4:2:2 eq. 8-305 pickup) / §8.5.12 eq. 8-334 identities and the §8.5.15 V/H DPCM on Intra_16x16 luma, chroma (Table 8-5 H/V) and 4:4:4 chroma-as-luma planes; reconstruction equals the source sample-for-sample at 8/10/12/14-bit across the chroma formats (our decoder bit-exact). Black-box finding: the stock reference decoder applies the transform-bypass DPCM to Intra_4x4 / Intra_8x8 only and skips §8.5.2 step 3 / §8.5.4 step 3 (Intra_16x16 V/H and chroma H/V) — verified mode by mode (DC / Plane agree, V / H disagree, V / H agree once the DPCM is withheld) — so `DeepConfig::lossless_interop` withholds those modes for streams that must also decode losslessly there (gated byte-exact in both decoders).
+- encoder: **8x8 transform at 10 / 12 / 14-bit** (`DeepConfig::transform_8x8`, 4:2:0 / 4:2:2) — §8.6.4 forward / §8.5.13 inverse at QP′ past 51 (eq. 8-356 `<< (qP/6 − 6)`), the §7.4.5.3.3 four-4x4 CAVLC split, the ctxBlockCat-5 CABAC residual with the `transform_size_8x8_flag` contexts, the §8.7 8x8-edge deblock skip, and the §8.5.13 bypass identity under lossless coding; 1 gate (4 streams) bit-exact in our decoder + byte-exact in the black-box reference decoder.
+- encoder: **CABAC at 10 / 12 / 14-bit** (`DeepConfig::cabac`) — the deep encoder's macroblock decisions coded with the arithmetic coder through the shared `encoder::mbaff_cabac` emission helpers (`CabacState`, `emit_i16_plane_cabac` / `emit_inter_plane_cabac` / `emit_chroma_cabac`, every ctxIdxInc through the decoder's `CabacNeighbourGrid`): 4:2:2 chroma DC under the eq. 9-22 `NumC8x8 = 2` contexts, 4:4:4 planes under the Table 9-42 cat 6..=12 families, eq. 9-5 context initialisation at negative slice QP, lossless residual magnitudes at 14-bit. 2 more gates (7 streams) bit-exact in our decoder + byte-exact in the black-box reference decoder.
+- fuzz: `mbaff_cabac_roundtrip` (CABAC MBAFF encoder ↔ decoder bit-exact round trip + corrupted-stream panic-freedom) and `deep_roundtrip` (8..=14-bit / 4:2:0 / 4:2:2 / 4:4:4 / CAVLC + CABAC / lossless round trip) targets.
+- encoder CAVLC: `write_intra16x16_mb_in_inter_slice_chroma` (Intra_16x16 inside P/B slices at every ChromaArrayType); SPS writer admits profile 110 and 4:2:2 under profile 244 (12-/14-bit 4:2:2).
+
+### Fixed
+
+- encoder CABAC 4x4-plane emitter (`emit_inter_plane_cabac`): the §9.3.3.1.1.9 `coded_block_flag` cond term for an unavailable neighbour block was derived with "current MB is inter" hard-coded; it now follows the macroblock's own intra flag (unchanged bits for every inter caller, required by the I_NxN emitter).
+- encoder `deep`: lossless streams (`qpprime_y_zero_transform_bypass_flag = 1`) signalled High 10 (110) / High 4:2:2 (122) at 4:2:0 / 4:2:2 up to 10 bit, which §A.2.5 / §A.2.6 forbid ("qpprime_y_zero_transform_bypass_flag equal to 0 only"); the flag now forces High 4:4:4 Predictive (244), the only profile that admits it (§A.2.7).
+- decoder CABAC `coeff_abs_level_minus1`: the UEG0 escape rejected suffixes past 14 leading-one bins (a ≈ 49 K cap sized for 8-bit), so legal 12-/14-bit residuals (§7.4.5.3.2 bounds the level at 2^(7 + BitDepth), i.e. 2^21 at 14-bit — 20 leading ones) failed with `EgEscapeSuffixOverflow`; the cap is now 20 (worst case ≈ 14 + 2^22, still i32-safe through §8.5.12). Found by the deep CABAC encoder at QP′Y = 6.
+- encoder 4:2:2 chroma DC quantiser (`quantize_chroma_dc_422_w`): the forward step used `MF(qP % 6) / 2^(17 + qP/6)` while §8.5.11.2 dequantises at `qP,DC = qP + 3` (eq. 8-327/8-328) — 1/√2 of the correct `MF(qP,DC % 6) / 2^(16 + qP,DC/6)` scale, so every 4:2:2 chroma DC (CAVLC and CABAC, I/P/B, every round since r27) reconstructed ~0.7× the intended value. Streams were legal and bit-exact (the recon mirrors the decoder), but 4:2:2 chroma sat ~10 dB below luma at equal QP; measured on the deep encoder's 4:2:2 source at 8-bit: Cb 30.0 → 41.8 dB, Cr 35.5 → 40.6 dB (luma 41.2 dB).
+
+## [0.1.8](https://github.com/OxideAV/oxideav-h264/compare/v0.1.7...v0.1.8) - 2026-08-30
+
+### Other
+
+- round-453 encoder coverage — MBAFF encode, weighted P, multi-ref/long-term/MMCO/RPLM, multi-slice/FMO/ASO/redundant/constrained intra, SEI recovery_point, full trellis; decoder FMO row
+- full trellis RDOQ (§9.3.3.1.3 Viterbi with §9.3.1.1-initialised context costs), opt-in with measured delta
+- recovery_point SEI emission on IDR access units (§D.1.8 / §D.2.8)
+- multi-slice, FMO (map types 0-6), ASO, redundant slices, constrained intra emission; decoder: FMO decoding (§7.3.2.2, §8.2.2 NextMbAddress, §6.4.8 slice availability)
+- multi-reference P coding + long-term references, MMCO and RPLM emission (§7.3.5.1 ref_idx_l0, §8.2.4.2.1 list init, §8.2.5 marking, §8.2.4.3 modification)
+- explicit weighted prediction on P slices with fade detection (§7.3.3.2 pred_weight_table, §8.4.2.3.2 eq. 8-274)
+- MBAFF frame encoding (§7.3.4 mb_field_decoding_flag, §6.4.12.2 Table 6-4 neighbours, eq. 8-217..8-220 MV scaling, §8.4.2.1 field-of-frame MC, §7.4.4 skip-pair inference, §8.7 MBAFF deblock)
+- round-451 status rollup — SP/SI + data partitioning + ASO + redundant pictures + 12/14-bit gates
+- discard redundant coded pictures (§7.4.2.2) + gate
+- arbitrary slice order (§A.2.1/§A.2.3) — §6.4.8 undecoded-neighbour availability fix + ASO gates
+- 12-/14-bit stream gates — I_PCM exact round-trips + I16x16 DC residual byte-exact vs black-box
+- slice data partitioning (§7.3.2.9) — NAL 2/3/4 decode, dual-form emit, I_PCM nC-grid fix
+- SP/SI switching-picture encoder + bit-exact identity gates
+- SP/SI slices (§8.6) — transform-domain reconstruction with QSY/QSC
+- bound non-conforming single-plane SCP input; docs: round-448 status
+- CAVLC I_NxN (Intra_4x4) at 4:0:0 — mono two-way I_16x16 / I_4x4 RDO
+- 8x8 transform at ChromaArrayType 0 — 4:0:0 + separate-colour-plane transform_8x8 streams
+- B pictures at ChromaArrayType 0 — 4:0:0 and separate-colour-plane B access units
+- separate-colour-plane (separate_colour_plane_flag=1) — §8.1 three-invocation decode + per-plane SCP encoder
+- monochrome (4:0:0) CABAC I/P legs
+- monochrome (4:0:0) CAVLC I/P — ChromaWriteKind::Mono, luma-only pipeline
+- exact-sample MVP neighbour probes — CAPAMA3_Sand_F 50/50, all four JVT conformance streams byte-exact
+- MB-row QP modulation on B pictures — CAVLC + CABAC rate-adaptive B entry points
+- B-frame rate control — 3-kind controller, B mini-GOP sessions, registry bframes
+- scrub one remaining attributive lambda citation in an old changelog entry
+- scrub — cite the upstream conformance package generically
+- round-440 status — Table 8-6/8-7/8-8 co-located derivation complete, 3/4 JVT conformance streams byte-exact, PAFF implicit-weight + B-reference-field encoder axes
+- PAFF B-field tail — §8.4.2.3.3 implicit-weight B fields + B REFERENCE fields
+- stamp mb_field_decoding_flag BEFORE inter partition derivation
+- complete §8.4.1.2.1 co-located derivation — Table 8-6/8-7/8-8 frame/field cross rows
+- clippy doc_lazy_continuation indent fix on collapse_field_pairs
+- §8.2.4.2.1/.2.3 frame-slice reference lists over complementary field-pair UNITS
+- §6.4.12 MBAFF neighbouring-SAMPLE derivation for intra prediction
+- staged JVT PAFF/MBAFF temporal-direct conformance harness + header/MB triage examples
+- clippy unused-mut fix on the diagnostic dump closure
+- round-436 stream classes in the PAFF diagnostic dump
+- round-436 interlaced follow-ups — PAFF B fields, §8.2.5.4 field MMCO, encoder field 8x8 scan
+- §8.2.5.4 MMCO field-marking operations (per-field DPB markings)
+- §8.5.7 Table 8-14 FIELD scan for the CAVLC 8x8 transform (PAFF field pictures)
+- §8.2.5.3 pair-aware sliding window; encoder: PAFF B field pairs (spatial + temporal direct)
+- CABAC + IDR MB-row QP modulation, HRD/VUI signalling (r420 followups)
+- DPB-bounded reference store + windowed §8.2.5.2 gap fill (scheduled-fuzz OOM triage)
+- rate-control validation matrix — accuracy across a signal matrix + RD check vs fixed-QP anchors
+- MB-row QP modulation on the CAVLC P path (mb_qp_delta emission)
+- H.264 encoder factory with rate-control options
+- rate-controlled GOP session — VBV retry loop, CBR filler NALs, capped-VBR integrator
+- per-frame QP overrides on all six frame entry points
+- rate-control core — CBR/capped-VBR feedback controller + Annex C leaky-bucket CPB model
+- corpus count 36/36 (paff-frame-refs)
+- gate paff-frame-refs BitExact — 36/36
+- PAFF frame-as-field-reference: field views of a stored FRAME picture serve P fields byte-exactly
+- round-416 rollup — CAVLC MBAFF closed + PAFF byte-exact end-to-end, corpus 35/35 BitExact
+- gate paff-p-crossparity BitExact — 35/35
+- PAFF cross-parity field references: $8.4.1.4 Table 8-10 chroma-MV adjustment end-to-end
+- gate the round-416 PAFF fixture extension — 34/34 BitExact
+- PAFF end-to-end: $8.2.4.2.5 field reference lists in the decoder + field-picture encoder, byte-exact both ways
+- CAVLC MBAFF byte-exact: route residual nC probes through Table 6-4 — mbaff-field-cavlc gates BitExact (31/31)
+- fuzz oracle: bind reference decoder by name + premise rework; enforce 5 conformance clauses the corrected oracle surfaced
+- Hide internal plumbing from the public API surface with #[doc(hidden)]
+- CAVLC MBAFF groundwork + round-413 fixture extension (mbaff-field-8x8t BitExact, mbaff-field-cavlc pin)
+- round-413 rollup — 29/29 corpus targets BitExact (MBAFF field pairs + lossless bypass)
+- MBAFF field-pair INTER decode byte-exact — mbaff-field-pairs gates BitExact (29/29 fixture targets)
+- MBAFF CABAC ctx: §7.4.4 pair-flag inference + Table 6-4 block-level neighbour probes + eq. 9-15/9-16 mvd scaling
+- §8.5.15 lossless transform-bypass decode — lossless-transform-bypass fixture BitExact
+- gate the round-410 fixture extension — 27/29 BitExact
+- 2:2 chroma DC dequant: spec-exact eq. 8-328 (qPDC, not qP) + MBAFF deblock processing order
+- MBAFF frame pictures byte-exact: pair-interleaved deblock addressing, spec-exact §8.7.2.1 bS, Table 6-4 inter MV neighbours
+- corpus re-baseline: 15/17 fixtures BitExact over full frame counts
+- README + CHANGELOG + encoder STATUS — round-397 rollup
+- CABAC B 16x8/8x16 partitions at 4:2:2/4:4:4
+- B 16x8/8x16 partitions at 4:2:2/4:4:4 — CAVLC
+- non-flat scaling matrices at 4:2:2/4:4:4 — every entropy coder, I/P/B + decoder 8x8 chroma-list index fix
+- CABAC B_Skip/B_Direct_16x16 at 4:2:2/4:4:4 + B_Skip deblock L1 identity fix
+- CAVLC 4:2:2/4:4:4 B-slices — skip/direct + explicit 16x16
+- CAVLC 4:2:2/4:4:4 P-slices — multi-format encode_p
+- README + CHANGELOG + encoder STATUS — round-391 rollup
+- CABAC 4:2:2/4:4:4 B-slices — 16x16 explicit mode set
+- CABAC 4:2:2/4:4:4 P-slices + twelve Table 9-30/31/32 P/B init-value fixes
+- non-flat scaling matrices under CABAC — 4:2:0 I/P/B
+- non-flat scaling matrices on P/B slices — §8.5.9 inter weightScale
+- custom user-supplied scaling lists — real §7.3.2.1.1.1 delta_scale emit
+- 4:4:4 I_4x4 leg — §8.3.4.5 chroma-as-luma 4x4 emit with per-plane nC
+- add CI / crates.io / docs.rs / MIT-license badges
+- README + encoder STATUS — round-388 rollup
+- 4:4:4 I_16x16-vs-Intra_8x8 RDO (CAVLC + CABAC) + real per-plane nC for mixed shapes
+- real §9.2.1.1 chroma-AC nC — dense chroma no longer desynchronises CAVLC
+- non-flat scaling-list emit — §7.3.2.1.1.1 seq/pic default matrices honoured end-to-end
+- transform unit tests updated to §8.5.9 weightScale semantics
+- §8.5.9 weightScale inverse-scan — non-flat scaling lists now honoured
+- CABAC 4:4:4 Intra_8x8 — blockCat-9/13 chroma residual + explicit cat-5/9/13 CBF
+- CABAC 4:2:2 IDR — 8-coefficient chroma DC + 2x4 chroma-AC grid + 8x8-luma trial
+- CABAC 4:2:2/4:4:4 residual contexts — eq. (9-22) NumC8x8 + §9.3.3.1.1.9 cat-5/9/13 CBF neighbours
+
+### Added
+
+- Round 453 — **Full trellis RDOQ** (`EncoderConfig::trellis_full`,
+  `encoder::transform::trellis_refine_4x4_ac_full`): a Viterbi search
+  over the §9.3.3.1.3 residual binarisation — every candidate
+  last-significant position, per-coefficient {0, |q|−1, |q|}
+  choices, dynamic programming over the eq. 9-23 / 9-24
+  `numDecodAbsLevelEq1` / `numDecodAbsLevelGt1` context state in
+  decoder order — with bin costs from the §9.3.1.1 initial context
+  states (Tables 9-12..9-33 at the block QP) and the Table 9-44
+  rangeTabLPS probabilities, coefficient-domain distortion (quantiser
+  step 2^qBits / MF and the inverse-transform basis energy measured
+  from the crate's own §8.5.12 inverse) and a sample-domain re-check
+  against the open-loop and trellis-lite blocks. Measured on the
+  textured-motion CABAC P + B fixture over QP 20..=36: P + B payload
+  1435 → 1419 bytes (−1.1 %) at ≤ 0.1 dB, the QP-32 P slice −8 %;
+  because one QP-34 B slice grew 4 bytes against the open-loop
+  quantiser the round-49 lite pass stays the default and the full
+  search is opt-in (`integration_trellis_quant::round453_full_trellis_beats_lite_over_qp_sweep`).
+
+- Round 453 — **`recovery_point` SEI emission** (§D.1.8 / §D.2.8,
+  `encoder::sei::build_recovery_point_payload`,
+  `SessionConfig::recovery_point_sei`): every IDR access unit of the
+  session leads with a payloadType-6 message (`recovery_frame_cnt =
+  0`, `exact_match_flag = 1`) next to the existing buffering_period /
+  pic_timing writers; `integration_sei_recovery_point` round-trips
+  the message through the decoder's SEI parsers and shows the stream
+  decodes identically with and without it in our decoder and the
+  black-box reference decoder.
+
+- Round 453 — **Multi-slice, FMO, ASO, redundant-slice and
+  constrained-intra emission** (`encoder::slices`,
+  `encode_slices_sequence`) **+ FMO decoding**. The PPS writer codes
+  §7.3.2.2 `num_slice_groups_minus1` with every slice group map type
+  (0 interleaved, 1 dispersed, 2 foreground + leftover, 3..=5
+  box-out / raster / wipe with `slice_group_change_direction_flag` /
+  `slice_group_change_rate_minus1`, 6 explicit) and
+  `constrained_intra_pred_flag`; the slice header writers code
+  `redundant_pic_cnt` and `slice_group_change_cycle` (eq. 7-37
+  width). The driver derives `MbToSliceGroupMap` with the decoder's
+  own §8.2.2 code, codes each slice group's macroblocks in raster
+  order as one or more slices (`mbs_per_slice`), restarts the
+  §9.2.1.1 / §8.4.1.3 / §8.3.1.1 neighbour state per slice and hands
+  the intra predictors an explicit §6.4.8 same-slice availability
+  mask (`predict_16x16_avail` / `predict_chroma_8x8_avail` — top,
+  left and top-left resolved individually, so a mid-row slice start
+  drops only the neighbours that belong to the previous slice);
+  `constrained_intra_pred_flag = 1` additionally drops inter-coded
+  neighbours for the Intra_16x16 fallback in P slices (§8.3.1.2).
+  ASO emits a picture's slices in reverse order; redundant slices
+  re-encode every slice at QP + 6 with `redundant_pic_cnt = 1`.
+  **Decoder**: FMO streams are now decoded instead of rejected — the
+  slice-data walker, the reconstruction walker and the picture
+  stamping advance through `NextMbAddress` over the §8.2.2 map
+  (`mb_address::slice_mb_to_slice_group_map` / `advance_mb_addr`).
+  Twelve `integration_slices_encoder` gates decode bit-exactly in our
+  decoder; the raster multi-slice, constrained-intra and
+  slice-boundary streams also byte-match the black-box reference
+  decoder (which implements neither FMO nor ASO and does not discard
+  redundant slices, so those streams are pinned by our decoder).
+
+- Round 453 — **Multi-reference P coding, long-term references, MMCO
+  and RPLM emission** (`encoder::multiref`,
+  `encode_multiref_sequence`). The P macroblock encoders now code
+  §7.3.5.1 / §7.3.5.2 `ref_idx_l0` te(v) (P_L0_16x16 and P_8x8;
+  P_Skip stays at index 0 per §8.4.1.1) against the slice's
+  `num_ref_idx_l0_active_minus1` (§7.3.3 override on
+  `PSliceHeaderConfig`), derive the §8.4.1.3 motion vector predictor
+  with the elected reference index, and stamp the §8.7.2.1 NOTE 1
+  reference-identity keys (`poc * 4`) so the deblocker separates
+  references. The driver mirrors the decoder's buffer: §8.2.4.2.1
+  RefPicList0 (short-term by descending PicNum, then long-term by
+  ascending LongTermPicNum), §8.2.5.3 sliding window, §7.4.3.3
+  `long_term_reference_flag` on the IDR, MMCO 4 + 6 long-term
+  assignment of a P picture (with an MMCO 1 eviction whenever
+  adaptive marking would overflow `max_num_ref_frames`), MMCO 2
+  unmarking, and RPLM `long_term_pic_num` splicing to index 0 — all
+  applied after the current picture is coded, as §8.2.5 orders. Per
+  MB the quarter-pel search runs on every active reference and the
+  lowest biased SAD elects the index. Four
+  `integration_multiref_encoder` gates (three active references
+  electing the two-frames-back reference on periodic content,
+  long-term IDR anchor surviving the window, MMCO mark + unmark,
+  RPLM long-term-first) decode bit-exactly in our decoder and
+  byte-exactly in the black-box reference decoder.
+
+- Round 453 — **Explicit weighted prediction on P slices with fade
+  detection** (`EncoderConfig::explicit_weighted_pred`). The PPS
+  codes `weighted_pred_flag = 1`, every P slice header carries the
+  §7.3.3.2 `pred_weight_table()` (`ExplicitPredWeightTableL0`, luma
+  only, `chroma_weight_l0_flag = 0`), and every inter predictor —
+  P_L0_16x16, P_8x8 and P_Skip alike — goes through the §8.4.2.3.2
+  eq. 8-274 weighting before residual / skip decisions and local
+  reconstruction. Per picture the encoder least-squares-fits a
+  slice-wide `(weight, offset)` at `logWD = 5` against the reference
+  and elects it when it beats the identity weighting by ≥ 1 % SSD on
+  the co-located planes, else codes `luma_weight_l0_flag = 0`;
+  motion search runs against the weighted reference so a fade does
+  not mislead the SAD ranking. Measured on a five-frame global-fade
+  sequence at QP 26: P payload 6684 → 960 bytes (14 % of the
+  unweighted stream) at equal PSNR (37.56 → 37.55 dB), every MB
+  inter instead of the Intra_16x16 fallback. Three
+  `integration_p_weighted_pred` gates (fade, static/identity,
+  QP 44 skip-dominated) decode bit-exactly in our decoder and
+  byte-exactly in the black-box reference decoder; `EncodedP`
+  reports the coded table.
+
+- Round 453 — **MBAFF encoding** (`encoder::mbaff`,
+  `encode_mbaff_sequence`). Interlaced sequences code as MBAFF frame
+  pictures (`frame_mbs_only_flag = 0`,
+  `mb_adaptive_frame_field_flag = 1`, `field_pic_flag = 0`, Main
+  profile, CAVLC 4:2:0): per-pair §7.3.4 `mb_field_decoding_flag`
+  with AllFrame / AllField / content-adaptive / checkerboard decision
+  policies, the §6.4.1 eq. 6-9/6-10 field-MB row interleave, and the
+  §8.5.6 field coefficient scan on field MBs. Neighbour derivation
+  reuses the decoder's §6.4.12.2 Table 6-4 process to resolve every
+  neighbouring sample, §9.2.1.1 `TotalCoeff` and §8.4.1.3.2 motion
+  cell (with the eq. 8-217..8-220 frame↔field MV/refIdx scaling)
+  against the real pair-interleaved picture state, then installs the
+  results as plain raster neighbours of a per-MB scratch geometry so
+  the existing frame-based macroblock encoders apply unchanged.
+  P pictures run the full P_Skip / P_L0_16x16 / P_8x8 /
+  Intra_16x16-fallback mode set; field MBs motion-compensate the
+  §8.4.2.1 same-parity field of the reference frame and code
+  §7.3.5.1 `ref_idx_l0` te(v) against the doubled field list;
+  fully-skipped pairs mirror the §7.4.4 flag inference (the driver
+  re-encodes a fully-skipped pair whose decision differs from the
+  inference). The §8.7 MBAFF deblock runs through the decoder's
+  picture-level walker (`deblock_recon_mbaff`) with per-MB field
+  flags and the NOTE 1 frame/field reference-identity keys. The SPS
+  writer gains `BaselineSpsConfig::mbaff`. Nine
+  `integration_mbaff_encoder` gates decode bit-exactly in our own
+  decoder AND byte-exactly in the black-box reference decoder across
+  I and P pictures at every pair policy, including a high-QP
+  skip-dominated stream.
+
+- Round 451 — **Redundant coded pictures are discarded**
+  (§7.4.2.2 / §7.4.1.2). A slice with `redundant_pic_cnt > 0` is an
+  approximation of (part of) the primary picture that a decoder may
+  use for error recovery and may otherwise discard; previously such
+  a slice would run the ordinary decode path and overwrite the
+  primary picture's macroblocks. The decode driver now drops
+  redundant slices (the §7.4.1.2.4 first-VCL detection keys on the
+  primary picture, so they never open a picture of their own), the
+  PPS writer can emit `redundant_pic_cnt_present_flag`, and a gate
+  decodes a stream with a deliberately-different redundant IDR slice
+  byte-identically to the primary-only stream.
+
+- Round 451 — **Arbitrary slice order (ASO) decode** (§A.2.1 /
+  §A.2.3 — Baseline and Extended allow a picture's slices to arrive
+  in any order). Two changes: the "first slice of a picture must
+  cover MB 0" strictness rejection is now scoped to the profiles
+  where ASO is disallowed (for Baseline 66 / Extended 88 a picture
+  may open at any `first_mb_in_slice`; the zero-luma-emission hazard
+  the rejection guarded stays closed independently by the
+  finalize-time full-coverage drop, so the `crash-957ac808` pin still
+  holds), and a real ordering defect in the §6.4.8 neighbour
+  availability was fixed: `same_slice_at` treated an UNSTAMPED
+  (not-yet-decoded) grid slot as "same slice", invisible under raster
+  order but reading zero-initialised picture samples for intra
+  prediction once slices arrived out of order. `integration_aso`
+  gates a 3-slice Intra_16x16-DC-residual picture and a 3-slice
+  I_PCM picture: byte-identical decodes under every slice-order
+  rotation, in-order form byte-matched against the black-box
+  reference decoder.
+
+- Round 451 — **12-bit / 14-bit decode coverage** (§7.4.2.1.1
+  `bit_depth_*_minus8` up to 6 — the High 4:4:4 Predictive depth
+  range, §A.2.7). The parse/transform plumbing supported 8..=14 all
+  along but no stream deeper than the staged 10-bit fixtures ever
+  ran. The SPS writer now emits caller-selected
+  `bit_depth_luma/chroma_minus8` in the chroma-extended group, and
+  `integration_high_bit_depth` builds its own streams from the
+  low-level writers: all-I_PCM pictures at 12 and 14 bits (payload
+  is `u(v)` at BitDepth — decode must return the exact samples in
+  LE-u16 planes, ranges genuinely beyond the 10-bit ceiling) and
+  Intra_16x16 DC pictures with coded luma/chroma DC residual
+  (arbitrary quantised levels through the §8.5.10 luma DC Hadamard,
+  §8.5.11 chroma DC and §8.5.12 scaling at qP′ = QP + QpBdOffset =
+  36 / 50), byte-compared against the black-box reference decoder —
+  an independent oracle with no self-mirror in the loop.
+
+- Round 451 — **Slice data partitioning (§7.3.2.9, NAL types 2/3/4)**
+  — the second Extended-profile tool of the round, decode + emit.
+  Decoder: NAL 2 parses the §7.3.3 slice header (ordinary PPS/SPS
+  activation) plus the §7.4.2.9.1 `slice_id`; NAL 3/4 parse the
+  `slice_id` / `redundant_pic_cnt` prefix against the ACTIVE
+  parameter sets (B/C partitions carry no pic_parameter_set_id of
+  their own); the decode driver holds a partition-A slice until any
+  non-B/C event (the partitions of a slice are consecutive,
+  §7.4.1.2.3) and then parses the slice with the category-2 elements
+  reading from partition A while every `residual()` — and the I_PCM
+  sample payload, category 3 with alignment relative to partition
+  B's own bitstream — routes to the partition selected by the
+  macroblock's collective type (intra → B, inter → C, §7.4.2.9.2/.3).
+  A missing partition whose data the category-2 elements call for is
+  a decode error, as are orphan B/C partitions; partitions of
+  redundant pictures (`redundant_pic_cnt > 0`) are discarded; CABAC +
+  partitioning is rejected (A.2.3 makes the combination impossible in
+  conforming streams). Emit: `encoder::sp` gains dual-form emitters
+  producing the SAME coded content as one single-NAL slice AND as an
+  A(+B)(+C) triple — a mixed SP picture (inter `P_L0_16x16` + I_PCM
+  macroblocks: all three partitions) and a partitioned SI picture.
+  Four `integration_dp` gates: the mixed three-partition slice
+  decodes byte-exactly to its single-NAL form and to the §8.6/I_PCM
+  mirror; the partitioned SI picture holds the §8.6.2 switching
+  identity byte-exactly through deblocking; dropping partition C is a
+  surfaced decode error; orphan B/C partitions land in the decode
+  error counter. **The identical-decode gate flushed out a real
+  pre-existing decoder defect**: the CAVLC I_PCM parse early-returns
+  before the §9.2.1.1 nC-grid commit, leaving PCM macroblocks
+  "unavailable" to every later nC derivation instead of contributing
+  nN = 16 — invisible in all-PCM slices, but desyncing any CAVLC
+  slice that mixes I_PCM with coded macroblocks as soon as a
+  neighbouring nC crosses a coeff_token table boundary. The PCM
+  branch now commits its slot (available + is_i_pcm).
+
+- Round 451 — **SP / SI encoder + bit-exact switching gates**
+  (`encoder::sp`). The Extended-profile switching-picture system is
+  now exercised end-to-end: `encode_sp_picture` emits primary SP
+  access units (`sp_for_switch_flag = 0` — all-`P_L0_16x16`, zero
+  motion, per-block transform-domain residual selection inverting the
+  eq. 8-416/8-428 dequants, with a §8.6-mirror reconstruction and the
+  final quantised coefficient arrays retained as switching TARGETS);
+  `encode_sp_switch_picture` emits a switching SP picture that
+  reproduces a primary picture's reconstruction **byte-exactly while
+  predicting from a different stream's decode state** (per block
+  `cr = c_target − Q_QSY(T(pred))`, the eq. 8-433/8-437 sums land on
+  the target exactly; the chroma DC rides eq. 8-440's additive level
+  with the eq. 8-431 scale shown integral for QSC >= 6); and
+  `encode_si_picture` does the same with **no reference at all**
+  (Table 7-12 SI macroblocks, DC Intra_4x4 + DC chroma prediction
+  against the already-switched samples). An all-I_PCM IDR writer
+  provides a bit-exact anchor, and the Extended (88) SPS profile is
+  wired through the SPS writer. Five `integration_sp_si` gates:
+  a two-frame chained primary SP stream decodes byte-exactly to the
+  encoder mirror at `QP != QS` (pinning the QPY-vs-QSY split) with
+  PSNR floors; the switching SP identity and the SI identity both
+  hold BYTE-EXACTLY with deblocking on (so the §8.7.2.1 SP/SI
+  strengths are inside the equality) and the SI identity again with
+  deblocking off; and a black-box cross-check against a stock
+  reference decoder binary (byte-exact I_PCM anchor; close-agreement
+  PSNR bounds on the SP frames — probing showed the binary rounds
+  negative §8.6 coefficients off the literal equations by ±1 level
+  and does not model the switching semantics at all, so the literal
+  fine behaviour rides the mirror + identity gates). Two defects were
+  flushed out by these gates during bring-up: the §8.6 chroma DC
+  needed the §8.5.4-raster reading of the eq. 8-428/8-431 index pairs
+  (the transposed alternative mis-places the PREDICTION DC — the
+  H2 sandwich is transpose-invariant, so only the black-box
+  comparison and the qs-insensitive quality floor exposed it), and
+  the chroma quantisers keep the literal sign-inside-the-shift form
+  (eqs. 8-425/8-429/8-435/8-439) that differs from the luma
+  eqs. 8-420/8-432 — the asymmetry repeats across all six equations
+  and is transcribed as printed.
+
+- Round 451 — **SP / SI slice decode (§8.6)** — the Extended-profile
+  switching-picture surface. The slice-type plumbing existed
+  (`sp_for_switch_flag` / `slice_qs_delta` parsed since the first
+  slice-header round) but SP slices previously reconstructed as plain
+  P and SI mb_types mis-mapped through the I-slice table. Now:
+  `MbType::SI` implements the §7.4.5 Table 7-12 mapping (raw 0 = the
+  SI macroblock type, coded as an Intra_4x4 prediction MB; raw 1..=26
+  the I types offset by one), and a new `sp_transform` module carries
+  the literal §8.6 math — eq. 8-415 forward core transform,
+  eq. 8-417 `Aij`, eqs. 8-418/8-419 `LevelScale2`, the §8.6.1
+  non-switching chain (eq. 8-416 QPY dequant-and-add, eq. 8-420 QSY
+  re-quantisation, chroma DC 8-427..8-431) and the §8.6.2
+  switching/SI chain (eqs. 8-432/8-433, 8-435/8-437, chroma DC
+  8-439..8-441, including the spec's asymmetric sign-vs-shift
+  placement between the luma and chroma quantisers). Reconstruction
+  routes every P macroblock of an SP slice (P_Skip included — an SP
+  skip re-quantises its prediction rather than copying samples) and
+  every SI macroblock through the transform-domain path, with the
+  final §8.5.12 scaling at qP = QSY / QSC (eqs. 8-331/8-333,
+  `sMbFlag == 1`) and `Clip1(rij)` sample output (no second
+  prediction add). QSY derives per eq. 7-33 from the PPS
+  `pic_init_qs_minus26` + `slice_qs_delta`; QSC through the §8.5.8
+  Table 8-15 process. §8.7 deblocking now honours the SP/SI bS
+  bullets: every edge touching an MB of an SP/SI slice takes the
+  intra strengths (bS = 4 on MB edges / 3 internally) via a new
+  per-MB `in_sp_si_slice` grid flag — the bS derivation itself had
+  modelled the input all along, but every call site pinned it false.
+  CABAC + SI is rejected explicitly (SP/SI live in the CAVLC-only
+  Extended profile, A.2.3), as are SP/SI at non-4:2:0 chroma, >8-bit
+  depth, lossless bypass, and 8x8-transform SP macroblocks.
+
+- Round 448 — **separate-colour-plane decode + encode**
+  (`separate_colour_plane_flag = 1`, High 4:4:4 Predictive — the last
+  deferred leg of the High 4:4:4 decode surface). Decoder: the §8.1
+  three-invocation model is implemented literally — when the active
+  SPS carries the flag, the driver routes every coded slice to one of
+  three internal monochrome sub-decoders selected by the §7.4.3
+  `colour_plane_id` (u(2) between `pic_parameter_set_id` and
+  `frame_num`, already parsed), each running the complete
+  ChromaArrayType-0 pipeline (POC, marking, DPB, reconstruction, §8.7
+  luma deblocking, §C.4 bumping) on its own plane "as if only a coded
+  video sequence with monochrome colour format with that particular
+  value of colour_plane_id would be present"; the three §C.4 output
+  streams re-assemble 1:1 into three-plane (yuv444p-shaped) frames
+  (plane 0 → S_L, 1 → S_Cb, 2 → S_Cr). Per §8.5.9 the luma-path
+  scaling-list selection now takes `iYCbCr = colour_plane_id`
+  (4x4 list `iYCbCr + (mbIsInterFlag ? 3 : 0)`, 8x8 list
+  `2 * iYCbCr + mbIsInterFlag`) instead of the fixed luma indices,
+  and per the §7.4.2.2 NOTE no chroma-QP offset applies. Encoder:
+  `EncoderConfig::colour_plane_id = Some(plane)` turns an
+  (internally monochrome) High 4:4:4 Predictive encoder into a
+  per-plane SCP encoder — the SPS codes the on-wire pair
+  (`chroma_format_idc = 3`, `separate_colour_plane_flag = 1`), every
+  slice header codes `colour_plane_id` — and
+  `encoder::scp::encode_scp_sequence` drives three such encoders over
+  the Y/Cb/Cr planes (CAVLC and CABAC, IDR + P chains, per-plane
+  §8.4 motion) with per-access-unit slice interleaving in increasing
+  plane order. Gates (`tests/integration_scp.rs`, 10): bit-exact
+  self-roundtrip on IDR / IDR+P+P at QP 12/26/44 under both entropy
+  coders; the §8.1 **compositional identity** — every plane of the
+  SCP decode is byte-identical to decoding the same coded plane data
+  wrapped as a standalone 4:0:0 stream (whose decode is itself
+  black-box-validated); and a black-box probe that documents the
+  stock reference decoder binary rejecting SCP streams ("separate
+  color planes are not supported"), so the byte-exact cross-check
+  arms automatically if a capable binary appears. **B pictures**
+  joined both new surfaces in the same round: `encode_b` /
+  `encode_b_cabac` run at `chroma_format_idc = 0` (B_Skip /
+  B_Direct_16x16 with §8.4.1.2.2 spatial AND §8.4.1.2.3 temporal
+  direct, explicit 16x16 rows, 16x8 / 8x16 partitions — all
+  luma-only), `ScpConfig::b_frame` codes an IDR-B-P
+  separate-colour-plane mini-GOP with each plane's B bi-predicting
+  inside its own plane, and the gates grow to 20 (mono) + 14 (SCP):
+  IBP self-roundtrips under both entropy coders and both direct
+  modes, with the 4:0:0 IBP streams additionally byte-exact against
+  the black-box reference decoder. The **8x8 transform** also runs at
+  ChromaArrayType 0 (`transform_8x8_mode_flag = 1` on 4:0:0 and
+  separate-colour-plane streams): the P/B §8.6.4 8x8-vs-4x4 luma
+  trials code the §7.3.5 second-gate flag, the CABAC IDR trials
+  Intra_8x8 (a coverage pin asserts real Intra_8x8 MBs on the wire
+  and byte-exact reference decode), and per §8.5.9 the SCP 8x8
+  dequant selects list `2 * colour_plane_id + mbIsInterFlag` —
+  6 more gates (25 mono + 16 SCP total). Finally the CAVLC 4:0:0 IDR
+  gained the **I_NxN (Intra_4x4) leg**: `write_i4x4_mb_mono` codes
+  the §7.3.5 monochrome I_NxN layout (no `intra_chroma_pred_mode`,
+  Table 9-4(b) intra CBP, luma-only residual) and the mono
+  `encode_mb` dispatch became a two-way I_16x16 / Intra_4x4
+  Lagrangian RDO with the shared snapshot discipline — a coverage
+  pin asserts real I_NxN MBs on edge content, byte-exact in the
+  black-box reference decoder (27 mono gates). A robustness guard
+  bounds NON-conforming separate-colour-plane input: a stream
+  feeding only one `colour_plane_id` (§7.4.1.2 requires all three
+  planes per access unit) can never pair plane triples, so the
+  per-plane queues drop past a generous cap with the overflow
+  surfaced through `decode_error_count` (gated by a 90-picture
+  plane-0-only stream test).
+
+- Round 448 — **monochrome (4:0:0, `chroma_format_idc = 0`) encode +
+  decode**. ChromaArrayType 0 pictures code a luma plane only
+  (§7.4.2.1.1 / §6.2); the decoder's parse layer already carried the
+  monochrome branches (no `intra_chroma_pred_mode` per §7.3.5.1,
+  luma-only `residual()` per §7.3.5.3, the Table 9-4(b)
+  `coded_block_pattern` column shared with ChromaArrayType 3) and now
+  decodes 4:0:0 streams end-to-end: `Picture` carries empty chroma
+  planes, §8.7 deblocking filters luma only, and the emitted
+  `VideoFrame` is single-plane. The encoder gains the 4:0:0 legs:
+  `EncoderConfig::chroma_format_idc = 0` under a High-family profile
+  (§A.2.4 lists monochrome in the High profile's supported chroma
+  range) encodes IDR (Intra_16x16, 4-mode RDO) and P pictures
+  (P_Skip / P_L0_16x16 with quarter-pel ME) through
+  `ChromaWriteKind::Mono` — luma-only MB syntax, chroma work skipped
+  at every stage (prediction, residual, recon, deblock mask, nC
+  grid). The **CABAC entropy path** carries the same legs
+  (`encode_idr_cabac` / `encode_p_cabac` at `chroma_format_idc = 0`):
+  no §9.3.3.1.1.8 `intra_chroma_pred_mode` bins, no chroma CBP
+  suffix after the four §9.3.3.1.1.4 luma prefix bins, no
+  ChromaDCLevel / ChromaACLevel residual blocks. Gates
+  (`tests/integration_mono.rs`, 13): bit-exact self-roundtrip on
+  IDR / IDR+P+P GOPs at QP 12 / 26 / 44 under CAVLC **and** CABAC,
+  plus byte-exact luma comparison against a stock black-box
+  reference decoder binary (which surfaces 4:0:0 as yuv420p output
+  with synthetic chroma — the gate compares the luma portion).
+
+### Fixed
+
+- Round 443 — **§6.4.11.7 / Table 6-4 MVP neighbour probes now use
+  exact sample locations; `CAPAMA3_Sand_F` decodes 50/50 byte-exact
+  — every staged JVT conformance bitstream now gates byte-exact.**
+  The §8.4.1.3 motion-vector-prediction neighbour fetch converted
+  4x4-block offsets to sample offsets with the block's TOP row
+  (`yN = 4*by`), which loses the exact row the text probes: the
+  B / C / D neighbours of a partition at ( xP, yP ) sit at
+  `yN = yP − 1` — an ODD sample row for the bottom partitions of a
+  top macroblock — and in an MBAFF frame Table 6-4 selects which
+  FIELD macroblock of a field-coded neighbouring pair supplies the
+  motion data by the PARITY of yN (`yN % 2`). Probing the D
+  substitute of a bottom 16x8 partition at row 4 instead of row 7
+  read the TOP field MB's motion where the text names the BOTTOM
+  field MB's, so the §8.4.1.3.1 median pulled the wrong vector
+  (first divergence: CAPAMA3 frame 1 MB 8 — the median resolved to
+  (0, 0) instead of (20, 123); localised by black-box search of the
+  reference decoder's prediction source against the parsed
+  residual). Non-MBAFF behaviour is unchanged (floor division
+  restores the identical block). This closes the round-440 triage
+  residue: the suspected "single-bin CABAC divergence" was never an
+  entropy-layer issue — the CABAC parse was byte-exact throughout,
+  and the divergence class was reconstruction-only (MVP neighbour
+  identity), which is exactly why the engine never desynchronised.
+  `CAPAMA3_Sand_F` (PAFF + MBAFF, CABAC, temporal direct) goes
+  12/50 → **50/50** frames byte-exact and now gates as a hard
+  assert alongside camp_mot_picaff0_full (30/30), CAPA1_TOSHIBA_B
+  (90/90) and CVPA1_TOSHIBA_B (90/90). Per-MB inter triage
+  instrumentation (resolved reference identity, MC row means,
+  per-block residuals under `OXIDEAV_H264_RECON_DEBUG_MB`) landed
+  alongside.
+
+### Added
+
+- Round 443 — **B-frame rate control**. The encoder's rate-control
+  machinery extends to non-reference B pictures across all three
+  layers:
+  * `RateController` models THREE frame kinds (`RcFrameKind::B`
+    joins Idr/P): per-kind complexity EWMAs feed a budget split
+    `t_kind = t · u_kind / Σ_j f_j·u_j` over the observed GOP mix
+    (cumulative kind frequencies + a one-GOP prior), which conserves
+    the steered per-frame budget exactly for any GOP structure and
+    yields a λ-scaled QP hierarchy: equal quantiser step for I and P
+    (complexity-proportional anchor allocation), and B pictures a
+    constant 2 QP coarser (their weight is divided by the matching
+    §8.5.9 step ratio — non-reference distortion does not propagate,
+    so the bits move to the anchors both lists predict from).
+    Cold-start QPs for an unseeded kind derive from the nearest
+    seeded kind shifted by the nominal inter-kind biases.
+  * `EncoderSession` gains `SessionConfig::b_frames` (0..=16):
+    display-order input buffers up to `b_frames` pictures until the
+    next anchor, then the mini-GOP emits in decode order — the P
+    anchor first (predicting from the previous anchor), then each B
+    with `RefPicList0`/`RefPicList1` = the two enclosing anchors
+    (§8.4.1.2.2 spatial direct, `nal_ref_idc = 0`, anchor-shared
+    `frame_num`, POC lsb = 2 × display index). New `push_frame` /
+    `finish` streaming API (0..=b+1 AUs out per push; `encode_frame`
+    stays for `b_frames == 0`). Mini-GOPs truncate before each IDR
+    (the last pre-IDR picture anchors as P) so a B never predicts
+    across an IDR, and `finish` drains the tail the same way. The
+    Annex C plan → VBV-retry → commit loop runs per AU in decode
+    order; CBR filler and the round-430 HRD SEI annotate every AU,
+    with `pic_timing`'s `dpb_output_delay` now covering the
+    one-frame B-reorder latency (`2·(disp + 1 − dec)` ticks; anchors
+    carry `2·(b_count+1)`, Bs 0) and `cpb_removal_delay` counting
+    decode-order AUs.
+  * The registry encoder factory (`h264_encoder`) gains the
+    `bframes` option (0..=16; > 0 promotes CAVLC signalling to Main
+    per §A.2.2 and switches packets to real reordering: `dts` =
+    decode counter, `pts` = display index + 1, `flush` drains the
+    lookahead tail).
+  * **MB-row QP modulation on B pictures**
+    (`Encoder::encode_b_rate_adaptive` +
+    `Encoder::encode_b_cabac_rate_adaptive`): the round-420/430 row
+    controller (asymmetric ±2-per-row stepping inside `frame_qp − 2
+    ..= frame_qp + 6` toward the whole-slice budget) now runs on
+    both B entropy paths, with the QP steps riding §7.4.5
+    `mb_qp_delta` on MBs with coded residual — B_Skip and cbp == 0
+    MBs inherit the previous MB's QP_Y (and reset the §9.3.3.1.1.5
+    `prev_mb_qp_delta_nonzero` context chain on CABAC), the §8.7
+    deblock strengths follow the decoder's chain, and the
+    Intra_16x16-in-B fallback trials/restores the chain state like
+    the P path. Rate-controlled sessions row-modulate every AU kind.
+  Measured (80x64 moving-texture suite, 30 fps, `b_frames = 2`,
+  post-warmup, row modulation on all kinds): CBR payload error
+  **2.8%** (CAVLC) / **1.1%** (CABAC), capped-VBR **0.04%**;
+  steady-state mean QPs I 17.0 ≤ P 18.0 < B 20.2 (the designed +2 λ
+  offset); RD check — the CBR B-GOP encode lands **1.2 dB ABOVE**
+  the fixed-QP B-GOP anchor curve at equal picture-coding rate.
+  Every stream (reordered output, SEI + filler included) decodes
+  byte-identically in our decoder and a black-box reference decoder
+  (`tests/integration_b_rate_control.rs`, 8 gates + registry
+  reorder gate in `tests/integration_registry_encoder.rs`).
+
+- Round 440 — **§8.4.1.2.1 co-located derivation completed** (Table
+  8-6 / 8-7 / 8-8, all frame/field cross rows). Temporal direct was
+  frame-only (colPic taken verbatim from `RefPicList1[0]`, mbAddrCol =
+  CurrMbAddr, no vertMvScale); it now implements the full clause:
+  Table 8-6 colPic selection (decoded frame, decoded field, field of a
+  decoded frame — the field VIEW carries the containing FRAME's motion
+  grids / per-MB field flags / coding struct / list snapshots — and
+  complementary field pair with the eq. 8-175/8-176 topAbsDiffPOC
+  parity choice), Table 8-7 PicCodingStruct classification, every
+  Table 8-8 mbAddrCol1..7 / yM / vertMvScale row incl. the AFRM MBAFF
+  variants with `fieldDecodingFlagX` and the eq. 8-182 tie-break,
+  eq. 8-193/8-194 mvCol[1] halving/doubling, MapColToList0 by picture
+  IDENTITY (per-entry DPB unit keys + field parities snapshotted on
+  every decoded picture; the One_To_One / Frm_To_Fld / Fld_To_Frm
+  forms including the field↔frame refIdxL0Frm << 1 index doubling),
+  and eq. 8-201/8-202 tb/td on per-FIELD order counts for field
+  macroblocks. Measured on the four staged JVT conformance
+  bitstreams: `camp_mot_picaff0_full` 5/30 → **30/30**,
+  `CAPA1_TOSHIBA_B` 10/90 → **90/90**, `CVPA1_TOSHIBA_B` 10/90 →
+  **90/90** frames byte-exact — all three now gate as hard asserts in
+  `tests/integration_conformance.rs`; `CAPAMA3_Sand_F` (PAFF + MBAFF)
+  0/50 → 12/50 (remainder under triage — single-bin CABAC elements
+  can diverge between decoders without desynchronising the engine,
+  which needs the upstream conformance-package syntax trace to arbitrate).
+
+- Round 440 — **§8.2.4.2.1/.2.3 frame-slice reference lists over
+  complementary field-pair UNITS** (`ref_list::collapse_field_pairs`):
+  two opposite-parity coded-field DPB entries sharing `frame_num`
+  collapse into one frame-level unit (eq. 8-1 Min POC, frame-level
+  PicNum, short/long-term only when BOTH fields carry the marking) and
+  non-paired reference fields are excluded per the §8.2.4.2.1 NOTE;
+  the driver materialises a pair unit's full-height reference by
+  re-interleaving its two stored fields for frame-slice MC. Any P/B
+  FRAME in a mixed frame/field stream previously motion-compensated
+  from a half-height field picture.
+
+- Round 440 — **§6.4.12 MBAFF neighbouring-SAMPLE derivation for intra
+  prediction**: every intra reference-sample gatherer (4x4 / 8x8 /
+  16x16 / §8.3.4 chroma / 4:4:4 luma-geometry chroma) resolves samples
+  through the Table 6-4 pair-interleaved process + the §6.4.1 inverse
+  MBAFF scan when MbaffFrameFlag is set (raster-adjacent addressing is
+  only correct when every involved pair is frame-coded). Two eager
+  grid stampings landed with it: `reconstruct_mb_intra` and the inter
+  partition derivation both record the in-flight MB's §7.4.4
+  `mb_field_decoding_flag` BEFORE any neighbour probing — an AFRM
+  bottom FIELD MB previously mis-resolved its above neighbour (and an
+  AFRM B field MB's temporal-direct derivation ran the wrong Table 8-8
+  row). CAPAMA3's IDR MBAFF frame with mixed field/frame pairs now
+  decodes byte-exact.
+
+- Round 440 — encoder **PAFF B-field tail**: `PaffConfig::
+  b_implicit_weight` codes a stride-3 anchor layout whose two
+  non-reference B pairs sit at unequal per-field POC distances, with
+  PPS `weighted_bipred_idc = 2` and every bipred / direct-Bi
+  macroblock combined through the §8.4.2.3.3 POC-derived (w0, w1)
+  pair (43/21 and 22/42 at logWD = 5, on the fields' own §8.2.1 order
+  counts, luma AND chroma); `PaffConfig::b_reference_fields` codes a
+  stride-4 layout with a REFERENCE B field pair midway (stored
+  through the §8.2.5.3 sliding window; the non-reference B pairs use
+  the B fields as `RefPicList1[0]` / `RefPicList0[0]`, making a coded
+  B FIELD the colPic of the §8.4.1.2 direct derivations), supported
+  by `EncoderConfig::b_l0_bi_only` (mode restriction keeping the
+  stored L0-only colocated snapshot decoder-consistent) and a
+  §8.2.4.3.1 RPLM on the later P/P anchors (the §8.2.4.2.2
+  FrameNumWrap ordering puts the newer reference-B pair at index 0).
+  Eight new gates: each axis (spatial + temporal direct)
+  self-roundtrips byte-exactly through our decoder and decodes
+  byte-identically in a stock reference binary.
+
+### Fixed
+
+- §8.2.5.3 sliding-window marking now counts reference **units** the
+  way the spec defines numShortTerm / numLongTerm: a complementary
+  reference field pair (two coded-field DPB entries sharing
+  `frame_num`) is ONE frame slot, the second field of such a pair
+  triggers no eviction at all (first branch of §8.2.5.3), and an
+  eviction marks BOTH fields of the chosen frame/pair. The per-entry
+  count previously halved the effective DPB for field streams —
+  invisible to P-field chains (which only reference the immediately
+  previous frame) but fatal to B fields, whose two anchor pairs must
+  both survive: at `max_num_ref_frames = 2` the earlier anchor's
+  fields were evicted while the P anchor pair of the following frame
+  was stored, so every B field resolved `RefPicList0[0]` /
+  `RefPicList1[0]` to the wrong picture (and the §8.2.4.2.4 List1
+  identical-lists swap then flipped the parity too). Unit tests pin
+  the pair-as-one-unit count, the second-field exemption and the
+  non-paired-field unit.
+
+### Added
+
+- §8.2.5.4 **MMCO field-marking operations** (round 436). The DPB
+  model gains per-parity markings (`DpbEntry::field_markings`):
+  §8.2.4.1 treats each field of a stored reference frame as a
+  reference picture with its own marking, and the field forms of the
+  MMCO ops (`field_pic_flag = 1`) mark individual FIELDS — MMCO 1/2
+  unmark exactly one field by its eq. 8-30/8-31 PicNum / eq. 8-32/
+  8-33 LongTermPicNum (the frame-level marking drops, "but the
+  marking of the other field is not changed"), MMCO 3 promotes one
+  field to long-term with the §8.2.5.4.3 eviction pre-pass sparing a
+  long-term field of the pair that includes the picNumX target,
+  MMCO 4 clears per-field by LongTermFrameIdx, and MMCO 6 spares the
+  complementary field of the CURRENT picture and completes long-term
+  pairs with a shared index. The §8.2.4.2.2/.2.4 field-list
+  initialisation now keys unit membership on "one or more fields
+  marked" and the §8.2.4.2.5 interleave skips fields not marked with
+  the matching reference class; DPB retention keeps an entry while
+  ANY field is referenced. Encoder side: the P / non-IDR-I slice
+  header writers emit §7.3.3.3 adaptive `dec_ref_pic_marking()` op
+  lists (`EncMmcoOp`) and §7.3.3.1 `ref_pic_list_modification()` op
+  lists (`EncRplmOp`); IDR headers can signal
+  `long_term_reference_flag`. Two new PAFF stream axes gate the
+  subsystem end-to-end byte-exactly (our decoder AND a black-box
+  reference decoder): `PaffConfig::long_term_anchor` (MMCO 4 + two
+  field MMCO 3 ops promote the frame-0 field pair; every later P
+  field splices the same-parity long-term field to ref_idx 0 via RPLM
+  `long_term_pic_num` while short-term pairs keep sliding) and
+  `PaffConfig::mmco_unpair_first_top` (a field MMCO 1 unmarks one
+  field of a reference pair; the following same-parity P field must
+  fall back across the unmarked field per the §8.2.4.2.5 "missing
+  field is ignored" rule). Eight new §8.2.5.4 unit tests pin the
+  per-field op semantics.
+
+- Encoder **field-mode 8x8 transform scan** (round 436, the r416
+  "encoder field 8x8 scan" follow-up). New §8.5.7 Table 8-14 FIELD
+  scan on the encoder side (`encoder::transform::field_scan_8x8` +
+  `FIELD_8X8_FWD`), plus a **split-pipeline pre-composed variant**
+  (`field_scan_8x8_for_cavlc_split`): the CAVLC 8x8 luma residual
+  passes through the §7.4.5.3.3 stride-4 de-interleave and then the
+  residual writer's per-sub-block Table 8-13 field remap (the writer
+  cannot distinguish an 8x8 split sub-block from a real 4x4 block),
+  so the scan bakes the inverse of both fixed stages in — the emitted
+  sub-block streams carry exactly the §7.4.5.3.3 split of the
+  Table 8-14 FIELD scan. All CAVLC 8x8 scan sites (I_8x8 4:2:0 +
+  4:4:4 intra RDO, the P/B inter 8x8-vs-4x4 trial via
+  `forward_inter_luma_8x8`) select frame/field by the live writer's
+  field-scan mode. `PaffConfig::transform_8x8` enables the tool in
+  PAFF field pictures (SPS promotes to High 100, PPS codes
+  `transform_8x8_mode_flag = 1`). Unit tests pin the forward scan as
+  the exact inverse of the decoder's §8.5.7 field scan and the
+  pre-composed scan surviving the full split + writer-remap pipeline;
+  six new integration gates (I / P / B field sequences, decoder
+  self-roundtrip + black-box reference decoder, byte-exact — with the
+  8x8 trial verified to genuinely win on part of the content).
+
+- PAFF **B field pictures** (round 436, encode + decode arms). The
+  `encoder::field` driver gains `PaffConfig::b_fields`: anchors at
+  even display indices (IDR/I pair, then P/P pairs), non-reference
+  B/B field pairs at odd display indices coded AFTER their following
+  anchor (coding order 0, 2, 1, 4, 3, …), each B field predicting L0
+  from the same-parity field of the previous anchor and L1 from the
+  same-parity field of the next anchor — where the §8.2.4.2.4 +
+  §8.2.4.2.5 field initialisation places them with single-entry
+  active lists. `PaffConfig::b_temporal_direct` switches the B-field
+  slices to `direct_spatial_mv_pred_flag = 0`: B_Skip /
+  B_Direct_16x16 MVs derive through §8.4.1.2.3 temporal direct with
+  colPic = the same-parity anchor field (§8.4.1.2.1, motion grid read
+  in field coordinates) and every eq. 8-201/8-202 tb/td distance on
+  per-FIELD §8.2.1 order counts. The B slice-header writer gained the
+  §7.3.3 `field_pic_flag` / `bottom_field_flag` position
+  (`BSliceHeaderConfig::field`). Five new gates in
+  `tests/integration_paff_encoder.rs`: spatial-direct and
+  temporal-direct 5-frame sequences plus an even-frame-count
+  trailing-P layout self-roundtrip **byte-exactly** through our
+  decoder, and both direct variants decode byte-identically in a
+  stock reference binary (black-box).
+
+- Encoder rate-control signalling completion (round 430, the r420
+  follow-ups). MB-row QP modulation now covers every slice kind the
+  GOP sessions drive: the **CABAC P** path
+  (`encode_p_cabac_rate_adaptive` — §7.4.5 `mb_qp_delta` under the
+  §9.3.3.1.1.5 prev-delta-nonzero context chain, with P_Skip / cbp==0
+  chain resets mirrored decoder-exactly) and **IDR pictures** on both
+  entropy coders (`encode_idr_rate_adaptive` /
+  `encode_idr_cabac_rate_adaptive` — Intra_16x16 always carries the
+  delta, I_NxN only with cbp > 0, and the §8.7 deblock-QP chain
+  follows the decoder's derivation through the CAVLC RDO trials).
+  **HRD/VUI signalling**: `BaselineSpsConfig::vui` +
+  `write_vui_parameters` / `write_hrd_parameters` (§E.1.1/§E.1.2
+  write side, field-for-field mirror of the parse side) and
+  `encoder::sei` with `buffering_period` / `pic_timing` writers
+  (§D.1.2/§D.1.3 + §7.3.2.3 framing). Rate-controlled
+  `EncoderSession`s now annotate their streams in-band: SPS VUI
+  timing info (field-based ticks, fixed frame rate) + a NAL HRD block
+  mirroring the controller's Annex C bucket (`cbr_flag` per mode,
+  round-up-to-granule BitRate/CpbSize), a buffering-period SEI on
+  every IDR (initial_cpb_removal_delay from the modelled CPB fill)
+  and a pic-timing SEI on every access unit; the SEI bits are
+  committed to the CPB model and reported via
+  `SessionFrame::sei_bits`. Validation: byte-exact roundtrips
+  (own + black-box reference decoder) for row-modulated CABAC-P /
+  CAVLC-IDR / CABAC-IDR streams incl. non-zero delta chains
+  (`integration_row_qp_cabac_idr.rs`), and HRD acceptance —
+  field-exact SPS/VUI/SEI re-parse through our own parsers, strict
+  `err_detect`-hard black-box decode, and black-box probing deriving
+  the tick rate from our VUI (`integration_hrd_signalling.rs`).
+
+### Fixed
+
+- Decoder memory bounds (round 430, from the 2026-07-25 scheduled-fuzz
+  OOM triage). The reference picture store never released pictures
+  whose DPB entries had been evicted by §8.2.5 marking, so a decode
+  session held every reference picture it had ever reconstructed
+  (linear growth on long streams); the store is now pruned to the live
+  DPB after every marking pass and after §8.2.5.2 gap fill. The
+  §8.2.5.2 frame_num-gap loop also allocated a full mid-grey
+  placeholder picture for every missing frame_num — up to MaxFrameNum
+  (65536) sample buffers from one hostile slice header; it now steps
+  the DPB/POC metadata for the whole gap but materialises sample
+  buffers only for the (at most `max_num_ref_frames`) synthetic
+  references that survive the §8.2.5.3 sliding window. Regression
+  pins: `frame_num_gap_fill_is_memory_bounded`,
+  `long_session_reference_store_stays_dpb_bounded`, plus the archived
+  OOM artifact in `tests/fixtures/fuzz_regressions/`. The differential
+  fuzz harness additionally skips inputs carrying SPS NALs it cannot
+  parse-and-size-vet and inputs whose gap exposure
+  (`picture_mbs * MaxFrameNum` with gaps allowed) exceeds a fixed
+  budget — the scheduled-run OOM itself was oracle-side
+  (version-dependent ballooning on a stream whose SPS our parser
+  rejects for an out-of-range cropping window).
+
+### Added
+
+- Encoder rate control (round 420). `encoder::rate_control` implements
+  a CBR / capped-VBR feedback controller (complexity-times-quantiser-
+  step model, §8.5.9 doubles-every-6 anchor) over an Annex C-style
+  leaky-bucket CPB: per-frame QP planning, a hard per-frame bit
+  ceiling, CBR §7.3.2.7 filler accounting and capped-VBR long-term
+  integration. All six frame entry points gained `_with_qp` variants —
+  the per-picture QP travels in the §7.4.3 `slice_qp_delta` while the
+  PPS stays fixed (CABAC context init runs at the resulting
+  SliceQP_Y). `encoder::session::EncoderSession` layers GOP cadence,
+  reference carry, VBV re-encode retry and filler-NAL emission
+  (`encoder::nal::build_filler_nal`); `Encoder::encode_p_rate_adaptive`
+  adds MB-row QP modulation on the CAVLC P path — per-row budget
+  feedback rides §7.4.5 `mb_qp_delta` (emitted only on
+  coded-residual MBs, with the skipped / cbp==0 inheritance and the
+  §8.7 deblock chain mirrored decoder-exactly via `MbQpTracker`).
+  The codec registry now also carries an encoder factory
+  (`h264_encoder::make_encoder`, dual-API) with a typed option schema:
+  `rc` (auto / cqp / cbr / vbr), `qp`, `bitrate`, `max_bitrate`,
+  `buffer_size`, `gop`, `cabac`; Annex B packets with in-band SPS/PPS.
+  Validation: rate-accuracy matrix across smooth / texture / scene-cut
+  signals (CBR + capped VBR), RD comparison against fixed-QP anchors,
+  and every rate-controlled stream (filler NALs included) decoding
+  byte-exactly through our decoder and a black-box reference decoder
+  (`integration_rate_control_session.rs`, `integration_frame_qp.rs`,
+  `integration_mb_row_qp.rs`, `integration_rate_validation.rs`,
+  `integration_registry_encoder.rs`).
+- PAFF (picture-adaptive frame/field) end-to-end. Decoder: coded FIELD
+  pictures (`field_pic_flag == 1`) now build their reference lists
+  through the §8.2.4.2.2/.2.4 + §8.2.4.2.5 field initialisation
+  (per-field entries interleaved by alternating parity starting from
+  the current field's own parity) and the §8.2.4.3 field RPLM — the
+  driver previously routed field slices through the frame init, whose
+  descending per-field-PicNum order put the complementary field of the
+  CURRENT frame at index 0 for every second field (top P fields
+  decoded correctly by coincidence; bottom P fields referenced the
+  wrong field). List entries naming one parity field of a picture
+  stored as a FRAME are materialised as half-height field views
+  (`Picture::field_view`) carried as per-index provider overrides, and
+  per-entry POCs are the FIELD order counts (a stored frame's two
+  fields share a `dpb_key` but carry distinct field POCs).
+- Encoder: a PAFF field-coding driver (`encoder::field`) — interlaced
+  frames split into top/bottom field pictures (IDR top + non-IDR I
+  bottom for frame 0 sharing `frame_num` per §7.4.3, then I/I or P/P
+  reference field pairs with the §8.2.4.2.5-implied same-parity
+  previous-frame field at `ref_idx` 0), optional full-height I FRAME
+  pictures inside the interlaced stream (the picture-adaptive axis),
+  interlaced SPS emission (`frame_mbs_only_flag = 0`), §7.3.3
+  `field_pic_flag` / `bottom_field_flag` slice-header signalling, and
+  per-field §8.7 deblock under the field-picture bS rules. The CAVLC
+  residual writer re-permutes 4x4 coefficient lists from the internal
+  zig-zag order into the §8.5.6 Table 8-13 FIELD scan for field
+  pictures (every MB of a field picture is a field MB).
+- `tests/integration_paff_encoder.rs`: I-field, P-field and mixed
+  frame/field PAFF sequences self-roundtrip byte-exactly through our
+  decoder AND decode byte-identically in a stock black-box reference
+  binary.
+- PAFF frame-as-field-reference axis: an IDR full-height FRAME
+  picture followed by P field pairs whose frame-1 references are the
+  parity FIELDS of that stored frame — per §8.2.4.2.5 a stored frame
+  supplies either parity field as a distinct reference picture, which
+  the decoder materialises as a `Picture::field_view` provider
+  override. The PAFF deblock reference identity now folds the
+  resolved field parity into the §8.7.2.1 NOTE 1 comparison key (the
+  two fields of one stored frame share its POC but are different
+  reference pictures). Encoder: `PaffConfig::idr_frame_first` codes
+  the pattern; round-trips byte-exactly through our decoder and the
+  stock black-box reference binary.
+- §8.4.1.4 Table 8-10 on the PAFF path: a coded field picture
+  referencing the OPPOSITE-parity field now applies the
+  `mvCLX[1] = mvLX[1] ± 2` vertical chroma-MV adjustment — the
+  reference field's parity travels on the provider
+  (`RefPicProvider::ref_field_parity`, resolved from the §8.2.4.2.5
+  per-field list), and the current parity comes from
+  `bottom_field_flag` (the MBAFF field-MB path keeps its existing
+  per-pair derivation). The PAFF encoder gained the matching
+  cross-parity axis (`cross_parity_first_bottom`: frame 0's bottom
+  field P-references the IDR top field — the only candidate
+  §8.2.4.2.5 can offer when the same-parity sub-list is empty) with
+  the Table 8-10 offset applied in its chroma predictors; the
+  resulting stream round-trips byte-exactly through our decoder and a
+  stock black-box reference binary.
+
+### Fixed
+
+- CAVLC MBAFF decode is now byte-exact: the residual walker's luma /
+  4:4:4-plane `nC` closures (§9.2.1.1) resolved EXTERNAL neighbour
+  blocks through the non-MBAFF raster-scan map, so on the
+  pair-interleaved MBAFF grid (§6.4.1) the bottom macroblock of the
+  leftmost pair read its own pair-top as "left" and derived a bogus
+  `nC` (a dense I MB pushed `nC` into the 6-bit FLC column and the
+  coeff_token decode desynced at MB #1). The closures now route
+  external probes through the same §6.4.12.2 Table 6-4 neighbouring
+  location process the chroma AC path already used, with
+  probes resolving into the current MB served from the
+  progressively-filled own-block totals (§9.2.1.1 step 3). The staged
+  `mbaff-field-cavlc` fixture (Main profile CAVLC, real FIELD-coded
+  pairs, IDR + 2 P) is promoted from ReportOnly to BitExact — all
+  three frames byte-for-byte.
+
+- Scheduled-Fuzz red (2026-07-12 → 2026-07-16): the `ffmpeg_oracle_decode`
+  differential harness was binding the wrong reference decoder by
+  numeric codec id, so every frame our decoder legitimately produced
+  was reported as a bogus "reject parity" divergence. The oracle now
+  binds the H.264 decoder **by name**, guards the binding at runtime,
+  opens it with `err_detect=explode` (concealed reference output never
+  reaches pixel asserts), and classifies our side as
+  clean / concealed / incomparable before asserting parity
+  (`decode_error_count()` + stored-SPS bit-depth/chroma gates; frames
+  produced from >8-bit or monochrome/separate-plane streams are outside
+  the 8-bit-planar comparison domain). "Reference rejected, we decoded
+  cleanly" is now an advisory stderr report rather than a crash: the
+  reference layers stream-discipline heuristics beyond bitstream
+  conformance (e.g. refusing non-paired fields), so reject-superset
+  parity with it is not a soundness property; mis-decode is asserted by
+  the frame-parity arm.
+- Decode-side strictness gaps the corrected oracle then surfaced, each
+  rooted in a T-REC-H.264 conformance clause:
+  - §8.3.1.2 / §8.3.2.2 / §8.3.3 / §8.3.4 — an intra prediction mode
+    whose required neighbour samples are unavailable ("shall be used
+    only when ... marked as available") is now an invalid-data error
+    instead of predicting from substituted values.
+  - §8.2.4 — a P/SP/B slice arriving with an empty reference DPB (no
+    picture RefPicList0 could hold) is refused at the slice header
+    instead of decoding its intra macroblocks into a fabricated frame.
+  - §8.2.5.2 — motion compensation now refuses to sample a synthesised
+    "non-existing" (frame_num-gap placeholder) reference picture.
+  - §7.4.3 — with `gaps_in_frame_num_value_allowed_flag == 0`, a
+    non-IDR picture whose `frame_num` is neither `PrevRefFrameNum` nor
+    `(PrevRefFrameNum + 1) % MaxFrameNum` is refused.
+  - NAL types 2/3/4 (slice data partitions, unimplemented) now surface
+    an error instead of being silently discarded VCL content.
+
+### Added
+
+- `H264CodecDecoder::decode_error_count()` plus `active_sps()` /
+  `stored_sps()` diagnostic accessors (`#[doc(hidden)]`, for
+  tests/fuzz): callers can tell clean output from partial/concealed
+  output produced by the slice-skipping resilience path.
+- `tests/fuzz_oracle_regressions.rs` + the archived fuzzer inputs under
+  `tests/fixtures/fuzz_regressions/`: pins that hostile streams never
+  yield a *clean* comparable frame (they must be flagged degraded or
+  incomparable) and that conforming streams keep
+  `decode_error_count() == 0`.
+
+### Changed
+
+- Internal plumbing modules (the slice/CABAC/reconstruction modules at
+  the crate root and every `encoder::*` submodule) are now
+  `#[doc(hidden)]`: they stay `pub` for tests/fuzz but are not part of
+  the stable API, which is the registry surface (`register` /
+  `register_codecs` / `CODEC_ID_STR`), `h264_decoder` (`make_decoder` /
+  `H264CodecDecoder`), the `encoder` top-level config/frame/entry
+  types, and the `sei` typed payloads.
+
+### Added
+
+- Round-413 corpus extension: two freshly generated black-box MBAFF
+  field-pair fixtures staged in docs and gated in
+  `tests/docs_corpus.rs` — `mbaff-field-8x8t` (High profile, field
+  pairs + `transform_8x8_mode_flag=1`, pinning the Table 8-14 8x8
+  FIELD inverse scan and the ctxBlockCat=5 field significance
+  contexts; BitExact on first run) and `mbaff-field-cavlc` (Main
+  profile CAVLC MBAFF with field pairs; report-only decode-gap pin).
+  CAVLC MBAFF groundwork landed with the pin: the §9.2.1.1 nC
+  neighbour probes route through the exact §6.4.12.2 Table 6-4
+  process on MBAFF grids (luma, 4:4:4 luma-like planes, and chroma
+  AC), the §7.4.5 te(v) ref_idx range doubles for field MBs, and the
+  CAVLC slice-data walker stamps real MBAFF field flags (§7.4.4
+  inference for skipped pairs, retro-patch on bottom-MB reads) into
+  the nC grid and the macroblock-layer entropy state. The I slice of
+  the CAVLC pin still desyncs at MB 1 (coeff_token nC mismatch) —
+  plain CAVLC MBAFF was never previously decodable; the fixture keeps
+  the remaining divergence grep-able.
+- MBAFF field-pair INTER decode (round 413) — the `mbaff-field-pairs`
+  fixture (MBAFF IDR + 2 P frames with real FIELD-coded MB pairs) now
+  decodes all three frames byte-exact and gates `Tier::BitExact`
+  (29/29 staged fixture targets). The subsystem spans both the parser
+  and the reconstructor:
+  - §8.4.2.1 per-field reference selection: a field MB resolves
+    RefPicListX[refIdxLX / 2] and refIdxLX % 2 picks the same/opposite
+    parity field; motion compensation runs on a zero-copy half-height
+    field view (doubled stride + parity row offset) for luma and
+    chroma, with §8.4.1.4 Table 8-10's ±2 vertical chroma-MV offset
+    for opposite-parity references at 4:2:0, §8.4.3 refIdxLX >> 1
+    weighted-prediction table indexing, and parity-aware picture
+    identity keys for the deblock §8.7.2.1 NOTE 1 comparison.
+  - §7.4.4 spatial inference of `mb_field_decoding_flag` for
+    fully-skipped pairs (left pair, else above pair, else 0), stamped
+    into the CABAC neighbour grid BEFORE any ctxIdxInc derivation and
+    retro-patched when the bottom MB's decoded flag arrives.
+  - FIELD-coded-MB CABAC residual contexts: Tables 9-22/9-23
+    (ctxIdx 277..=398) were missing from the context-initialisation
+    registry entirely, and the significance-map decode always used the
+    frame ctxIdxOffset column — field MBs now select the §9.3.3.1.3
+    field offsets over properly initialised contexts.
+  - §8.5.6/§8.5.7 field inverse scans (4x4 Table 8-13 + new 8x8
+    Table 8-14 field scan) selected per-MB in every residual
+    reconstruction path.
+  - Exact §6.4.12.2 Table 6-4 block-level neighbour probes for the
+    §9.3.3.1.1.6/.7/.9 ctxIdxInc derivations (previously raster
+    addressing that reads the wrong MB in a pair-interleaved grid),
+    per-bin §6.4.11.2 CBP luma probes, eq. 9-12's doubled refIdx
+    threshold, and eq. 9-15/9-16 vertical mvd scaling. Fixed two
+    mis-transcribed Table 6-4 rows (TopCentre/TopRight for bottom
+    field MBs must select mbAddrB/C + 1 with yM = yN unconditionally).
+  - §8.7 spec-shaped per-MB MBAFF deblocking walker (eqs.
+    8-442..8-449): field MBs filter edges on parity rows (dy = 2), a
+    field pair has no pair-internal horizontal edge, the top edge of a
+    frame top MB below a field pair is filtered twice in field mode
+    ((k, 0) and (k, 1)), and the §8.7.2.1 NOTE 3 vertical |Δmv|
+    threshold halves to 2 quarter-FIELD samples between field MBs.
+
+- §8.5.15 lossless transform-bypass decode (round 413): when
+  `qpprime_y_zero_transform_bypass_flag` is 1 and QP′Y == 0, every
+  §8.5.10/§8.5.11/§8.5.12/§8.5.13 scaling+transform stage takes its
+  identity leg (eqs. 8-319 / 8-323 / 8-334 / 8-355) and the §8.5.15
+  intra residual DPCM (eqs. 8-411..8-413) is applied for
+  vertical/horizontal intra prediction modes — per 4x4/8x8 block for
+  Intra_4x4/Intra_8x8, across the assembled 16x16 rMb for
+  Intra_16x16, and across the full chroma MB (4:2:0/4:2:2, with the
+  eq. 8-305 4:2:2 DC pickup preserved in the bypass) or per
+  luma-style block at 4:4:4. Covers intra AND inter macroblocks in
+  all three ChromaArrayType layouts. The staged
+  `lossless-transform-bypass` fixture (High 4:4:4, IDR + P) now
+  decodes bit-exact — true lossless round-trip — and gates
+  `Tier::BitExact` (28/29 staged fixture targets green).
+
+- Corpus re-baseline (round 410): after regenerating 13 defective
+  staged `expected.yuv` references from a clean black-box reference
+  decode of the unchanged bitstreams, 15 of 17 staged fixtures now
+  gate `Tier::BitExact` over their FULL frame counts (previously 9,
+  several of those on truncated 1-frame references) — including
+  10-bit High10, both High 4:4:4 fixtures, the 5-frame multi-ref /
+  bipred GOPs and the 4-slice-per-frame picture. The "remaining ~7%
+  High10 right-column divergence" and the r346 "accumulated inter
+  error" both turned out to be artifacts of the defective references,
+  not decoder bugs: the decoder is byte-exact end-to-end on every
+  staged fixture except `mbaff-interlaced` (809/12288 bytes off).
+- Round-410 corpus extension: 11 freshly generated black-box
+  conformance fixtures staged in docs and gated in
+  `tests/docs_corpus.rs` — 4:2:2 8-bit CABAC + CAVLC I/P/B GOPs,
+  10-bit High10 inter, 10-bit 4:2:2, 10-bit 4:4:4, temporal-direct B,
+  implicit weighted bipred (`weighted_bipred_idc=2`), `cqm=jvt`
+  non-flat matrices with 8x8 transform on I/P/B, CAVLC B-slices (nine
+  BitExact), plus two report-only decode-gap pins: `mbaff-field-pairs`
+  (MBAFF FIELD-coded-pair inter reconstruction — per-field references,
+  §7.4.4 skipped-pair flag inference — still deferred; its all-frame
+  MBAFF I frame IS byte-exact) and `lossless-transform-bypass`
+  (§8.5.15 qpprime_y_zero bypass unimplemented). Corpus now: 29
+  fixtures, 27 BitExact over full frame counts.
+- `corpus_cavlc_444_intra8x8` gate: the CAVLC 4:4:4 Intra_8x8 fixture
+  (§7.4.5.3.3 8×8 residual interleave at ChromaArrayType==3) had no
+  corpus driver entry; added at `Tier::BitExact` (exact on first run).
+- `dump_yuv` example: decode an Annex B stream and dump every visible
+  frame as tightly-packed planar YUV for offline byte-diff against a
+  black-box reference decode.
+- CAVLC 4:2:2 and 4:4:4 P-slices (multi-format `encode_p`: per-format
+  chroma MC, §8.5.11.2 inter chroma chain at 4:2:2, §7.3.5.3
+  coded-like-luma chroma with Table 9-4(b) inter CBP at 4:4:4, real
+  per-format §9.2.1.1 nC)
+- CAVLC 4:2:2 and 4:4:4 B-slices (B_Skip / B_Direct_16x16 — spatial
+  and temporal — plus the explicit 16x16 mode set)
+- B_Skip / B_Direct_16x16 at 4:2:2 / 4:4:4 under CABAC (spatial
+  §8.4.1.2.2 direct with the uniform gate)
+- B 16x8 / 8x16 partitions at 4:2:2 / 4:4:4 under BOTH entropy coders
+  (per-format chroma-rect MC via `build_chroma_rect_pred_fmt`)
+- Non-flat scaling matrices at 4:2:2 and 4:4:4 (every entropy coder,
+  I/P/B): weighted §8.5.11.2 4:2:2 chroma chain
+  (`quantize_chroma_dc_422_w`), weighted 4:4:4 coded-like-luma plane
+  chains, and the §7.3.2.2 PPS 12-list loop at 4:4:4
+
+### Fixed
+
+- MBAFF frame-picture reconstruction is now byte-exact on the staged
+  `mbaff-interlaced` conformance fixture (MBAFF I + MBAFF P with a
+  16x8 partition; previously 809/12288 bytes diverged). Three real
+  bugs: (1) the deblock walker's `pixel_to_mb_addr` computed
+  raster-style MBAFF addresses while the grid is §6.4.1
+  pair-interleaved, so per-MB deblock metadata (QP / intra flag /
+  coefficient masks) was read from the wrong macroblock; (2) §8.7.2.1
+  bS derivation — the first two bS=4 bullets ("p0 and q0 are both in
+  frame macroblocks") apply to horizontal MB edges between frame-coded
+  pairs inside an MBAFF picture (previously downgraded to bS=3), the
+  bS=4 block wrongly required mixedModeEdgeFlag==0, and
+  mixedModeEdgeFlag itself is now computed for real (was hardcoded 0);
+  field pictures are recognised through a new `field_pic` parameter on
+  the deblock drivers so their horizontal intra MB edges correctly
+  take bS=3; (3) the inter MV-prediction neighbour fetch used raster
+  addressing on the pair-interleaved grid — it now routes through the
+  §6.4.12.2 Table 6-4 probe and applies the §8.4.1.3.2
+  eq. 8-217..8-220 field/frame vertical-MV / refIdx adjustment.
+- §8.5.11.2 eq. 8-328 (4:2:2 chroma DC dequant at qPDC >= 36) was
+  mis-transcribed: both the LevelScale row and the shift use qPDC, not
+  qP (the 2024-08 PDF renders the qPDC subscripts ambiguously; the
+  ISO/IEC 14496-10:2012 rendering is unambiguous). The old form
+  produced a negative shift for qP 33..=35 and a non-monotone dequant
+  scale — every >8-bit 4:2:2 stream (QpBdOffsetC pushes qPDC past 36)
+  and any 8-bit 4:2:2 stream at high QP garbled its chroma DC. Found
+  by black-box conformance diff on freshly generated High 4:2:2
+  streams (8-bit CABAC/CAVLC inter chroma + 10-bit whole-picture
+  chroma all now byte-exact); the old unit test that enshrined the
+  mis-transcription was rewritten against the corrected equation with
+  a monotonicity argument.
+- §8.7 deblock macroblock processing order under MBAFF: macroblocks
+  are filtered in increasing mbAddr order, which in an MBAFF frame is
+  pair-interleaved (top MB, bottom MB, next column) — not the raster
+  scan the plane walkers used. Observable at corners where a vertical
+  MB edge crosses the pair-internal horizontal edge.
+- CABAC B_Skip deblock records only carried the L0 side of the direct
+  derivation — the encoder-side §8.7.2.1 walker read a phantom ref/MV
+  mismatch (bS 0 → 1) on edges against coded B_Direct neighbours and
+  filtered samples the decoder leaves alone
+- Decoder: the 4:4:4 inter chroma 8x8 dequant selected its scaling
+  lists with spec indices (9/11) where `select_scaling_list_8x8`
+  takes the 0-based sub-index — every non-flat 4:4:4 inter chroma 8x8
+  residual dequantised flat
+
+- 4:4:4 I_4x4 encoder leg — §8.3.4.5 chroma-as-luma 4x4 emit with
+  per-plane §9.2.1.1 nC; the CAVLC 4:4:4 IDR trial is two-way
+  (I_16x16 / Intra_4x4) or three-way (+ Intra_8x8 under transform_8x8)
+- Custom user-supplied scaling lists (ScalingMatrixMode::SeqCustom /
+  PicCustom) coded through the real §7.3.2.1.1.1 delta_scale chain
+- Non-flat scaling matrices on P/B slices (inter §8.5.9 weightScale on
+  the 4x4/8x8 inter luma + chroma quantisers) and under CABAC (I/P/B
+  at 4:2:0)
+- CABAC 4:2:2 and 4:4:4 P-slices (inter §8.5.11.2 chroma chain at
+  NumC8x8=2; §7.3.5.3 chroma-coded-like-luma blockCat-8/12 4x4 or
+  blockCat-5/9/13 8x8 inter residuals with explicit CBF)
+- CABAC 4:2:2 and 4:4:4 B-slices (16x16 explicit mode set)
+
+### Fixed
+
+- Twelve §9.3.1.1 Table 9-30/9-31/9-32 P/B-column CABAC init values
+  (ctxIdx 805/849, 975..980, 1005..1010) that desynchronised every
+  CABAC 4:4:4 P/B decode at the first inter chroma abs-level bin
+
+## [0.1.7](https://github.com/OxideAV/oxideav-h264/compare/v0.1.6...v0.1.7) - 2026-07-03
+
+### Other
+
+- README + CHANGELOG + encoder STATUS — round-385 CABAC/4:2:2/4:4:4 8x8-transform rollup
+- 4:4:4 Intra_8x8 — §8.3.4.5 chroma-coded-like-luma 8x8 CAVLC encode
+- decoder CAVLC 4:4:4 8x8 read-path — §7.4.5.3.3 interleave on the chroma planes
+- 4:2:2 Intra_8x8 — High 4:2:2 + transform_8x8 CAVLC IDR encode
+- B-slice CABAC inter 8x8 transform — second-gate flag across all coded B shapes
+- P-slice CABAC inter 8x8 transform — §7.3.5 second-gate flag + blockCat-5 residual
+- Intra_8x8 under CABAC — blockCat-5 residual + ctx-399 flag in encode_idr_cabac
+- §9.3.3.1.1.10 transform_size_8x8_flag + blockCat-5 CABAC encode primitives
+- README + encoder STATUS — round-382 High-profile 8x8 transform rollup
+- B-MB 8x8-residual RDO — 8x8 transform selectable on B slices
+- B-slice second-gate transform_size_8x8_flag — full GOPs under transform_8x8
+- P-slice inter 8x8 transform via second-gate transform_size_8x8_flag
+- adaptive per-MB transform-size RDO (I_16x16 / I_4x4 / I_8x8)
+- High-profile Intra_8x8 encoder + §7.4.5.3.3 CAVLC 8x8 de-interleave fix
+- §8.6.4 forward 8x8 transform + §8.5.13 quantizer + §7.4.5.3.3 CAVLC de-interleave
+- README — document PAFF field-picture decode + field pairing
+- §7.4.1.2.4 bottom_field_flag primary-coded-picture boundary
+- PAFF field-picture decode + §C.4.4 complementary-field pairing
+- lock 4:2:2 explicit weighted-prediction chroma combine
+- lock 4:4:4 B-slice inter chroma decode + correct stale 4:4:4 README row
+- lock 4:2:2 P/B-slice inter chroma decode with bit-exact conformance gates
+- synthetic MBAFF interlaced conformance fixture + ffmpeg-gated test
+- fix MBAFF intra neighbour addressing (§6.4.10/Table 6-4)
+- document field reference-list init/RPLM as implemented
+- §8.2.4.3 field reference-list modification (RPLM)
+- §8.2.4.2.2/.2.4/.2.5 field reference-list initialisation
+- round 349 — gate the verifiable 10-bit right MB column as a QP_Y regression guard
+- round 349 — fix §8.5.8 eq. 8-309 QP_Y derivation for >8-bit luma (10-bit High10 dequant collapse)
+- round 349 — High10 (10-bit) decode-path milestone guard + root-cause the ungateable fixture
+- neutralise black-box-validator naming in §8.3.4.5 4:4:4 test doc (r346 Hat-2)
+- round 346 — enforce High 4:4:4 I_4x4 bit-exact gate + root-cause ReportOnly corpus divergences to defective fixtures
+- neutralise black-box-validator naming in fixture comment
+- round 343 — pin 10 staged fixtures to enforced BitExact tier
+- round 339 — README + CHANGELOG MBAFF decode milestone
+- round 339 — MBAFF coded_block_flag external-MB neighbours via Table 6-4; mbaff-interlaced now decodes end-to-end
+- round 339 — wire §6.4.11.1 MBAFF MB-level neighbours + correct §7.3.5.1 ref_idx override
+- round 339 — §6.4.12.2 Table 6-4 exact MBAFF neighbour-location derivation
+- round 334 — §G.13.1.7 view_dependency_change (SEI payload type 42)
+- round 330 — §H.7.3.2.1.4 seq_parameter_set_mvcd_extension (MVCD profiles 138/135)
+- round 325 — §7.3.2.1.2 seq_parameter_set_extension_rbsp (NAL 13)
+- round 321 — §F.7.3.2.1.4 SVC SPS extension + §F.14.1 SVC VUI
+- round 318 — Annex H §H.13.2.6 alternative_depth_info (SEI payload type 181)
+- round 314 — §8.4.2.2 4:4:4 (ChromaArrayType==3) inter chroma MC + residual
+- refresh to current status, drop per-round changelog cruft
+
+### Fixed
+
+- **Round-385 — decoder CAVLC 4:4:4 8x8 read-path.** At
+  ChromaArrayType == 3 with `transform_size_8x8_flag = 1` the Cb/Cr
+  plane residuals are now §7.4.5.3.3-interleaved at parse time
+  (mirroring the round-382 luma fix); previously the raw de-interleaved
+  4x4 lists were stored while the 4:4:4 8x8 reconstruction consumed
+  contiguous 8x8-scan chunks, scrambling every CAVLC 4:4:4
+  8x8-transform chroma residual.
+
+### Added
+
+- **Round-385 — 8x8 transform under CABAC (blockCat-5), I / P / B.**
+  `encode_idr_cabac` runs a per-MB I_16x16-vs-Intra_8x8 trial: a winner
+  codes mb_type I_NxN + the §9.3.3.1.1.10 `transform_size_8x8_flag`
+  (new `encode_transform_size_8x8_flag`, ctxIdxOffset 399 with per-MB
+  neighbour condTerm tracking), four prev/rem Intra_8x8 pred-mode
+  pairs, an explicit CBP, and one §7.3.5.3.3 blockCat-5 64-coefficient
+  residual per coded quadrant (CBF suppressed at 4:2:0 and folded into
+  the four 4x4 slots — decoder mirror; Table 9-43 significance maps
+  pinned by new 64-coefficient roundtrip unit tests).
+  `encode_p_cabac` / `encode_b_cabac` run the shared §8.6.4 8x8-vs-4x4
+  luma-residual trial on every coded MB and code the §7.3.5 second-gate
+  flag after CBP whenever `cbp_luma > 0` (all emitted P/B shapes
+  qualify; skips stay gate-exempt; the flag normalises to the
+  decoder-inferred 0 when cbp collapses). `i8x8_mb_count` now counts
+  CABAC picks on IDR / P / B. Gated by
+  `tests/integration_i8x8_cabac.rs`: 6 tests, all bit-exact through
+  both our decoder and the black-box reference decoder.
+- **Round-385 — 4:2:2 Intra_8x8 encode.** The 3-way transform-size RDO
+  runs at High 4:2:2 (profile 122): new `write_i8x8_mb_chroma` writer
+  takes `ChromaWriteKind` (4:2:0 delegates bit-identically), and the
+  4:2:2 I_NxN writer gains the mandatory §7.3.5
+  `transform_size_8x8_flag = 0` emission inside a
+  `transform_8x8_mode_flag = 1` stream. Bit-exact self-roundtrip +
+  yuv422p black-box interop tests.
+- **Round-385 — 4:4:4 Intra_8x8 encode (§8.3.4.5 chroma coded like
+  luma).** With `transform_8x8` at chroma_format_idc = 3 every MB codes
+  Intra_8x8: Cb/Cr predict each quadrant with the chosen luma mode, run
+  the 8x8 transform at the chroma QP, and emit the §7.4.5.3.3 split
+  under the shared CBP (Table 9-4(b) inverse via
+  `intra_cbp_to_codenum_0_3`; real per-plane §9.2.1.1 nC via the new
+  `derive_nc_plane_luma_like`). Bit-exact self-roundtrip + yuv444p
+  black-box interop.
+- **B-MB 8x8-residual RDO — the 8x8 transform now wins on B slices
+  too.** The `encode_b` per-MB path runs the same §8.6.4
+  8x8-vs-sixteen-4x4 luma-residual trial as `encode_p`
+  (`forward_inter_luma_8x8` + `inter_luma_transform_cost`, lower
+  `J = D + λ·R` wins) for every coded B shape; the six B CAVLC writers'
+  flag field is upgraded from emit-0-only to
+  `transform_size_8x8_flag: Option<bool>` so a winning trial codes the
+  §7.3.5 second-gate flag as 1 with the §7.4.5.3.3 de-interleaved
+  residual split, and the §8.7 deblock mirror carries the per-MB flag.
+  New `EncodedB::i8x8_mb_count` (CABAC paths report 0). The IDR+P+B GOP
+  gate now also asserts the B-slice RDO genuinely selects 8x8 (3/16 B
+  MBs on the fixture) while both decoders stay bit-exact.
+- **B-slice second-gate `transform_size_8x8_flag` coding — full
+  IDR+P+B GOPs under `transform_8x8`.** Every coded B MB shape this
+  encoder emits (B_L0/L1/Bi_16x16, B_Direct_16x16, 16x8 / 8x16
+  partitions, all-Direct and mixed B_8x8) passes the §7.3.5 second gate
+  in a `transform_8x8_mode_flag = 1` stream (no sub-partition below
+  8x8; `direct_8x8_inference_flag = 1` in our SPS), so all six B CAVLC
+  writers now code the mandatory flag as 0 when `cbp_luma > 0` (new
+  `emit_transform_size_8x8_zero` on each B config struct); the B
+  residual itself stays on the 4x4 transform (an 8x8-residual RDO trial
+  for B MBs is a follow-up). The `encode_b` transform_8x8 rejection is
+  lifted. Gated by `i8x8_b_slice_gop_codes_second_gate_flag_and_
+  roundtrips`: a 3-frame IDR+P+B GOP (with a vacuity guard proving the
+  B slice genuinely codes MBs) decodes bit-exactly through both our
+  decoder and the black-box reference decoder.
+- **P-slice inter 8x8 transform (`transform_size_8x8_flag` on
+  P_L0_16x16).** With `transform_8x8` set, `encode_p`'s coded-MB path
+  trials the §8.6.4 forward 8x8 transform of the motion-compensated
+  luma residual (one transform per quadrant, inter quantiser rounding)
+  against the sixteen-4x4 coding and keeps the lower `J = D + λ·R`
+  alternative (`forward_inter_luma_8x8` + `inter_luma_transform_cost`).
+  The §7.3.5 second-gate flag is coded after `coded_block_pattern` when
+  `cbp_luma > 0` (`PL016x16McbConfig::transform_size_8x8_flag`); the
+  4MV all-PL08x8 writer codes the mandatory flag as 0
+  (`P8x8AllPL08x8McbConfig::emit_transform_size_8x8_zero` — its
+  sub-partitions are 8x8 so `noSubMbPartSizeLessThan8x8Flag = 1`);
+  P_Skip and the Intra_16x16 fallback are gate-exempt per §7.3.5.
+  `EncodedP::i8x8_mb_count` mirrors the IDR counter. `encode_b` rejects
+  `transform_8x8` until the B-slice writers grow the flag. Gated by
+  `i8x8_p_slice_inter_8x8_transform_roundtrips_bit_exact`: a
+  low-frequency ramp residual makes the RDO pick 8x8 on P MBs and the
+  2-frame stream decodes bit-exactly through both our decoder and the
+  black-box reference decoder.
+- **Adaptive per-MB transform-size RDO (I_16x16 / I_4x4 / I_8x8).**
+  With `EncoderConfig::transform_8x8` set, `encode_idr`'s per-MB
+  Lagrangian RDO now runs a third **Intra_8x8** trial alongside the
+  existing I_16x16 and I_4x4 trials (same snapshot/rollback
+  discipline), installing the lowest-J winner per macroblock instead of
+  forcing every MB to 8x8. Mixed streams are spec-correct: I_4x4 MBs
+  code `transform_size_8x8_flag = 0` per §7.3.5 (the flag is mandatory
+  for I_NxN once the PPS signals `transform_8x8_mode_flag = 1`) via the
+  new `INxNMcbConfig::emit_transform_size_8x8_zero`. New
+  `EncodedIdr::i8x8_mb_count` surfaces how many MBs the RDO coded as
+  Intra_8x8. On the mixed gradient+texture fixture the RDO picks
+  Intra_8x8 for 4/16 MBs (the textured quadrant) and the stream stays
+  bit-exact through both our decoder and the black-box reference
+  decoder (`i8x8_adaptive_rdo_selects_8x8_on_textured_content_and_
+  roundtrips`, + a zero-count guard for non-8x8 configs).
+- **High-profile Intra_8x8 (8x8-transform) IDR encoder — bit-exact
+  through both our decoder and a black-box reference decoder.** New
+  `EncoderConfig::transform_8x8` drives `encode_idr` to code every MB
+  as I_NxN + `transform_size_8x8_flag = 1` (§7.3.5): per-8x8-block
+  §8.3.2 intra prediction (all 9 modes, availability-gated per
+  §8.3.2.2.2..2.10, Lagrangian RDO), the §8.3.2.1 eq. 8-73
+  `predIntra8x8PredMode` derivation mirrored encoder-side (including
+  the eq. 8-72 Intra_4x4-neighbour sub-index), §8.6.4 forward 8x8
+  transform + §8.5.13.1 quantiser, Table 8-14 8x8 zig-zag, and the
+  §7.4.5.3.3 four-4x4 CAVLC split with the §9.2.1.1 per-sub-block nC
+  walk. The SPS auto-promotes to High (`profile_idc = 100`, §A.2.4) and
+  the PPS emits the §7.3.2.2 optional tail (`transform_8x8_mode_flag =
+  1`, flat scaling, `second_chroma_qp_index_offset`). The §8.7 deblock
+  runs with the 8x8-transform internal-edge skip mirrored through a new
+  `MbDeblockInfo::transform_size_8x8_flag`. Four integration tests
+  (`integration_i8x8_encoder.rs`): High-profile SPS/PPS syntax,
+  bit-exact self-roundtrip, bit-exact black-box reference-decoder
+  interop, and a PSNR-Y sanity floor at QP 26 on a mixed
+  gradient+texture fixture.
+
+### Fixed
+
+- **§7.4.5.3.3 CAVLC 8x8 luma residual de-interleave (decoder).** The
+  CAVLC path for `transform_size_8x8_flag = 1` macroblocks read the
+  four per-quadrant 4x4 residual blocks but stored them *concatenated*
+  instead of applying the normative interleave `level8x8[4·i + i4x4] =
+  level4x4[i4x4][i]`, so every CAVLC 8x8-transform macroblock
+  reconstructed from a scrambled coefficient order (a long-standing
+  documented simplification — the CABAC path was unaffected). The
+  macroblock-layer parser now interleaves the four scan lists into the
+  8x8 scan order before storage, making the CAVLC and CABAC storage
+  conventions identical for the §8.5.13 inverse-transform consumer.
+  Locked by the round-382 bit-exact encoder round-trip gates.
+
+### Added
+
+- **§8.6.4 / §8.5.13 High-profile 8x8 forward transform + quantizer
+  (encoder side).** New `encoder::transform::forward_core_8x8`
+  (`W = E8 · X · E8ᵀ` with the integer 8x8 basis `E8`, the transpose of
+  the normative §8.5.13.2 inverse butterfly), `quantize_8x8`
+  (`MF8x8[m][class] = round(2^18 / normAdjust8x8)` with
+  `qBits8 = 22 + qP/6`), `zigzag_scan_8x8` (Table 8-14 frame scan,
+  inverse of the decoder's `inverse_scan_8x8_zigzag`), and
+  `deinterleave_8x8_to_4x4` (§7.4.5.3.3 `level4x4[i4x4][i] =
+  level8x8[4·i + i4x4]` for the CAVLC four-4x4 residual split). Round-trip
+  quality is gated against the decoder's normative `inverse_transform_8x8`:
+  a smooth ramp + mid-frequency ripple recovers to within `4·2^(qP/6)+2`
+  per sample across QP 16/22/26/30; the `E8` basis is verified orthogonal
+  and the 8x8 zig-zag verified an exact inverse of the decoder scan. This
+  is the transform foundation for the High-profile Intra_8x8 encode path.
+- **§7.4.1.2.4 `bottom_field_flag` primary-coded-picture boundary.** The
+  first-VCL-of-new-picture detection now treats a change in
+  `bottom_field_flag` (when both slices are field pictures) as a picture
+  boundary, so the top field of a complementary pair finalizes before
+  the bottom field opens — the canonical condition that previously
+  relied only on the incidental `pic_order_cnt_lsb` difference between
+  the two fields. Gated off for frame pictures (`field_pic_flag == 0`),
+  where `bottom_field_flag` is inferred 0 and irrelevant. Two unit tests
+  cover the field-pair split and the frame-picture no-op.
+- **PAFF (`field_pic_flag == 1`) field-picture decode + §C.4.4
+  complementary-field pairing.** A picture-adaptive frame/field stream's
+  individual field pictures now decode: a field is reconstructed as a
+  half-height picture per §7.4.2.1.1 eq. (7-26)
+  `PicHeightInMbs = FrameHeightInMbs / (1 + field_pic_flag)`, with the
+  §7.3.4 macroblock walk, CAVLC/CABAC neighbour grids and §8 sample
+  placement all operating in field-local coordinates (within a single
+  field MbaffFrameFlag == 0, so the §6.4 raster neighbour derivation
+  applies unchanged). The decoder driver sizes the in-progress
+  `Picture` + `MbGrid` to the coded field height, derives the field's
+  own Top/BottomFieldOrderCnt for output ordering, and holds the first
+  field of a complementary pair until its opposite-parity partner
+  (same `frame_num`) arrives — at which point `interleave_fields`
+  re-weaves the two half-height fields into one full-height output frame
+  (top field → even rows, bottom field → odd rows) whose POC is
+  `Min(TopFieldOrderCnt, BottomFieldOrderCnt)` (§8.2.1 eq. 8-1). A
+  trailing unpaired field at IDR / MMCO-5 / EOF is emitted as a
+  standalone half-height frame rather than dropped. New SPS geometry
+  helpers `pic_height_in_mbs(field_pic_flag)` / `pic_size_in_mbs(...)`
+  carry eq. (7-26)/(7-27); the previous blanket
+  `field_pic_flag == 1` reconstruction rejection is removed. Six new
+  unit tests cover the field geometry, the row-interleave parity
+  placement, complementary-pair frame assembly, and the
+  non-complementary orphan-flush path. (Byte-exact conformance against a
+  black-box reference is blocked: neither x264 nor the in-tree encoder
+  emits PAFF field-coded streams — x264's interlaced mode is MBAFF only
+  — so no field-picture fixture is available; see followups.)
+- **Conformance gates for 4:2:2 (ChromaArrayType == 2) P / B-slice inter
+  chroma reconstruction.** The §8.4.1.4 chroma-MV derivation (eq.
+  8-221/8-222: `mvCLX = mvLX`, SubHeightC == 1 so no vertical halving),
+  the §8.4.2.2 fractional-position rule (eq. 8-231..8-234: `yIntC +=
+  mvCLX[1] >> 2`, `yFracC = (mvCLX[1] & 3) << 1` for the full-height
+  chroma grid; `xIntC` / `xFracC` shared with 4:2:0), the §8.4.2.3
+  default / explicit / implicit weighted combine, and the §8.5 eight-4x4
+  inter chroma residual all already ran for 4:2:2 P / B slices but were
+  untested at the reconstruction level. Four new `reconstruct::tests`
+  lock them with bit-exact assertions: `mc_chroma_422_vertical_quarter_
+  pel_uses_subheightc_1` (the 4:2:2-distinguishing vertical 1/4-pel rule
+  via a step-8 ramp), `mc_chroma_422_horizontal_quarter_pel_matches_420_
+  x_rule`, `p_l0_16x16_422_zero_mv_copies_full_height_chroma` (end-to-end
+  P_L0_16x16 over the 8x16 chroma tile), and
+  `b_bi_16x16_422_default_averages_full_height_chroma` (end-to-end
+  B_Bi_16x16 default averaging across all 16 chroma rows). The README's
+  stale "P / B-slice 4:2:2 deferred" claim is corrected: only the 4:2:2
+  *encoder* P / B path remains deferred.
+- **Conformance gate for 4:4:4 (ChromaArrayType == 3) B-slice inter
+  chroma reconstruction.** The 4:4:4 chroma planes are motion-compensated
+  by the §8.4.2.2.1 luma 6-tap kernel (eq. 8-235..8-238) and combined by
+  the §8.4.2.3 weighted-sample dispatch; the P path was already tested
+  (`p_l0_16x16_444_*`) but the B-slice bipred combine was not.
+  `b_bi_16x16_444_default_averages_full_resolution_chroma` locks the
+  default-averaging combine across the full 16×16 4:4:4 chroma tile.
+  Combined with the existing `intra_8x8_zero_residual_dc_reconstructs_
+  444_chroma` (I_8x8 4:4:4 chroma) and the P-inter tests, the README's
+  stale "I_8x8 4:4:4 / P / B 4:4:4 deferred" claim is corrected — only
+  `separate_colour_plane_flag=1` remains deferred for 4:4:4.
+- **Conformance gate for 4:2:2 explicit weighted prediction chroma.**
+  `p_l0_16x16_422_explicit_weighted_per_plane_chroma` exercises the
+  §8.4.2.3.2 (eq. 8-274) explicit weighted-pred combine on the 8×16 4:2:2
+  chroma tile with distinct per-iCbCr (Cb/Cr) weights and offsets,
+  asserting the per-plane weight selection and the full-height chroma
+  walk are correct (Cb `((80·5 + 2) >> 2) + 1 == 101`, Cr `((80·3 + 2) >>
+  2) + 7 == 67`).
+
+### Fixed
+
+- **§6.4.10 / Table 6-4 MBAFF intra neighbour addressing.** In an MBAFF
+  frame (`mb_adaptive_frame_field_flag == 1 && !field_pic_flag`),
+  macroblock addresses are pair-interleaved, so the §6.4.9 raster
+  neighbour derivation (`mb_addr − 1`, `mb_addr − PicWidthInMbs`) used by
+  the §8.3.1.1 / §8.3.2.1 intra-prediction-mode derivation pointed at the
+  wrong neighbour macroblocks. The `intraMxMPredMode` predicted from
+  those mis-located neighbours cascaded reconstruction errors across the
+  whole picture (only MB 0, which has no neighbours, was correct).
+  `neighbour_4x4_addr` / `neighbour_8x8_addr` now route through the
+  §6.4.10 / Table 6-4 pair-aware derivation (via
+  `mb_address::mbaff_neigh_location`) when the new `MbGrid.mbaff_frame_flag`
+  is set, reading each macroblock's `mb_field_decoding_flag` (now recorded
+  on `MbInfo`) for the `mbAddrXFrameFlag` input. On a synthetic 128×96
+  MBAFF I-frame (libx264 `interlaced=1`) this lifts luma PSNR vs a
+  black-box ffmpeg decode from ~9 dB to ~54 dB.
+
+### Added
+
+- round 355 — **§8.2.4.3 field reference-list modification (RPLM).**
+  `modify_ref_pic_list_field` applies `modification_of_pic_nums_idc`
+  ops to the `RefFieldEntry` lists from the field init step. Short-term
+  ops (idc 0/1) derive `picNumLX` via eq. 8-34..8-36 with the field
+  forms of CurrPicNum (`2*frame_num+1`) and MaxPicNum (`2*MaxFrameNum`),
+  then splice the *field* of the DPB whose field-level PicNum
+  (eq. 8-30/8-31, parity-relative to the current field) matches; the
+  long-term op (idc 2) matches a field by field-level LongTermPicNum
+  (eq. 8-32/8-33). The eq. 8-37/8-38 shift-and-compact splice is
+  reduced to "drop the duplicate of the just-inserted field" since a
+  field is uniquely keyed by `(dpb_key, parity)`. New
+  `DpbEntry::field_pic_num` / `field_long_term_pic_num` give the
+  per-parity numbers (the existing `pic_num` infers parity from the
+  entry's own structure, which is wrong when a stored *frame* can
+  supply either of its two fields). 5 spec-derived unit tests
+  (parity-relative PicNum, subtract reorder, long-term splice,
+  picNumLXPred chaining across ops, pad/truncate).
+
+- round 355 — **§8.2.4.2.2 / §8.2.4.2.4 / §8.2.4.2.5 field reference
+  picture list initialisation.** When the current picture is a coded
+  field, each *field* of a stored reference frame is a separate
+  reference picture with its own list index (§8.2.4.2.4), so the field
+  RefPicLists are built in two stages: an ordered list of reference
+  *frames* (§8.2.4.2.2 for P/SP — descending `FrameNumWrap` short-term,
+  ascending `LongTermFrameIdx` long-term; §8.2.4.2.4 for B — the
+  `PicOrderCnt`-partitioned List0/List1 frame orders), then the
+  §8.2.4.2.5 parity-alternation interleave that emits one entry per
+  field, starting with the current field's own parity, skipping any
+  frame whose field of the wanted parity was not decoded ("the missing
+  field is ignored"), and appending the leftover fields of the available
+  parity in frame order once the alternate parity is exhausted. New
+  `FieldParity` / `RefFieldEntry` types name the `(dpb_key, parity)` of
+  each list entry; `init_ref_pic_list_p_field`,
+  `init_ref_pic_lists_b_field`, and the shared `interleave_fields` helper
+  implement the three clauses, plus `DpbEntry::has_field` / `field_poc`
+  accessors for per-parity availability + POC. Covered by 18
+  spec-derived unit tests. This replaces the previous "fields treated as
+  single-parity reference frames" placeholder for the list-interleaving
+  step; the frame-only paths (`init_ref_pic_list_p` /
+  `init_ref_pic_lists_b`) are unchanged.
+
+### Fixed
+
+- round 349 — **§8.5.8 eq. 8-309 QP_Y derivation for >8-bit luma.** The
+  per-MB `QP_Y` modulo used the addend `52 + QpBdOffsetY` where the spec
+  requires `52 + 2*QpBdOffsetY` (the modulus stays `52 + QpBdOffsetY`).
+  For 8-bit luma `QpBdOffsetY == 0` so the two coincide (all 8-bit
+  fixtures were unaffected), but at 10-bit (`QpBdOffsetY = 12`) every
+  macroblock's `QP_Y` came out 12 too low, dragging `qP'Y = QP_Y +
+  QpBdOffsetY` below its true value and collapsing the §8.5.12
+  inverse-quant scale so reconstructed residuals were ~16× too small —
+  10/12/14-bit pictures decoded to a near-flat mid-gray. Extracted the
+  derivation into `reconstruct::next_qp_y` with the corrected formula and
+  spec-value unit tests at 8/10/12-bit. On the `10-bit-high10` fixture
+  this lifts the (gateable) right MB column's luma to ~93% byte-exact —
+  its top rows now match the reference exactly — and the overall match
+  from 5.6% to 46.9% (the rest is the fixture's concealed left MB column,
+  see Other).
+
+### Added
+
+- round 349 — High10 (10-bit, `profile_idc=110`) decode-path milestone
+  guard (`corpus_10_bit_high10_emits_full_range`). The 10-bit fixture's
+  `expected.yuv` cannot gate bit-exactness (its entire left MB column is
+  concealed with `0x80` fill — 50% of the reference bytes; see Other),
+  so this guard asserts the spec-checkable invariants of the >8-bit path
+  instead: the all-intra frame decodes at 32×32 packed as `yuv420p10le`
+  (2-bytes/sample LE-u16, 3072 B); every emitted sample is a legal
+  10-bit value (`0..=1023`); and the luma plane genuinely exercises the
+  >8-bit range (≥¼ of samples exceed 255), proving the §8.5.12 dequant
+  at `qP'=qP+QpBdOffsetY` (=qP+12), the `1<<(10-1)=512` predicted DC
+  default, and the LE-u16 plane packing are all wired end-to-end rather
+  than collapsed to 8-bit.
+
+- round 346 — enforced bit-exact gate for the High 4:4:4 Predictive
+  I_4x4 decode path (`integration_high444_i4x4_bitexact`). The
+  `intra-only-high444` fixture's high-QP picture (frame 1) decodes
+  byte-for-byte against its reference YUV, exercising §7.3.5.3 /
+  §8.3.4.5 4:4:4 Intra_4x4 luma + the "chroma coded like luma" Cb/Cr
+  reconstruction (per-block luma pred-mode reuse) at ChromaArrayType==3.
+  This path could not be gated by the multi-frame `docs_corpus` case
+  because that fixture's frame 0 reference is defective (see below).
+
+### Other
+
+- round 346 — corpus fixture diagnosis. Root-caused the remaining
+  `ReportOnly` corpus divergences to defective/under-specified staged
+  reference data, not decoder bugs (verified, no web tools, spec-only):
+  (a) `4-4-4-high` and `intra-only-high444` frame 0 — `expected.yuv`
+  luma is a uniform 128 despite the bitstream coding textured CABAC
+  I_4x4 MBs (same defect class as `i-only-64x64-main`); our decoder
+  produces correct texture, confirmed against the bit-exact
+  `transform-8x8-on` 4:2:0 I_4x4 path. (b) `multi-ref-frames` —
+  `expected.yuv` holds 2 non-consecutive frames (IDR + the 5th coded
+  picture, `frame_num=4`) while the harness scores them as the first 2
+  decoded frames; the 94% is an artefact of the 5th picture being a
+  near-copy of the IDR. (c) `bipred-with-b-frames-main` — `expected.yuv`
+  frame 1's bottom MB row diverges from its own frame 0 by up to +16
+  despite the trace recording `mv=(0,0)`, no luma residual, identity
+  weights, and bS=0 internal edges — a delta the spec cannot produce, so
+  the reference is internally inconsistent. All recorded as docs-gaps for
+  fixture regeneration; the affected cases stay `ReportOnly`.
+
+- round 349 — `10-bit-high10` corpus fixture diagnosis (spec-only, no
+  web tools). The fixture's `expected.yuv` is partially concealed: the
+  whole left MB column (luma x∈0..16 over both MB rows, plus co-sited
+  chroma) is `0x80` byte-fill — exactly 50% (1536/3072) of the reference
+  bytes are the FFmpeg-HEAD conceal-MB mid-gray seen in
+  `i-only-64x64-main` (100%) / `4-4-4-high` (52%) / `intra-only-high444`
+  (29%), and `0x8080` as LE-u16 (32896) is not even a legal 10-bit
+  value. Per `trace.txt` all four MBs are real textured CABAC I_4x4
+  (CBPs 0x27..0x2e), so a flat left column cannot be a true decode. The
+  valid right MB column can't gate either, because its §8.3.1.2 intra-4x4
+  prediction reads the concealed left-MB right edge as its left
+  neighbour — so no part of this `expected.yuv` is verifiable 10-bit
+  ground truth. Recorded as a docs-gap for fixture regeneration; the
+  scoring case stays `ReportOnly`, with the verifiable 10-bit invariants
+  now guarded by `corpus_10_bit_high10_emits_full_range` (see Added). A
+  byte-exact gate on the High10 path is unblocked the moment the fixture
+  is re-exported without the conceal-MB fill.
+
+- round 343 — fixture-validation hardening. Ran the full staged
+  `docs/video/h264/fixtures/` corpus byte-for-byte against each
+  `expected.yuv` and promoted the ten fixtures that decode bit-exactly
+  from `ReportOnly` to the enforced `BitExact` tier (test fails on any
+  divergence): `tiny-i-only-16x16-baseline`,
+  `i-frame-then-p-frame-baseline`, `cavlc-mode`, `cabac-mode`,
+  `transform-8x8-on`, `qp-low-cqp`, `qp-high-cqp`,
+  `weighted-prediction-explicit`, and `iso-mp4-vs-annexb` on both the
+  Annex-B and length-prefixed-AVC (avcC) framing paths. These now guard
+  against regression in the all-intra, CAVLC/CABAC entropy, §8.5
+  transform + QP-extreme, §8.4.2.3.2 explicit-weighted, and container
+  framing decode paths. Diagnosed and documented (in each fixture's test
+  comment) the remaining gaps: two fixtures carry bogus reference YUV
+  (`i-only-64x64-main` — `expected.yuv` is a uniform 128 that cannot
+  correspond to its non-zero-CBP 16-MB CABAC I-frame; `multi-slice-per-frame`
+  — a single-coded-picture bitstream split into two reference frames),
+  and a genuine narrow §8.4.2 inter edge-case affecting only the bottom
+  MB row of P_L0 pictures (`bipred-with-b-frames-main` 90.4 %,
+  `multi-ref-frames` 94.3 %; Y max diff ≤16, chroma ≤10, survives with
+  deblocking disabled). No `src/` behaviour change; the corpus harness is
+  the deliverable.
+- round 339 — MBAFF (macroblock-adaptive frame/field) decode. Added the
+  exact §6.4.12.2 Table 6-4 neighbouring-location derivation
+  (`mb_address::mbaff_neigh_location`) covering all six spatial cells and
+  the full (currMbFrameFlag, mbIsTopMbFlag, mbAddrXFrameFlag, yN-parity)
+  dispatch, returning `(mbAddrN, xW, yW)` per eqs. 6-36/6-37. Wired the
+  §6.4.11.1 MB-level neighbour addresses (Table 6-2 (xN,yN) = (-1,0)/(0,-1))
+  into the CABAC `mb_skip_flag` + per-MB `NeighbourCtx` context modeling
+  and the §9.3.3.1.1.9 `coded_block_flag` external-MB lookup
+  (`CabacNeighbourGrid::neighbour_mb_addrs_mbaff` / `new_mbaff`).
+  Corrected the §7.3.5.1/.2 ref_idx-presence override to
+  `mbaff_frame_flag && mb_field_decoding_flag` (field_pic_flag == 0 in an
+  MBAFF frame) instead of unconditionally-true. Result: the libx264 Main
+  MBAFF `mbaff-interlaced` fixture now parses both slices without CABAC
+  desync (was: read-past-end at MB #21 of slice 0) and reconstructs both
+  frames through the §6.4.1 field/frame y-stride path. New
+  `corpus_mbaff_interlaced_parses` regression guard. 10 Table-6-4 unit
+  tests. Deferred: field/frame-mixed-pair §6.4.11.4 block-index
+  remapping, §8.7.2 MBAFF deblock cascade, PAFF (`field_pic_flag == 1`).
+- round 334 — §G.13.1.7 `view_dependency_change()` SEI message (payload
+  type 42, Annex G / MVC). Parses `seq_parameter_set_id` (range-checked
+  0..=31 per §G.13.2.7), `anchor_update_flag` / `non_anchor_update_flag`,
+  and — when an update flag is set — the per-view
+  `anchor_ref_lX_flag[i][j]` / `non_anchor_ref_lX_flag[i][j]` arrays for
+  view indices `i ∈ 1..=num_views_minus1`. The §G.13.1.7 inner-loop
+  bounds (`num_views_minus1`, `num_anchor_refs_lX[i]`,
+  `num_non_anchor_refs_lX[i]`) are not in the payload — §G.13.2.7 takes
+  them from the active MVC subset SPS (§G.7.3.2.1.4), so they are supplied
+  through the new `SeiContext::mvc_view_ref_counts` field (a
+  `Vec<MvcViewRefCounts>` indexed view-1-first). The anchor and
+  non-anchor blocks are decoded as two SEPARATE per-view loops per the
+  spec (not interleaved). When an update flag is set but the context
+  carries no MVC counts the message is rejected with
+  `SeiError::ViewDependencyChangeRefCountsUnknown`, mirroring the
+  §H.13.1.5 depth_timing / §D.1.10 spare_pic context-gating precedent.
+  Six unit tests (no-update, anchor-only, both-updates separate-loop
+  ordering, unknown-context rejection, sps-id range rejection, dispatch)
+  plus the malformed-input sweep (type 42 added; cardinality 3168 →
+  3212) and the `sei_payload` cargo-fuzz context generator. `SeiContext`
+  drops its `Copy` derive (now `Clone` only) to carry the new
+  variable-length field. Brings the SEI dispatch to 53 explicit payload
+  types.
+- round 330 — §H.7.3.2.1.4 `seq_parameter_set_mvcd_extension()` for the
+  Annex H MVCD profiles 138 (Multiview Depth High) / 135 (Multiview Depth
+  Stereo). The subset-SPS dispatch previously surfaced these as a typed
+  `MvcdNotParsed` placeholder with the base SPS still read; it now parses
+  the full MVCD extension into `SpsMvcdExtension`: the per-VOIdx view-info
+  loop (`view_id[i]` + `depth_view_present_flag[i]` /
+  `texture_view_present_flag[i]`, with a `num_depth_views()` accessor for
+  the §H.7.4.2.1.4 `NumDepthViews` count), the `depth_view_present_flag`-
+  gated anchor + non-anchor inter-view reference loops (reusing the §G MVC
+  `Min(15, num_views_minus1)` count cap + 0..=1023 view-id bounds by
+  reference from §H.7.4.2.1.4), and the per-level operation points
+  (`MvcdApplicableOp` / `MvcdLevelValue`) extended with per-target-view
+  `applicable_op_depth_flag` / `applicable_op_texture_flag` and the
+  `applicable_op_num_texture_views_minus1` / `applicable_op_num_depth_views`
+  counts. The §H.7.3.2.1.4 tail flags `mvcd_vui_parameters_present_flag`
+  (parsing the new §H.14.1 `mvcd_vui_parameters_extension()` into
+  `MvcdVuiParametersExtension`, with per-op depth/texture target-view flags
+  and §E timing/HRD reuse) and `texture_vui_parameters_present_flag`
+  (reusing the §G.14.1 `mvc_vui_parameters_extension()` parser) are now
+  read, so profiles 138/135 reach `additional_extension2_flag` and finish
+  the RBSP. The `SubsetSpsExtension::MvcdNotParsed` variant is replaced by
+  a fully-parsed `Mvcd { extension, vui, texture_vui }` variant; profile
+  139 (MVCD + Annex I 3D-AVC) stays `Mvcd3dNotParsed` because the trailing
+  `seq_parameter_set_3davc_extension()` is unimplemented. Five new range-
+  bound error variants (`OpNumTextureViewsOutOfRange`,
+  `OpNumDepthViewsOutOfRange`, `VuiMvcdNumOpsOutOfRange`,
+  `VuiMvcdNumTargetOutputViewsOutOfRange`, `VuiMvcdViewIdOutOfRange`) plus
+  five round-trip / gating / VUI / texture-VUI / rejection tests. Source:
+  ITU-T Rec. H.264 (2024-08) §7.3.2.1.3, §H.7.3.2.1.4, §H.7.4.2.1.4,
+  §H.14.1, §H.14.2.
+- round 325 — §7.3.2.1.2 `seq_parameter_set_extension_rbsp()` (NAL unit
+  type 13). The decoder previously routed type-13 NAL units to
+  `Event::Ignored` with the body unread; it now parses the sequence
+  parameter set extension into a new `SeqParameterSetExtension`
+  (`src/sps_extension.rs`). The parser reads `seq_parameter_set_id`
+  (range-checked 0..=31), `aux_format_idc` (range-checked 0..=3 per
+  §7.4.2.1.2; reserved values >3 rejected), and — when
+  `aux_format_idc != 0` — the auxiliary-coded-picture / alpha-blending
+  block: `bit_depth_aux_minus8` (range-checked 0..=4), `alpha_incr_flag`,
+  and the `bit_depth_aux_minus8 + 9`-bit `u(v)` `alpha_opaque_value` /
+  `alpha_transparent_value` (the §7.4.2.1.2 width rule), exposed as
+  `AuxFormat` with `bit_depth_aux()` / `alpha_value_bits()` helpers;
+  finally `additional_extension_flag`. The body is stored keyed by the
+  supplemented `seq_parameter_set_id` (the ordinary SPS id space, since an
+  SPS extension supplements the SPS of the same id) and surfaced through a
+  new `Event::SpsExtensionStored(id)` event plus a `Decoder::sps_extension`
+  accessor. Auxiliary-picture reconstruction is not wired — §7.4.2.1.2
+  states "the decoding of the sequence parameter set extension and the
+  decoding of auxiliary coded pictures is not required for conformance" —
+  but the parameters are now surfaced rather than discarded. Eight unit
+  tests cover `aux_format_idc == 0` (no aux block), the full aux block,
+  the `bit_depth_aux_minus8 == 0` 9-bit alpha-value width, the reserved
+  `additional_extension_flag == 1`, the three range-check rejections, and a
+  truncated-input EOF; one decoder test exercises NAL-13 dispatch +
+  storage + the `sps_extension` accessor end-to-end.
+- round 321 — Annex F (SVC) §F.7.3.2.1.4
+  `seq_parameter_set_svc_extension()` + §F.14.1
+  `svc_vui_parameters_extension()`. Subset SPSs with `profile_idc ∈
+  {83, 86}` previously surfaced as `SubsetSpsExtension::SvcNotParsed`
+  with the extension body unread; they now parse fully into a new
+  `SubsetSpsExtension::Svc { extension, vui }` variant carrying
+  `SpsSvcExtension` + optional `SvcVuiParametersExtension`. The SVC
+  extension reads `inter_layer_deblocking_filter_control_present_flag`,
+  `extended_spatial_scalability_idc` (range-checked 0..=2 per
+  §F.7.4.2.1.4), the ChromaArrayType-gated `chroma_phase_x_plus1_flag`
+  / `chroma_phase_y_plus1` (with the §F.7.4.2.1.4 absent-field
+  inference to 1), the `extended_spatial_scalability_idc == 1`
+  geometrical-resampling block (`seq_ref_layer_chroma_phase_*` gated on
+  ChromaArrayType nonzero, four `se(v)` scaled-ref-layer offsets), and
+  the `seq_tcoeff_level_prediction_flag` /
+  `adaptive_tcoeff_level_prediction_flag` /
+  `slice_header_restriction_flag` tail. The SVC VUI extension parses
+  per-entry `vui_ext_dependency_id` / `vui_ext_quality_id` /
+  `vui_ext_temporal_id`, reusing the §E.2.1 timing triple and §E.1.2
+  NAL/VCL HRD parsers (mirroring the existing MVC VUI path).
+  `vui_ext_num_entries_minus1` is range-checked (0..=1023) before
+  allocation. Five new unit tests cover the basic round-trip (both SVC
+  profiles), the ESS==1 geometrical block, the monochrome chroma-phase
+  inference path, the two-entry SVC VUI with HRD, and the illegal
+  `extended_spatial_scalability_idc == 3` rejection.
+- round 318 — Annex H §H.13.1.6 / §H.13.2.6 alternative_depth_info SEI
+  payload (type 181). The dispatch previously routed type 181 to
+  `SeiPayload::Unknown`; it now parses the global-view-and-depth (GVD)
+  camera-parameter body. `parse_alternative_depth_info` reads
+  `depth_type` (ue(v)); a non-zero (reserved) type is recorded and the
+  body ignored per the spec's "decoders shall ignore" rule. For
+  `depth_type == 0` it parses `num_constituent_views_gvd_minus1`
+  (0..=3 → `+2` cameras, base + constituent per Table H-4), the five
+  GVD presence flags, the optional per-camera near/far depth pair
+  (reusing the §H.13.2.3 `DepthFloatComponent`: sign u(1), exponent
+  u(7) reserved-127, explicit `man_len_minus1+1` mantissa), and the
+  optional per-camera intrinsic (focal lengths + principal point),
+  3×3 rotation, and horizontal-translation float blocks (reusing the
+  §G.13.2.5 `FloatComponent`: sign u(1), exponent u(6) reserved-63,
+  prec-derived mantissa width via `mantissa_width_g1325`). Range
+  checks enforce `num_constituent_views_gvd_minus1 ≤ 3` and each
+  `prec_gvd_* ∈ 0..=31`. Six unit tests cover the all-flags-clear
+  body, reserved-`depth_type` graceful ignore, the out-of-range
+  guard, the z near/far block (denormal + normal + reserved-exponent
+  `binToFp` eq. H-1 reconstruction), the intrinsic/rotation/
+  translation block, and `parse_payload` dispatch; the type is added
+  to the malformed-input never-panic sweep (cardinality 3124 → 3168)
+  and the `sei_payload` fuzz target.
+- round 314 — §8.4.2.2 ChromaArrayType==3 (4:4:4) inter chroma
+  reconstruction. Previously the P/B inter path motion-compensated only
+  luma at 4:4:4 and left the Cb/Cr planes zero (the chroma MC + residual
+  branches handled only ChromaArrayType ∈ {1, 2}). Per §8.4.1.4 eq.
+  8-221/8-222 the chroma motion vector equals the luma MV at 4:4:4
+  (SubWidthC == SubHeightC == 1), and per §8.4.2.2 eq. 8-235..8-238 the
+  chroma sample is taken at full-resolution integer position with
+  quarter-sample fractions and the §8.4.2.2.1 *luma* 6-tap interpolation
+  process (not the §8.4.2.2.2 chroma bilinear filter). New
+  `mc_chroma_partition_444` runs the luma kernel on each chroma plane;
+  the §8.4.2.3 default / explicit / implicit weighted-sample combine
+  reuses the chroma weight tables / `chroma_log2_weight_denom`. The
+  §8.5.5 "coded like luma" inter chroma residual is reconstructed by
+  `reconstruct_inter_chroma_residual_444` (cbp_luma-gated 4x4 / 8x8
+  blocks, inter chroma scaling lists Table 7-2 i=4/5 + i=9/11, no chroma
+  DC Hadamard). Verified by a bit-identical MC equality test against the
+  luma kernel plus two end-to-end P_L0_16x16 reconstructions (zero-MV
+  plane copy + half-pel luma-6tap on chroma).
+
+## [0.1.6](https://github.com/OxideAV/oxideav-h264/compare/v0.1.5...v0.1.6) - 2026-06-14
+
+### Other
+
+- round 306 — §8.7.2 eq. (8-450) 4:4:4 chroma deblocking
+- round 300 — §8.3.4.5 4:4:4 I_NxN chroma reconstruction
+- round 293 — Annex G §G.13.1.9 base_view_temporal_hrd (SEI payload type 44)
+- round 288 — Annex G (MVC) coded slice extension (NAL 20) slice-header path
+- round 281 — §7.3.2.1.3 subset SPS + §G.7.3.2.1.4 MVC extension + §G.14.1 MVC VUI
+- round 278 — Annex H §H.13.1.5 depth_timing (payload type 52)
+- §D.2.25 tone_mapping_info typed piece-wise default-endpoint accessors
+- round 271 typed filmGrainBitDepth accessors (§D.2.21 eq. D-14/D-15)
+- round 264 — typed num_refinement_steps accessor on ProgressiveRefinementSegmentStart
+- round 259 — typed sub_seq_duration_seconds accessor on SubSeqCharacteristics
+- round 255 — typed average_bit_rate_bps / average_frame_rate_fps accessors on SubSeqLayerCharacteristic
+- round 253 — typed DepthNonlinearRepresentationNumSegments + signalled-model-len accessors on depth_representation_info
+- round 250 — typed NumSampleShift accessor on three_dimensional_reference_displays_info
+- drop release-plz.toml — use release-plz defaults across the workspace
+- round 247 — Annex H (3D-AVC) SEI type 53 depth_sampling_info
+- round 237 — Annex I (3D-AVC depth) SEI type 54 constrained_depth_parameter_set_identifier
+- round 231 — Annex H (3D-AVC) SEI type 50 depth_representation_info
+- round 226 — Annex H (3D-AVC) SEI type 51 three_dimensional_reference_displays_info
+- round 219 — strict §7.3.1 NAL extension header parsing (§F/G/I.7.3.1.1)
+- round 213 — Annex G (MVC) SEI type 40 multiview_acquisition_info
+- round 207 — Annex G (MVC) SEI type 41 non_required_view_component
+- round 200 — two more Annex G (MVC) SEI types: type 39 multiview_scene_info + type 43 operation_point_not_present
+- round 194 — CAVLC §7.3.5.3.1 call-contract guards + fuzz artifact sweep
+
+### Other
+
+- round 306 — §8.7.2 eq. (8-450) 4:4:4 (ChromaArrayType == 3) chroma
+  deblocking. Previously only the luma plane was deblocked at 4:4:4 and
+  the Cb/Cr planes were left unfiltered (the `deblock_picture` chroma
+  branch handled only ChromaArrayType ∈ {1, 2}). Per eq. (8-450)
+  `chromaStyleFilteringFlag` evaluates to 0 for ChromaArrayType == 3, so
+  the chroma planes are filtered with the *luma* filtering process (the
+  four-sample p0..p2 / q0..q2 update), not the two-sample chroma-style
+  filter. At 4:4:4 SubWidthC == SubHeightC == 1, so the chroma grid is
+  full-resolution and shares the luma 16x16 MB edge geometry exactly: the
+  new `deblock_plane_chroma_444` mirrors the luma walker (4 vertical + 4
+  horizontal edges, identical `transform_size_8x8_flag` internal-edge
+  skips) and derives `bS` from the same §8.7.2.1 per-4x4-block inputs (the
+  §8.7.2.1 last paragraph maps the chroma sample at (x, y) onto the luma
+  edge at (SubWidthC·x, SubHeightC·y) == (x, y)). The only per-edge
+  difference is the quantization parameter: §8.7.2 uses QPC (§8.5.8, with
+  the cb/cr `chroma_qp_index_offset`), and the QPC corresponding to
+  QPY == 0 for an I_PCM macroblock. New helpers
+  `filter_vertical_edge_plane_luma_style` /
+  `filter_horizontal_edge_plane_luma_style` apply `filter_edge` with
+  `Plane::Luma` to a selected chroma plane via `plane_at` / `plane_set`.
+  Measured on the docs corpus: `intra-only-high444` frame 1 goes from
+  76.14 % byte-exact (UV 1315/2048, max diff 20) to **100.00 %** (UV
+  2048/2048, max diff 0), lifting the fixture aggregate from 60.97 % to
+  72.90 %; the luma planes are unaffected. 2 new lib unit tests cover the
+  luma-style filter firing at an intra MB edge and the bS == 0 skip.
+- round 288 — Annex G (MVC) coded-slice-extension path: NAL unit type 20
+  (`SliceExtension`) with `svc_extension_flag == 0` is now decoded as a
+  §G.7.3.2.13 `slice_layer_extension_rbsp()` MVC body instead of falling
+  through to `Event::Ignored`. Per §G.7.3.2.13 the MVC else-branch
+  (neither `svc_extension_flag` nor `avc_3d_extension_flag` set) carries
+  the *same* §7.3.3 `slice_header()` as a base-view slice, so the
+  existing slice-header parser is reused with two MVC-specific
+  adaptations: (a) `IdrPicFlag` is derived from the §G.7.3.1.1
+  NAL-unit-header MVC extension's `non_idr_flag` (`IdrPicFlag =
+  !non_idr_flag`, §G.7.4.1.1) rather than from the NAL unit type (fixed
+  at 20); (b) the activated PPS's `seq_parameter_set_id` resolves against
+  the **subset SPS** id space (NAL 15) rather than the ordinary SPS
+  table, per the §G.7.4.1.2.1 activation rule ("a subset sequence
+  parameter set RBSP … referred to by activation of a picture parameter
+  set RBSP … activated by a coded slice MVC extension NAL unit"). The
+  slice header is then parsed against the subset SPS's embedded base SPS.
+  New `SliceHeader::parse_mvc_extension_and_tell` shares the parse body
+  with `parse_and_tell` via a private `parse_and_tell_inner` taking the
+  caller-resolved `idr_pic_flag`; the public `parse_and_tell` still
+  rejects NAL 20/21 with `SliceExtensionNotSupported` so a base-view
+  caller can't mis-parse an extension body. New `Event::SliceExtension`
+  surfaces the parsed header alongside the §G.7.3.1.1 MVC fields
+  (`view_id`, `temporal_id`, `anchor_pic_flag`, `inter_view_flag`), the
+  derived `idr_pic_flag`, the activated PPS, the referencing subset SPS,
+  and the slice_data() cursor. The §7.3.2.2 PPS-storage handler now
+  resolves `chroma_format_idc` (needed for the scaling-matrix tail) from
+  the subset SPS table when no ordinary SPS carries the referenced id,
+  per §G.7.4.2.2 ("substituting MVC sequence parameter set for sequence
+  parameter set"), so an MVC PPS that references a subset-SPS-only id is
+  accepted. SVC bodies (`svc_extension_flag == 1`, Annex F) and 3D-AVC
+  bodies (NAL 21, Annex J) still surface as `Event::Ignored` — their
+  `slice_header_in_scalable_extension()` / `slice_header_in_3davc_extension()`
+  prefixes are not modelled. New `DecoderError` variants:
+  `UnknownSubsetSps(id)` (type-20 PPS references an unstored subset SPS)
+  and `SliceExtensionBodyNotMvc`. 5 new decoder unit tests: two-view
+  Stereo High (profile 128) MVC slice parsed against the subset SPS,
+  IdrPicFlag derivation from `non_idr_flag` (non-IDR vs IDR-with-
+  idr_pic_id bodies), missing-subset-SPS rejection, unknown-PPS
+  rejection, and SVC-body fall-through to Ignored. Reconstruction of
+  inter-view-predicted MVC slices remains out of scope (no §G.8
+  inter-view reference assembly yet); this lands the parse + activation
+  groundwork the r281 subset-SPS work flagged.
+
+- round 281 — first Annex G (MVC) parameter-set body step: §7.3.2.1.3
+  `subset_seq_parameter_set_rbsp()` (NAL unit type 15) parsing in a new
+  `subset_sps` module, wired into the decoder. The embedded
+  `seq_parameter_set_data()` body reuses the §7.3.2.1.1 SPS parser,
+  extracted as `Sps::parse_seq_parameter_set_data` (cursor-based, no
+  rbsp_trailing_bits) with `Sps::parse` now a thin wrapper. The
+  per-profile extension branch dispatches on `profile_idc`:
+  118 (Multiview High) / 128 (Stereo High) / 134 (MFC High) parse the
+  full §G.7.3.2.1.4 `seq_parameter_set_mvc_extension()` — per-VOIdx
+  `view_id[]` (0..=1023 each, `num_views_minus1 ≤ 1023` checked before
+  allocation), the anchor + non-anchor inter-view dependency lists for
+  both reference picture lists (per-list count capped at the
+  §G.7.4.2.1.4 `Min(15, num_views_minus1)` bound; VOIdx 0 always empty
+  per the `num_*_refs_lX[0] == 0` constraint, matching the syntax
+  loops starting at i = 1), the signalled level values
+  (`num_level_values_signalled_minus1 ≤ 63`) with their operation
+  points (temporal_id u(3) + target view list + required-view count,
+  all 0..=1023-bounded), and — for profile 134 only — the MFC tail:
+  `mfc_format_idc` u(6) (Table G-1; reserved values 2..=63 stored, not
+  rejected, per the §G.7.4.2.1.4 decoder-shall-ignore direction),
+  `default_grid_position_flag` + explicit grid positions validated
+  against the "shall be equal to 4, 8 or 12" constraint, a
+  `grid_positions()` accessor applying the
+  `default_grid_position_flag == 1` inference ((4, 8, 12, 8) for idc 0,
+  (8, 4, 8, 12) for idc 1), `rpu_filter_enabled_flag`, and
+  `rpu_field_processing_flag` (present only when
+  `frame_mbs_only_flag == 0`; `rpu_field_processing()` applies the
+  inferred-0 rule). The optional §G.14.1
+  `mvc_vui_parameters_extension()` is parsed too: per-operation-point
+  temporal_id, target output view list, timing info triple, NAL + VCL
+  `hrd_parameters()` (reusing the §E.1.2 parser from `vui`),
+  conditional `low_delay_hrd_flag`, and `pic_struct_present_flag`,
+  with the §G.14.2 0..=1023 bounds enforced before every allocation.
+  §7.4.2.1.3 semantics honoured: `bit_equal_to_one` must be 1
+  (`SubsetSpsError::BitEqualToOneViolated`), and an
+  `additional_extension2_flag == 1` reserved tail is consumed and
+  discarded ("decoders shall ignore all data that follow"). SVC
+  profiles 83/86 (Annex F), MVCD 138/135 (Annex H) and MVCD+3D-AVC 139
+  (Annex H + I) extension bodies are not parsed yet — they surface as
+  typed `SubsetSpsExtension::{Svc,Mvcd,Mvcd3d}NotParsed` variants with
+  the base `seq_parameter_set_data()` still fully parsed, and
+  `additional_extension2_flag` reported as `None` since the flag sits
+  after the unparsed structure. Decoder integration: subset SPSs are
+  stored in a `subset_sps_by_id` table separate from ordinary SPSs per
+  the §7.4.1.2.1 separate-value-space rule, emitting a new
+  `Event::SubsetSpsStored(id)` (NAL 15 no longer falls through to
+  `Event::Ignored`), retrievable via `Decoder::subset_sps(id)`; new
+  `DecoderError::SubsetSps` wraps the parse error. 16 new lib unit
+  tests: two-view MVC round trip (view deps + level/op fields),
+  minimal single-view Stereo High, MFC default-grid inference /
+  explicit grid + field flag / reserved idc skips grid / invalid grid
+  value rejection, bit_equal_to_one violation, `num_views_minus1 >
+  1023` + `view_id > 1023` + anchor-ref-count-over-cap rejections, MVC
+  VUI with timing + NAL HRD, SVC/MVCD/139 not-parsed variants, the
+  no-extension-branch profile path, the reserved
+  additional_extension2 tail, and an end-to-end `Decoder` check that
+  the subset SPS lands in the separate table. Groundwork for the
+  Annex G slice-extension path (NAL 20 activates subset SPSs) and the
+  §H.7.3.2.1.5 MVCD extension that feeds
+  `SeiContext::num_depth_views`.
+
+- round 278 — fourth Annex H (3D-AVC) SEI payload: payload type 52
+  `depth_timing` (§H.13.1.5 / §H.13.2.5), completing the contiguous
+  Annex H/I payload block 50..=54 (depth_representation_info /
+  three_dimensional_reference_displays_info / depth_timing /
+  depth_sampling_info / constrained_depth_parameter_set_identifier).
+  The message indicates the acquisition time of the depth view
+  components of one or more access units relative to the DPB output
+  time of the same access units; it pertains until the end of the
+  coded video sequence or until the next depth timing SEI message,
+  whichever is earlier in decoding order. `per_view_depth_timing_flag`
+  (u(1)) selects either a single shared §H.13.1.5.1
+  `depth_timing_offset()` (all depth view components in the target
+  access unit set share one acquisition offset) or one offset per
+  depth view in ascending view order index. The per-view loop bound is
+  NOT in the payload — §H.13.1.5 loops over the SPS-derived
+  `NumDepthViews` variable (accumulated from
+  `depth_view_present_flag[i]` in the §H.7.3.2.1.5
+  `seq_parameter_set_mvcd_extension()`), threaded through a new
+  `SeiContext::num_depth_views` field. Default 0 (unknown / no Annex H
+  subset SPS active) rejects the per-view branch with new
+  `SeiError::DepthTimingNumDepthViewsUnknown`, mirroring the §D.1.10
+  spare_pic treatment of an unknown `PicSizeInMapUnits`; values above
+  1024 are rejected with `DepthTimingNumDepthViewsOutOfRange` since
+  the §H.7.3.2.1.5 view loop runs `num_views_minus1 + 1 ≤ 1024` times
+  and increments `NumDepthViews` at most once per iteration
+  (pre-allocation gate in the round-177/200 anti-OOM spirit). New
+  `DepthTimingOffset` struct carries `offset_len_minus1` (u(5)) +
+  `depth_disp_delay_offset_fp` (u(offset_len_minus1 + 1), 1..=32
+  bits per §H.13.2.5.1 "the length ... is equal to
+  offset_len_minus1 + 1") + `depth_disp_delay_offset_dp` (u(6));
+  `offset_clock_ticks()` reconstructs the §H.13.2.5.1 scalar
+  `depth_disp_delay_offset_fp ÷ 2^depth_disp_delay_offset_dp` in
+  units of clock ticks as specified in Annex C. Wired into
+  `parse_payload`; the payload-type table at the top of `sei.rs`
+  grows one row (§H.13.1.5). `tests/integration_sei_malformed.rs`
+  `KNOWN_PAYLOAD_TYPES` grows from 49 → 50 entries (sweep cardinality
+  3036 → 3080 panic-free invocations); two of the sweep contexts now
+  carry non-zero `num_depth_views` (2 / 1024) so the per-view branch
+  is part of the adversarial sweep, and the `sei_payload` fuzz
+  context derives a bounded 0..=7 `num_depth_views` from its selector
+  byte. 7 new lib unit tests cover the shared-offset path (1.0-tick
+  round trip), the two-view path at the extreme fp widths (u(1) and
+  u(32) with all bits set), the unknown-context rejection, the
+  above-1024 rejection, fractional (3 ÷ 2^1 = 1.5) + dp-ceiling
+  (2^-63) reconstruction, the truncated-offset bitstream error, and
+  the `parse_payload` dispatch round trip. Harmless on non-Annex-H
+  streams (Phase 4 on the profiles table).
+
+- round 274 — two typed accessors on the already-parsed §D.2.25
+  `ToneMappingBody` (SEI payload type 23, tone_mapping_info) surfacing
+  the normative implicit *default end points* of the piece-wise linear
+  mapping model (`tone_map_model_id == 3`). §D.2.25 defines `num_pivots`
+  as "*the number of pivot points in the piece-wise linear mapping
+  function without counting the two default end points, (0, 0) and
+  (2^coded_data_bit_depth − 1, 2^target_bit_depth − 1)*" — only the
+  interior `num_pivots` pivots carry signalled
+  `(coded_pivot_value[i], target_pivot_value[i])` pairs; the two end
+  points are implicit and never appear in the bitstream. New
+  `ToneMappingBody::piecewise_default_end_points(&self) ->
+  Option<((u32, u32), (u32, u32))>` materialises the start `(0, 0)` and
+  the end `(2^coded_data_bit_depth − 1, 2^target_bit_depth − 1)` pair in
+  the same `(coded_pivot_value, target_pivot_value)` domain as the
+  stored interior pivots, computing the end value from the body's
+  `coded_data_bit_depth` (8..=14 ⇒ coded end 255..=16383) and
+  `target_bit_depth` (1..=16 ⇒ target end 1..=65535); the shifts are
+  `checked_shl`-saturated so a hand-constructed out-of-spec body can't
+  panic. Sibling accessor `piecewise_total_pivot_count(&self) ->
+  Option<u32>` returns `num_pivots + 2`, the size of the assembled curve
+  including the two implicit end points (u(16) `num_pivots` ⇒ total
+  2..=65537, widened to `u32`). Both return `None` unless
+  `tone_map_model_id == 3` — the implicit end points are defined only
+  for the piece-wise linear model, so no inferred value exists for the
+  linear / sigmoid / user-table / reserved models. 3 new lib unit tests
+  pin the None-for-linear (model_id 0) branch, the typical case
+  (coded 10 / target 8 ⇒ end (1023, 255), 2 interior pivots ⇒ total 4),
+  and the max-legal-bit-depth case (coded 14 / target 16 ⇒ end
+  (16383, 65535), zero interior pivots ⇒ total 2). Zero new SEI types;
+  the typed-accessor delta closes the small §D.2.25 semantic gap left by
+  the round-73 tone_mapping_info implementation (the implicit default
+  end points were normatively defined but not materialised — only the
+  interior signalled pivots were stored).
+
+- round 271 — two typed bit-depth accessors on the already-parsed
+  §D.2.21 `FilmGrainSeparateColourDescription` body (SEI payload type
+  19, film_grain_characteristics). New
+  `FilmGrainSeparateColourDescription::bit_depth_luma(&self) -> u8`
+  surfaces the spec semantic `filmGrainBitDepth[0]` by applying the
+  eq. D-14 derivation `filmGrainBitDepth[0] =
+  film_grain_bit_depth_luma_minus8 + 8` ("*film_grain_bit_depth_luma_minus8
+  plus 8 specifies the bit depth used for the luma component of the
+  film grain characteristics specified in the SEI message*"). Sibling
+  accessor `bit_depth_chroma(&self) -> u8` surfaces the shared
+  `filmGrainBitDepth[1] == filmGrainBitDepth[2]` semantic via eq. D-15
+  `filmGrainBitDepth[c] = film_grain_bit_depth_chroma_minus8 + 8` for
+  c = 1, 2. Both on-wire `_minus8` carriers are u(3) (0..=7), so the
+  results land in 8..=15 and always fit in `u8`. The returns are
+  unconditional (not `Option`) because this struct is only constructed
+  when `separate_colour_description_present_flag == 1`; the §D.2.21
+  "not present ⇒ inferred to bit_depth_{luma,chroma}_minus8" rule is
+  represented by the carrying `FilmGrainBody::separate_colour_description`
+  being `None`, not by an in-struct sentinel. 4 new lib unit tests pin
+  the typical 10-bit case (2 ⇒ 10 on both axes), the minimum 8-bit
+  carrier (0 ⇒ 8), the u(3) ceiling plus an asymmetric luma/chroma
+  pair (luma 7 ⇒ 15, chroma 4 ⇒ 12, proving the two accessors read
+  independent carriers), and an end-to-end round trip through
+  `parse_film_grain_characteristics` that fires the accessors on the
+  parsed struct. Zero new SEI types added; the typed-accessor delta
+  closes the small §D.2.21 semantic gap left by the round-73
+  film_grain implementation (the parsed values were the biased on-wire
+  u(3) `_minus8` carriers directly, not the spec's `filmGrainBitDepth`
+  scalars).
+
+- round 264 — typed `num_refinement_steps(&self) -> u64` accessor on
+  the already-parsed §D.2.18 `ProgressiveRefinementSegmentStart` body
+  (SEI payload type 16). The on-wire field is the classic `_minus1`
+  bias per the spec text "*num_refinement_steps_minus1 plus 1
+  indicates the maximum number of refinement steps that may be used
+  during the refinement of the picture quality from the
+  progressive_refinement_segment_start to the corresponding
+  progressive_refinement_segment_end*", so the accessor surfaces the
+  semantic `NumRefinementSteps = num_refinement_steps_minus1 + 1`
+  directly. The `u64` return is the smallest unsigned type that can
+  represent the full u(32) carrier range without overflow:
+  `num_refinement_steps_minus1 == u32::MAX` yields
+  `u32::MAX + 1 == 4_294_967_296`, one past `u32::MAX`. Return is
+  unconditional (not `Option`) because the `_minus1` bias guarantees
+  `NumRefinementSteps >= 1` for any well-formed payload — no
+  unsignalled-flag sentinel exists, unlike the `Option`-returning
+  accessors elsewhere in this module. 4 new lib unit tests pin: the
+  minimum (0 ⇒ 1), a typical small segment (2 ⇒ 3), the u(32) ceiling
+  (`u32::MAX` ⇒ `u32::MAX + 1 == 4_294_967_296` with no overflow), and
+  an end-to-end round trip through `parse_progressive_refinement_segment_start`
+  (id=5, steps_minus1=9 ⇒ NumRefinementSteps=10).
+
+- round 259 — typed `sub_seq_duration_seconds(&self) -> Option<f64>`
+  accessor on the already-parsed §D.2.13 (2024 spec) / §D.2.12 (2003
+  draft) `SubSeqCharacteristics` body (SEI payload type 12). The
+  on-wire `sub_seq_duration` field is a u(32) count of 90-kHz clock
+  ticks per the spec text "*sub_seq_duration specifies the duration of
+  the target sub-sequence in clock ticks of a 90-kHz clock*", so the
+  accessor divides the carrier by `90_000` to surface the seconds
+  scalar. Returns `None` when `duration_flag == 0` (the spec sentinel:
+  "*duration_flag equal to 0 indicates that the duration of the target
+  sub-sequence is not specified*") — `sub_seq_duration` is `None` in
+  that case and no scalar derivation is defined. The `f64` return
+  represents the full u(32) carrier range (0..=4_294_967_295 ticks ≈
+  13.25 hours, since 4_294_967_295 / 90_000 ≈ 47_721.86 s) with only a
+  lossless `u32 → f64` widening followed by a single divide. 7 new
+  lib unit tests pin the None-when-unspecified branch, the minimum
+  non-zero carrier (1 tick round-trips back to 1 within 1e-12 after
+  multiplying by 90_000), the exact one-second carrier (90_000 ticks
+  → 1.0), a common per-frame interval (3_000 ticks → 1/30 second), the
+  u(32) ceiling (`u32::MAX` ticks → exact `f64::from(u32::MAX) /
+  90_000.0`), and two end-to-end round trips through
+  `parse_sub_seq_characteristics` covering the duration_flag=1 path
+  (180_000 ticks → 2.0 s) and the duration_flag=0 path (mirrors the
+  on-wire `None`). Zero new SEI types added; the delta closes the
+  remaining §D.2.13 semantic gap from the round-99 implementation —
+  the parsed value was the raw u(32) tick count, not the spec's
+  seconds scalar.
+
+- round 255 — two typed accessors on the already-parsed §D.2.13 (2024
+  spec) / §D.2.12 (2003 draft) `sub_seq_layer_characteristics` body
+  (SEI payload type 11), also re-used by §D.2.14 (payload type 12)
+  under `SubSeqCharacteristics::average_rate`. New
+  `SubSeqLayerCharacteristic::average_bit_rate_bps(&self) -> Option<u32>`
+  multiplies the raw u(16) `average_bit_rate` field by 1000 to surface
+  the bits-per-second semantic — the on-wire field is in units of
+  1000 bits/second per §D.2.13 / equation D-6 ("*average_bit_rate
+  indicates the average bit rate in units of 1000 bits per second*"),
+  so the carrier is a pre-divided count. Sibling accessor
+  `average_frame_rate_fps(&self) -> Option<f64>` divides the raw
+  u(16) `average_frame_rate` field by 256 to surface the
+  frames-per-second semantic — the on-wire field is in units of
+  frames/(256 seconds) per §D.2.13 / equation D-8 ("*average_frame_rate
+  indicates the average frame rate in units of frames/(256 seconds)*").
+  Both accessors return `None` when the carrier is 0 — equations D-7 /
+  D-9 (and the D-11 / D-13 mirror pair in §D.2.14) reserve the value
+  0 for the degenerate `t1 == t2` case and the general "unspecified"
+  reading; the spec defines no scalar derivation from a 0 carrier so
+  no inferred value exists. The `u32` return on the bit-rate accessor
+  is large enough for the on-wire ceiling (`65535 * 1000 = 65_535_000`,
+  well under `u32::MAX`); the `f64` return on the frame-rate accessor
+  represents the `1/256` quantisation step exactly (256 is a power of
+  two so all on-wire values map to dyadic rationals with no rounding
+  error). 8 new lib unit tests pin the None-when-zero branch, the
+  minimum non-zero carrier (1 ⇒ 1000 bits/s and 1/256 fps), a typical
+  bitrate (5000 ⇒ 5 Mbit/s), the u(16) bit-rate ceiling
+  (65535 ⇒ 65.535 Mbit/s), the u(16) frame-rate ceiling
+  (65535 ⇒ 65535/256 fps), exact-integer common frame rates
+  (24/25/30 fps via 24*256 / 25*256 / 30*256 carriers), an end-to-end
+  parse round trip through `parse_sub_seq_layer_characteristics`
+  proving `bps()` / `fps()` survive the layer-vector wrapping, and a
+  cross-payload round trip through `parse_sub_seq_characteristics`
+  proving the same accessors fire on the `SubSeqCharacteristics::
+  average_rate` carrier (payload type 12). Zero new SEI types added;
+  the typed-accessor delta closes the small §D.2.13 semantic gap left
+  by the round-99 implementation (the parsed values were the biased
+  on-wire u(16) counts directly, not the spec's bits/s and fps
+  scalars).
+
+- round 253 — two typed accessors on the already-parsed §H.13.2.3
+  `depth_representation_info` body (SEI payload type 50). New
+  `DepthRepresentationInfo::depth_nonlinear_representation_num_segments(&self)
+  -> Option<u8>` surfaces the spec semantic
+  `DepthNonlinearRepresentationNumSegments` — the number of
+  piecewise linear segments used to map decoded depth-view luma
+  samples to a disparity-uniform scale — by applying the `+ 2`
+  bias documented in §H.13.2.3 ("*depth_nonlinear_representation_num_minus1
+  plus 2 specifies the number of piecewise linear segments…*").
+  Sibling accessor
+  `depth_nonlinear_representation_model_len(&self) -> Option<u8>`
+  returns the `num_minus1 + 1` count of *signalled*
+  `depth_nonlinear_representation_model[i]` entries — that is, the
+  on-wire `i = 1..=num_minus1 + 1` loop bound from the §H.13.1.3
+  syntax table, excluding the two trailing-coverage sentinels
+  `model[0]` and `model[num_minus1 + 2]` that §H.13.2.3 pre-defines
+  to `0`. Both accessors return `None` when the carrier is
+  unsignalled (`depth_representation_type != 3`); the spec's
+  piecewise model is only defined for type 3, so no inferred value
+  exists for other types. The on-wire range
+  `num_minus1 ∈ 0..=62` gives semantic ranges `2..=64` (segments)
+  and `1..=63` (signalled model entries), both fitting in `u8`. 5
+  new lib unit tests pin the None-when-absent branch, the minimum
+  carrier (0 → 2 segments / 1 signalled entry), an interior
+  carrier (3 → 5 / 4), the maximum on-wire carrier (62 → 64 / 63),
+  and an end-to-end round trip through
+  `parse_depth_representation_info` using the existing type-3
+  fixture that proves the relations
+  `model_len() == depth_nonlinear_representation_model.len()` and
+  `num_segments() == model_len() + 1`. Zero new SEI types added;
+  the typed-accessor delta closes the small §H.13.2.3 semantic gap
+  left by round 231 (the parsed value was the biased ue(v)
+  directly, not the spec's
+  `DepthNonlinearRepresentationNumSegments`).
+
+- round 250 — typed accessor on the already-parsed §H.13.2.4
+  `three_dimensional_reference_displays_info` body (SEI payload
+  type 51). New `ReferenceDisplay::num_sample_shift(&self) ->
+  Option<i16>` surfaces the §H.13.2.4 signed semantic
+  `NumSampleShift[i] = num_sample_shift_plus512[i] − 512` from the
+  biased u(10) storage field. Returns `None` when
+  `additional_shift_present_flag == 0` (§H.13.2.4 leaves the value
+  unsignalled and does not define an inferred value); returns
+  `Some(NumSampleShift[i])` otherwise. The §H.13.2.4 sign
+  convention is documented inline on the method: negative →
+  shift the left view left by `|NumSampleShift|` samples; zero →
+  no shift; positive → shift the left view right by
+  `NumSampleShift` samples. The return type is `i16` since the
+  value fits in `−512..=511`. 6 new lib unit tests pin the
+  None-when-absent branch, the centre value (biased 512 →
+  semantic 0), a positive case (biased 768 → +256), a negative
+  case (biased 256 → −256), the −512 / +511 endpoint pair
+  exercising the full bitstream range (biased 0 and 1023), and an
+  end-to-end round trip through
+  `parse_three_dimensional_reference_displays_info` using the
+  existing per-display fixture so the accessor's contract is
+  wired to a real parse path. Zero new SEI types added; the
+  typed-accessor delta closes the small §H.13.2.4 semantic gap
+  left by round 226 (the parsed value was the biased u(10)
+  directly, not the spec's signed `NumSampleShift[i]`).
+
+- round 247 — third Annex H (3D-AVC) SEI payload implemented in
+  `sei.rs`: payload type 53 `depth_sampling_info`
+  (§H.13.1.7 / §H.13.2.7). Surfaces the depth/texture sample-size
+  ratio (`dttsr_x_mul` / `dttsr_x_dp` for horizontal,
+  `dttsr_y_mul` / `dttsr_y_dp` for vertical — each ratio is
+  `dttsr_*_mul ÷ 2^dttsr_*_dp` per §H.13.2.7; the value 0 for
+  `dttsr_*_mul` is reserved per §H.13.2.7 and is rejected before
+  storage with the new
+  `SeiError::DepthSamplingInfoDttsrMulReserved { axis }`) and the
+  depth sampling grid position(s) for the IDR access unit's depth
+  views relative to the same-`view_id` texture views. The
+  `per_view_depth_grid_pos_flag` (u(1)) gates either a single
+  shared `depth_grid_position()` (else-branch — surfaced as a
+  single-entry `views` vector with a sentinel `depth_grid_view_id
+  = 0`) or `num_video_plus_depth_views_minus1 + 1` per-view
+  `(depth_grid_view_id[i], depth_grid_position())` entries.
+  Anti-OOM pre-allocation cap on
+  `num_video_plus_depth_views_minus1 ≤ 1023` (Annex G/H absolute
+  `num_views_minus1` upper bound) + the same `view_id ≤ 1023`
+  range check applied per entry. New §H.13.1.7.1
+  `depth_grid_position()` sub-struct `DepthGridPosition` carries
+  the raw `(pos_x_fp u(20), pos_x_dp u(4), pos_x_sign_flag u(1))`
+  triple + the matching y triple;
+  `DepthGridPosition::{x,y}_to_f64` reconstruct the §H.13.2.7.1
+  signed fixed-point scalar
+  `(1 − 2 * sign_flag) * (fp ÷ 2^dp)`. New
+  `DepthSamplingInfo::{dttsr_x,dttsr_y}_to_f64` helpers
+  reconstruct the §H.13.2.7 sample-size ratios. New `SeiError`
+  variants `DepthSamplingInfoDttsrMulReserved { axis }` (axis is
+  `"x"` or `"y"`), `DepthSamplingInfoNumViewsOutOfRange` and
+  `DepthSamplingInfoViewIdOutOfRange { i }`. Wired into
+  `parse_payload` dispatch; the payload-type doc-comment table at
+  the top of `sei.rs` grows one row (§H.13.1.7).
+  `tests/integration_sei_malformed.rs` `KNOWN_PAYLOAD_TYPES`
+  table grows from 48 → 49 entries (type 53 wasn't in the
+  fallback list either, so the sweep cardinality moves from 2992
+  → 3036 panic-free invocations). 7 new lib unit tests cover the
+  shared-position min path (1:1 sample-size ratio + zero grid
+  position), a two-view per-view path with distinct fp/dp/sign-bit
+  triples per view (and per-axis), rejection of
+  `dttsr_x_mul = 0`, rejection of `dttsr_y_mul = 0`, rejection of
+  `num_video_plus_depth_views_minus1 > 1023`, rejection of
+  `depth_grid_view_id[0] > 1023`, and `parse_payload(53, …)`
+  dispatch round-trip. Harmless on non-Annex-H streams (Phase 4
+  on the profiles table).
+
+- round 237 — first Annex I (3D-AVC depth coding) SEI payload
+  implemented in `sei.rs`: payload type 54
+  `constrained_depth_parameter_set_identifier`
+  (§I.13.1.1 / §I.13.2.1). Per-CVS pair `(max_dps_id, max_dps_id_diff)`
+  constraining the `depth_range_parameter_set_id` window so decoders
+  can conclude losses of depth parameter set NAL units (§I.13.2.1
+  NOTE 1) and maintain the running `MaxUsedDpsId` / `UsedDpsIdSet`
+  state per slice (§I.13.2.1 eq. (I-86) sliding-window walk). Both
+  fields are ue(v); the parser enforces both §I.13.2.1 normative
+  constraints before storage: `max_dps_id ≤ 62` (derived from the
+  `depth_parameter_set_id` range `1..=63` per §7.4.2.16, since
+  `max_dps_id + 1` is the maximum allowed
+  `depth_range_parameter_set_id` value) and
+  `max_dps_id_diff * 2 < max_dps_id` (the §I.13.2.1 sliding-window
+  integrity constraint; a violation would make the prev/min walk
+  around eq. (I-86) ambiguous because the window would overlap
+  itself). New `SeiError` variants
+  `ConstrainedDepthParameterSetIdentifierMaxDpsIdOutOfRange` and
+  `ConstrainedDepthParameterSetIdentifierDiffViolatesBound
+  { max_dps_id_diff, max_dps_id }`. Wired into `parse_payload`
+  dispatch; the payload-type doc-comment table at the top of `sei.rs`
+  grows one row (§I.13.1.1).
+  `tests/integration_sei_malformed.rs` lifts type 54 out of the
+  `Unknown`-fallback set into the implemented group; sweep
+  cardinality is preserved at 2992 panic-free invocations (one type
+  migrated, total per-type count unchanged at 68). 7 new lib unit
+  tests cover the min-legal pair (`max_dps_id = 1`,
+  `max_dps_id_diff = 0`), a mid-range pair (`7`, `3`), the max-legal
+  pair (`62`, `30`), rejection of `max_dps_id = 63`, rejection of
+  `max_dps_id_diff = 2` when `max_dps_id = 4` (boundary `2 * 2 = 4`
+  ⇒ NOT < 4), rejection of the all-zero pair (strict-less-than rules
+  it out even without a diff), and `parse_payload` dispatch
+  round-trip. Harmless on non-Annex-I streams (Phase 4 on the
+  profiles table).
+
+- round 231 — second Annex H (3D-AVC) SEI payload implemented in
+  `sei.rs`: payload type 50 `depth_representation_info`
+  (§H.13.1.3 / §H.13.2.3). Per-CVS depth / disparity range parameters
+  per target view used by a renderer prior to display (e.g. for view
+  synthesis on a 3D display). Surfaces `all_views_equal_flag` (u(1)),
+  which gates whether `num_views_minus1` is signalled (when 1, the
+  message describes one shared view; when 0, `num_views_minus1 + 1`
+  per-view entries follow); `z_near_flag` / `z_far_flag` /
+  `d_min_flag` / `d_max_flag` (each u(1)) gating the four
+  §H.13.1.3.1 floating-point quadruples; the optional
+  `z_axis_equal_flag` + `common_z_axis_reference_view` pair gated by
+  `z_near_flag || z_far_flag`; `depth_representation_type` (ue(v)) —
+  Table H-1 interpretation: 0 = inverse-Z, 1 = disparity, 2 = Z,
+  3 = nonlinear-disparity, 4..=15 reserved (and the §H.13.2.3
+  ignore-trailing-data rule is honoured by skipping the nonlinear
+  tail when the value is not exactly 3); per-view
+  `depth_info_view_id` / optional `z_axis_reference_view` (gated by
+  `(z_near || z_far) && !z_axis_equal`) / optional
+  `disparity_reference_view` (gated by `d_min || d_max`) (each ue(v)
+  in 0..=1023); and, when `depth_representation_type == 3`, the
+  §H.13.2.3 piecewise-linear `depth_nonlinear_representation_model[]`
+  (count `num_minus1 + 1`, each entry ue(v) in 0..=65535, with the
+  §H.13.2.3 DepthLUT construction's `i = 0` / `i = num_minus1 + 2`
+  sentinels left implicit per the spec). New `DepthFloatComponent`
+  carries the §H.13.1.3.1 element bitstream value verbatim
+  (1-bit sign, 7-bit exponent, 5-bit mantissa_len_minus1, variable
+  mantissa width = `da_mantissa_len_minus1 + 1` in 1..=32);
+  `DepthFloatComponent::to_f64` reconstructs the Table H-2 scalar:
+  denormal `(-1)^s * 2^(-(30 + v)) * n` for `e == 0`, normal
+  `(-1)^s * 2^(e - 31) * (1 + n / 2^v)` for `0 < e < 127`, and
+  `f64::NAN` for the reserved `e == 127` value. New `SeiError`
+  variants `DepthRepresentationInfoNumViewsOutOfRange` (anti-OOM
+  cap on the per-view loop allocation),
+  `DepthRepresentationInfoViewIdOutOfRange { field }` (catch-all for
+  the four 0..=1023 view-id range checks),
+  `DepthRepresentationInfoNonlinearNumOutOfRange` (per §H.13.2.3 the
+  spec range is 0..=62; pre-allocation cap on the nonlinear-model
+  loop), and `DepthRepresentationInfoNonlinearModelOutOfRange { i }`
+  (per §H.13.2.3 each model entry is 0..=65535). Wired into
+  `parse_payload` dispatch; the payload-type table at the top of
+  `sei.rs` grows one row (§H.13.1.3). The
+  `tests/integration_sei_malformed.rs` `KNOWN_PAYLOAD_TYPES` table
+  lifts type 50 out of the `FALLBACK_PAYLOAD_TYPES` set into the
+  implemented group (46 → 47 entries; the per-type total is
+  unchanged at 68, so the sweep cardinality stays at 2992 panic-free
+  invocations). 8 new lib unit tests cover the minimum-syntax
+  single-view path with all flags off, the two-view path with
+  per-view `z_axis_reference_view` + per-view `ZNear` / `DMin` float
+  quadruples, the type-3 nonlinear-tail path with one model entry,
+  the reserved-type 4 ignore-trailing path, rejection of
+  `num_views_minus1 > 1023`, rejection of
+  `common_z_axis_reference_view > 1023`, rejection of
+  `depth_nonlinear_representation_num_minus1 > 62`,
+  `DepthFloatComponent::to_f64` branches (normal / negative-sign /
+  denormal / reserved), and `parse_payload` dispatch round-trip.
+  Harmless on non-Annex-H streams (Phase 4 on the profiles table).
+- round 226 — first Annex H (3D-AVC) SEI payload implemented in
+  `sei.rs`: payload type 51 `three_dimensional_reference_displays_info`
+  (§H.13.1.4 / §H.13.2.4). Per-CVS reference-display list with
+  reference baseline, reference display width, optional reference
+  viewing distance, and per-display additional horizontal shift.
+  Each scalar follows §H.13.2.4 Table H-3 (sign-less floating-point
+  with 6-bit exponent and a variable-width mantissa from the same
+  three-branch width formula used in §G.13.2.5 — `e == 0 → max(0,
+  prec − 30)`, `0 < e < 63 → max(0, e + prec − 31)`, `e == 63 → 0`
+  reserved). New `UnsignedFloatComponent` mirrors the round-213
+  `FloatComponent` minus the sign bit; `to_f64()` reconstructs the
+  Table H-3 scalar (`NaN` for the reserved `e == 63`). Surfaces
+  `prec_ref_baseline`, `prec_ref_display_width`,
+  `prec_ref_viewing_dist` (each ue(v) in 0..=31), `num_ref_displays_minus1`
+  (ue(v) in 0..=31, anti-OOM pre-allocation cap), per-display
+  `additional_shift_present_flag` + optional `num_sample_shift_plus512`
+  (u(10), 0..=1023 naturally), and the trailing
+  `three_dimensional_reference_displays_extension_flag` (u(1)). New
+  `SeiError` variants `ThreeDimensionalReferenceDisplaysInfoPrecOutOfRange`
+  and `ThreeDimensionalReferenceDisplaysInfoNumRefDisplaysOutOfRange`.
+  Wired into `parse_payload` dispatch; the payload-type table at the
+  top of `sei.rs` grows one row (§H.13.1.4). The
+  `tests/integration_sei_malformed.rs` `KNOWN_PAYLOAD_TYPES` table
+  moves type 51 into the implemented group (it wasn't in the
+  fallback list either, so the sweep cardinality moves from 2948 →
+  2992 panic-free invocations across 68 payload types × 11
+  adversarial shapes × 4 contexts). 8 new lib unit tests cover the
+  minimum-syntax single-display path, the two-display path with
+  reference viewing distance + per-display additional shift, the
+  trailing `extension_flag` propagation, `UnsignedFloatComponent::to_f64`
+  branches (normal / denormal / reserved), rejection of
+  `prec_ref_baseline == 32`, rejection of `prec_ref_viewing_dist
+  == 32`, rejection of `num_ref_displays_minus1 == 32`, and
+  `parse_payload` dispatch round-trip. Harmless on non-Annex-H
+  streams (Phase 4 on the profiles table).
+- round 219 — strict §7.3.1 dispatch on `nal_unit_type ∈ {14, 20, 21}`
+  in `nal.rs`. `parse_nal_unit` now reads the leading
+  `svc_extension_flag` (for types 14 / 20) or `avc_3d_extension_flag`
+  (for type 21) and parses the matching three-byte NAL extension
+  header per §F.7.3.1.1 (SVC), §G.7.3.1.1 (MVC, three bytes), or
+  §I.7.3.1.1 (3D-AVC, two bytes). The MVC variant surfaces
+  `non_idr_flag`, `priority_id` (u(6)), `view_id` (u(10), widened to
+  `u16`), `temporal_id` (u(3)), `anchor_pic_flag`, `inter_view_flag`,
+  and `reserved_one_bit`; the SVC variant surfaces `idr_flag`,
+  `priority_id`, `no_inter_layer_pred_flag`, `dependency_id` (u(3)),
+  `quality_id` (u(4)), `temporal_id`, `use_ref_base_pic_flag`,
+  `discardable_flag`, `output_flag`, and `reserved_three_2bits`
+  (u(2)); the 3D-AVC variant surfaces `view_idx` (u(8)), `depth_flag`,
+  `non_idr_flag`, `temporal_id`, `anchor_pic_flag`, and
+  `inter_view_flag`. Per §7.3.1 the emulation-prevention scan starts
+  at `i = nalUnitHeaderBytes`, so the extension bytes themselves are
+  read verbatim; only the post-extension RBSP body is fed through
+  `rbsp_from_nal_payload`. New struct fields on `NalUnit`:
+  `extension: Option<NalUnitHeaderExtension>` with the
+  `Mvc / Svc / Avc3d` variants. New `NalError::TruncatedExtensionHeader`
+  error variant fires when the NAL is too short for the dispatched
+  extension width (≥ 3 bytes for SVC / MVC, ≥ 2 bytes for 3D-AVC).
+  The §7.3.1 type-21 fall-through to the MVC three-byte body when
+  `avc_3d_extension_flag == 0` is honoured (depth NAL referencing an
+  MVC view component). `decoder.rs` still routes extension NAL types
+  through `Event::Ignored`, but now does so against a
+  spec-conformantly-parsed RBSP slice that no longer includes the
+  extension bytes — observable through the
+  `prefix_nal_14_is_ignored` regression test, which is widened from
+  a two-byte payload (formerly tolerated; the spec requires at
+  least three bytes) to a syntactically valid three-byte zero
+  extension. Twelve new `nal::tests` cover MVC / SVC / 3D-AVC happy
+  paths, max-field-value coverage of the bit-width boundaries, the
+  three truncation modes, the §7.3.1 type-21 → MVC fall-through,
+  and the emulation-prevention scoping rule (extension bytes
+  preserved verbatim, RBSP body bytes still stripped).
+- round 213 — new Annex G (MVC) SEI payload type implemented in
+  `sei.rs`: payload type 40 `multiview_acquisition_info` (§G.13.1.5 /
+  §G.13.2.5 — intrinsic + extrinsic camera parameters per view).
+  Intrinsic block carries `prec_focal_length`, `prec_principal_point`,
+  and `prec_skew_factor` (each ue(v) in 0..=31) plus a per-camera
+  `(focal_length_x, focal_length_y, principal_point_x,
+  principal_point_y, skew_factor)` five-tuple; when
+  `intrinsic_params_equal_flag == 1` a single shared entry is signalled
+  for all views. Extrinsic block carries `prec_rotation_param`,
+  `prec_translation_param` (each ue(v) in 0..=31) plus a 3×3 rotation
+  matrix `r[j][k]` and 3-vector translation `t[j]` per view in the
+  §G.13.1.5 row-major spec order. Each scalar is decoded as the
+  sign-exponent-mantissa floating-point form of §G.13.2.5: 1-bit sign,
+  6-bit exponent, and a variable-width mantissa whose width follows
+  the spec formula `e == 0 → max(0, prec − 30)`,
+  `0 < e < 63 → max(0, e + prec − 31)`, `e == 63 → 0` (the spec
+  reserves value 63 as "unspecified" without defining a mantissa
+  width; we conservatively read no mantissa bits in that case so the
+  bitstream cursor stays aligned). New `FloatComponent` (sign / exponent
+  / mantissa raw bits / mantissa width) preserves the bitstream value
+  verbatim; `FloatComponent::to_f64` reconstructs the §G.13.2.5
+  IEEE-style scalar (denormal for `e == 0`, normal for `0 < e < 63`,
+  `NaN` for `e == 63`). Anti-OOM pre-allocation cap on
+  `num_views_minus1 ≤ 1023` (Annex G absolute, mirrors round-200's
+  §G.13.2.8 pattern); explicit rejection of any `prec_* > 31`. New
+  `SeiError` variants `MultiviewAcquisitionInfoNumViewsOutOfRange` and
+  `MultiviewAcquisitionInfoPrecOutOfRange`. Wired into `parse_payload`
+  dispatch; `tests/integration_sei_malformed.rs` `KNOWN_PAYLOAD_TYPES`
+  table moves 40 out of the `Unknown`-fallback set (sweep cardinality
+  preserved at 2948 panic-free invocations since 40 was already
+  exercised in the fallback group). 8 new lib unit tests cover the
+  no-flags happy path, intrinsic-only with shared camera entry,
+  extrinsic-only with full 3×3 R + 3-vector T per camera, the
+  §G.13.2.5 mantissa-width formula across all three branches
+  (denormal / normal / reserved), `FloatComponent::to_f64`
+  reconstruction (denormal + unity + −3.0 + reserved → NaN),
+  rejection of `num_views_minus1 == 1024`, rejection of
+  `prec_focal_length == 32`, and `parse_payload` dispatch round-trip.
+  Harmless on non-MVC streams (Phase 4 on the README "Profiles +
+  features in scope" table).
+
+- round 207 — new Annex G (MVC) SEI payload type implemented in
+  `sei.rs`: payload type 41 `non_required_view_component` (§G.13.1.6 /
+  §G.13.2.6 — per-target-view list of `(view_order_index[i],
+  index_delta_minus1[i][])` pairs, each pair recording the
+  view-order-index of the target view plus the deltas locating the
+  view components that are not needed to decode it). All four §G.13.2.6
+  range bounds are enforced before storage:
+  `num_info_entries_minus1 ≤ 1022` (pre-allocation cap derived from
+  Annex G's absolute `num_views_minus1 ≤ 1023` per §G.13.2.10);
+  `view_order_index[i] ∈ 1..=1023` (incl. the spec's lower bound of 1
+  since view 0 is the base view, not a target);
+  `num_non_required_view_components_minus1[i] ≤ view_order_index − 1`
+  (pre-allocation, anti-OOM); and `index_delta_minus1[i][j] ≤
+  view_order_index − 1`. Wired into `parse_payload` dispatch; the
+  payload-type table at the top of `sei.rs` grows one row. New
+  `SeiError` variants `NonRequiredViewComponentNumInfoEntriesOutOfRange`,
+  `NonRequiredViewComponentViewOrderIndexOutOfRange`,
+  `NonRequiredViewComponentCountOutOfRange`, and
+  `NonRequiredViewComponentIndexDeltaOutOfRange`. The
+  `tests/integration_sei_malformed.rs` `KNOWN_PAYLOAD_TYPES` table
+  moves 41 out of the `Unknown`-fallback set, lifting the
+  sweep-cardinality lock from 2904 → 2948 panic-free invocations. 7
+  new lib unit tests cover the single-entry / two-entry happy path,
+  rejection of `view_order_index == 0`, rejection of
+  `num_info_entries_minus1 == 1023` (1 above the absolute cap),
+  rejection of the per-entry inner count exceeding `view_order_index
+  − 1`, rejection of an index delta exceeding `view_order_index − 1`,
+  and `parse_payload` dispatch round-trip. Harmless on non-MVC streams
+  (Phase 4 on the README "Profiles + features in scope" table).
+- round 200 — two new Annex G (MVC) SEI payload types implemented in
+  `sei.rs`: payload type 39 `multiview_scene_info` (§G.13.1.4 /
+  §G.13.2.4 — single `max_disparity` ue(v), 0..=1023 range bound
+  enforced before storage) and payload type 43
+  `operation_point_not_present` (§G.13.1.8 / §G.13.2.8 — list of
+  16-bit operation-point identifiers declared absent in the bitstream,
+  with the §G.13.2.8 65536-id pre-allocation cap closing the same
+  shape of OOM lever that the round-177 §D.2.20 fix removed for
+  motion_constrained_slice_group_set, plus the 0..=65535 per-id range
+  check). Both arms are wired into `parse_payload` dispatch; the
+  payload-type table at the top of `sei.rs` grows two rows. New
+  `SeiError` variants `MultiviewSceneInfoMaxDisparityOutOfRange`,
+  `OperationPointNotPresentCountOutOfRange`, and
+  `OperationPointNotPresentIdOutOfRange`. The
+  `tests/integration_sei_malformed.rs` `KNOWN_PAYLOAD_TYPES` table
+  moves 39 and 43 out of the `Unknown`-fallback set (which also lifts
+  the sweep-cardinality lock from 2816 → 2904 panic-free invocations).
+  10 new lib unit tests (5 per payload type) cover boundary 0,
+  typical value, boundary 1023 / boundary 65535, count-overflow
+  rejection, id-overflow rejection, and `parse_payload` dispatch
+  round-trip. Harmless on non-MVC streams (Phase 4 on the README
+  "Profiles + features in scope" table).
+- round 194 — `parse_residual_block_cavlc` rejects malformed §7.3.5.3.1
+  call-contract triples (`startIdx > endIdx`, `maxNumCoeff ∉ {4, 8, 15, 16}`,
+  span exceeding `maxNumCoeff`) before any bit is read; new `CavlcError`
+  variants `InvalidBlockSpan` / `InvalidMaxNumCoeff` / `BlockSpanExceedsMax`
+- round 194 — sweep `fuzz/artifacts/panic_free_decode/` (4 local oom-*
+  artifacts cleared by round-177 §D.2.20 + round-187 §8.2.1 i64 staging;
+  re-fed through `panic_free_decode -runs=1`, all exit 0 in 0 ms within
+  libFuzzer's default 2 GiB RSS budget — the artifacts directory is
+  git-ignored so the prune is a local-disk operation) + new
+  `fuzz/README.md` documenting the harness layout, the round-194 sweep,
+  and the local-rerun recipe
+
+## [0.1.5](https://github.com/OxideAV/oxideav-h264/compare/v0.1.4...v0.1.5) - 2026-05-30
+
+### Other
+
+- round 192 — strict avcC parser + ISO/IEC 14496-15 §5.2.4.1.1 High-family extension
+- round 187 — i64-stage §8.2.1 derivation + PocError::Overflow (fuzz crash 1743a9ce)
+- round 183 — Annex G §G.13.2.10 multiview_view_position (payload type 46)
+- round 177 — fix sei_payload OOM via §D.2.20 num_slice_groups_in_set_minus1 bound
+- round 164 — fuzz target + malformed-input property sweep
+- round 158 — typed ATSC1 envelope sub-parser (A/53 Part 4 §6.2.3 / §D.2.6)
+- round-151 — opt-in CABAC IDR Intra_16x16 chroma AC trellis (§8.5.11.1 + §7.3.5.3 + §9.3.3.1.3)
+- round-148 — opt-in CABAC IDR Intra_16x16 luma AC trellis (§8.5.10 + §9.3.3.1.3)
+- scrub pre-existing JM / libavcodec decorative-attribution prose
+- round 145: end-to-end Criterion encode benchmark
+- round 139 — Criterion decode bench over IDR / P-chain / IPB / 4:2:2
+- CAVLC I_PCM honours BitDepth{Y,C} from the active SPS (§7.4.5)
+- reject PPS that arrives before its backing SPS (task #1044 / round 120 fuzz failure)
+- round-120 — sei_manifest + sei_prefix_indication (payload types 200, 201)
+- parse colour_remapping_info (payload type 142, §D.1.30/§D.2.30)
+- regionwise_packing Annex D SEI payload (type 155)
+- dec_ref_pic_marking_repetition Annex D SEI payload (type 7)
+- round-107 — content_colour_volume Annex D SEI payload (type 149)
+- round 103 — spare_pic Annex D SEI payload (type 8)
+- round 99 — sub-sequence Annex D SEI family (types 10/11/12)
+- round-95 — omni_viewport + shutter_interval_info parsers
+- drop incomplete pictures whose MbGrid leaves MBs uncovered
+- validate frame_cropping offsets stay within the coded picture
+- reject first_mb_in_slice != 0 for new coded picture
+- round-78 — four additional Annex D HDR + 360 payload parsers
+- round-73 — five additional Annex D payload parsers
+- CABAC inter trellis quantisation (round 49 RDOQ-lite)
+- bound max_num_ref_frames at 16 (§7.4.2.1.1 / Annex A.3.1)
+- reconstruct + inter_pred: reject inter MC against zero-dim reference (§8.4.2)
+- bound first_mb_in_slice by PicSizeInMbs (§7.4.3)
+- drop unfinished picture when every slice failed
+- sps + transform: reject reserved profile_idc + wrap chroma DC math
+- reject FMO PPS activation per §A.2 (fuzz oracle parity)
+- transform + cavlc + cabac: keep §8.5.12 inverse-quant multiply within i32
+- tighten picture-dim cap to 510 mbs / axis (was 32766)
+- cabac + slice_data + slice_header + pps: bound parse-time growth & shifts
+- sps + scaling_list: bound parse-time fields to prevent arithmetic overflow
+- bound Exp-Golomb leading-zero count at 31 (fix shl overflow)
+- add cargo-fuzz harness + libavcodec oracle for H.264 decoder
+
+### Added
+
+- **round 192 — ISO/IEC 14496-15 §5.2.4.1.1 strict avcC parser +
+  High-profile extension trailer.** `H264CodecDecoder::consume_extradata`
+  now (a) rejects `lengthSizeMinusOne == 2` (3-byte length prefix) at
+  the avcC header, as required by §5.2.4.1.1 — previously the illegal
+  value silently flowed into `AvccSplitter`, which rejected it later
+  with a less specific error; (b) parses the §5.2.4.1.1 High-family
+  extension (`chroma_format`, `bit_depth_luma_minus8`,
+  `bit_depth_chroma_minus8`, `numOfSequenceParameterSetExt` + SPS-Ext
+  NAL list) when `AVCProfileIndication ∈ {100, 110, 122, 144, 244}`,
+  rather than leaving up to 4+ trailing bytes silently dropped; (c)
+  enforces the §7.4.2.1.1 `bit_depth_*_minus8 ≤ 6` cap before the
+  values reach any consumer. New diagnostic accessors
+  `avcc_profile_idc()` / `avcc_level_idc()` / `avcc_chroma_format()` /
+  `avcc_bit_depth_luma()` / `avcc_bit_depth_chroma()` surface what the
+  avcC header advertised — useful for cross-checking against the
+  in-band SPS on streams where the two disagree (the SPS still wins).
+  Records that elide the High-family extension trailer are still
+  accepted (some real-world muxers truncate it); the accessors stay
+  `None` in that case. 11 new tests in `src/h264_decoder.rs` pin: the
+  baseline + 1-byte + 2-byte prefix accept paths, the
+  `lengthSizeMinusOne == 2` reject, wrong configurationVersion reject,
+  short-header reject, profile_idc 100 + 244 extension parse, missing
+  extension toleration, and the §7.4.2.1.1 bit-depth overflow / SPS
+  truncation rejections.
+
+### Fixed
+
+- **round 187 — §8.2.1 POC derivation overflow now structured, not
+  a panic.** Nightly `panic_free_decode` libfuzzer run #26632302094
+  surfaced a debug-build `attempt to add with overflow` at
+  `src/poc.rs:225` inside `derive_type0`'s eq. 8-5 frame branch
+  (`TopFieldOrderCnt + delta_pic_order_cnt_bottom`, i32+i32). The
+  `Decoder` trait contract is that adversarial bytes surface as
+  `Err(...)` from `send_packet` — never a process-killing panic —
+  so the i32 arithmetic in §8.2.1.1 eq. 8-3 / 8-4 / 8-5 was lifted
+  into i64 staging, the §8.2.1.2 / §8.2.1.3 silent `as i32` tail
+  truncations were replaced with `i32::try_from`, and a new
+  `PocError::Overflow` variant carries the §C.4-mandated
+  i32-PicOrderCnt invariant violation back to the caller. The
+  decoder driver in `h264_decoder.rs` already maps `PocError` to
+  `Error::invalid(...)`, so the affected slice is now skipped (and
+  logged) instead of aborting the process.
+
+  Four new unit tests in `src/poc.rs` pin the structured-error
+  contract per algorithm (type 0 eq. 8-5 frame branch overflow,
+  type 0 eq. 8-3 negative msb-wrap overflow, type 1 eq. 8-10
+  frame-branch overflow against an i32::MAX × 10 cycle, type 2
+  eq. 8-12 doubling overflow against `prev_frame_num_offset` ≈
+  i32::MAX / 2). A new integration regression
+  (`fuzz_crash_1743a9ce_poc_eq_8_5_frame_branch_overflow_does_not_panic`)
+  embeds the 596-byte libfuzzer artefact verbatim so CI exercises
+  the previously panicking path on every run; surviving the
+  `send_packet` / `flush` / `receive_frame` round trip without a
+  panic IS the assertion. All 22 pre-existing POC unit tests plus
+  the round-187 additions keep passing.
+
+### Added
+
+- **round 183 — Annex G §G.13.2.10 multiview_view_position SEI
+  (payload type 46).** Wires the per-CVS view-position SEI from the
+  MVC family into the SEI dispatch table at payload type 46. The
+  syntax (§G.13.1.10) is three fields: `num_views_minus1` ue(v),
+  `view_position[i]` ue(v) for `i = 0..=num_views_minus1`, and a
+  trailing `multiview_view_position_extension_flag` u(1). Each ue(v)
+  is bounded at 1023 inclusive per §G.13.2.10 before allocation, so
+  an adversarial input can never drive the per-view vector past 1024
+  entries — the `num_views_minus1` check fires before
+  `Vec::with_capacity` runs. The extension flag is preserved
+  verbatim so callers auditing a non-conforming stream (§G.13.2.10
+  requires the flag equal 0) can distinguish a clean stream from a
+  reserved-extension marker. Two new `SeiError` variants
+  (`MultiviewViewPositionNumViewsOutOfRange`,
+  `MultiviewViewPositionViewPositionOutOfRange`) surface the bound
+  failures with the offending value + index.
+
+  New unit tests cover: two-view left/right ordering, single-view
+  zero-position degenerate case, extension-flag-preserved-when-set,
+  rejection of `num_views_minus1 = 1024` before allocation,
+  rejection of `view_position[i] = 1024`, and the `parse_payload`
+  dispatcher routing payload type 46 to the new variant. The
+  malformed-input integration sweep (`integration_sei_malformed.rs`)
+  pulls payload type 46 into `KNOWN_PAYLOAD_TYPES` so the existing
+  panic-free contract automatically extends to the new parser
+  across all 11 adversarial shapes × 4 contexts.
+
+  SEI dispatch arm count goes 40 → 41. This is the first §G.13.2
+  (Annex G — MVC) SEI parser to land; the rest of Annex G/H/I
+  (24–44, 48–54, 181) remains deferred to Phase 4 alongside the
+  matching `nal_unit_type` 14/15/20/21 prefix/subset-SPS handling.
+
+### Fixed
+
+- **round 177 — `sei_payload` fuzz target OOM (artifact
+  `oom-1bf45ba3a116aa21631ccf3b3cec29fed395ef0e`, 11 bytes, reported
+  by oxideav-h264 fuzz CI run 26569743256).** §D.2.20
+  motion_constrained_slice_group_set's
+  `parse_motion_constrained_slice_group_set` read
+  `num_slice_groups_in_set_minus1` as a raw `ue(v)` and pushed
+  `count = num_slice_groups_in_set_minus1 + 1` entries into the
+  slice_group_id vector before checking the §D.2.20 range bound.
+  When the active PPS only declares a single slice group, the
+  encoded width of each slice_group_id field collapses to 0 bits
+  per §D.1.20 (`Ceil(Log2(num_slice_groups))`), so each iteration
+  consumed zero payload bits — letting an adversarial `ue(v)` value
+  near 2^28 drive a ~1 GiB allocation and trip libfuzzer's
+  rss_limit. The fix reads the same `ue(v)` and immediately
+  enforces the §D.2.20 normative bound
+  `num_slice_groups_in_set_minus1 ≤ num_slice_groups_minus1` (where
+  `num_slice_groups_minus1` arrives via `SeiContext::num_slice_groups`),
+  returning the new
+  `SeiError::MotionConstrainedSliceGroupCountTooLarge` before the
+  loop allocates. Each `slice_group_id[i]` then gets the §7.4.2.2 /
+  §D.2.20 per-id range check (`< num_slice_groups`), surfaced as
+  `SeiError::MotionConstrainedSliceGroupIdOutOfRange`.
+
+  New `tests/integration_sei_malformed.rs` test
+  `motion_constrained_slice_group_set_unbounded_count_is_rejected`
+  replays the exact 11-byte fuzz artifact's path-2 payload tail
+  (first byte 0x90 used for the §D.2.20 `SeiContext` derivation;
+  remaining 10 bytes as the raw payload) and asserts the parser
+  returns a deterministic `Err` rather than allocating its way to
+  OOM. The two existing motion_constrained_slice_group_set tests
+  (`single_group_collapses_width` /
+  `multi_group_reads_u_v`) continue to pass — the bound is
+  consistent with their `num_slice_groups_in_set_minus1` values
+  (0 < 1 and 1 < 4 respectively). All 1033 lib tests + 5
+  `integration_sei_malformed` tests pass.
+
+### Added
+
+- **round 164 — SEI parser hardening (new cargo-fuzz target +
+  malformed-input property sweep).** Two complementary additions
+  exercise the Annex D SEI surface that the existing whole-decoder
+  fuzz targets reach only when libFuzzer happens to synthesise a
+  well-formed Annex-B NAL→RBSP→sei_payload framing — i.e. almost
+  never. Together they bring the 40-payload SEI dispatcher under the
+  same panic-free contract the rest of the public Decoder surface
+  has carried since round 120.
+
+  `fuzz/fuzz_targets/sei_payload.rs` — new cargo-fuzz binary that
+  feeds raw libFuzzer bytes through three SEI-parsing paths: (1) the
+  full envelope (`parse_sei_rbsp`) and then `parse_payload` on every
+  extracted message; (2) `parse_payload` directly with a payload type
+  chosen from a 63-entry fixed pool (every dispatcher arm + several
+  `Unknown`-fallback sentinels covering Annex F/G/H/I numeric
+  ranges); (3) `parse_payload` on the full input under a second
+  payload-type selector. A `context_from_byte` helper derives a
+  varied-but-bounded `SeiContext` from the input so the VUI-gated
+  branches (`buffering_period`, `pic_timing`,
+  `dec_ref_pic_marking_repetition`, `spare_pic`, the §D.1.20
+  `num_slice_groups`-dependent u(v) width) are reached without
+  requiring libFuzzer to discover them. The new binary sits adjacent
+  to the existing `panic_free_decode` / `ffmpeg_oracle_decode`
+  binaries.
+
+  `tests/integration_sei_malformed.rs` — deterministic property
+  sweep covering every (payload_type, shape, context) triple in the
+  matrix the fuzz target explores, so CI catches a regression even
+  without libFuzzer. The grid is 40 known + 23 fallback payload
+  types × 11 adversarial shapes (empty / one_zero / eight_zeros /
+  sixtyfour_zeros / one_ff / eight_ffs / sixtyfour_ffs /
+  max_ueg_prefix / alt_55_aa / alt_aa_55 / long_zeros_then_stop) ×
+  4 `SeiContext` cells (`default` / `nal_hrd_present_24bit` /
+  `vcl_hrd_present_4sched` / `max_lengths_8sg`) = 2772 invocations
+  of `parse_payload`, asserted to never panic. Three companion
+  tests cover the envelope-only path
+  (`sei_parse_rbsp_never_panics`), the envelope-then-dispatch
+  composition (`sei_envelope_then_dispatch_never_panics`), and the
+  `SeiPayload::Unknown` catch-all contract
+  (`sei_unknown_payload_type_is_ok`). The cardinality is explicitly
+  pinned (2772) so a future change that accidentally drops a
+  payload-type row or shape entry fails loudly instead of silently
+  shrinking coverage.
+
+  No behaviour change — `parse_payload` and `parse_sei_rbsp` are
+  unchanged. This round is hardening only: it locks in the
+  panic-free contract on the SEI surface and gives a defined surface
+  for future libFuzzer runs to target without re-deriving the
+  framing.
+
+- **round 158 — typed ATSC1 envelope sub-parser on top of
+  `user_data_registered_itu_t_t35` (§D.2.6).** Adds
+  `parse_atsc1_envelope(payload_bytes)` consuming the post-country-code
+  bytes of a country=0xB5 (USA) T.35 payload and decoding the ATSC1
+  envelope per ATSC A/53 Part 4 (2009) §6.2.3:
+  * `provider_code` (u(16) BE) — validated to be `0x0031` (the ATSC slot
+    in the T.35 administered provider registration).
+  * `user_identifier` (u(32) BE) — validated to be one of the two
+    registered ATSC values per Table 6.7: `'GA94'` (0x47413934 →
+    `ATSC_user_data()`) or `'DTG1'` (0x44544731 → `afd_data()`).
+  * For `'GA94'`: reads `user_data_type_code` (u(8)) per Table 6.8 and
+    dispatches per Table 6.9 — `0x03` surfaces the inner `MPEG_cc_data()`
+    bytes opaquely (the inner cc_data() byte layout is normatively in
+    CEA-708 [1] Table 2 which is **not present in this docs tree** — see
+    docs-gap note below), `0x06` parses `bar_data()` per Table 6.11
+    (top/bottom letterbox + left/right pillarbox pairs, reserved nibble
+    + per-value '11' one_bits validation + §6.2.3.2 mutual-exclusion
+    enforcement), any other code surfaces as `Atsc1UserData::Reserved`
+    with raw bytes preserved per §6.2.2 silent-discard rule.
+  * For `'DTG1'`: parses `afd_data()` per Table 6.13 / §6.2.4.2 (1 byte
+    when `active_format_flag = 0`, 2 bytes when `1` carrying the 4-bit
+    `active_format` value from Table 6.14).
+
+  New public surface in `crate::sei`: `Atsc1Envelope`, `Atsc1Body`,
+  `Atsc1UserData`, `Atsc1UserIdentifier` (with `GA94` / `DTG1`
+  constants), `BarData`, `AfdData`, and `parse_atsc1_envelope`. Ten new
+  `SeiError` variants pin the validation failures
+  (`Atsc1EnvelopeTooShort`, `Atsc1ProviderCodeMismatch`,
+  `Atsc1UnknownUserIdentifier`, `Atsc1AtscUserDataEmpty`,
+  `Atsc1BarDataReservedMismatch`, `Atsc1BarDataOneBitsMismatch`,
+  `Atsc1BarDataTopBottomMismatch`, `Atsc1BarDataLeftRightMismatch`,
+  `Atsc1BarDataLetterboxPillarboxBoth`, `Atsc1BarDataTruncated`).
+
+  Sixteen new `sei::tests::atsc1_*` unit tests cover: GA94+cc_data
+  round-trip with the raw cc_data bytes passed through verbatim;
+  GA94+bar_data letterbox + pillarbox decode at line/pixel values from
+  the worked example in §6.2.3.2; rejections for top≠bottom, left≠right,
+  reserved≠'1111', one_bits≠'11', and simultaneous letterbox+pillarbox;
+  GA94+reserved type-code preserving raw bytes for diagnostics; GA94
+  empty body rejected; DTG1+AFD flag-off (1-byte) and flag-on (2-byte
+  with `active_format = '1010'` 16:9 letterbox); 6-byte minimum size
+  enforcement; wrong provider_code (0x003C HDR10+) rejected; unknown
+  user_identifier rejected; and an end-to-end chain through
+  `parse_payload(4, …)` → `UserDataRegisteredItuTT35` →
+  `parse_atsc1_envelope`. 1033 lib tests + 1243 total tests pass with
+  the new module wired in (was 1017 + 1227).
+
+  Spec basis: ATSC A/53 Part 4 (2009) §6.2.3 Tables 6.7 / 6.8 / 6.9 /
+  6.10 / 6.11 / 6.13 / 6.14 (`docs/broadcast/atsc/A53-Part-4-2009.pdf`);
+  Rec. ITU-T H.264 (08/2024) §D.1.6 / §D.2.6 for the outer
+  `user_data_registered_itu_t_t35` carriage; ITU-T T.35 §3.1 for the
+  country_code / extension semantics.
+
+  **Docs-gap** — CEA-708 (the spec carrying the cc_data() Table 2 byte
+  layout: `process_cc_data_flag` + `cc_count` + per-triple `cc_valid` /
+  `cc_type` / `cc_data_1` / `cc_data_2` + DTVCC packet framing) is not
+  present in `docs/`. Until it lands, ATSC1 `MPEG_cc_data` inner bytes
+  stay opaque (the round-158 parser hands them through unchanged for a
+  downstream CEA-708-aware consumer). Adding CEA-708-D to
+  `docs/broadcast/cea/` would unblock a typed `CcData` decoder returning
+  the per-triple (cc_type, cc_data_1, cc_data_2) array.
+
+- **round 151 — opt-in CABAC IDR Intra_16x16 chroma AC trellis
+  quantisation.** Extends the round-148 luma-AC trellis to the chroma
+  Intra_16x16 paths. For 4:2:0 the lever refines the 4 per-block 4×4
+  AC arrays per chroma plane (Cb / Cr) inside
+  `encode_chroma_intra16x16_420`; for 4:4:4 the lever refines the 16
+  per-block 4×4 AC arrays per chroma plane inside
+  `encode_chroma_intra16x16_444` (§7.3.5.3 "chroma coded like luma").
+  Each block is passed through
+  `crate::encoder::transform::trellis_refine_4x4_ac` with
+  `skip_dc=true` so the §8.5.11.1 2×2 chroma-DC Hadamard chain (4:2:0)
+  or the §8.5.10 luma-style 4×4 DC Hadamard chain on the 4:4:4 chroma
+  plane stays bit-exact. New `EncoderConfig::trellis_quant_intra_chroma`
+  toggle (default `false`) gates the refinement. Bitstream syntax is
+  unchanged; the decoder is unaffected; `cbp_chroma` keeps the §7.4.5.1
+  Table 7-15 value (`0`/`1`/`2` based purely on whether DC and / or AC
+  remains non-zero across the MB). The default stays off for the same
+  reason as `trellis_quant_intra`: the round-49 rate model is
+  calibrated for inter blockCat 2 (Luma4x4) and is roughly net-zero on
+  dense intra chroma AC at typical QP — re-calibrating for chroma
+  blockCats 4 (ChromaACLevel @ 4:2:0) and 1 (Intra16x16AC @ 4:4:4,
+  treated like luma) so the lever can ship default-on is the obvious
+  follow-up. New `integration_trellis_quant_intra_chroma.rs` pins six
+  guarantees: 4:2:0 and 4:4:4 default-off byte-for-byte determinism;
+  4:2:0 decoder self-roundtrip bit-exact on all three planes at QP=22;
+  4:4:4 decoder self-roundtrip bit-exact on all three planes at QP=22;
+  QP {18..42} sweep stays decodable + plane-wise bit-exact; luma PSNR
+  invariant under the chroma lever; and a measurement-only byte-savings
+  print across QP {18..38}. Spec basis: §8.5.10, §8.5.11.1, §7.3.5.3,
+  §7.4.5.1, §9.3.3.1.3.
+
+- **round 148 — opt-in CABAC IDR Intra_16x16 luma AC trellis
+  quantisation.** Extends the round-49 `D + λ·R` refinement
+  (`crate::encoder::transform::trellis_refine_4x4_ac`) to the 16 per-
+  block 4x4 AC arrays inside an Intra_16x16 luma MB on the
+  `encode_idr_cabac` path. Each block is passed through the trellis
+  with `skip_dc=true` so the §8.5.10 inverse-Hadamard DC chain stays
+  bit-exact while higher-frequency AC levels can shrink toward zero.
+  New `EncoderConfig::trellis_quant_intra` toggle (default `false`)
+  gates the refinement. Bitstream syntax is unchanged; the decoder
+  is unaffected; `cbp_luma` keeps the §7.4.5.1 Table 7-11 value
+  (`15` whenever any AC remains non-zero across the MB). The default
+  stays off because the round-49 rate model is calibrated for inter
+  blockCat 2 (Luma4x4) and is net-negative on dense intra
+  Intra_16x16 AC at low QP — re-calibrating for blockCat 1
+  (Intra16x16AC) so the lever can ship default-on is the obvious
+  follow-up. New `integration_trellis_quant_intra.rs` pins four
+  guarantees: default-off byte-for-byte determinism, decoder self-
+  roundtrip bit-exact at QP=22, PSNR drift inside a 3 dB envelope
+  across QP {22, 28, 34}, and QP {18..42} sweep stays decodable +
+  bit-exact (max enc/dec luma diff = 0). Spec basis: §8.5.10, §8.5.12,
+  §7.4.5.1, §9.3.3.1.3.
+
+- **round 145 — end-to-end Criterion `encode` benchmark.** Adds
+  `benches/encode.rs`, sibling to `benches/decode.rs`, exercising
+  the public encoder entry points across seven in-process variants
+  with no on-disk fixtures: 64x64 + 128x96 Baseline CAVLC IDR;
+  Baseline IDR + 4×P CAVLC chain (real P-slice ME); Main IDR + P +
+  B (§8.4.1.2.2 spatial-direct + bipred); 64x64 CABAC IDR
+  (`encode_idr_cabac`); 64x64 CABAC IDR + P
+  (`encode_idr_cabac` + `encode_p_cabac`, exercises the round-49
+  trellis-quant refinement that's on by default); 64x64 High 4:2:2
+  IDR (§8.5.11.2 4×2 chroma DC Hadamard). Criterion reports both
+  per-frame (`Throughput::Elements`, "Kelem/s" ≈ frames-encoded
+  per second) and per-source-byte (`Throughput::Bytes`,
+  MiB/s of raw planar input absorbed) views per variant. Measured
+  headline numbers on an Apple M-series host (Criterion `--quick`,
+  release profile): CABAC IDR ~18.3 Kelem/s (107 MiB/s of source);
+  CAVLC Baseline IDR 64x64 ~2.7 Kelem/s (17 MiB/s); CAVLC IDR + 4×P
+  chain 207 elem/s (1.22 MiB/s — ME-dominated); Main IPB GOP
+  176 elem/s; CABAC IDR + P 685 elem/s. Complements the existing
+  `inter_pred_bench`, `transform_bench`, and `decode` benches —
+  the encode hot path was previously unmeasured.
+
+- **round 139 — end-to-end Criterion `decode` benchmark.** Adds
+  `benches/decode.rs` driving the public `H264CodecDecoder`
+  (`send_packet` + `flush` + `receive_frame`) across five
+  in-process corpora generated by `oxideav-h264`'s own encoder so
+  the bench is self-contained and needs no on-disk fixtures:
+  64x64 Baseline IDR, 128x96 Baseline IDR, IDR + 4×P Baseline
+  chain, IDR + P + B Main GOP (spatial-direct B), and a 64x64
+  High 4:2:2 IDR. Criterion reports both per-frame
+  (`Throughput::Elements`) and per-byte (`Throughput::Bytes`)
+  numbers per variant. Headline decode rates on an Apple M-series
+  host range from ~6 Kelem/s (128x96 Baseline IDR) to ~21 Kelem/s
+  (IDR + 4×P chain, amortised over 5 frames per access unit).
+  Complements the existing `inter_pred_bench` (motion-compensation
+  kernels) and `transform_bench` (inverse-transform kernels),
+  which only measured isolated hot paths.
+
+### Fixed
+
+- **round 128 — CAVLC I_PCM macroblock now honours `BitDepthY` /
+  `BitDepthC` from the active SPS (§7.4.5 / §7.4.2.1.1).** Before this
+  round, the CAVLC `I_PCM` path in `macroblock_layer.rs` hard-coded
+  `bit_depth_y = bit_depth_c = 8`, so `pcm_sample_luma[i]` and
+  `pcm_sample_chroma[i]` were always read as 8-bit values regardless
+  of `bit_depth_luma_minus8` / `bit_depth_chroma_minus8` on the SPS.
+  For a High10 (BitDepthY = 10) sequence with an `I_PCM` MB this
+  would truncate every sample to its low 8 bits and leave the bit
+  reader off by `(256 + 2 * MbWidthC * MbHeightC) * (BitDepth - 8)`
+  bits — corrupting all subsequent macroblocks in the slice.
+
+  Fix threads `bit_depth_luma_minus8` / `bit_depth_chroma_minus8`
+  through `EntropyState` (new fields, defaulting to 0 for parser
+  unit-test call sites) and reads them in the CAVLC PCM loop. The
+  CABAC PCM path in `slice_data.rs` already consulted the SPS
+  directly, so no behavioural change there beyond forwarding the
+  same fields into its `EntropyState`. New regression
+  `slice_data::tests::cavlc_i_pcm_macroblock_10bit_high10_round_trips`
+  emits a single 10-bit `I_PCM` MB with samples that explicitly
+  require bits 8..=9 and asserts byte-for-byte round-trip through
+  `parse_slice_data`.
+
+- **fuzz: round-125 / task #1044 — reject PPS that arrives BEFORE its
+  referenced SPS (§7.4.1.2.1 / §7.4.2.2).** Closes the
+  `ffmpeg_oracle_decode` divergence flagged on
+  `crash-065436ed80e17520598536327afceed7133b3122` (359 B) and the
+  resulting scheduled-Fuzz-job redness on master since round 120. The
+  crash input delivered a PPS NAL ahead of its backing SPS; our
+  `process_nal` PPS branch used to fall back to a guessed
+  `chroma_format_idc = 1` in that case, store the PPS anyway, and let
+  the IDR slices that arrived later activate it and emit two 16x16
+  frames. libavcodec rejects the PPS at NAL arrival time
+  ("sps_id 0 out of range", referring to the unstored backing SPS) and
+  produces zero frames.
+
+  Per §7.4.2.2 the PPS scaling-matrix tail loop length depends on
+  the referenced SPS's `chroma_format_idc` (4:4:4 carries 6 8x8 lists;
+  everything else carries 2 when `transform_8x8_mode_flag` is set),
+  so the PPS cannot be parsed unambiguously when the SPS hasn't been
+  seen yet — the previous "parse with default, replace if SPS turns
+  up later" code path was correct only for 4:2:0 streams without a
+  PPS scaling matrix.
+
+  Fix sits in `Decoder::process_nal` (PPS branch): peek the
+  `seq_parameter_set_id`, look up the SPS, and return
+  `DecoderError::UnknownSps(sps_id)` when it isn't stored. The
+  permissive 4:2:0 fallback is removed; only the SPS-driven
+  `chroma_format_idc` reaches `Pps::parse_with_chroma_format`.
+
+  Regression: `tests/integration_fuzz_oracle_regression.rs::
+  fuzz_crash_065436ed_pps_before_sps_rejected` pins the exact
+  359-byte payload and asserts the decoder reports `Error::Eof`
+  with zero frames. The pre-existing
+  `slice_referencing_pps_with_unknown_sps_is_rejected` test in
+  `src/decoder.rs` is renamed to
+  `pps_referencing_unknown_sps_is_rejected_at_storage` and now
+  asserts the rejection happens at PPS arrival (not at slice
+  activation), with neither PPS storage nor active-pps state
+  committed.
+
+### Added
+
+- **sei: round-120 — sei_manifest + sei_prefix_indication Annex D SEI
+  payloads (types 200 and 201).** Adds `sei_manifest` (§D.1.36 / §D.2.36)
+  and `sei_prefix_indication` (§D.1.37 / §D.2.37) of
+  `docs/video/h264/T-REC-H.264-202408-I.pdf`, bringing the typed-SEI
+  surface from 38 to 40 recognised payloads. These are transport- and
+  systems-layer hint messages — `sei_manifest` advertises, for the
+  entire coded video sequence, which SEI payload types are expected to
+  be present along with a per-type "necessary / unnecessary /
+  undetermined / not-expected" classification from Table D-12, and
+  `sei_prefix_indication` carries one or more leading bit-strings from
+  the start of an upcoming SEI payload of a given
+  `prefix_sei_payload_type` so a transport element can inspect the
+  first few syntax elements (e.g. `frame_packing_arrangement_type` for
+  type 45) without parsing the full SEI message.
+
+  New `parse_sei_manifest` reads `manifest_num_sei_msg_types u(16)`
+  then per entry `manifest_sei_payload_type[ i ] u(16)` and
+  `manifest_sei_description[ i ] u(8)`. Descriptions 0..=3 are
+  surfaced as `SeiManifestDescription::{NotExpected,
+  ExpectedNecessary, ExpectedUnnecessary, ExpectedUndetermined}`; per
+  §D.2.36 values 4..=255 are reserved and must be passed through (so
+  callers can honour "Decoders shall allow ... shall ignore" for both
+  the manifest entry and any SEI prefix indication keyed off the same
+  payload type) — these land as `Reserved(raw)`. The §D.2.36
+  uniqueness constraint (`manifest_sei_payload_type[ m ] !=
+  manifest_sei_payload_type[ n ] for m != n`) is enforced at parse
+  time via `SeiManifestDuplicatePayloadType { payload_type, first,
+  second }`.
+
+  New `parse_sei_prefix_indication` reads
+  `prefix_sei_payload_type u(16)`, `num_sei_prefix_indications_minus1
+  u(8)`, then for each indication `num_bits_in_prefix_indication_minus1
+  u(16)` (the data field's bit count is value + 1), packs that many
+  `sei_prefix_data_bit u(1)` values MSB-first into a `Vec<u8>` (length
+  `bit_count.div_ceil(8)`), and consumes the §D.1.37
+  byte-alignment trailer (`while !byte_aligned() { f(1) }`). A
+  `SeiPrefixIndicationOverflow { i, bits, available }` rejects an
+  indication whose declared `bit_count` exceeds the remaining payload
+  bits — the existing fuzzed bitstream EOF check already guards the
+  individual `u(1)` reads but the upfront check shortens the failure
+  path on hostile inputs.
+
+  Wired into `parse_payload(200, …)` → `SeiPayload::SeiManifest` and
+  `parse_payload(201, …)` → `SeiPayload::SeiPrefixIndication`.
+  Thirteen new unit tests in `src/sei.rs`: SEI manifest empty / single
+  entry / three-entry mixed / reserved-description / duplicate
+  rejection / truncated input / `parse_payload` dispatch; SEI prefix
+  indication single byte-aligned / short bit-string with `1`-fill
+  byte-alignment trailer / two entries with mixed bit-widths /
+  oversized-bit-count rejection / truncated-header rejection /
+  `parse_payload` dispatch. Lib-test count 1003 → 1016 (+13).
+
+- **sei: round-113 — regionwise_packing Annex D SEI payload (type 155).**
+  Adds `regionwise_packing` (§D.1.35.4 / §D.2.35.4 of
+  `docs/video/h264/T-REC-H.264-202408-I.pdf`), bringing the typed-SEI
+  surface from 36 to 37 recognised payloads and completing the
+  omnidirectional projection family alongside equirectangular (150),
+  cubemap (151), sphere_rotation (154), and omni_viewport (156). The
+  message describes the region-wise packing transformation that maps
+  regions of the cropped decoded ("packed") picture onto a projected
+  picture, plus optional per-region guard bands. New
+  `parse_regionwise_packing` reads `rwp_cancel_flag u(1)`; when not
+  cancelled it reads `rwp_persistence_flag u(1)`,
+  `constituent_picture_matching_flag u(1)`, `rwp_reserved_zero_5bits
+  u(5)` (read and ignored), `num_packed_regions u(8)`,
+  `proj_picture_width`/`proj_picture_height u(32)`, and
+  `packed_picture_width`/`packed_picture_height u(16)`, then one
+  `PackedRegion` per region: `rwp_reserved_zero_4bits u(4)` (ignored),
+  `transform_type u(3)` (Table D-11, 0..=7), `guard_band_flag u(1)`,
+  the four `proj_region_*` `u(32)` and four `packed_region_*` `u(16)`
+  geometry fields, and — when `guard_band_flag` is set — a `GuardBand`
+  carrying the four `*_gb_*` `u(8)` widths/heights,
+  `gb_not_used_for_pred_flag u(1)`, the four `gb_type[j] u(3)` edge
+  types, and `rwp_gb_reserved_zero_3bits u(3)` (ignored). Parse-time
+  §D.2.35.4 conformance checks reject `num_packed_regions == 0`
+  (`RegionWisePackingNoRegions`), a zero `proj_picture_*`
+  (`RegionWisePackingProjPictureZero`) or `packed_picture_*`
+  (`RegionWisePackingPackedPictureZero`) dimension, and a guard band
+  with all four dimensions zero (`RegionWisePackingGuardBandAllZero`).
+  Wired into `parse_payload(155, …)` →
+  `SeiPayload::RegionWisePacking`. Nine unit tests cover the cancel
+  path, a single region without a guard band, a region with a
+  four-edge guard band, a two-region mixed-guard-band message, the
+  four §D.2.35.4 error paths, and parse_payload dispatch.
+
+- **sei: round-110 — dec_ref_pic_marking_repetition Annex D SEI payload
+  (type 7).** Adds `dec_ref_pic_marking_repetition` (§D.1.9 / §D.2.9 of
+  `docs/video/h264/T-REC-H.264-202408-I.pdf`), bringing the typed-SEI
+  surface from 35 to 36 recognised payloads. The message repeats the
+  `dec_ref_pic_marking()` syntax structure (§7.3.3.3) that originally
+  appeared in an earlier picture's slice header(s), so a decoder that
+  lost that picture can still apply its reference-marking operations.
+  New `parse_dec_ref_pic_marking_repetition` reads `original_idr_flag
+  u(1)`, `original_frame_num ue(v)`, and — only when the active SPS has
+  `frame_mbs_only_flag == 0` — `original_field_pic_flag u(1)` plus
+  (when set) `original_bottom_field_flag u(1)`, then the embedded
+  `dec_ref_pic_marking()`. Per §D.2.9 the `IdrPicFlag` selecting the
+  embedded structure's IDR vs. non-IDR branch is `original_idr_flag`,
+  not the SEI NAL's own flag: the IDR branch yields
+  `no_output_of_prior_pics_flag` + `long_term_reference_flag`, the
+  non-IDR branch the `adaptive_ref_pic_marking_mode_flag` sliding-window
+  / MMCO loop. The embedded reader reuses the shared
+  `slice_header::{DecRefPicMarking, MmcoOp}` data model and validates
+  `memory_management_control_operation` to 0..=6 per Table 7-9
+  (`SeiError::DecRefPicMarkingRepetitionMmcoOutOfRange`). The active
+  SPS `frame_mbs_only_flag` is newly carried on
+  `SeiContext::frame_mbs_only_flag` (default `true`). Wired into
+  `parse_payload(7, …)` → `SeiPayload::DecRefPicMarkingRepetition`.
+  Eight unit tests cover the IDR frame-only path, a two-op adaptive
+  MMCO loop, sliding-window, field coding with and without a bottom-
+  field flag, an all-six-MMCO-ops sweep, the out-of-range MMCO error,
+  and parse_payload dispatch.
+
+- **sei: round-107 — content_colour_volume Annex D SEI payload (type 149).**
+  Adds `content_colour_volume` (§D.1.33 / §D.2.33 of
+  `docs/video/h264/T-REC-H.264-202408-I.pdf`), bringing the typed-SEI
+  surface from 34 to 35 recognised payloads. The message records the
+  colour volume (display gamut + luminance range) actually present in
+  the content, complementing the mastering-display volume (type 137)
+  and MaxCLL/MaxFALL (type 144). New `parse_content_colour_volume`
+  reads `ccv_cancel_flag u(1)`; when not cancelled it reads
+  `ccv_persistence_flag u(1)` + the four present flags
+  (`ccv_primaries_present_flag`, `ccv_min_/max_/avg_luminance_value_
+  present_flag`, each `u(1)`) + `ccv_reserved_zero_2bits u(2)` (read
+  and ignored per §D.2.33), then the gated sub-blocks: three
+  `(ccv_primaries_x[c], ccv_primaries_y[c])` `i(32)` pairs (green /
+  blue / red ordering per §D.2.33), and `ccv_min_/max_/avg_luminance_
+  value u(32)`. Parse-time §D.2.33 conformance checks reject the
+  all-present-flags-zero case (`ContentColourVolumeNoComponents`),
+  primary coordinates outside [-5 000 000, 5 000 000]
+  (`ContentColourVolumePrimaryOutOfRange`), and any luminance-ordering
+  violation among the present values — `min <= avg`, `avg <= max`,
+  `min <= max` (`ContentColourVolumeLuminanceOrder`). Wired into
+  `parse_payload(149, …)` → `SeiPayload::ContentColourVolume`. Ten
+  unit tests cover the cancel path, an all-fields BT.2020-style
+  message, a single-luminance-only body, negative primary coordinates
+  round-tripping through `i(32)`, and the four §D.2.33 error paths.
+
+- **sei: round-103 — spare_pic Annex D SEI payload (type 8).**
+  Adds `spare_pic` (§D.1.10 / §D.2.10 of
+  `docs/video/h264/T-REC-H.264-202408-I.pdf`), bringing the typed-SEI
+  surface from 33 to 34 recognised payloads. The message flags
+  slice-group map units of one or more decoded reference pictures (the
+  spare pictures) as resembling the co-located map units of a target
+  picture, so an error-concealing decoder can substitute spare-picture
+  samples. New `parse_spare_pic` reads `target_frame_num ue(v)`,
+  `spare_field_flag u(1)` (+ optional `target_bottom_field_flag`),
+  `num_spare_pics_minus1 ue(v)` (validated to 0..=15 per §D.2.10), then
+  one `SparePicEntry` per spare picture: `delta_spare_frame_num ue(v)`,
+  optional `spare_bottom_field_flag` (field messages only), and
+  `spare_area_idc ue(v)` (validated to 0..=2) selecting the spare-area
+  coding — `0` = whole picture spare (no per-unit data), `1` = one
+  `spare_unit_flag u(1)` per map unit in raster order (stored as
+  `true` = spare per §D.2.10), `2` = `zero_run_length ue(v)` runs in
+  counter-clockwise box-out order read until the running map-unit count
+  reaches `PicSizeInMapUnits`. The `1`/`2` branches need
+  `PicSizeInMapUnits`, newly carried on `SeiContext::pic_size_in_map_units`
+  (default 0; a message reaching a per-unit branch with 0 is rejected
+  with `SeiError::SparePicMapUnitsUnknown` rather than guessed). Wired
+  into `parse_payload(8, …)` → `SeiPayload::SparePic`. Nine unit tests
+  cover all three `spare_area_idc` methods, a field message with bottom
+  -field flags, a two-entry mixed-method message, and the three range/
+  context error paths.
+
+- **sei: round-99 — sub-sequence Annex D SEI payload family (2003 draft).**
+  Three new payload types land, bringing the typed-SEI surface from
+  30 to 33 recognised payloads. All three are specified in the 2003
+  draft (`docs/video/h264/ISO_IEC_14496-10-AVC-2003-draft.pdf`,
+  §D.1.11–§D.1.13 / §D.2.11–§D.2.13) and describe the sub-sequence
+  data-dependency hierarchy (layer 0 independently decodable, higher
+  layers predicted only from lower ones):
+  - **10** `sub_seq_info` (§D.1.11 / §D.2.11) — places the current
+    picture in the hierarchy: `sub_seq_layer_num ue(v)` (< 256) +
+    `sub_seq_id ue(v)` (< 65536) + `first_ref_pic_flag` +
+    `leading_non_ref_pic_flag` + `last_pic_flag` +
+    `sub_seq_frame_num_flag`, the optional `sub_seq_frame_num ue(v)`
+    counting pictures within the sub-sequence modulo `MaxFrameNum`.
+  - **11** `sub_seq_layer_characteristics` (§D.1.12 / §D.2.12) —
+    `num_sub_seq_layers_minus1 ue(v)` (≤ 255) followed by one
+    `(accurate_statistics_flag u(1), average_bit_rate u(16),
+    average_frame_rate u(16))` triple per layer; the layer-`N` entry
+    jointly characterises layers `0..=N`.
+  - **12** `sub_seq_characteristics` (§D.1.13 / §D.2.13) — target
+    `sub_seq_layer_num` / `sub_seq_id`, optional `sub_seq_duration
+    u(32)` (90-kHz ticks) gated on `duration_flag`, an optional
+    average-rate triple gated on `average_rate_flag`, and a list of
+    `num_referenced_subseqs ue(v)` (< 256) inter-prediction-reference
+    sub-sequences `(ref_sub_seq_layer_num, ref_sub_seq_id,
+    ref_sub_seq_direction)`.
+  Parse-time §D.2.11–§D.2.13 range checks reject out-of-range
+  `sub_seq_layer_num` / `sub_seq_id` / `num_sub_seq_layers_minus1` /
+  `num_referenced_subseqs`. Nine new unit tests cover both the
+  with/without optional-field branches and the dispatch wiring for
+  payload types 10/11/12.
+
+- **sei: round-95 — two additional Annex D SEI payload parsers.**
+  Two new payload types land, bringing the typed-SEI surface from
+  28 to 30 recognised payloads:
+  - **156** `omni_viewport` (§D.1.35.5 / §D.2.35.5) — completes
+    the 360-video SEI family started in round 78 (alongside
+    `equirectangular_projection` (150), `cubemap_projection`
+    (151), and `sphere_rotation` (154)). `omni_viewport_id u(10)`
+    + `omni_viewport_cancel_flag u(1)` + (when not cancelled)
+    `omni_viewport_persistence_flag u(1)` + `omni_viewport_cnt_minus1
+    u(4)` + the per-viewport quintuple `(azimuth_centre i(32),
+    elevation_centre i(32), tilt_centre i(32), hor_range u(32),
+    ver_range u(32))`. Parse-time §D.2.35.5 range checks enforce:
+    `azimuth_centre`, `tilt_centre` ∈ [−180·2^16, 180·2^16 − 1];
+    `elevation_centre` ∈ [−90·2^16, 90·2^16]; `hor_range` ∈
+    [1, 360·2^16]; `ver_range` ∈ [1, 180·2^16].
+  - **205** `shutter_interval_info` (§D.1.38 / §D.2.38) — indicates
+    the camera shutter interval (image-sensor exposure time) for
+    the associated source pictures, either as a single CVS-wide
+    constant or as a per-sub-layer schedule. `sii_sub_layer_idx
+    ue(v)` gates the body; when the index is 0 the body adds
+    `shutter_interval_info_present_flag u(1)` and (when the
+    present-flag is 1) `sii_time_scale u(32)` +
+    `fixed_shutter_interval_within_cvs_flag u(1)` + either
+    `sii_num_units_in_shutter_interval u(32)` (fixed-mode) or
+    `sii_max_sub_layers_minus1 u(3)` followed by
+    `sub_layer_num_units_in_shutter_interval[i] u(32)`
+    (per-sub-layer). Parse-time §D.2.38 range check enforces
+    `sii_time_scale > 0`. The shutter interval, in seconds, is
+    derivable as `num_units / time_scale` (e.g. the §D.2.38
+    worked example: 27 MHz time-scale + 1_080_000 units →
+    0.04 s).
+
+  Each new parser ships unit tests (16 new: 9 for omni_viewport
+  covering cancel / single director's-cut / two-entry / max-range
+  boundary plus four range-rejection paths and a parse_payload
+  dispatch; 7 for shutter_interval_info covering present-false /
+  non-zero sub-layer-idx / fixed 27 MHz worked example /
+  per-sub-layer schedule / time_scale=0 reject and a parse_payload
+  dispatch). Six new `SeiError` variants police the §D.2.35.5
+  / §D.2.38 range checks. The SEI table header comment in
+  `src/sei.rs` is updated; coverage bumps from 28 → 30 recognised
+  SEI types.
+
+### Fixed
+
+- **h264_decoder: drop in-progress pictures whose MbGrid is
+  incomplete at finalize time (round 91 fuzz-oracle triage,
+  third hardening).** Per §7.4.2.1 / Annex A, a coded picture's
+  slices shall collectively cover macroblock addresses
+  `0..PicSizeInMbs`. Previously we emitted any picture for which
+  at least one slice succeeded (`any_slice_succeeded` gate) even
+  when the slice walk stopped well short of the picture's last
+  MB — the un-walked tail came out zero. A 420 B fuzz crash
+  (`crash-b20f4127…`) hit this on a 48x2048 (PicSizeInMbs = 384)
+  picture whose two slices each walked ~4 MBs before
+  `end_of_slice_flag` or a CABAC failure; we emitted two
+  mostly-zero `Frame::Video`, libavcodec emitted none. The fix
+  scans `MbGrid::info[]` for any `available == false` entry at
+  finalize time and drops the in-progress picture when found
+  (the `MbInfo::available` flag was already set per-MB by
+  `reconstruct_slice_no_deblock`).
+- **sps: reject `frame_cropping` offsets that overshoot the coded
+  picture (round 91 fuzz-oracle triage, follow-up).** Per §7.4.2.1.1
+  the cropping rectangle must satisfy
+  `frame_crop_left_offset ≤ (PicWidthInSamplesL / CropUnitX) − (frame_crop_right_offset + 1)`
+  and the mirror inequality on the vertical axis. Previously our
+  SPS parser accepted any `ue(v)`-decoded offsets without checking
+  against the picture extent; a 506 B input
+  (`crash-8e8b38ae…`) carried `frame_crop_top_offset = 2148` against
+  a `FrameHeightInSamplesL = 16` picture, so `CropUnitY * (top +
+  bottom + 1) = 2 * 2151 = 4302 > 16` — but the SPS still activated,
+  slices reconstructed against MB 0 OK, and we emitted two
+  `Frame::Video` while libavcodec rejected the SPS outright with
+  "crop values invalid 0 5 2148 2 / 2848 16". The fix derives
+  CropUnitX / CropUnitY per §7.4.2.1.1 eqs. 7-19..7-22 (4:2:0 / 4:2:2
+  / 4:4:4 SubWidthC × SubHeightC table, mbs_only_flag scaling) and
+  raises `SpsError::FrameCroppingOutOfRange` when either inequality
+  fails. Two new unit tests pin the boundary (max-allowed offsets
+  accepted) and the reject path (overshoot rejected); a third
+  integration test
+  `fuzz_crash_8e8b38ae_sps_crop_out_of_range_rejected` embeds the
+  506 B crash verbatim.
+- **slice_header: reject `first_mb_in_slice != 0` when opening a new
+  coded picture (round 91 fuzz-oracle triage).** Per §7.4.3 + Annex A
+  the first VCL slice of a coded picture must cover MB 0 when
+  arbitrary slice order (ASO) is not allowed; ASO is gated on the
+  same Baseline/Extended-with-FMO carve-out we already reject at PPS
+  activation (`DecoderError::FmoNotSupported` — see `decoder.rs`).
+  Previously, an input whose every "first" slice carried
+  `first_mb_in_slice > 0` opened a fresh `PictureInProgress` whose
+  MBs `0..first_mb_in_slice` were never coded; the slice walk did
+  return Ok (it just covered the wrong MBs), so
+  `any_slice_succeeded` flipped to true and `finalize_in_progress_picture`
+  emitted a `Frame::Video` whose luma + chroma planes were the
+  zero-initialised allocation buffer. libavcodec rejects the access
+  unit outright; we now match. Caught by `ffmpeg_oracle_decode` on
+  `crash-957ac808…` (440 B, four IDR slices, all with
+  `first_mb_in_slice == 2`, 1×6-MB picture). New regression test
+  `fuzz_crash_957ac808_first_mb_nonzero_for_new_picture_rejected`
+  pins the libavcodec parity.
+
+### Added
+
+- **sei: round-78 — four additional Annex D HDR + 360 payload parsers.**
+  The decoder now recognises four more SEI payload types it previously
+  kept as `SeiPayload::Unknown`:
+  - **148** `ambient_viewing_environment` (§D.1.34 / §D.2.34) —
+    `ambient_illuminance` (`u(32)`, nonzero per §D.2.34) +
+    `ambient_light_x` / `ambient_light_y` (`u(16)` each, 0..=50000 per
+    §D.2.34 CIE 1931 chromaticity scaled by 50000). Parse-time range
+    check rejects illuminance=0 and chromaticity > 50000.
+  - **150** `equirectangular_projection` (§D.1.35.1 / §D.2.35.1) —
+    `erp_cancel_flag` + (when not cancelled) `erp_persistence_flag` +
+    `erp_padding_flag` + `erp_reserved_zero_2bits` (consumed but
+    ignored per §D.2.35.1) + the §D.1.35.1 padding-conditional triple
+    (`gb_erp_type u(3)`, `left_gb_erp_width u(8)`,
+    `right_gb_erp_width u(8)`).
+  - **151** `cubemap_projection` (§D.1.35.2 / §D.2.35.2) — the
+    shortest body in the family: `cmp_cancel_flag u(1)` plus, when
+    not cancelled, `cmp_persistence_flag u(1)`.
+  - **154** `sphere_rotation` (§D.1.35.3 / §D.2.35.3) —
+    `sphere_rotation_cancel_flag` + (when not cancelled) the
+    `sphere_rotation_persistence_flag u(1)`, `reserved_zero_6bits
+    u(6)` (consumed but ignored), and three `i(32)` rotation
+    angles (yaw, pitch, roll). Parse-time §D.2.35.3 range checks
+    enforce yaw / roll ∈ [−180·2^16, 180·2^16 − 1] and pitch ∈
+    [−90·2^16, 90·2^16].
+
+  Each new parser ships unit tests (15 new) exercising both
+  `parse_*` directly and the `parse_payload` dispatcher for the
+  matching `payload_type`. Six new `SeiError` variants police the
+  §D.2.34 / §D.2.35.3 range checks. Coverage bumps from 24 → 28
+  recognised SEI types; the SEI table header comment in
+  `src/sei.rs` is updated.
+
+- **sei: round-73 — five additional Annex D payload parsers.** The
+  decoder now recognises five SEI payload types it previously kept as
+  `SeiPayload::Unknown`:
+  - **9** `scene_info` (§D.1.11 / §D.2.11) — `scene_id` +
+    `scene_transition_type` with the §D.1.11 `> 3` branch reading
+    `second_scene_id`.
+  - **16** `progressive_refinement_segment_start` (§D.1.18 / §D.2.18)
+    — `progressive_refinement_id` + `num_refinement_steps_minus1`.
+  - **17** `progressive_refinement_segment_end` (§D.1.19 / §D.2.19)
+    — pairs with type 16 by `progressive_refinement_id`.
+  - **18** `motion_constrained_slice_group_set` (§D.1.20 / §D.2.20)
+    — variable-width `slice_group_id[i]` (`u(v)` with
+    `v = Ceil(Log2(num_slice_groups))`) drawn from the active PPS via
+    a new `SeiContext::num_slice_groups` field; collapses to 0 bits
+    when `num_slice_groups <= 1`, with optional `pan_scan_rect_id`.
+  - **21** `stereo_video_info` (§D.1.23 / §D.2.23) — both
+    `field_views_flag = 1` (top_field_is_left_view_flag) and the
+    frame-views branch (`current_frame_is_left_view_flag` +
+    `next_frame_is_second_view_flag`) plus the two
+    `*_self_contained_flag` bits.
+
+  Each new parser ships unit tests in `sei::tests` (12 new tests)
+  exercising both `parse_*` directly and the `parse_payload`
+  dispatcher for the corresponding `payload_type`. `SeiContext` loses
+  its derived `Default` for a manual impl so the new
+  `num_slice_groups` field defaults to `1`. Coverage bumps from
+  19 → 24 recognised SEI types; the SEI table header comment in
+  `src/sei.rs` is updated to list all 24.
+
+- **encoder: CABAC inter trellis quantisation (round 49 — Lever C
+  RDOQ-lite).** A new `EncoderConfig::trellis_quant` toggle (default
+  `true`) wires a single-pass greedy Viterbi over the open-loop
+  quantised levels in the P-CABAC + B-CABAC inter luma paths.
+  `crate::encoder::transform::trellis_refine_4x4_ac` revisits each
+  non-zero quantised coefficient at each scan position and considers
+  one alternative (`|level|` → `|level| − 1` toward zero); the
+  alternative is accepted iff the spatial-domain `D + λ·R` cost
+  strictly drops, where the rate term is approximated from §9.3.3.1.3
+  (significant_coeff_flag + last_significant_coeff_flag + truncated-
+  unary prefix + sign), λ follows the `0.85 · 2^((QP-12)/3) · 2/3`
+  RDOQ relaxation, and D is the SSD between source and reconstructed
+  residual after the actual §8.5.12 inverse transform. The refinement
+  is informative — the decoder is unchanged, the bitstream syntax is
+  identical — so existing fixtures pin bit-equivalent ffmpeg cross-
+  decode (max diff 0) with the trellis enabled. On a 64×64 textured-
+  motion P-slice at QP=22 the encoded length drops from 178 → 167
+  bytes (-6.2 %) while local-recon PSNR_Y moves from 45.10 → 44.94
+  dB (-0.16 dB, well inside quantisation noise); the new
+  `integration_trellis_quant.rs` pins this number plus a QP=18..38
+  sweep that asserts the trellis never enlarges the inter slice.
+  Spec basis: §9.3.3.1.3 (CABAC residual binarisation), §8.5.12
+  (inverse 4×4 transform), informative reference JVT-D015. No
+  external encoder source consulted.
+
+### Fixed
+
+- **sps: bound `max_num_ref_frames` at 16 (§7.4.2.1.1 / Annex A.3.1).**
+  The spec says `max_num_ref_frames` shall be in the range `0..MaxDpbFrames`
+  where MaxDpbFrames = `Min(MaxDpbMbs / (PicWidthInMbs * FrameHeightInMbs), 16)`.
+  The cap at 16 is absolute — independent of level — and any value above
+  it implies a malformed bitstream that libavcodec rejects with
+  "too many reference frames". Closes a fuzz-oracle strictness divergence
+  on `crash-f9387b9697e640efbd689a9909ff59deaaf32864`, where a stream
+  with `max_num_ref_frames=32` was accepted by oxideav-h264 (producing
+  partially-decoded pictures from the slices that survived MB-level
+  CABAC parse) while libavcodec rejected the SPS outright.
+- **reconstruct + inter_pred: reject inter MC against zero-dim
+  reference (§8.4.2).** §8.4.2 motion compensation addresses reference
+  samples via `Clip3(0, src_width-1, x)` / `Clip3(0, src_height-1, y)`.
+  With `src_width` or `src_height == 0` the clip range becomes
+  `[0, -1]` (lo > hi), and our `clip3` implementation returns
+  `hi == -1`. `-1 as usize == usize::MAX` then indexes the empty
+  `ref_pic.cb` slice and panics. A malformed bitstream whose active
+  reference list resolves to an uninitialised DPB slot (chroma
+  monochrome / placeholder) triggers this in the slow edge-replicated
+  path of `interpolate_chroma`. New `ReconstructError::InvalidRefDims`
+  guards both `mc_luma_partition` (luma dims) and `mc_chroma_partition`
+  (chroma dims) at the MC entry. New `InterPredError::ZeroDimRef`
+  guards `interpolate_luma` / `interpolate_chroma` in `inter_pred`,
+  `simd::chunked` (and via delegation `simd::scalar`, `simd::portable`)
+  for defence-in-depth. Regression for fuzz crash
+  `crash-a6f950699905bc0f4d353474b94d4801044c8091`.
+- **slice_header: bound `first_mb_in_slice` by PicSizeInMbs
+  (§7.4.3).** The spec constrains `first_mb_in_slice` to
+  `0..PicSizeInMbs - 1` (non-MBAFF) or `0..PicSizeInMbs/2 - 1` (MBAFF,
+  where the parsed value is in macroblock-pair units and the underlying
+  raw MB address is `first_mb_in_slice * 2`). With no upper bound
+  applied at parse time, a multi-million MB address propagated to
+  `reconstruct::mb_sample_origin`, where the `(mb_addr / PicWidthInMbs)
+  * 16` i32 multiply overflowed in debug / sanitizer builds. New
+  `SliceHeaderError::FirstMbInSliceOutOfRange` carries the parsed
+  value + max + PicSizeInMbs + mbaff flag for diagnostics. PicSizeInMbs
+  is derived per eq. (7-31) `= PicWidthInMbs * PicHeightInMbs` with
+  PicHeightInMbs = FrameHeightInMbs / (1 + field_pic_flag) per eq.
+  (7-28), so the check runs after `field_pic_flag` is parsed.
+  Regression for fuzz crash
+  `crash-80e231ea0edb920c618dc6ea3f9d04626a5b2b16` (175-byte input
+  triggering the i32 multiply overflow path through `reconstruct.rs:254`).
+- **h264_decoder: drop in-progress picture when every slice failed
+  parse / reconstruction (§7.4.1.2.4).** `H264CodecDecoder` collects
+  per-slice CABAC/CAVLC failures via an `eprintln!` log line and
+  keeps assembling the in-progress picture; the previous behaviour
+  then ran §8.7 deblocking on the never-painted picture and pushed
+  it through the §C.4 output bumping process, so `receive_frame`
+  emitted a zeroed `Frame::Video` for an access unit whose every
+  slice was malformed. libavcodec rejects the access unit outright
+  in that case (no frame produced), which the fuzz oracle flagged
+  as a strictness divergence on a 175-byte input
+  (`crash-2ad9589faea57c09b55364bf7ac4af0373e66c18`: PPS + SPS +
+  three non-IDR slices, every slice's CABAC stream runs past EOF).
+  `PictureInProgress` now carries an `any_slice_succeeded` flag set
+  on the OK return of `reconstruct_slice_into_in_progress`; finalize
+  drops the picture (no DPB insert, no `VideoFrame` emit) when the
+  flag is still false. Multi-slice pictures where some slices
+  succeed and others fail are unchanged — the partially-painted
+  picture still finalizes, matching the existing best-effort
+  recovery for the JVT SVA_Base_B / SL1_SVA_B conformance streams.
+- **sps: reject reserved profile_idc values (§A.1 / §A.2).** Only the
+  16 profile_idc values enumerated in clause A.2 (66, 77, 88, 100,
+  110, 122, 244, 44, 83, 86, 118, 128, 138, 139, 134, 135) are
+  defined; §A.1 says "all other values of profile_idc and level_idc
+  are reserved for future use". `Sps::parse` now returns
+  `SpsError::ProfileIdcReserved` for any other value, matching
+  libavcodec's "sps_id 0 out of range" rejection of fuzz inputs
+  carrying profile_idc=243 / 251 (regression for fuzz crash
+  `crash-1b2aaf6f54f92df08bf67802c970555c02de3b4e`).
+- **transform: use wrapping arithmetic in §8.5.11.1 / §8.5.11.2
+  chroma DC Hadamard + scaling for both 4:2:0 and 4:2:2.** Same
+  class of bug as commit `dc09485` (4x4 / 8x8 transforms): a
+  malformed CAVLC/CABAC stream can carry residual coefficients near
+  i32::MAX, the Hadamard combine sums up to 4 of them, and `f * ls
+  << shift` then panicked on debug builds with "attempt to shift
+  left with overflow" (regression for fuzz crash
+  `crash-5e4c895f03eb99238772ecd84738327f07b4cf75`). Wrapping
+  arithmetic absorbs the overflow; the §8.5.13 Clip3 stage in
+  reconstruct clamps wrapped pixels back to bit-depth range.
+- **decoder: reject FMO PPS activation (§A.2).** A slice that
+  activates a PPS with `num_slice_groups_minus1 > 0` (Flexible
+  Macroblock Ordering) is now rejected with
+  `DecoderError::FmoNotSupported`. Per §A.2.1 / §A.2.3, FMO is
+  constrained to the Baseline (profile_idc=66) and Extended
+  (profile_idc=88) profiles, and our §8.4 reconstruction path walks
+  raster (slice-group-0) order — it does not honour the §8.2.2
+  MbToSliceGroupMap. Without this gate the decoder emitted a
+  silently-mis-decoded picture for FMO streams that the H.264
+  reference decoder (libavcodec) refuses outright with "FMO is not
+  implemented", which the fuzz oracle flagged as a strictness
+  divergence (`crash-181e9dea7dfa8fcb2c9721a3f9f044214af6167b`).
+- **transform: use wrapping arithmetic in §8.5.12 / §8.5.13
+  inverse-quant multiplications.** Spec-conformant streams keep `c *
+  ls` in i32; only malformed input could drive the product past
+  i32::MAX (panic: multiply with overflow). The downstream §8.5.13
+  Clip3 stage clamps everything back into bit-depth range, so
+  silently wrapping bad input is preferable to panicking on it.
+- **cavlc: tighten `level_prefix` cap from 32 to 25 (§9.2.2 note).**
+  The spec mandates `level_prefix ≤ 25`. The previous cap of 32 let
+  malformed CAVLC streams synthesise `levelCode` values whose
+  downstream §8.5.12 multiplication overflowed.
+- **cabac: tighten UEG0 escape suffix cap from k=30 to k=14
+  (§7.4.5.3.2).** Real coefficients fit in 16 bits; the previous
+  k=30 cap let malformed streams produce `coeff_abs_level_minus1`
+  values up to ~2^31, which then panicked in the §8.5.12 inverse
+  quant multiplication. Cap aligns with the actual spec residual
+  range.
+- **slice_data: bound `mb_skip_run` and the macroblock walker against
+  malformed streams.** §7.4.4 implicitly bounds `mb_skip_run` by
+  `PicSizeInMbs - CurrMbAddr`, but the parser used to accept any
+  ue(v) and grew the `macroblocks` Vec until the process OOM'd
+  (~2.7 GB realloc reachable in CAVLC). A hard cap of 2^18 MBs (well
+  above any Annex A level) on both `mb_skip_run` and `CurrMbAddr`
+  rejects pathological streams with `SliceDataError::MbSkipRunOverflow`
+  / `MbAddrOverflow` instead of panicking.
+- **slice_header: cap `num_ref_idx_lX_active_minus1` at 63.** §7.4.3
+  bounds the field at 31 (frame) / 63 (field); without enforcement an
+  oversized value funneled into `parse_pred_weight_table` /
+  `parse_ref_pic_list_modification` and drove a multi-gigabyte
+  allocation. Defensive re-check covers PPS-inherited defaults too.
+- **pps: cap `pic_size_in_map_units_minus1` (FMO type 6) at 2^22 − 2.**
+  Previously fed unbounded into `Vec::with_capacity`, exposing a
+  decoder-side OOM via a single PPS NAL (~3.2 GB realloc reachable).
+- **cabac: bound the bypass Exp-Golomb escape suffix at `k = 30`.**
+  Both `coeff_abs_level_minus1` (UEG0, §9.3.3.1.3) and `mvd_lX`
+  (UEG3, §9.3.3.1.1.7) accumulated `k` without limit before computing
+  `1u32 << k`, panicking with `attempt to shift left with overflow`
+  in CABAC residual decode for any stream that fed ≥ 32 leading-one
+  bins in a row. Now returns `CabacError::EgEscapeSuffixOverflow`.
+- **scaling_list: enforce §7.4.2.1.1.1 `delta_scale ∈ −128..=127`
+  bound.** Previously the parser quietly accepted any se(v) value and
+  evaluated `last_scale + delta_scale + 256` in i32, which panicked
+  with `attempt to add with overflow` for values fed via oversized
+  se(v) codewords. Out-of-range deltas now return
+  `ScalingListError::DeltaScaleOutOfRange`. Surfaced by fuzz CI run
+  25642717757 once the bitstream-overflow gate landed.
+- **sps: cap `pic_width_in_mbs_minus1` and
+  `pic_height_in_map_units_minus1` at 510.** §A.3 level limits bound
+  real streams well below this — Level 6.2 needs ~1056 mbs / axis,
+  4K-class needs ~240 — but malformed inputs could previously feed
+  arbitrarily large dimensions into `sps.pic_width_in_mbs() * 16`
+  (panic: multiply with overflow), `pic_width_in_mbs() *
+  frame_height_in_mbs()` (panic on mb_count), and `Picture::new`
+  (multi-GB calloc → fuzz OOM at 7.5 GB). The chosen ceiling
+  guarantees every downstream multiplication stays in u32 *and* the
+  worst-case `Picture` allocation (3 × width × height at 4:4:4)
+  stays under ~200 MB.
+- **Exp-Golomb decoder no longer panics on 32+ leading zeros.**
+  `BitReader::read_codenum` previously accepted up to 32 leading zero
+  bits, then computed `1u32 << leading_zeros` — which is undefined
+  behaviour in Rust at `leading_zeros == 32` and panicked with
+  `attempt to shift left with overflow` in debug builds. The bound is
+  now 31 (the largest `k` for which `2^k − 1 + suffix` still fits in
+  u32), returning `BitError::ExpGolombOverflow` for malformed streams
+  that ask for more. The crash was reachable via PPS parsing on
+  fuzzer input (panic_free_decode crash
+  `5c9d8c8642cdb8ffc371d3dbb45c3a1604477676`). Regression unit tests
+  added in `src/bitstream.rs` cover both the overflow rejection path
+  and the 31-zeros boundary that yields the largest legal codeNum.
+
+## [0.1.4](https://github.com/OxideAV/oxideav-h264/compare/v0.1.3...v0.1.4) - 2026-05-06
+
+### Other
+
+- drop stale REGISTRARS / with_all_features intra-doc links
+- drop dead `linkme` dep
+- CABAC 4:4:4 IDR encode (round 33) + fix ctxIdx 460-1023 init
+- registry calls: rename make_decoder/make_encoder → first_decoder/first_encoder
+- auto-register via oxideav_core::register! macro (linkme distributed slice)
+- unify entry point on register(&mut RuntimeContext) ([#502](https://github.com/OxideAV/oxideav-h264/pull/502))
+
+### Fixed
+
+- **CABAC context init Tables 9-25..9-33 (ctxIdx 460..=1023) added.**
+  All nine missing tables — coded_block_flag, significant_coeff_flag,
+  last_significant_coeff_flag, and coeff_abs_level_minus1 for 4:4:4
+  chroma blockCat 6..=13 (Cb/Cr planes) plus 8x8 field/frame variants —
+  were absent from `init_table()`. Every context in the 460..=1023 range
+  fell back to the neutral (0,0) init (pStateIdx=62, valMPS=0), causing
+  ffmpeg to fail decoding multi-MB 4:4:4 IDR CABAC streams with "top
+  block unavailable for requested intra mode". All five round-33 4:4:4
+  CABAC tests now pass including ffmpeg interop for 32×16 and 64×64.
+
+## [0.1.3](https://github.com/OxideAV/oxideav-h264/compare/v0.1.2...v0.1.3) - 2026-05-05
+
+### Other
+
+- CABAC per-cell mixed B_8x8 (task #475)
+- CABAC B 16x8 / 8x16 partition modes + B_8x8 all-Direct (task #475)
+- CABAC real ME + B_Skip / B_Direct_16x16 (round 32)
+- B-slice CABAC encode (round 31)
+
+### Added
+
+- **Encoder: CABAC per-cell mixed B_8x8 (task #475).** `encode_b_cabac`
+  now picks per-quadrant `sub_mb_type ∈ {B_Direct_8x8, B_L0_8x8,
+  B_L1_8x8, B_Bi_8x8}` for `mb_type=22` MBs, mirroring the CAVLC
+  round-25 selector. Per-cell ME (`pick_best_b8x8_cell`) builds an
+  L0 / L1 / Bi candidate per 8x8 quadrant and picks the lowest-
+  Lagrangian-cost variant; mixed mode wins over `B_Direct_16x16` /
+  `B_8x8`-all-Direct / explicit-16x16 / partition modes when its
+  total cell SAD beats the current best by more than the
+  +12-bit MB-header bias. Writer emits `mb_type=22` + per-cell
+  `sub_mb_type` raw {0, 1, 2, 3} via `encode_sub_mb_type_b`, then
+  per-cell mvd_l0[i] (cell order 0..3) + mvd_l1[i] (cell order 0..3)
+  per §7.3.5.2 sub_mb_pred() field ordering.
+
+  New `cabac_mvp_for_b_8x8_partition` derives §8.4.1.3 mvp for one
+  8x8 sub-MB partition with `MvpredShape::Default` (no directional
+  shortcut for 8x8 cells) using a per-cell inflight tracker
+  `cabac_neighbour_partition_mv_b8x8` that distinguishes
+  "cell decoded but list X unused" (returns `intra_but_mb_available`,
+  partition_available=true) from "cell not yet decoded" (returns
+  `partition_not_yet_decoded_same_mb`, partition_available=false) —
+  the distinction matters for the §8.4.1.3.2 C→D substitution gate.
+  Per-cell inflight is updated in raster order, mirroring the
+  decoder's per-cell `process_partition` grid update; Direct cells
+  contribute their §8.4.1.2.2-derived MVs / refs to the inflight even
+  though they emit no mvd. The L1 mvd loop walks raster order with a
+  fresh per-cell inflight to re-mirror the decoder's
+  cells-0..(c-1)-only state at cell c's L1 mvp derivation point.
+
+  Predictor build stitches per-cell 8x8 luma + 4x4 chroma predictors
+  via `build_b_explicit_8x8_cell_luma` /
+  `build_b_explicit_4x4_cell_chroma` (now `pub(crate)`); Direct
+  cells build per-cell predictors from `direct.mv_l0_per_8x8[c]` /
+  `direct.mv_l1_per_8x8[c]` directly (independent of the
+  `direct_8x8_competitive` build, which only fires when
+  `!direct_uniform`). Per-MB grid update writes per-cell `ref_idx_l*`
+  + `mv_l*` + `abs_mvd_l*` so neighbour MBs reading our slot get the
+  right §8.4.1.3 / §9.3.3.1.1.7 inputs. Per-4x4 deblock state
+  (`MbDeblockInfo.mv_l*` / `ref_idx_l*` / `ref_poc_l*`) reflects the
+  per-cell layout so the §8.7.2.1 bS derivation matches the decoder.
+
+  ffmpeg cross-decode bit-exact (max diff 0) on the round-25 mixed-
+  motion fixture (32×16 px, IDR + P + B, per-quadrant content
+  offsets exercising all four cell kinds) at PSNR_Y = 44.20 dB.
+  B-slice shrinks 99 → 73 bytes (~26 %) on the 64×64 round-475
+  per-half-motion fixture vs the prior partition-only path. Encoder
+  exits at ~72 % H.264 syntax coverage estimated by the task
+  yardstick.
+
+- **Encoder: CABAC B 16x8 / 8x16 partition modes + B_8x8 all-Direct
+  (task #475).** `encode_b_cabac` now emits Table 7-14 mb_type ∈ 4..=21
+  (the nine 16x8 + nine 8x16 partition variants) by mirroring the CAVLC
+  partition-decision pipeline: per-cell `search_quarter_pel_8x8` ME on
+  each list × four 8x8 cells, per-partition `best_partition_mode_b`
+  pick across {L0, L1, Bi}, Lagrangian SAD compare against the 16x16
+  candidates, and stitched composite predictor via the existing
+  `build_b_partition_pred_luma_16x8` / `_8x16` (now `pub(crate)`).
+  Per-partition mvd emission follows §7.3.5.1 ordering with within-MB
+  inflight tracking for partition 1's MVP. New `cabac_enc_mvd_abs_sum`
+  helper mirrors the decoder's `cabac_mvd_abs_sum` byte-for-byte so
+  the §9.3.3.1.1.7 ctxIdxInc lands on the same context regardless of
+  partition shape; `cabac_mvp_for_b_16x8_partition` /
+  `cabac_mvp_for_b_8x16_partition` reuse the shared
+  `derive_mvpred_with_d` machinery with the directional shortcuts
+  (`Partition16x8Top` / `Bottom`, `Partition8x16Left` / `Right`). The
+  per-MB deblock state (`MbDeblockInfo.mv_l0` / `mv_l1` / `ref_idx_*` /
+  `ref_poc_*`) is now built per-4x4 from the partition layout so the
+  internal partition boundary's bS derivation matches what the decoder
+  computes (without this the decode/encode recon drifts ~2 LSB at the
+  partition seam).
+
+  Also adds **B_8x8 + 4× B_Direct_8x8** (mb_type=22) as a fallback
+  whenever the §8.4.1.2.2 spatial-direct derivation produces non-uniform
+  per-8x8 MVs: composite predictor stitched per 8x8 quadrant via
+  `build_inter_pred_luma_8x8` / `build_inter_pred_chroma_4x4` (now
+  `pub(crate)`); writer emits `mb_type=22` + 4× `sub_mb_type=0` (no
+  ref_idx / mvd, decoder re-derives all four (mvL0, mvL1, refIdxL0,
+  refIdxL1) per §8.4.1.2.2). New `encode_sub_mb_type_p` /
+  `encode_sub_mb_type_b` helpers in `cabac_syntax.rs` mirror Table 9-37
+  / 9-38 binarisations bin-for-bin against `decode_sub_mb_type_p` /
+  `_b`. Per-cell mixed B_8x8 (per-quadrant L0 / L1 / Bi) deferred —
+  the all-Direct path establishes the syntax scaffolding for the next
+  round.
+
+  ffmpeg cross-decode bit-exact (≤ 1 LSB) on per-half-motion fixtures
+  forcing B_L0_L1_16x8 / B_L0_L1_8x16 (PSNR_Y ≥ 38 dB) and on the
+  bipred-on-midpoint fixture exercising B_8x8 + all-Direct. Encoder
+  now exits at ~62 → ~70 % H.264 syntax coverage estimated by the
+  task's progress yardstick.
+
+- **Encoder: CABAC real ME + `B_Skip` / `B_Direct_16x16` (round 32).**
+  P/B CABAC paths replace the round-30/31 forced MV=(0, 0) with real
+  quarter-pel motion estimation (`search_quarter_pel_16x16`) and emit
+  proper §8.4.1.3 mvds against a median MV predictor. New
+  `cabac_mvp_for_16x16` / `cabac_p_skip_mv` /
+  `cabac_b_spatial_direct_derive` helpers track per-8x8 MVs / refIdxs
+  in `CabacEncMbInfo` (`mv_l0_8x8` + `ref_idx_l0_8x8` + L1 mirrors) and
+  read the §6.4.11.7 (A, B, C, D) neighbour cells through the existing
+  `derive_mvpred_with_d` / `derive_p_skip_mv_with_d` /
+  `derive_b_spatial_direct_with_d` infrastructure. P-CABAC now requires
+  `chosen_mv == skip_mv` for P_Skip eligibility (no longer trivially
+  always-skip). B-CABAC additionally implements `B_Skip` (mb_skip_flag
+  with no further MB syntax) and `B_Direct_16x16` (mb_type=0 with no
+  mvd / ref_idx); the §8.4.1.2.2 derivation is mirrored encoder-side
+  and the direct candidate is picked over the explicit-inter rows
+  (B_L0/L1/Bi_16x16) on a Lagrangian rate-bias-adjusted SAD. Per-8x8 /
+  mixed `B_8x8`+all-Direct CABAC variants + 4:2:2 / 4:4:4 P/B still
+  deferred. ffmpeg cross-decode bit-exact at QP 22 on translation-
+  motion fixtures (PSNR_Y ≈ 99 dB on flat-object content,
+  ≥ 46 dB on textured-background motion via
+  `round32_b_cabac_textured_motion_ffmpeg_interop`); the smooth-content
+  16-frame B-pyramid GOP shrinks from 555 → 487 bytes (~12 %) thanks
+  to B_Skip / B_Direct gradually replacing the explicit B_L0_16x16
+  emissions.
+
+## [0.1.2](https://github.com/OxideAV/oxideav-h264/compare/v0.1.1...v0.1.2) - 2026-05-04
+
+### Other
+
+- add full_frame_freeze/release/snapshot + deblocking_filter_display_preference (§D.2.15-17, §D.2.22)
+- add post_filter_hint payload type 22 (§D.1.24 / §D.2.24)
+- rustfmt the film_grain test fixtures (CI green-up after 716fa7b)
+- complete film_grain_characteristics per-component body (§D.2.21)
+- derive level_idc from picture size instead of hard-coding 30
+- rustfmt fixes from 4e0e6b4 CI red
+- distinguish Level 1b from Level 1.1 in MaxDpbMbs lookup
+- add user_data_registered_itu_t_t35 ([#4](https://github.com/OxideAV/oxideav-h264/pull/4)) + pan_scan_rect ([#2](https://github.com/OxideAV/oxideav-h264/pull/2))
+- document why luma indexA clamp stays at 0 (no -QpBdOffsetY)
+- thread bit_depth_chroma_minus8 through QPC derivation
+- switch chroma QPC derivation to extended-range qPI for High10+
+- rustfmt fixes from CI red on previous commit
+- extend dequant + QP range for High10 / 4:2:2 / 4:4:4
+- rustfmt docs_corpus.rs videoframe_to_packed pack() calls
+- emit High10/High422/High444-Predictive 10/12-bit planes (task #259)
+- clippy fixes for docs_corpus.rs
+- rustfmt docs_corpus.rs
+- wire docs/video/h264/ fixture corpus into integration test
+- replace never-match regex with semver_check = false
+- drop enable_miri input (miri now manual-only via workflow_dispatch)
+- fix red-CI items from round 30
+- grant release-plz shim contents+pull-requests write
+- migrate to OxideAV/.github reusable workflows
+- round 30 — encoder CABAC entropy coding for I + P slices
+- round 29 — encoder intra fallback in P / B slices (Intra_16x16)
+- round 28 — encoder 4:4:4 chroma (IDR Intra_16x16-only path)
+- round 27 — encoder 4:2:2 chroma (IDR-only path)
+- oxideav-core ^0.2 -> ^0.1 (0.2.0 was yanked)
+- round 26 — encoder explicit weighted bipred (§7.4.2.2 + §8.4.2.3.2)
+- round 24 — encoder B-slice §8.4.1.2.3 temporal direct mode
+- round 23 — encoder B_8x8 + 4× B_Direct_8x8 (§8.4.1.2.2 spatial direct, Table 7-14 raw 22 / Table 7-18 raw 0)
+- round 22 — encoder B-slice 16x8 / 8x16 partitions (Table 7-14 raw 4..=21)
+- round 21 — encoder B_Skip / B_Direct_16x16 (§8.4.1.2.2 spatial direct)
+- decoder round 6 — fix DPB output ordering on under-reported max_num_reorder_frames
+- decoder round 5 — speed pass (2.01x on solana-ad.mp4)
+- decoder round 4 — fix CABAC drift on High-profile B-slice content
+- round 20 — encoder B-slice (B_L0 / B_L1 / B_Bi 16x16)
+- round 19 — encoder 4MV (P_8x8 / sub_mb_type=PL08x8)
+- round 18 — encoder quarter-pel ME (§8.4.2.2.1)
+- half-pel ME + 6-tap interpolation (round 17)
+- adopt slim VideoFrame shape
+- P-slice support — single L0, integer-pel ME (round 16)
+- Lagrangian RDO mode decision + intra4x4 blk-5 fix (round 15)
+- in-loop §8.7 deblocking on local recon (round 14)
+- I_NxN (Intra_4x4) all 9 modes + per-MB mb_type decision (round 4)
+- I_16x16 luma AC residual transmit (round 3)
+- I_16x16 V/H/DC/Plane modes + chroma residual (round 2)
+- Baseline I_16x16 IDR scaffold (round 1)
+- pin release-plz to patch-only bumps
+
+### Added
+
+- **Encoder: B-slice CABAC encode (round 31).** New
+  `Encoder::encode_b_cabac` entry point covering non-reference B-slices
+  with CABAC entropy coding (mirror of round-30's
+  `encode_idr_cabac` / `encode_p_cabac`). Per-MB pick of {`B_L0_16x16`,
+  `B_L1_16x16`, `B_Bi_16x16`} on minimum-luma-SAD against MV=(0, 0)
+  predictors; bipred uses the §8.4.2.3.1 default merge `(L0 + L1 + 1)
+  >> 1`. New `encode_mb_type_b` syntax helper (mirror of
+  `decode_mb_type_b`) covers Table 9-37 B-slice rows 0..=22 + intra
+  suffix (rows 23..=48). `BSliceHeaderConfig` gains `cabac:
+  Option<CabacSliceParams>` to drive `cabac_init_idc` emission per
+  §7.3.3, parallel to `PSliceHeaderConfig`. Validated by
+  `round31_b_cabac_self_roundtrip` (decoder ↔ encoder recon match,
+  PSNR_Y ≥ 45 dB) and `round31_b_cabac_pyramid_ffmpeg_interop`
+  (16-frame B-pyramid GOP — 1 IDR + 7 P + 7 B — decoded by ffmpeg with
+  PSNR_Y ≈ 51.5 dB on smooth content). `B_Skip` / `B_Direct_16x16` /
+  4:2:2 / 4:4:4 P/B paths still deferred. New
+  `CabacEncMbInfo::is_b_skip_or_direct` field threads the spec's
+  §9.3.3.1.1.3 mb_type ctxIdxOffset=27 bin-0 condTerm correctly through
+  the CABAC encoder grid.
+
+- **SEI: `full_frame_freeze` (type 13), `full_frame_freeze_release`
+  (type 14), `full_frame_snapshot` (type 15), and
+  `deblocking_filter_display_preference` (type 20)**, covering §D.1.15 /
+  §D.1.16 / §D.1.17 / §D.1.22 and the corresponding semantics clauses.
+  All four are short single-element-or-flag-gated payloads:
+  * `FullFrameFreeze { full_frame_freeze_repetition_period: u32 }` —
+    one ue(v) field.
+  * `FullFrameFreezeRelease` — empty payload, surfaced as a unit
+    `SeiPayload::FullFrameFreezeRelease` variant.
+  * `FullFrameSnapshot { snapshot_id: u32 }` — one ue(v) field.
+  * `DeblockingFilterDisplayPreference { cancel_flag,
+    display_prior_to_deblocking_preferred_flag,
+    dec_frame_buffering_constraint_flag, repetition_period }` —
+    cancel-flag-gated body. When `cancel_flag` is true the body is
+    absent and the other fields default to zero / false per §D.2.22.
+  Wired into `parse_payload` and into `SeiPayload`. 8 new unit tests
+  including dispatcher round-trips and the empty-payload release path.
+
+- **SEI: `post_filter_hint` (payload type 22, §D.1.24 / §D.2.24)**.
+  Decodes the `filter_hint_size_y` / `filter_hint_size_x` ue(v)
+  dimensions, the `filter_hint_type` u(2) (0 = 2-D FIR, 1 = pair of
+  1-D FIRs, 2 = cross-correlation matrix), the `filter_hint_value
+  [cIdx][cy][cx]` se(v) coefficients (`3 * size_y * size_x` entries
+  flattened in spec order), and the trailing
+  `additional_extension_flag` u(1). Spec constraints policed:
+  * `filter_hint_size_y`, `filter_hint_size_x` ∈ 1..=15 →
+    `SeiError::PostFilterHintSizeOutOfRange`;
+  * `filter_hint_type == 3` (reserved) →
+    `SeiError::PostFilterHintTypeReserved`;
+  * `filter_hint_type == 1` ⇒ `filter_hint_size_y == 2` →
+    `SeiError::PostFilterHintType1WrongHeight`.
+  Wired into `parse_payload` and into `SeiPayload::PostFilterHint`.
+  6 new unit tests (1x1 cross-correlation round-trip, 2x3 type-0 2-D
+  FIR with 18 coefficients, type=1 wrong-height rejection,
+  size-out-of-range rejection, reserved-type rejection, dispatcher
+  wiring).
+
+- **SEI: `film_grain_characteristics` per-component intensity-interval body
+  (§D.1.21 / §D.2.21).** Previously `parse_film_grain_characteristics`
+  stopped after the three `comp_model_present_flag` bits and dropped the
+  per-component (`num_intensity_intervals_minus1`,
+  `num_model_values_minus1`, `intensity_interval_lower_bound`,
+  `intensity_interval_upper_bound`, `comp_model_value`) data plus the
+  trailing `film_grain_characteristics_repetition_period`. The full body
+  is now decoded:
+  * New `FilmGrainBody::components: [Option<FilmGrainComponent>; 3]`
+    populated in lockstep with `comp_model_present_flag` (Y, Cb, Cr).
+  * New `FilmGrainComponent { num_model_values_minus1, intensity_intervals }`
+    + new `FilmGrainIntensityInterval { lower_bound, upper_bound,
+    model_values: Vec<i32> }`. `comp_model_value[c][i][j]` is read as
+    se(v) per the spec.
+  * New `FilmGrainBody::repetition_period: u32`
+    (`film_grain_characteristics_repetition_period`, ue(v)).
+  * Per §D.2.21 `num_model_values_minus1[c]` shall be in 0..=5; out-of-
+    range values produce
+    `SeiError::FilmGrainNumModelValuesOutOfRange { component, got }`.
+  * Two new round-trip tests (multi-interval / multi-model-value with
+    signed `comp_model_value` entries; out-of-range rejection); the two
+    pre-existing tests now extend through the new body.
+
+- **SEI: `user_data_registered_itu_t_t35` (payload type 4) + `pan_scan_rect`
+  (payload type 2)** (§D.1.4 / §D.2.4, §D.1.6 / §D.2.6). Both are
+  upgraded from `SeiPayload::Unknown { payload, .. }` round-tripping
+  to fully-typed payloads in the `parse_payload` dispatch.
+  * `parse_user_data_registered_itu_t_t35` returns
+    `(country_code, country_code_extension, payload_bytes)`. Country
+    code 0xFF triggers the §D.1.6 / Recommendation ITU-T T.35 §3.1
+    extension-byte read; an empty payload — or a 0xFF country code
+    with no extension byte to follow — is rejected with
+    `SeiError::RegisteredUserDataMissingCountryCode`. Real-world
+    consumers (ATSC A/53 closed captions, AFD, ATSC bar data,
+    HDR10+ dynamic metadata, Dolby Vision RPU) all ride on this
+    payload, distinguished by the country / provider tuple plus the
+    leading bytes of `payload_bytes`.
+  * `parse_pan_scan_rect` returns `pan_scan_rect_id`, `cancel_flag`,
+    and (when not cancelled) a `Vec<PanScanRectOffsets>` plus a
+    `repetition_period`. The §D.2.4 `pan_scan_cnt_minus1 ∈ 0..=2`
+    constraint is policed lazily — counts up to 31 are accepted but
+    32+ rejected with `SeiError::PanScanCountTooLarge` to avoid
+    pathological allocations on malformed streams.
+  * 11 new unit tests (`registered_user_data_*` ×5, `pan_scan_rect_*`
+    ×3, `parse_payload_dispatches_*` ×3) including hand-derived
+    Exp-Golomb encodings of the offsets test vector.
+
+- **Decoder honours SPS `bit_depth_luma_minus8` / `bit_depth_chroma_minus8`
+  in `picture_to_video_frame`** (task #259). When a High10 / High 4:2:2
+  / High 4:4:4 Predictive stream declares 9..=14-bit samples, the
+  reconstructed planes are emitted as little-endian u16 (two bytes per
+  sample) clamped to `(1 << bit_depth) - 1`, matching the
+  `oxideav_core::PixelFormat::{Yuv420P10Le, Yuv422P10Le, Yuv444P10Le,
+  Yuv420P12Le, Yuv422P12Le, Yuv444P12Le}` plane layouts. 8-bit streams
+  are unchanged (one byte per sample, clamped to `0..=255`). The
+  previously-`#[ignore]`d `corpus_10_bit_high10` integration test now
+  runs and scores against the 16-bit-per-sample `expected.yuv`
+  reference; it stays `Tier::ReportOnly` until the §8.5.10 inverse
+  transform / dequant path widens to >8-bit arithmetic. Spec refs:
+  §7.4.2.1.1, §6.4.2.1.
+
+- **Round 30 — encoder CABAC entropy coding for I + P slices**.
+  Adds the H.264 §9.3 CABAC arithmetic encoder (engine + per-syntax
+  binarisations + ctxIdx derivation) and wires up two new entry points
+  on `Encoder`: `encode_idr_cabac` and `encode_p_cabac`. PPS now carries
+  `entropy_coding_mode_flag = 1` when [`EncoderConfig::cabac`] is enabled
+  (Main profile or higher — Baseline forbids CABAC per §A.2.1).
+  Implementation:
+  * New module `encoder::cabac_engine`: §9.3.4 `EncodeDecision`,
+    `EncodeBypass`, `EncodeTerminate`, `RenormE`, plus the
+    carry-propagation `put_bit` / outstanding-bit mechanism. Reuses the
+    decoder's `RANGE_TAB_LPS`, `TRANS_IDX_LPS`, `TRANS_IDX_MPS` tables —
+    same probabilities, just walked in encode direction.
+  * New module `encoder::cabac_syntax`: per-element encoders mirroring
+    the decoder's `cabac_ctx::decode_*` step-for-step
+    (`encode_mb_skip_flag`, `encode_mb_type_i` / `_p`,
+    `encode_mvd_lx`, `encode_ref_idx_lx`, `encode_coded_block_pattern`,
+    `encode_coded_block_flag`, `encode_significant_coeff_flag`,
+    `encode_last_significant_coeff_flag`,
+    `encode_coeff_abs_level_minus1`, `encode_coeff_sign_flag`,
+    `encode_intra_chroma_pred_mode`, `encode_mb_qp_delta`,
+    `encode_end_of_slice_flag`, `encode_residual_block_cabac`).
+  * New module `encoder::cabac_path`: top-level IDR + P encoders
+    layered on existing motion estimation / intra prediction /
+    transform / quantisation primitives. IDR encodes every MB as
+    Intra_16x16 with all four §8.3.3 modes trialled by SAD + chroma DC
+    / V / H / Plane. P encodes P_Skip when CBP collapses to zero or
+    P_L0_16x16 (single-ref, MV pinned to 0 for round-30 to keep the
+    §8.4.1.3 mvp derivation off the critical path; sufficient for the
+    P_Skip-dominated round-30 fixtures).
+  * `BaselinePpsConfig::entropy_coding_mode_flag`: PPS gains a CABAC
+    toggle. The slice header writer (`write_p_slice_header`) gains a
+    `cabac` parameter that emits `cabac_init_idc` ue(v) when present
+    (P/SP/B only).
+  * Per-MB CBF neighbour tracking (`CabacEncGrid` +
+    `cbf_neighbour_mb_level` / `cbf_neighbour_luma_ac` /
+    `cbf_neighbour_chroma_ac`) mirrors the decoder's
+    `CabacNeighbourGrid` so encoder + decoder agree on every
+    `coded_block_flag` ctxIdxInc derivation. Internal-to-MB neighbour
+    reads consult the running CBF state of the current MB; external
+    neighbour reads consult the previously-encoded MB's grid slot,
+    with the §9.3.3.1.1.9 "transBlockN unavailable" rule firing on
+    the cbp_luma 8x8-quadrant gate for `Luma4x4` / `Luma16x16Ac`
+    block types.
+  Validation:
+  * 27 new unit tests in `encoder::cabac_engine` (7) and
+    `encoder::cabac_syntax` (20) — every primitive round-trips through
+    the decoder bin-for-bin, including LPS-runs that exercise the
+    `outstanding_bits` carry path, alternating bins, mixed
+    decision/bypass/terminate sequences, and pseudo-random 200-bin
+    streams.
+  * `tests/integration_cabac_encoder.rs` — 3 integration tests:
+    `round30_idr_cabac_self_roundtrip` (47.58 dB Y on 64x64 gradient,
+    max enc/dec diff = 0), `round30_idr_plus_p_cabac_self_roundtrip`
+    (IDR 79 bytes + P 12 bytes, 47.58 dB Y, max enc/dec diff = 0),
+    `round30_idr_cabac_ffmpeg_interop` (ffmpeg 8.1 libavcodec decodes
+    bit-equivalently against encoder local recon, max diff = 0).
+  Status caveats:
+  * I + P slices only; B slices not yet wired to the CABAC path.
+  * 4:2:0 only; 4:2:2 / 4:4:4 still CAVLC-only.
+  * Round-30 P encoder forces MV = (0, 0) for every inter MB to
+    sidestep the §8.4.1.3 mvp derivation. Sufficient for the round-30
+    acceptance fixture (≥45 dB on synthetic gradient) since static /
+    near-static content hits the P_Skip fast path; future rounds will
+    wire the per-MB MV grid + spec mvp derivation for moving content.
+  * I_NxN (Intra_4x4) under CABAC deferred — the IDR CABAC path emits
+    every MB as Intra_16x16.
+
+- **Round 29 — encoder intra fallback in P/B slices (Intra_16x16)**.
+  When [`EncoderConfig::intra_in_inter`] is true (default), the per-MB
+  RDO loop in `encode_p` and `encode_b` now compares the inter cost
+  `J_inter = D_inter + λ·R_inter` against an `Intra_16x16` trial cost
+  `J_intra` and installs the lower-J winner. This covers occlusion,
+  scene-cut frames, and high-detail areas where motion-compensated
+  prediction's residual is more expensive to code than a fresh intra
+  block. Per H.264 §7.3.5 the chosen MB is emitted with the intra
+  mb_type values shifted by **+5** (P-slice Table 7-13 raw mb_type ∈
+  6..=29 for Intra_16x16) or **+23** (B-slice Table 7-14 raw mb_type ∈
+  24..=47); the existing decoder already handles intra MBs in P/B
+  slices so no decoder-side change is required.
+  Implementation:
+  * New writer `write_intra16x16_mb_in_inter_slice` in
+    `encoder::macroblock` — identical layout to `write_intra16x16_mb`
+    but with a configurable `mb_type_offset` (5 or 23).
+  * New `InterMbStateSnapshot` type wraps the existing `MbStateSnapshot`
+    with the inter-context-only `MvGridSlot` (and optional L1 grid for
+    B-slice) plus `pending_skip` counter so the trial RDO can roll
+    back the loser cleanly.
+  * New methods `Encoder::encode_p_mb_with_intra_fallback` /
+    `encode_b_mb_with_intra_fallback` snapshot pre-state, run the
+    inter trial (existing `encode_p_mb` / `encode_b_mb`), measure
+    `J_inter` from `D_inter = SSD(source, recon)` and `R_inter =
+    bits_emitted` delta, snapshot post-inter state, restore pre-state,
+    run the new `encode_*_mb_intra16x16` trial, measure `J_intra`,
+    and install the winner.
+  * Shared emit helper `Encoder::encode_intra16x16_in_inter_slice`
+    runs §8.3.3 luma mode RDO + §8.3.4 chroma mode SAD, builds the
+    forward + quantize + inverse pipeline, writes the MB syntax, and
+    updates `recon_*` / `nc_grid` / `intra_grid`. Caller updates
+    `mv_grid` (intra MB → `is_intra = true`) so subsequent inter MBs'
+    §8.4.1.3.2 step-2 collapse fires (mv=0, ref=-1).
+  Round-29 scope:
+  * `Intra_16x16` only (no `I_NxN` / `I_PCM` fallback). The §8.3.1.2
+    9-mode I_NxN path in P/B slices needs careful CAVLC nC-grid
+    plumbing for the in-MB neighbour reads — deferred.
+  * 4:2:0 chroma only (encode_p / encode_b are 4:2:0-only).
+  * `P_Skip` / `B_Skip` fast paths still trigger normally — when the
+    inter trial decides the MB is a skip, `J_inter` is essentially
+    zero (no syntax + zero residual SSD) and intra never wins.
+  Acceptance fixture: `integration_p_slice_intra_fallback.rs`
+  encodes a 64x64 textured-wall IDR + a P-frame with a 32x32
+  "occluding ball" of brand-new content. Result: P-slice **588 → 108
+  bytes (81.6% smaller)** under intra fallback, ffmpeg/libavcodec
+  cross-decode bit-equivalent (max diff 0), self-roundtrip bit-exact
+  through our own decoder. New `EncoderConfig::intra_in_inter`
+  toggle (default `true`) lets callers A/B test against the inter-
+  only path. P-only / B-only fixtures from rounds 16..28 are
+  unaffected (their inter cost is well below any intra trial cost).
+
+- **Round 28 — encoder 4:4:4 chroma support (IDR Intra_16x16-only path)**.
+  `EncoderConfig::chroma_format_idc` now also accepts 3 (4:4:4); when
+  paired with `profile_idc=244` (High 4:4:4 Predictive) the SPS writer
+  emits the §7.3.2.1.1 chroma-extended group with `chroma_format_idc=3`
+  and `separate_colour_plane_flag=0` (the decoder maps that pair to
+  `ChromaArrayType=3`). Per-MB chroma planes are encoded "like luma"
+  per §7.3.5.3 / §8.3.4.1: each plane has its own 16x16 DC Hadamard
+  block + 16 4x4 AC blocks (§6.4.3 raster-Z), shares the luma
+  Intra_16x16 prediction mode, and the `intra_chroma_pred_mode` u(v)
+  field is omitted from the bitstream. New helper
+  `encode_intra16x16_chroma_plane_luma_like` runs the luma transform
+  pipeline on a chroma plane and writes its decoded-bit-exact recon
+  back to `recon_u`/`recon_v`. Per §7.3.5.3 the per-plane chroma AC
+  emit is gated by `cbp_luma == 15`, so the encoder promotes
+  `cbp_luma` to 15 whenever any chroma plane has nonzero AC. Round-28
+  scope:
+  * IDR Intra_16x16 only (I_NxN for 4:4:4 is rejected).
+  * `disable_deblocking_filter_idc=1` is forced in the slice header
+    (§8.7 chroma deblock for ChromaArrayType==3 uses the LUMA filter
+    ladder applied per-plane — separate plumbing exercise).
+  * `separate_colour_plane_flag=0` only (separate-plane coding is
+    out of scope).
+  * P/B-slice paths still pin `chroma_format_idc ∈ {1}`.
+  Decoder side: lifted the blanket `chroma_array_type==3` rejection in
+  `reconstruct_slice_no_deblock`; new helper
+  `reconstruct_chroma_intra_444` reconstructs each chroma plane via
+  the §8.3.3 16x16 luma predictor + §8.5.10 Hadamard-DC + 16 AC
+  blocks. New writer variant `ChromaWriteKind::Yuv444` carries the
+  per-plane DC/AC arrays + their CAVLC nC contexts. New tests:
+  * `sps::tests::high_444_sps_emits_chroma_extended_group_with_separate_colour_plane_flag`
+  * Integration: `round28_444_encode_decode_self_roundtrip_matches_local_recon`
+    (self-roundtrip + bit-exact decoder match, PSNR Y=42.25 / U=V=50.85
+    on a 64x64 gradient).
+  * Integration: `round28_444_ffmpeg_decode_matches_encoder_recon`
+    (ffmpeg cross-decode bit-exact for all three planes,
+    Y PSNR ≥ 40 dB acceptance threshold).
+
+- **Round 27 — encoder 4:2:2 chroma support (IDR-only path)**.
+  `EncoderConfig::chroma_format_idc` selects between 1 (4:2:0,
+  default) and 2 (4:2:2). When set to 2, the SPS writer emits a High
+  4:2:2 (`profile_idc=122`) sequence parameter set with the
+  §7.3.2.1.1 chroma-extended group fields (chroma_format_idc=2,
+  bit_depth_luma/chroma_minus8=0, no scaling matrix). The per-MB
+  chroma path now dispatches to either:
+  * 4:2:0 (`encode_chroma_residual`) — 4 4x4 sub-blocks per plane,
+    2x2 Hadamard DC, `ChromaDc420` CAVLC context, 8x8 chroma tile;
+    OR
+  * 4:2:2 (`encode_chroma_residual_422`) — 8 4x4 sub-blocks per
+    plane, 4x2 Hadamard DC (§8.5.11.2 / eq. 8-325), `ChromaDc422`
+    CAVLC context, 8x16 chroma tile.
+  Chroma intra prediction adds `predict_chroma_8x16` covering DC, H,
+  V, Plane modes for the 4:2:2 8x16 block (§8.3.4 with `yCF=4` /
+  `c=5*V` per eq. 8-147 / 8-149). The §8.7 deblock walker now uses
+  `Picture::chroma_array_type` derived from the encoder config so
+  chroma 4x4 edges land in the right pixel positions for both
+  subsampling modes. New tests:
+  * `transform::tests::chroma_dc_422_uniform_residual_round_trips_within_tolerance`
+  * `transform::tests::chroma_dc_422_scan_matches_decoder_inverse`
+  * `sps::tests::high_422_sps_emits_chroma_extended_group`
+  * Integration: `round27_422_encode_decode_self_roundtrip_matches_local_recon`
+    (self-roundtrip + bit-exact decoder match, luma PSNR ≥ 40 dB
+    on a 64x64 gradient).
+  * Integration: `round27_422_ffmpeg_decode_matches_encoder_recon`
+    (ffmpeg cross-decode bit-exact for both planes).
+  P-slice / B-slice paths still pin `chroma_format_idc=1` (4:2:0).
+
+### Fixed
+
+- **Encoder no longer emits `level_idc = 30` for HD/4K streams**
+  (§7.4.2.1.1 / Annex A Table A-1). The pre-fix encoder hard-coded
+  `level_idc = 30` (Level 3, MaxFS = 1620 mb = 720x576 SD) for
+  every emitted SPS regardless of picture size, producing
+  spec-non-conformant streams when encoding at 720p (3600 mb,
+  needs 3.1) / 1080p (8160 mb, needs 4.0) / 4K UHD (32400 mb,
+  needs 5.1) / 8K (129600 mb, needs 6.0). Strict decoders are
+  entitled to reject those streams.
+  * New `EncoderConfig::level_idc` field (u8). Default for new
+    configs is derived from `(width, height)` via the new
+    `min_level_idc_for_picture_size` helper, which walks Annex A
+    Table A-1 low-to-high and picks the first level whose `MaxFS`
+    covers the picture size in macroblocks. Includes Levels 1
+    through 6.2 (the full 2024-08 set).
+  * Hard-coded `level_idc: 30` removed from the two production
+    SPS-emit sites: `Encoder::encode_idr` (CAVLC path,
+    `src/encoder/mod.rs`) and `Encoder::encode_idr_cabac` (CABAC
+    path, `src/encoder/cabac_path.rs`). Test fixtures using small
+    synthetic dimensions (64x64) now correctly signal `level_idc = 10`.
+  * 3 new unit tests
+    (`encoder::level_derivation_tests::min_level_idc_picks_smallest_covering_level`,
+    `encoder_config_default_level_matches_picture_size`,
+    `non_aligned_dimensions_round_up_to_whole_mbs`) covering the
+    full Table A-1 walk plus dimension-rounding edge cases.
+
+- **Annex A Table A-1 — Level 1b vs Level 1.1 disambiguation**
+  (§A.3.4.1). `max_dpb_mbs_for_level` now takes
+  `constraint_set3_flag` and returns 396 (Level 1b) instead of 900
+  (Level 1.1) when `level_idc == 11 && constraint_set3_flag == 1`.
+  The shorthand `level_idc == 9` (Baseline / Constrained Baseline
+  Level 1b form) also returns 396. Fixes a real over-allocation in
+  the §A.3.1 / §C.4 DPB reorder-window floor: a 176x144 QCIF
+  Level 1b stream (real PicSize = 99 MBs) now floors at 4 reorder
+  frames, not 9, matching the spec cap. Two new regression tests
+  (`max_dpb_mbs_level_1b_versus_level_1_1`,
+  `level_1b_qcif_stream_sized_at_level_1b_cap_not_level_1_1`).
+
+- **DPB output ordering when a real-world encoder under-reports
+  `max_num_reorder_frames` in SPS VUI** (§E.2.1 / §A.3.1).
+  `output_dpb_sizing` now floors the reorder window at the
+  level-derived MaxDpbMbs/PicSize cap (§A.3.1 item h, Annex A
+  Table A-1) so a stream whose actual reorder depth exceeds the
+  encoder's claim is no longer bumped out of POC order. The
+  textbook reproducer is solana-ad.mp4 (High@L3.1 720p, 4-deep
+  B-pyramid): VUI claims `reorder=2` but the stream needs 5,
+  and the §C.4 bumping process emits frames in display order
+  only when the queue can hold all five. Pre-fix `oxideplay`
+  saw frames arrive in something close to decode order with one
+  trailing B-frame per 4 anchors; post-fix every frame on the
+  3960-frame clip arrives with strictly monotonically-increasing
+  pts. Two new tests (`dpb_sizing_raises_undersized_vui_to_level_cap`,
+  `b_pyramid_emits_in_poc_order_at_level_31_720p`) pin the new
+  behaviour.
+
+### Performance
+
+- decoder (round 5 — speed pass): **2.01× end-to-end on solana-ad.mp4**
+  (1280×720 yuv420p High@3.1, 3960 frames, ~158s of content) —
+  wall-time **89.83s → 44.76s** via `oxideplay --vo hash --ao null`,
+  hash digest unchanged (`da9c18e4008cfd37`, regression-checked).
+  Three independent wins, smallest-to-biggest:
+  1. **`src/simd/` skeleton + `chunked` interpolate_luma /
+     interpolate_chroma** matching the `oxideav-mpeg4video` pattern
+     (scalar / chunked / nightly portable). The 6-tap luma FIR is
+     rewritten so the H-FIR row strip is computed exactly once and
+     fed to the V-FIR for the diagonal "j" position; the per-pixel
+     edge-clip is hoisted out of the FIR. Bench numbers (1000 ×
+     16×16 blocks): scalar 222 µs → chunked 36 µs (integer copy,
+     **6.16×**); 798 µs → 109 µs (H-half-pel, **7.32×**); 805 µs →
+     98 µs (V-half-pel, **8.21×**); **3645 µs → 161 µs (diagonal-j,
+     22.64×)**. End-to-end contribution on solana-ad: ~4 % (~3.6 s)
+     because the luma interpolator wasn't the actual hotspot at
+     720p — but the kernel is now SIMD-shaped for the round-6
+     widening to 1080p / 4K.
+  2. **Cached debug-env-var lookups in CABAC + macroblock-layer +
+     reconstruct hot paths.** Several `std::env::var(...)` calls
+     (`OXIDEAV_H264_BIN_TRACE`, `OXIDEAV_H264_CABAC_DEBUG`,
+     `OXIDEAV_H264_MB_TRACE`, `OXIDEAV_H264_RECON_DEBUG`,
+     `OXIDEAV_H264_NO_DEBLOCK`, etc.) were resolving via a `getenv()`
+     syscall on **every CABAC bin decode and every per-MB parse**.
+     With ~140 M bin decisions in this 3960-frame clip that
+     dominated decoder wall-time. Each var is now resolved once on
+     first access and cached behind a `OnceLock<bool>` /
+     `OnceLock<Option<u32>>`. End-to-end contribution: ~21 %
+     (85.89 s → 68.12 s).
+  3. **Eliminated per-MB clone of the CABAC neighbour grid in
+     `parse_residual_cabac_only`.** The function previously cloned
+     the entire `CabacNeighbourGrid` (~720 KiB on 720p) at the top
+     of every macroblock parse to dodge the borrow checker between
+     read-only neighbour CBF lookups and the end-of-MB writeback.
+     Replaced with `nb_grid.as_deref()` for a shared re-borrow that
+     NLL drops before the writeback. **Eliminates ~10 TB of
+     `_platform_memmove` traffic** across the full file.
+     End-to-end contribution: ~35 % (68.12 s → 44.76 s).
+- decoder: deblocking-filter fast paths in `filter_vertical_edge_luma`
+  / `filter_horizontal_edge_luma` / `filter_chroma_vertical_rows` /
+  `filter_chroma_horizontal_cols` — when the 8-sample window across an
+  edge is fully inside the picture (the common case for picture-
+  internal edges), bypass the clipped `Picture::luma_at` /
+  `set_luma` accessor pair and read/write the contiguous slice
+  directly. Slow-path clipping retained for edges that straddle the
+  picture boundary so semantics are unchanged.
+
+### Fixed
+
+- decoder (round 4): CABAC parse failures on real-world High-profile
+  B-slice content with `transform_size_8x8_flag=1`. Two related bugs:
+  (1) Table 9-24 (ctxIdx 402..=459 — Luma8x8 frame/field
+  significant_coeff_flag, last_significant_coeff_flag, and
+  coeff_abs_level_minus1) was missing from the CABAC context init
+  pipeline, leaving every cat-5 context at the neutral
+  `(m=0, n=0)` → `pStateIdx=62, valMPS=0` collapse; the arithmetic
+  decoder drifted out of sync within a few hundred macroblocks. (2)
+  §9.3.3.1.1.9 cat=1/2 transBlockN derivation: when the neighbour MB
+  has `transform_size_8x8_flag=1` and the cbp bit covering
+  `luma4x4BlkIdxN` is set, the spec assigns the neighbour's 8x8 luma
+  block as transBlockN — its `coded_block_flag` is inferred to 1 from
+  the CBP for ChromaArrayType < 3. Our `cabac_cbf_cond_terms` was
+  short-circuiting to "transBlockN unavailable" instead. On
+  `solana-ad.mp4` (1280×720 yuv420p High@3.1, 3960 frames, all B/P),
+  slice-skip errors went from ~1900 to **0** end-to-end. Adds 4
+  regression tests pinning Table 9-24 init values via §9.3.1.1
+  eq. 9-5 hand-derivation.
+
+### Added
+
+- encoder: **B-slice §8.4.1.2.3 temporal direct mode (round 24)** —
+  alongside the round-21/23 spatial direct path, the encoder can now
+  emit B_Skip / B_Direct_16x16 / B_8x8+all-B_Direct_8x8 macroblocks
+  driven by **temporal direct** MV derivation: per-8x8 (mvL0, mvL1)
+  computed by POC-distance scaling of the L1 anchor's per-block
+  colocated L0 motion vectors (eq. 8-191..8-202), with refIdxL0 /
+  refIdxL1 collapsed to 0 for our single-ref-per-list setup
+  (MapColToList0 collapses to identity since the L1 anchor's only L0
+  reference is the IDR — same as the current B's L0 reference). Slice
+  header now signals `direct_spatial_mv_pred_flag = 0`. New
+  `EncoderConfig::direct_temporal_mv_pred` toggle (default `false` =
+  spatial); new `EncodedFrameRef::pic_order_cnt` field carrying each
+  reference's POC (auto-populated for `EncodedIdr` / `EncodedP` /
+  `EncodedB` via the existing `From` impls). The encoder mirrors the
+  decoder's §8.4.1.2.3 derivation locally (`b_temporal_direct_derive`)
+  and re-uses the existing BMode chooser + `B_Direct_16x16` / `B_8x8`
+  writers — only the MV/refIdx derivation differs from spatial. Five
+  new integration tests (`integration_b_temporal_direct.rs`) pin the
+  new behaviour: slice-header signalling check, 5-frame I-P-B-P-B
+  self-roundtrip (max enc/dec diff ≤ 1 LSB on both B-frames),
+  ffmpeg-interop on the same fixture (max diff ≤ 1, ≥ 38 dB PSNR_Y on
+  every B), plus three boundary checks pinning the
+  `derive_b_temporal_direct` helper at zero-mvCol / td-zero passthrough
+  / symmetric-midpoint inputs. Round-24 caveats: still single ref per
+  list (multi-ref temporal direct needs full §8.2.4 RefPicList
+  construction + the MapColToList0 POC search — deferred), CAVLC only,
+  no field/MBAFF, no long-term refs.
+- encoder: **B_8x8 with all four `sub_mb_type = B_Direct_8x8` (round
+  23)** — Table 7-14 raw mb_type 22 (`B_8x8`) + Table 7-18 raw
+  sub_mb_type 0 (`B_Direct_8x8`) ×4. Zero MV / refIdx fields in the
+  bitstream — the decoder re-derives all four per-8x8 (mvL0, mvL1,
+  refIdxL0, refIdxL1) per §8.4.1.2.2 (spatial direct, since
+  `direct_spatial_mv_pred_flag = 1` in our slice header). With
+  `direct_8x8_inference_flag = 1` (hard-wired in our SPS), each 8x8
+  sub-MB carries one (mvL0, mvL1) pair shared across its four 4x4
+  sub-partitions. The encoder mirrors the §8.4.1.2.2 derivation locally
+  (already present from round 21), now exercises the per-8x8 MV grid
+  it produces by stitching four independent 8x8 luma + 4x4 chroma
+  predictors into a 16x16 / 8x8 buffer and trial-coding it as a third
+  Direct candidate (uniform `B_Direct_16x16` from round 21 + per-8x8
+  `B_8x8`+all-Direct from round 23 + explicit/partition modes from
+  round 22). Lifts the round-21 "uniform-only" gate that previously
+  rejected Direct when the §8.4.1.2.2 step-7 colZeroFlag drove
+  per-partition MVs to disagree. Lagrangian rate bias `(qp_y/6+1)*12`
+  SAD units favours the smaller-syntax `B_Direct_16x16` over per-8x8
+  Direct when the per-8x8 SAD doesn't materially beat the uniform one
+  (per-8x8 syntax cost: mb_type=22 ue(9) + 4× sub_mb_type=0 ue(1) = 13
+  bits vs B_Direct_16x16's 1-bit mb_type=0). New writer
+  `write_b_8x8_all_direct_mb` + config `B8x8AllDirectMcbConfig`. The
+  encoder's per-8x8 grid update + per-4x4 deblock-walker MV array
+  honour the §8.4.1.2.2 derivation's per-8x8 MVs so the decoder's bs
+  derivation sees the same MVs as the encoder. Three new integration
+  fixtures (`integration_b_8x8_direct.rs`) verify bit-exact ffmpeg /
+  libavcodec interop on a synthetic IPB midpoint fixture, plus two new
+  unit tests for the writer (Table 7-14 / 7-18 round-trip + 14-bit
+  zero-residual emit count). Round-23 caveats: spatial direct only
+  (no temporal direct §8.4.1.2.3), CAVLC only, no per-sub-MB-partition
+  granularity (B_8x8 paths with mixed sub_mb_type ∈ {B_Direct_8x8,
+  B_L0_8x8, B_L1_8x8, B_Bi_8x8, …} are out of scope).
+- encoder: **B-slice 16x8 / 8x16 partition modes (round 22)** — Table
+  7-14 raw mb_types 4..=21 (`B_L0_L0_16x8` through `B_Bi_Bi_8x16`). Per-
+  partition refIdx, MV, prediction mode (L0 / L1 / Bi), and §8.4.1.3
+  partition-shape MVP derivation (`Partition16x8Top/Bottom`,
+  `Partition8x16Left/Right`). Per-partition ME candidates pulled from the
+  3-way set `{16x16-best-MV, cell-A-best-MV, cell-B-best-MV}`; mode
+  decision enumerates the 9 `(mode_a, mode_b)` combos per shape and
+  picks the minimum-SAD pair. Partition mode wins over 16x16 only when
+  its joint SAD beats 16x16 by more than `(qp_y/6 + 1) * 8` SAD units —
+  the Lagrangian rate penalty for the larger mb_type ue(v) plus the
+  duplicated mvds. Bipred uses the same §8.4.2.3.1 default weighted
+  average `(L0+L1+1)>>1` as round-20. The encoder's per-MB
+  `MvGridSlot` now carries genuinely per-8x8 MVs (top half = #0/#1,
+  bottom = #2/#3 for 16x8; left = #0/#2, right = #1/#3 for 8x16); the
+  §8.4.1.3.2 C→D substitution and the per-partition `LUMA_4X4_BLK`
+  Z-scan indexing of the deblock-walker's MV array are honoured so the
+  decoder's bs derivation sees the same MVs as the encoder. Two new
+  integration fixtures (`integration_b_partitions.rs`) verify
+  bit-exact ffmpeg/libavcodec interop on a per-half-motion B-frame
+  (max diff 0, 46.87 dB PSNR_Y on 16x8 split, 48.54 dB on 8x16). The
+  encoder's `neighbour_mvs_16x16` now reads each neighbour's per-8x8
+  cell that spatially abuts the current MB's top-left 4x4 (`#1` for
+  left, `#2` for above and above-right, `#3` for above-left), matching
+  the decoder's per-partition MV grid for partition-mode neighbours.
+  Round-22 caveats: partition mode never overrides Direct (B_Skip
+  beats partition by 0 vs ~10+ bits of mb_type / mvd cost), CAVLC only,
+  single ref per list.
+- encoder: **B_Skip / B_Direct_16x16 spatial-direct mode (round 21)**
+  on top of round-20 explicit-inter. The encoder now mirrors the
+  §8.4.1.2.2 derivation locally using its own L0 / L1 MV grids plus
+  the L1 anchor's per-block colocated MVs (new
+  `EncodedFrameRef::partition_mvs`, populated by `encode_p`). When the
+  derived predictor's SAD is competitive with the explicit-inter
+  candidates (under a Lagrangian rate bias of `(qp_y/6 + 1) * 16` SAD
+  units), the encoder emits **B_Direct_16x16** (raw mb_type 0, no mvds
+  / ref_idx in the bitstream) — or **B_Skip** if the residual quantises
+  to zero (folded into a `mb_skip_run` ue(v)). On a 16-MB static-content
+  B-frame (IDR + P + B all from the same source), the new path
+  collapses the B-slice from 75 → 11 bytes (~85% reduction) with
+  identical PSNR (52.36 dB Y, max enc/dec diff 0, bit-equivalent
+  against ffmpeg/libavcodec). Implements §8.4.1.2.1 colocated-block
+  selection, §8.4.1.2.2 step 4 (MinPositive on refIdxLX), step 5
+  (directZeroPredictionFlag), step 7 (colZeroFlag short-circuit), and
+  §8.4.1.3 median MV prediction. Round-21 caveats: spatial direct only
+  (no temporal direct), 16x16 partitions only (no B_Direct_8x8 / B_8x8),
+  per-8x8 uniformity gate skips Direct when the derivation's per-
+  partition MVs disagree.
+- encoder: B-slice support (round 20). Explicit B_L0_16x16 / B_L1_16x16
+  / B_Bi_16x16 macroblock types via the new `Encoder::encode_b` entry
+  point. SPS bumps to Main profile (profile_idc=77) since §A.2.2
+  forbids B-slices in Baseline; `EncoderConfig::profile_idc` and
+  `max_num_ref_frames` are now part of the public configuration.
+  Per-MB SAD-driven L0/L1/Bi mode decision; bipred uses §8.4.2.3.1
+  default weighted average `(L0+L1+1)>>1`. Two-list MV-pred grids
+  (independent §8.4.1.3 mvpLX derivation per list). `MbDeblockInfo`
+  extended with `mv_l1` / `ref_idx_l1` / `ref_poc_l1` so the §8.7.2.1
+  bipred edge-strength derivation sees the right per-list identity.
+  ffmpeg/libavcodec decodes the B-slice **bit-equivalently** (max diff
+  0) at 54.19 dB PSNR_Y on a synthetic IPB fixture; our own decoder
+  agrees bit-for-bit. Round-20 caveats: no B_Skip, no B_Direct, no
+  intra fallback in B, single ref per list, no sub-MB partitions.
+- encoder: 4MV / P_8x8 with all sub_mb_type = PL08x8 (round 19).
+  Per-8x8 quarter-pel ME, content-driven SAD heuristic gate (≥30%
+  SAD reduction over 1MV), §8.4.1.3 within-MB-aware mvp derivation.
+  ffmpeg interop bit-equivalent on a per-sub-block-shifted fixture;
+  40.95 dB PSNR_Y.
+- encoder: P-slice support (round 16). Single L0 reference, integer-pel
+  motion estimation, P_Skip + P_L0_16x16 macroblock types. Self-roundtrip
+  + ffmpeg interop bit-exact on a 2-frame I+P fixture; PSNR vs source
+  ~50 dB on integer-shift content.
+
+## [0.1.1](https://github.com/OxideAV/oxideav-h264/compare/v0.1.0...v0.1.1) - 2026-04-25
+
+### Other
+
+- release v0.1.0 ([#3](https://github.com/OxideAV/oxideav-h264/pull/3))
+
+## [0.1.0](https://github.com/OxideAV/oxideav-h264/compare/v0.0.4...v0.1.0) - 2026-04-25
+
+### Other
+
+- fix clippy 1.95 lints
+- promote to 0.1.0
+- drop oxideav-codec/oxideav-container shims, import from oxideav-core
+- bump thiserror 1 → 2
+- sync Picture identity with DPB entry on MMCO-5
+- honour §7.4.1.2.4 MMCO-5 prevFrameNum reset in POC types 1 & 2
+- fix MMCO-5 POC reset for output ordering and DPB identity
+- insert non-existing refs on frame_num gaps (§8.2.5.2)
+- fix §8.3.1.2 / §8.3.2.2 / §8.3.3.1 / §8.3.4.1 constrained_intra_pred
+- Add 15 more JVT vectors — 5 fully pixel-exact, inc. LS_SVA_D 1700/1700
+- Add 14 JVT vectors — 13 pixel-exact on first run, 1307 more exact frames
+- snapshot activated PPS/SPS on Slice event (§7.4.1.2.1)
+- Add 14 JVT vectors — 12 pixel-exact on first run, 2034 new exact frames
+- fix Table 8-17 tC0 values for indexA 17..=23 (spec transcription)
+- Add 12 JVT CAVLC conformance vectors — 10 pixel-exact on first run
+- derive mb_field_decoding_flag ctxIdxInc per §9.3.3.1.1.2
+- implement I_PCM macroblock handling in CABAC mode (§7.3.5 / §9.3.1.2)
+- implement spatial direct MV derivation (§8.4.1.2.2) for B_Skip / B_Direct
+- Add JVT vectors: HCMP1 (hierarchical GOP + ref reorder), CAMA1 (MBAFF), CAPA1 (PAFF)
+- resolve deblocking ref-picture identity per-slice not per-picture
+- Add JVT CABACI3_Sony_B + CABAST3_Sony_E: multi-slice CABAC coverage
+- honour slice boundaries in neighbour availability for multi-slice pictures
+- Add 3 JVT conformance vectors: CABA3 (CABAC IPB), SVA_Base_B + SL1_SVA_B (multi-slice)
+- fix bS for single-pred B-slice edges with swapped lists
+- fix bS derivation with per-POC picture-identity compare
+- fix MVpred same-MB partition-availability for single-list predictions
+- proper §8.4.1.2.3 temporal-direct with MapColToList0 and B_Direct_8x8
+- fix B-slice ref_idx_l0 gate + mb_type condTerm on B_Skip/B_Direct_16x16
+- implement §8.4.1.2.3 temporal direct MV derivation
+- fix Table 9-17 init for ctxIdx 64..=69 (intra-pred-mode contexts)
+- add CTX17 debug trace for P-slice mb_type investigation
+- fix ref_idx condTermFlag for in-MB 8x8 partition neighbours
+- fix P-slice mb_type binIdx=0 ctxIdxInc + Table 9-17 mb_qp_delta init
+- add bin-level trace instrumentation + Round 31 CABA2 analysis
+- add MB-level trace instrumentation + InitCell::same helper
+- add P_Skip filter to P-slice mb_type ctxIdxInc (§9.3.3.1.1.3)
+- use '(b1 != 0) ? 2 : 3' for P-slice mb_type binIdx 2
+- Add JVT CABA2_SVA_B: CABAC P-slice conformance with trace file
+- §9.3.3.1.1.1 / .1.1.3 / .1.1.5: thread CABAC per-slice neighbour state
+- Remove accidental [workspace] marker from Cargo.toml
+- chroma 4:2:0 per-sub-segment bS derivation
+- per-4x4 nonzero-coef mask + chroma bS inherit path
+- wire inter-edge bS=1 MV-delta / ref-mismatch test
+- median step-1 replacement is partition-level, not MVpred-level
+- C→D substitution is partition-level, not MVpred-level
+- P_Skip intra neighbour must not zero-force MVpred
+- Deblock per-MB iteration order fix (§8.7.1)
+- distinguish I-slice Intra_16x16 raw=5 from I_NxN neighbour
+- Fix AC scan off-by-one for Intra_16x16 & Chroma AC blocks
+- CABAC §9.3.3.1.1.9: fix cbf_cond_for cbp-bit branch + unify cbf lookup
+- Round 17: investigate §9.3.3.1.1.9 CBF cbp-bit gate (known gap)
+- CABAC coded_block_flag MB-level DC availability + engine spec audit
+- CABAC CBP + coded_block_flag ctxIdxInc fixes per §9.3.3.1.1.4/9
+- Add JVT CABA1_SVA_B: CABAC conformance WITH bit-level trace file
+- Add JVT CABAC frame-coded conformance: camp_mot_frm0 (Mobile 720x480)
+- Add JVT conformance harness: AUD_MW_E (Baseline/CAVLC, foreman QCIF)
+- Round 14: P/B MVpred fixes + deblock Table 8-17 + 4:4:4 chroma parse
+- Latent CABAC Cb/Cr mixup + chroma DC transform bugs (§8.5.11.2)
+- Pixel-accuracy fixes + enhanced conformance diagnostics + sub_mb_type CABAC
+- CABAC sub_mb_type + neighbour grid + MBAFF field stride + conformance harness
+- CABAC inter syntax + MBAFF Phase 2 + multi-slice picture assembly
+- Inter CAVLC fixes (100% parse on 5 streams) + CABAC suffix + MBAFF phase 1 + intra neighbour pred
+- CAVLC Table 9-5 Col1 length fix + DpbOutput reorder + scaling lists wired
+- CAVLC table + transform_8x8 ordering fixes + DPB wiring + recon polish
+- CAVLC nC + run_before tables + weighted pred + more SEI + C→D MVpred
+- Wire receive_frame + fix CABAC mb_type_i binarisation
+- Add CABAC residual walker (§7.3.5.3.3) — foreman decodes end-to-end
+- Fix ME_INTER_420_422 tail + surface MB index in slice_data errors
+- Register h264 codec decoder in the registry
+- rustfmt + clippy pass: auto-fixes + scoped too_many_arguments allows
+- Expose slice_data bit cursor + wire end-to-end in integration test
+- Add integration test: parse foreman_p16x16.264 (ffmpeg sample)
+- Add inter MC reconstruction path (P + B slices)
+- Pre-stub ref_store module for inter MC reference picture access
+- Add I-slice reconstruction pipeline + POC-ordered output queue
+- Pre-stub picture / mb_grid / reconstruct / dpb_output modules
+- Add slice_data, macroblock_layer, FMO MB address, top-level Decoder
+- point spec link at new video/h264/ path
+- Pre-stub slice_data / macroblock_layer / mb_address / decoder modules
+- Wire VUI + scaling_list into SPS/PPS
+- Add inter prediction, MV derivation, CABAC binarisations, SEI payloads
+- Pre-stub inter_pred / mv_deriv / cabac_ctx / sei modules
+- aim for complete H.264, widening from the common subset
+- Add intra prediction, inverse transform, deblocking, ref list + marking
+- Pre-stub intra_pred / transform / deblock / ref_list modules
+- Add slice_header, scaling_list, VUI, non-VCL parsers, POC derivation
+- Pre-stub slice_header / scaling_list / vui / non_vcl / poc modules
+- Add §7.3.2.1 SPS, §7.3.2.2 PPS, §9.2 CAVLC, §9.3 CABAC
+- Pre-stub sps/pps/cavlc/cabac modules
+- Add §7.3.1/§B.1 NAL unit parsing + Annex B / AVCC framing
+- Add §7.2 bitstream reader (u/i/f/ue/se/te + RBSP helpers)
+- Reset to empty skeleton for spec-driven rewrite
+
+### Removed
+
+- **Entire previous implementation.** The pre-rewrite codebase decodes
+  many H.264 streams but accumulates spec-deviations on real-world
+  content that bug-by-bug fixing stopped paying off; archived to the
+  [`old`](https://github.com/OxideAV/oxideav-h264/tree/old) branch
+  for reference.
+
+### Added
+
+- Empty crate skeleton with the standard CI / release-plz / LICENSE
+  layout. `register()` is a no-op so the workspace aggregator keeps
+  building.
+- `README.md` is now a spec coverage matrix that grows with the
+  rewrite.
+
+### Notes
+
+The rewrite is driven by ITU-T Rec. H.264 | ISO/IEC 14496-10 (2024-08
+edition) as the single authoritative source. No external decoder code
+is consulted while writing the implementation; conformance is verified
+by behavioural diff against an external reference decoder run
+separately.

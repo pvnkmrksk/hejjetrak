@@ -31,6 +31,12 @@ The 300-frame sample benchmark checks aligned per-frame Rodrigues deltas, path a
 
 ## Compact desktop and transport additions
 
+Performance has a separate [same-machine assessment](performance.md): bounded
+decode/fit overlap and exact-work elimination improve the sample 1.91× over
+v0.1.1. Pure Rust decoding remains the limiting stage; full active-throughput
+parity with C++ has not been demonstrated. Numerical and pixel gates remain
+unchanged.
+
 The default preview hides config and diagnostics. A separate native inspector exposes the same canonical config and shared-core calibration actions. Source images and diagnostic panels use uniform scaling and letterboxing; cropping uses the calibrated pinhole/fisheye projection. Native pointer regressions cover active-tool isolation, nearest-point deletion and preserved square corner order. Camera controls are capability-based: exact formats/rates and readback are implemented, but support for manual exposure/gain depends on the backend and device. See camera-controls.md.
 
 ZeroMQ is a pure Rust localhost PUB with a bounded worker queue, alongside UDP/serial. PUB startup/subscriber reconnect loss and overload are observable, not guaranteed delivery. Accepted-row wire compatibility is verified independently with libzmq; full rejected-frame evidence remains in files. Busy-port edits roll back outputs while retaining the numerical source state.

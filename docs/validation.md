@@ -1,5 +1,53 @@
 # hejjetrak validation evidence
 
+## Performance refinement — 2026-10-25 (source after v0.1.1)
+
+Local Apple M2 Pro / macOS 27.0.1 arm64, Rust 1.99.1, release thin LTO,
+codegen-units=1. Required workspace formatting, strict all-target Clippy and
+locked full tests passed: **136 tests**, zero failures. The separately pinned
+Rust H.264 decoder library passed **1,353 tests**, including new independent
+bit-reader/stop-bit oracles. No numerical tolerances, decoder constants,
+optimizer budgets or supplied benchmark files changed.
+
+The full 300-frame sample retains luma FNV64 `7e8d27f58358523f` and RGB FNV64
+`7c112d90f2f74beb`, ordered presentation timestamps and recording-rate inference.
+New bounded-pipeline tests cover full-queue shutdown and persistent decode
+failures. Source-clock/config atomicity, all-frame quality evidence, recovery,
+recording and real-video agent regressions remain passing.
+
+Performance cases ran serially after the release build, without concurrent
+builds/tests. Same-machine C++/Rust and retained v0.1.1 comparisons, exact timing
+boundaries and remaining decoder gap are in [performance.md](performance.md).
+The final alternating-pair repeat measured **211.50 → 411.05 fps**, with every
+all-frame numerical row byte-identical and unchanged reference gates passing.
+The release known-motion demo processed 120 frames of 160×160 video with delta
+`[0.006,-0.009,0.004]`, zero rejected frames and component RMSE
+**0.000304049695 rad** against the unchanged 0.003 rad gate. Its reported wall
+time was 0.213823 s (561.21 fps); tracker-only throughput was 625.16 fps.
+
+Actual native checks on the optimized executable:
+
+- Four-window video agent run: **137 commands**, all 300 sample frames,
+  endpoint discrepancy 0.054525318 sphere rad, pause/step, transactional config,
+  preserved source clocks, template relocalization and five-frame raw/debug
+  recording independently decoded. The rendered diagnostic screen was visually
+  inspected; source/ROI aspect ratios and maps remained correct.
+- Built-in camera run: **107 commands**, actual 640×480/30 and 1280×720/15
+  format/readback, reopen, unsupported-control feedback, unchanged canonical
+  config during recording, **33 matched all-frame/quality/raw/debug frames**.
+  FFprobe and full independent decode passed. This room-scene test establishes
+  acquisition/lifecycle, not physical sphere accuracy.
+- Sixteen actual native windows completed 300 sample frames each, all with
+  endpoint discrepancy 0.054525318 sphere rad and non-overlapping 4×4 native
+  rectangles. This does not establish sixteen-camera sustained throughput.
+- Local Mac archive assembly and strict ad hoc signature verification passed.
+  The archive contains both the local decoder MIT license and patch provenance
+  alongside registry dependency notices. This check did not publish a release.
+
+Local evidence remains under ignored `runs/*foundation-final/` and
+`runs/performance-foundation/`. Published v0.1.1 platform execution below is
+historical; this refinement's cross-platform CI must be assessed separately.
+
 Current release evidence is in **hejjetrak v0.1.1 refinement** below: 130 tests, full-video reference checks, native camera/recording checks, sixteen actual video windows and an extracted Mac bundle. The older sections retain the internal v0.3 checkpoint as history; their test counts and platform/release statements describe that checkpoint only.
 
 ## Internal v0.3 checkpoint — 2026-10-24

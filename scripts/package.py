@@ -41,12 +41,15 @@ for filename in ['README.md', 'LICENSE', 'ATTRIBUTION.md', 'THIRD_PARTY.md']:
 licenses = resource / 'DependencyLicenses'
 licenses.mkdir()
 manifest = []
-for package in sorted((root / 'third-party-source').iterdir()):
+packages = list((root / 'third-party-source').iterdir())
+if (root / 'vendor').is_dir():
+    packages.extend((root / 'vendor').iterdir())
+for package in sorted(packages):
     if not package.is_dir():
         continue
     names = []
     for path in package.rglob('*'):
-        if path.is_file() and (path.name.lower().startswith(('license', 'licence', 'copying', 'notice', 'copyright'))):
+        if path.is_file() and (path.name.lower().startswith(('license', 'licence', 'copying', 'notice', 'copyright')) or path.name == 'HEJJETRAK_PATCHES.md'):
             relative = path.relative_to(package)
             destination = licenses / package.name / relative
             destination.parent.mkdir(parents=True, exist_ok=True)

@@ -1,0 +1,225 @@
+{
+  "pairs": [
+    {
+      "baseline": {
+        "process_wall_seconds": 1.414511708,
+        "wall_seconds": 1.4094090000000001,
+        "fps": 212.8551754671639,
+        "tracking_fps": 557.0378166809193,
+        "frames": 300,
+        "rejected": 0
+      },
+      "rust": {
+        "process_wall_seconds": 1.1355683330000002,
+        "wall_seconds": 0.751947333,
+        "fps": 398.964112025117,
+        "tracking_fps": 650.3468765974822,
+        "frames": 300,
+        "rejected": 0
+      },
+      "cpp": {
+        "process_wall_seconds": 1.5981405,
+        "reported_active_fps": 598.79,
+        "frames": 300
+      }
+    },
+    {
+      "rust": {
+        "process_wall_seconds": 0.7527158749999998,
+        "wall_seconds": 0.743989208,
+        "fps": 403.23165547852943,
+        "tracking_fps": 651.1217130944555,
+        "frames": 300,
+        "rejected": 0
+      },
+      "cpp": {
+        "process_wall_seconds": 1.2033229159999994,
+        "reported_active_fps": 595.09,
+        "frames": 300
+      },
+      "baseline": {
+        "process_wall_seconds": 1.4189134589999997,
+        "wall_seconds": 1.413472084,
+        "fps": 212.24331445657333,
+        "tracking_fps": 555.0222357170744,
+        "frames": 300,
+        "rejected": 0
+      }
+    },
+    {
+      "cpp": {
+        "process_wall_seconds": 1.2041674579999997,
+        "reported_active_fps": 594.32,
+        "frames": 300
+      },
+      "baseline": {
+        "process_wall_seconds": 1.4526967920000011,
+        "wall_seconds": 1.447436417,
+        "fps": 207.26299026093938,
+        "tracking_fps": 544.6743351208958,
+        "frames": 300,
+        "rejected": 0
+      },
+      "rust": {
+        "process_wall_seconds": 0.7601666250000001,
+        "wall_seconds": 0.754781209,
+        "fps": 397.46617486339676,
+        "tracking_fps": 634.1171393896151,
+        "frames": 300,
+        "rejected": 0
+      }
+    },
+    {
+      "baseline": {
+        "process_wall_seconds": 1.4436368749999993,
+        "wall_seconds": 1.438517125,
+        "fps": 208.54809079871052,
+        "tracking_fps": 547.7090663426468,
+        "frames": 300,
+        "rejected": 0
+      },
+      "rust": {
+        "process_wall_seconds": 0.7727153340000008,
+        "wall_seconds": 0.767994375,
+        "fps": 390.62786104390415,
+        "tracking_fps": 628.6707324423504,
+        "frames": 300,
+        "rejected": 0
+      },
+      "cpp": {
+        "process_wall_seconds": 1.1991493339999995,
+        "reported_active_fps": 592.66,
+        "frames": 300
+      }
+    }
+  ],
+  "medians": {
+    "baseline": {
+      "process_wall_seconds": 1.4436368749999993,
+      "wall_seconds": 1.438517125,
+      "fps": 208.54809079871052,
+      "tracking_fps": 547.7090663426468
+    },
+    "rust": {
+      "process_wall_seconds": 0.7601666250000001,
+      "wall_seconds": 0.754781209,
+      "fps": 397.46617486339676,
+      "tracking_fps": 634.1171393896151
+    },
+    "cpp": {
+      "process_wall_seconds": 1.2033229159999994,
+      "reported_active_fps": 594.32
+    }
+  },
+  "all_frame_dat_identical": true,
+  "cpp_wall_includes_original_250ms_supervisor_poll_and_250ms_exit_sleep": true,
+  "input": "examples/sample.mp4",
+  "source_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+  "platform": "Apple M2 Pro, macOS 27.0.1 arm64",
+  "toolchain": "rustc 1.99.1; release thin LTO, codegen-units=1",
+  "frozen_build_repeat": {
+    "all_frame_numeric_output_identical": true,
+    "medians": {
+      "baseline": {
+        "wall_seconds": 1.4184529160000001,
+        "end_to_end_fps": 211.4980318458452,
+        "tracking_fps": 553.3196043550143
+      },
+      "candidate": {
+        "wall_seconds": 0.729830083,
+        "end_to_end_fps": 411.0545824129861,
+        "tracking_fps": 651.127616077204
+      }
+    },
+    "runs": [
+      {
+        "binary": "baseline",
+        "iteration": 0,
+        "warmup": true,
+        "process_wall_seconds": 1.447073125,
+        "wall_seconds": 1.438416709,
+        "end_to_end_fps": 208.56264955971116,
+        "tracking_fps": 555.1541749747951,
+        "frames": 300,
+        "rejected": 0
+      },
+      {
+        "binary": "candidate",
+        "iteration": 0,
+        "warmup": true,
+        "process_wall_seconds": 0.7609565419999997,
+        "wall_seconds": 0.75417375,
+        "end_to_end_fps": 397.7863191340192,
+        "tracking_fps": 646.4348893907455,
+        "frames": 300,
+        "rejected": 0
+      },
+      {
+        "binary": "candidate",
+        "iteration": 1,
+        "warmup": false,
+        "process_wall_seconds": 0.7525196250000001,
+        "wall_seconds": 0.747900917,
+        "end_to_end_fps": 401.1226529890723,
+        "tracking_fps": 638.9943762104949,
+        "frames": 300,
+        "rejected": 0
+      },
+      {
+        "binary": "baseline",
+        "iteration": 1,
+        "warmup": false,
+        "process_wall_seconds": 1.4298246249999997,
+        "wall_seconds": 1.424879209,
+        "end_to_end_fps": 210.54416269470602,
+        "tracking_fps": 551.3004340180663,
+        "frames": 300,
+        "rejected": 0
+      },
+      {
+        "binary": "baseline",
+        "iteration": 2,
+        "warmup": false,
+        "process_wall_seconds": 1.4153485000000003,
+        "wall_seconds": 1.410917125,
+        "end_to_end_fps": 212.62765522106764,
+        "tracking_fps": 555.575188965428,
+        "frames": 300,
+        "rejected": 0
+      },
+      {
+        "binary": "candidate",
+        "iteration": 2,
+        "warmup": false,
+        "process_wall_seconds": 0.7342062499999997,
+        "wall_seconds": 0.729830083,
+        "end_to_end_fps": 411.0545824129861,
+        "tracking_fps": 651.127616077204,
+        "frames": 300,
+        "rejected": 0
+      },
+      {
+        "binary": "candidate",
+        "iteration": 3,
+        "warmup": false,
+        "process_wall_seconds": 0.7339480829999996,
+        "wall_seconds": 0.729463417,
+        "end_to_end_fps": 411.2611996826155,
+        "tracking_fps": 654.2777374187765,
+        "frames": 300,
+        "rejected": 0
+      },
+      {
+        "binary": "baseline",
+        "iteration": 3,
+        "warmup": false,
+        "process_wall_seconds": 1.4229081669999992,
+        "wall_seconds": 1.4184529160000001,
+        "end_to_end_fps": 211.4980318458452,
+        "tracking_fps": 553.3196043550143,
+        "frames": 300,
+        "rejected": 0
+      }
+    ]
+  }
+}

@@ -23,3 +23,10 @@ OxideAV supplies Rust codec/container implementations. No FFmpeg/OpenH264/libav/
 Dependency sources, authorship and full license texts remain in Cargo registry distributions. CI vendors the locked dependency graph, and the packager copies its available license/notice files into `DependencyLicenses/` with a manifest listing each package's included files. On macOS this directory is under `Contents/Resources/`. Windows x64 releases use [Rust's static CRT linkage](https://doc.rust-lang.org/reference/linkage.html#static-and-dynamic-c-runtimes) to avoid a separately installed Visual C++ redistributable; native Windows system DLLs remain OS dependencies. Historical development archives in this workspace must not be confused with current GitHub releases.
 
 Upstream FicTrac's CC BY-NC-SA terms remain in LICENSE and ATTRIBUTION.md. Permissive dependency licenses do not remove those terms.
+
+`oxideav-h264` 0.1.9 is retained under `vendor/oxideav-h264` with its MIT
+license and original tests. A documented local performance patch is selected
+by Cargo's registry patch table; provenance and changed files are listed in
+`vendor/oxideav-h264/HEJJETRAK_PATCHES.md`. Packaging collects local-path notices
+alongside registry-vendored licenses. CI runs the decoder's library suite
+separately because this third-party package is excluded from our workspace.

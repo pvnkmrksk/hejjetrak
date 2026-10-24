@@ -36,6 +36,11 @@ See [the UI design and command mapping](docs/ui-design.md) and [agent control](d
 
 ## CLI and the upstream benchmark
 
+The [performance reassessment](docs/performance.md) measures the redesigned
+pipeline against released v0.1.1 and a same-machine C++ reference. The sample
+improves from 209 to 397 fps with identical Rust output; full C++ throughput
+parity remains open.
+
 ```sh
 cargo build --workspace --release --locked
 cargo run -p fictrac --release --locked -- track --config examples/benchmark/config.txt --input examples/sample.mp4 --output runs/benchmark

@@ -1,0 +1,97 @@
+diff --git a/include/RecorderInterface.h b/include/RecorderInterface.h
+index 84c0fcf..ab68424 100644
+--- a/include/RecorderInterface.h
++++ b/include/RecorderInterface.h
+@@ -20,7 +20,7 @@ public:
+     };
+ 
+     RecorderInterface() : _open(false), _type(CLOSED) {}
+-    ~RecorderInterface() { _open = false; _type = CLOSED; } // just to make sure
++    virtual ~RecorderInterface() { _open = false; _type = CLOSED; } // just to make sure
+ 
+     /// Delete the copy constructors we wish to block (public decs give better compiler error msgs)
+     RecorderInterface(RecorderInterface const&) = delete;
+diff --git a/include/SocketRecorder.h b/include/SocketRecorder.h
+index be1781c..da9cdbf 100644
+--- a/include/SocketRecorder.h
++++ b/include/SocketRecorder.h
+@@ -35,7 +35,7 @@ private:
+     std::string _host;
+     int _port;
+ 
+-    boost::asio::io_service _io_service;
++    boost::asio::io_context _io_service;
+     boost::asio::ip::udp::socket _socket;
+     boost::asio::ip::udp::endpoint _endpoint;
+ };
+diff --git a/src/SerialRecorder.cpp b/src/SerialRecorder.cpp
+index e94d66a..d25cb59 100644
+--- a/src/SerialRecorder.cpp
++++ b/src/SerialRecorder.cpp
+@@ -50,7 +50,7 @@ bool SerialRecorder::openRecord(std::string port_baud)
+ 
+     // open serial port
+     try {
+-        asio::io_service io;
++        asio::io_context io;
+         _port = make_shared<asio::serial_port>(io);
+         _port->open(_port_name);
+         //_port->set_option(asio::serial_port_base::baud_rate(baud));
+diff --git a/src/SocketRecorder.cpp b/src/SocketRecorder.cpp
+index 5307d88..b9b00ec 100644
+--- a/src/SocketRecorder.cpp
++++ b/src/SocketRecorder.cpp
+@@ -56,7 +56,7 @@ bool SocketRecorder::openRecord(std::string host_port)
+     _host = host_port.substr(0, pos);
+     _port = stoi(host_port.substr(pos + 1));
+ 
+-    _endpoint = udp::endpoint(boost::asio::ip::address::from_string(_host), _port);
++    _endpoint = udp::endpoint(boost::asio::ip::make_address(_host), _port);
+ 
+     LOG("Opening UDP connection to %s:%d", _host.c_str(), _port);
+ 
+diff --git a/src/Trackball.cpp b/src/Trackball.cpp
+index 5c5e405..267307d 100644
+--- a/src/Trackball.cpp
++++ b/src/Trackball.cpp
+@@ -164,11 +164,11 @@ Trackball::Trackball(string cfg_fn, string src_override)
+     }
+     bool fisheye = false;
+     if (_cfg.getBool("fisheye", fisheye) && fisheye) {
+-        _src_model = CameraModel::createFisheye(source->getWidth(), source->getHeight(), vfov * CM_D2R / (double)source->getHeight(), 360 * CM_D2R);
++        _src_model = ::CameraModel::createFisheye(source->getWidth(), source->getHeight(), vfov * CM_D2R / (double)source->getHeight(), 360 * CM_D2R);
+     }
+     else {
+         // default to rectilinear
+-        _src_model = CameraModel::createRectilinear(source->getWidth(), source->getHeight(), vfov * CM_D2R);
++        _src_model = ::CameraModel::createRectilinear(source->getWidth(), source->getHeight(), vfov * CM_D2R);
+     }
+ 
+     /// Dimensions - quality defaults to 6 (remap_dim 60x60, sphere_dim 180x90).
+@@ -290,7 +290,7 @@ Trackball::Trackball(string cfg_fn, string src_override)
+ 
+     ///// Remap (ROI) model and remapper.
+     double sphere_radPerPix = _sphere_rad * 2.0 / _roi_w;
+-    _roi_model = CameraModel::createFisheye(_roi_w, _roi_h, sphere_radPerPix, _sphere_rad * 2.0);
++    _roi_model = ::CameraModel::createFisheye(_roi_w, _roi_h, sphere_radPerPix, _sphere_rad * 2.0);
+     _cam_to_roi = MatrixRemapTransform::createFromOmega(-roi_to_cam_r);
+     CameraRemapPtr remapper = CameraRemapPtr(new CameraRemap(_src_model, _roi_model, _cam_to_roi));
+ 
+@@ -300,7 +300,7 @@ Trackball::Trackball(string cfg_fn, string src_override)
+     remapper->apply(src_mask, _roi_mask);
+ 
+     /// Surface mapping.
+-    _sphere_model = CameraModel::createEquiArea(_map_w, _map_h, CM_PI_2, -CM_PI, CM_PI, -2 * CM_PI);
++    _sphere_model = ::CameraModel::createEquiArea(_map_w, _map_h, CM_PI_2, -CM_PI, CM_PI, -2 * CM_PI);
+ 
+     /// Buffers.
+     _sphere_map.create(_map_h, _map_w, CV_8UC1);
+@@ -1264,7 +1264,7 @@ void Trackball::drawCanvas(shared_ptr<DrawData> data)
+ 
+     /// Draw source image.
+     double radPerPix = _sphere_rad * 3.0 / (2 * DRAW_CELL_DIM);
+-    static CameraModelPtr draw_camera = CameraModel::createFisheye(
++    static CameraModelPtr draw_camera = ::CameraModel::createFisheye(
+         2 * DRAW_CELL_DIM, 2 * DRAW_CELL_DIM, radPerPix, 360 * CM_D2R);
+     static CameraRemapPtr draw_remapper = CameraRemapPtr(new CameraRemap(
+         _src_model, draw_camera, _cam_to_roi));
