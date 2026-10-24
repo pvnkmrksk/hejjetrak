@@ -30,7 +30,7 @@ cargo run --release --locked -- --windows 16 --grid 4x4
 cargo run --release --locked -- --config VR1.txt --window-size 480x360 --window-position=0,24
 ```
 
-`--window-size` and `--window-position` use logical pixels. Without a size override, `--grid` derives cell sizes from the monitor; new windows otherwise place themselves beside existing ones. Sixteen native windows are supported; sustained sixteen-camera throughput depends on source, recording mode and hardware. Windows source builds require the usual Visual Studio linker, and Linux source builds need desktop/camera development headers. Prebuilt executables need no Rust installation.
+`--window-size` and `--window-position` use logical pixels. Without a size override, `--grid` derives cell sizes from the monitor; new windows otherwise place themselves beside existing ones. Sixteen native windows are supported; sustained sixteen-camera throughput depends on source, recording mode and hardware. Windows source builds require the usual Visual Studio linker, and Linux source builds need desktop/camera development headers. Windows x64 builds select Rust's static CRT linkage to avoid a separately installed Visual C++ redistributable. Prebuilt executables need no Rust installation.
 
 See [the UI design and command mapping](docs/ui-design.md) and [agent control](docs/agent-control.md). The first public POC is v0.1.0; v0.1.1 contains the compact interface, camera controls, ZMQ and ZIP timestamp repair. Earlier v0.2/v0.3 validation names were internal prototype labels.
 

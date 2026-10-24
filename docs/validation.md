@@ -1,4 +1,8 @@
-# Validation evidence — v0.3, 2026-10-24
+# hejjetrak validation evidence
+
+Current release evidence is in **hejjetrak v0.1.1 refinement** below: 130 tests, full-video reference checks, native camera/recording checks, sixteen actual video windows and an extracted Mac bundle. The older sections retain the internal v0.3 checkpoint as history; their test counts and platform/release statements describe that checkpoint only.
+
+## Internal v0.3 checkpoint — 2026-10-24
 
 Local execution: macOS 27.0.1, Apple Silicon, Rust 1.99.1, thin LTO release. Toolchain homes remain task-local under `/tmp`; no sudo, global toolchain changes, releases or external agent/model credentials were used. The user subsequently unlocked the Mac and authorized live-camera testing; the built-in camera was exercised as described below. Historical v0.1/v0.2 evidence is retained separately and must not be confused with this build.
 

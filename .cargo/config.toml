@@ -1,0 +1,4 @@
+# Keep downloaded Windows executables independent of the separately installed
+# Visual C++ redistributable. Native Windows system DLLs remain OS dependencies.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

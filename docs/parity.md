@@ -1,4 +1,4 @@
-# Behavioral parity assessment — v0.3
+# Behavioral parity assessment — hejjetrak v0.1.1
 
 Assessed against pvnkmrksk/fictrac commit `10fc4472af1fc9062b9bf5a92738e835b98cc3ec` and the supplied FicTrac 2.1.2 sample output. This version closes the previously missing operational features for the supported recorded-video workflow. **It does not establish unrestricted or numerical identity.**
 
