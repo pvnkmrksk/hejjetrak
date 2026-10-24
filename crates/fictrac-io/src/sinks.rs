@@ -171,6 +171,7 @@ impl OutputSinks {
     pub fn status(&self) -> OutputStatus {
         OutputStatus {
             udp_enabled: self.udp.is_some(),
+            udp_destination: self.udp.as_ref().map(|(_, address)| address.to_string()),
             serial_enabled: self.serial.is_some(),
             zmq: self.zmq.as_ref().map(|z| z.status()),
         }
@@ -183,6 +184,7 @@ impl OutputSinks {
 #[derive(Clone, Debug, serde::Serialize)]
 pub struct OutputStatus {
     pub udp_enabled: bool,
+    pub udp_destination: Option<String>,
     pub serial_enabled: bool,
     pub zmq: Option<crate::zmq_output::ZmqOutputStatus>,
 }

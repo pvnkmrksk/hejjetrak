@@ -1,0 +1,285 @@
+{
+  "platform": "macOS-27.0.1-arm64-arm-64bit",
+  "machine": "arm64",
+  "toolchain": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+  "profile": "release thin LTO, codegen-units=1; no target-cpu override",
+  "source_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+  "frames": 300,
+  "numeric_dat_bit_identical_before_after": true,
+  "timing_boundary": "CLI summary wall_seconds includes source open/decode, tracking, all-frame/quality output and finalization; tracking_fps covers Tracker::process including numerical diagnostics; outputs on /tmp, no video recording or wire sinks enabled. Four alternating pairs, first warmup pair excluded; no other task workloads running.",
+  "cpp_reference_fps": 517.25,
+  "medians": {
+    "before": {
+      "end_to_end_fps": 186.19628168148122,
+      "tracking_fps": 469.93690201077504,
+      "wall_seconds": 1.6112029589999999
+    },
+    "after": {
+      "end_to_end_fps": 208.94824334599966,
+      "tracking_fps": 547.1414761369277,
+      "wall_seconds": 1.43576225
+    }
+  },
+  "synthetic_oracle": {
+    "expected_delta": [
+      0.006,
+      -0.009,
+      0.004
+    ],
+    "passed": true,
+    "rotation_component_rmse_rad": 0.0003040496948914138,
+    "tolerance_rad": 0.003
+  },
+  "core_media_commit": "88e638741eb2c9e0bfaae3bff5ed3e8df03f910a",
+  "cpu": "Apple M2 Pro",
+  "wire_benchmark": {
+    "fixture": "examples/sample.mp4",
+    "fixture_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+    "config": "examples/benchmark/config.txt, only transport settings changed",
+    "frames_per_case": 300,
+    "repetitions_per_mode": 5,
+    "warmups_per_mode": 1,
+    "timing_boundaries": "Development timing harness; application remains pure Rust.\n\nInput: repository examples/sample.mp4, examples/benchmark/config.txt.\nOnly transport settings change. One untimed warm-up per mode, then five\nalternating pairs. Timings include one synchronous agent run(10000) JSONL\nrequest/response, full decode, numerical tracking and output enqueue/send;\nexclude process startup, config/source open, PUB subscription propagation,\nreceiver draining, status requests and teardown. No recording/export in timed\nregions. Native libzmq/UDP receivers validate every transport row afterward.",
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "machine": "arm64",
+    "python": "3.9.6",
+    "pyzmq": "27.2.0",
+    "libzmq": "4.3.5",
+    "binary_sha256": "07a14e42a875690e10688a6f9951c281bcfd806e462fe3697bac8b9395739415",
+    "baseline_seconds": [
+      1.456376,
+      1.468755208,
+      1.460402583,
+      1.457557458,
+      1.468382333
+    ],
+    "udp_zmq_seconds": [
+      1.519230333,
+      1.503916333,
+      1.499561959,
+      1.497789583,
+      1.4956115
+    ],
+    "baseline_median_seconds": 1.460402583,
+    "udp_zmq_median_seconds": 1.499561959,
+    "median_change_percent": 2.681409664419898,
+    "reports": [
+      {
+        "mode": "disabled",
+        "pair": 1,
+        "warmup": false,
+        "seconds": 1.456376,
+        "fps": 205.99076062774998,
+        "frames": 300,
+        "outputs": {
+          "serial_enabled": false,
+          "udp_enabled": false,
+          "zmq": null
+        },
+        "udp_rows": 0,
+        "zmq_rows": 0,
+        "last_row_matches": true
+      },
+      {
+        "mode": "udp_zmq",
+        "pair": 1,
+        "warmup": false,
+        "seconds": 1.519230333,
+        "fps": 197.46841113130932,
+        "frames": 300,
+        "outputs": {
+          "serial_enabled": false,
+          "udp_enabled": true,
+          "zmq": {
+            "dropped": 0,
+            "endpoint": "tcp://127.0.0.1:63269",
+            "enqueued": 300,
+            "failures": 0,
+            "last_error": null,
+            "published": 300,
+            "queue_capacity": 256,
+            "queue_len": 0,
+            "worker_alive": true
+          }
+        },
+        "udp_rows": 300,
+        "zmq_rows": 300,
+        "last_row_matches": true
+      },
+      {
+        "mode": "udp_zmq",
+        "pair": 2,
+        "warmup": false,
+        "seconds": 1.503916333,
+        "fps": 199.47918206431234,
+        "frames": 300,
+        "outputs": {
+          "serial_enabled": false,
+          "udp_enabled": true,
+          "zmq": {
+            "dropped": 0,
+            "endpoint": "tcp://127.0.0.1:63273",
+            "enqueued": 300,
+            "failures": 0,
+            "last_error": null,
+            "published": 300,
+            "queue_capacity": 256,
+            "queue_len": 0,
+            "worker_alive": true
+          }
+        },
+        "udp_rows": 300,
+        "zmq_rows": 300,
+        "last_row_matches": true
+      },
+      {
+        "mode": "disabled",
+        "pair": 2,
+        "warmup": false,
+        "seconds": 1.468755208,
+        "fps": 204.25459488821775,
+        "frames": 300,
+        "outputs": {
+          "serial_enabled": false,
+          "udp_enabled": false,
+          "zmq": null
+        },
+        "udp_rows": 0,
+        "zmq_rows": 0,
+        "last_row_matches": true
+      },
+      {
+        "mode": "disabled",
+        "pair": 3,
+        "warmup": false,
+        "seconds": 1.460402583,
+        "fps": 205.42280840378382,
+        "frames": 300,
+        "outputs": {
+          "serial_enabled": false,
+          "udp_enabled": false,
+          "zmq": null
+        },
+        "udp_rows": 0,
+        "zmq_rows": 0,
+        "last_row_matches": true
+      },
+      {
+        "mode": "udp_zmq",
+        "pair": 3,
+        "warmup": false,
+        "seconds": 1.499561959,
+        "fps": 200.05842252764162,
+        "frames": 300,
+        "outputs": {
+          "serial_enabled": false,
+          "udp_enabled": true,
+          "zmq": {
+            "dropped": 0,
+            "endpoint": "tcp://127.0.0.1:63279",
+            "enqueued": 300,
+            "failures": 0,
+            "last_error": null,
+            "published": 300,
+            "queue_capacity": 256,
+            "queue_len": 0,
+            "worker_alive": true
+          }
+        },
+        "udp_rows": 300,
+        "zmq_rows": 300,
+        "last_row_matches": true
+      },
+      {
+        "mode": "udp_zmq",
+        "pair": 4,
+        "warmup": false,
+        "seconds": 1.497789583,
+        "fps": 200.29515721368185,
+        "frames": 300,
+        "outputs": {
+          "serial_enabled": false,
+          "udp_enabled": true,
+          "zmq": {
+            "dropped": 0,
+            "endpoint": "tcp://127.0.0.1:63282",
+            "enqueued": 300,
+            "failures": 0,
+            "last_error": null,
+            "published": 300,
+            "queue_capacity": 256,
+            "queue_len": 0,
+            "worker_alive": true
+          }
+        },
+        "udp_rows": 300,
+        "zmq_rows": 300,
+        "last_row_matches": true
+      },
+      {
+        "mode": "disabled",
+        "pair": 4,
+        "warmup": false,
+        "seconds": 1.457557458,
+        "fps": 205.82378989823673,
+        "frames": 300,
+        "outputs": {
+          "serial_enabled": false,
+          "udp_enabled": false,
+          "zmq": null
+        },
+        "udp_rows": 0,
+        "zmq_rows": 0,
+        "last_row_matches": true
+      },
+      {
+        "mode": "disabled",
+        "pair": 5,
+        "warmup": false,
+        "seconds": 1.468382333,
+        "fps": 204.30646246409177,
+        "frames": 300,
+        "outputs": {
+          "serial_enabled": false,
+          "udp_enabled": false,
+          "zmq": null
+        },
+        "udp_rows": 0,
+        "zmq_rows": 0,
+        "last_row_matches": true
+      },
+      {
+        "mode": "udp_zmq",
+        "pair": 5,
+        "warmup": false,
+        "seconds": 1.4956115,
+        "fps": 200.58685026158196,
+        "frames": 300,
+        "outputs": {
+          "serial_enabled": false,
+          "udp_enabled": true,
+          "zmq": {
+            "dropped": 0,
+            "endpoint": "tcp://127.0.0.1:63288",
+            "enqueued": 300,
+            "failures": 0,
+            "last_error": null,
+            "published": 300,
+            "queue_capacity": 256,
+            "queue_len": 0,
+            "worker_alive": true
+          }
+        },
+        "udp_rows": 300,
+        "zmq_rows": 300,
+        "last_row_matches": true
+      }
+    ],
+    "interpretation": "Descriptive wall-clock fixture timings; two receiver threads run only for enabled output. Small differences can be scheduling noise; no general speed claim or delivery guarantee.",
+    "cpu": "Apple M2 Pro",
+    "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13), LLVM23.1.1, aarch64-apple-darwin",
+    "build": "Cargo --release, locked dependencies; final application binary fingerprint above",
+    "harness": "benchmark.py (development-only Python/libzmq; not an application dependency)",
+    "command": "/private/tmp/hejjetrak-zmq-interop/bin/python /private/tmp/hejjetrak-zmq-interop/benchmark.py"
+  }
+}

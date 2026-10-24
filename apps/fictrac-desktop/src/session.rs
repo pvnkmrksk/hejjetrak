@@ -40,6 +40,7 @@ pub struct Session {
     pub points: Vec<[f64; 2]>,
     pub square_slots: Option<[Option<[f64; 2]>; 4]>,
     pub window_rect: Option<[f32; 4]>,
+    pub last_title: String,
     pub plane: String,
     pub full_image: bool,
     pub changed: Option<Instant>,
@@ -90,6 +91,7 @@ impl Session {
             points: vec![],
             square_slots: None,
             window_rect: None,
+            last_title: String::new(),
             plane: "xy".into(),
             full_image: false,
             changed: None,
@@ -172,6 +174,16 @@ impl Session {
                 debug: self.record_debug,
             },
         ));
+    }
+    pub fn display_name(&self) -> String {
+        self.document()
+            .ok()
+            .and_then(|d| {
+                d.get("rust_instance_name")
+                    .filter(|s| !s.trim().is_empty())
+                    .map(|s| s.chars().take(64).collect())
+            })
+            .unwrap_or_else(|| format!("VR{}", self.id))
     }
     pub fn document(&self) -> Result<ConfigDocument, String> {
         ConfigDocument::parse(self.history.text.clone()).map_err(|e| e.to_string())

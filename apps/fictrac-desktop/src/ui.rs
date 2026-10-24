@@ -12,6 +12,11 @@ const YELLOW: Color32 = Color32::from_rgb(230, 235, 35);
 impl Session {
     pub fn show(&mut self, ctx: &egui::Context) {
         self.update();
+        let title = format!("hejjetrak · {}", self.display_name());
+        if self.last_title != title {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
+            self.last_title = title;
+        }
         self.window_rect = ctx
             .input(|i| i.viewport().outer_rect)
             .map(|r| [r.min.x, r.min.y, r.width(), r.height()]);
@@ -139,7 +144,7 @@ impl Session {
                 .input(|i| i.viewport().outer_rect)
                 .map(|r| egui::pos2(r.right() + 8.0, r.top()));
             let mut builder = egui::ViewportBuilder::default()
-                .with_title(format!("hejjetrak · VR{} configuration", self.id))
+                .with_title(format!("hejjetrak · {} configuration", self.display_name()))
                 .with_inner_size([440.0, 640.0])
                 .with_min_inner_size([340.0, 360.0]);
             if let Some(position) = position {
@@ -182,7 +187,7 @@ impl Session {
     fn toolbar_row(&mut self, ui: &mut egui::Ui) {
         ui.spacing_mut().item_spacing.x = 3.0;
         if ui.available_width() > 330.0 {
-            ui.strong(format!("VR{}", self.id)).on_hover_text(
+            ui.strong(self.display_name()).on_hover_text(
                 self.path
                     .as_ref()
                     .map(|p| p.display().to_string())
@@ -318,19 +323,22 @@ impl Session {
                     "Frame rejected; motion is unmeasured. Reset or inspect calibration.",
                 );
             }
-            if ui.available_width() > 100.0
-                && let Ok(doc) = self.document()
-                && doc.number("zmq_port", -1.0) > 0.0
+            if ui.available_width() > 90.0
+                && let Some(output) = &self.snapshot.outputs
+                && let Some(zmq) = &output.zmq
             {
-                ui.small(format!("Z:{}", doc.get("zmq_port").unwrap_or("")))
-                    .on_hover_text(format!(
-                        "ZMQ PUB tcp://127.0.0.1:{} · UDP {}:{}",
-                        doc.get("zmq_port").unwrap_or(""),
-                        doc.get("sock_host").unwrap_or("127.0.0.1"),
-                        doc.get("sock_port").unwrap_or("disabled")
-                    ));
+                let port = zmq.endpoint.rsplit(':').next().unwrap_or("");
+                ui.small(format!("Z:{port}")).on_hover_text(format!(
+                    "ZMQ PUB {} · UDP {}\nPublished {} · queued {} · dropped {} · failures {}\n{}",
+                    zmq.endpoint,
+                    output.udp_destination.as_deref().unwrap_or("off"),
+                    zmq.published,
+                    zmq.queue_len,
+                    zmq.dropped,
+                    zmq.failures,
+                    zmq.last_error.as_deref().unwrap_or("")
+                ));
             }
-
             if !self.error.is_empty() {
                 ui.colored_label(Color32::LIGHT_RED, "!")
                     .on_hover_text(&self.error);
@@ -948,6 +956,19 @@ value}
         }
     }
     fn preview(&mut self, ui: &mut egui::Ui, rect: Rect) {
+        if self
+            .document()
+            .is_ok_and(|doc| doc.get("do_display") == Some("n") && !doc.boolean("save_debug"))
+        {
+            ui.painter().text(
+                rect.center(),
+                Align2::CENTER_CENTER,
+                "do_display = n · tracking continues",
+                FontId::proportional(13.0),
+                Color32::GRAY,
+            );
+            return;
+        }
         let Some(image) = &self.snapshot.image else {
             ui.painter().text(
                 rect.center(),
@@ -1353,6 +1374,21 @@ value}
                     square,
                     Stroke::new(1.5_f32, Color32::from_rgb(220, 160, 255)),
                 ));
+            }
+        }
+        if self.tool == Tool::Square
+            && let Some(slots) = &self.square_slots
+        {
+            for (index, point) in slots.iter().enumerate() {
+                if let Some(point) = point {
+                    painter.text(
+                        to_screen(*point) + Vec2::new(5.0, -5.0),
+                        Align2::LEFT_BOTTOM,
+                        ["TL", "TR", "BR", "BL"][index],
+                        FontId::proportional(11.0),
+                        YELLOW,
+                    );
+                }
             }
         }
         let preview: Vec<_> = self.points.iter().map(|p| to_screen(*p)).collect();

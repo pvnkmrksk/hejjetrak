@@ -118,3 +118,27 @@ Artifacts: `runs/benchmark-camera-v03/` contains full data, quality, map, summar
 ## Remaining boundary
 
 The implementation is not scientifically or byte-for-byte identical to FicTrac. Optimizers differ; the renderer shares geometry with the tracker; the upstream reference is not physical ground truth. All five original recorded-video codec choices are implemented. H.264 recording requires even display dimensions; unfamiliar media profiles and formats remain outside the tested coverage. Built-in Mac camera acquisition and recording are verified; physical sphere accuracy, iPhone/industrial cameras, physical serial devices, native Windows/Linux execution, broader media and experimental ground-truth validation remain unverified. See [parity.md](parity.md). No release was published.
+
+## hejjetrak v0.1.1 refinement
+
+On 2026-10-25 the final local required check sequence passed: `cargo fmt --all -- --check`, strict workspace/all-target Clippy, and **130 Rust tests**. These include real egui pointer events for tool isolation and nearest-point deletion, exact square-corner slot replacement, uniform scaling of landscape/portrait/cropped input, native-worker busy-port rollback retaining its source/tracker, real codec recording selections, native view atomicity and camera numeric-value schemas. No scientific tolerances or decoder oracle constants were relaxed.
+
+The actual compact native preview and its 240×180 minimum window were visually inspected on the sample; reset, record, source, diagnostics and settings remain accessible. A 168-command native GUI transcript exercised the separate inspector, diagnostic view, four independent native windows, complete 300-frame reference, config/history, recordings, source-clock continuity and template relocalization. Endpoint discrepancy remained 0.0545253183 sphere rad. Evidence: `runs/native-agent-v0.1.1/`, `runs/ui-v0.1.1/` and `runs/ui-tiny-v0.1.1/`.
+
+The new native camera GUI passed **115 commands**: 640×480/30 capture, capabilities/unsupported-control behavior, transient raw+debug recording without config/revision changes, exact 1280×720/15 format/readback, invalid-format atomicity and 640×480/30 reopen. Both independently decoded H.264 recordings contain **35 frames** at 640×480 and 30 fps; numeric/quality counts agree. The scene was a room, not a calibrated ball; no physical tracking-accuracy claim follows. Metadata-only capability probes also independently captured both formats. Evidence: `runs/camera-gui-v0.1.1/` and `runs/camera-controls-native/`.
+
+### Serial performance and exact-output optimization
+
+Apple M2 Pro, macOS 27.0.1 arm64, Rust 1.99.1, release/thin LTO/codegen-units=1 with no target-cpu override. The unchanged 384×288, 300-frame sample has SHA256 `afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad`. Four alternating before/after pairs ran serially with no other task workloads; the first pair was warmup. Output was under `/tmp`, with raw/debug recording and wire sinks disabled. Values below are medians of the remaining three runs.
+
+| Boundary | Retained pre-optimization build | Cached atlas rays + exact RGB conversion |
+|---|---:|---:|
+| CLI wall seconds, including open/decode, tracking, data/quality and finalization | 1.61120 | 1.43576 |
+| End-to-end frames/s | 186.20 | 208.95 |
+| Tracker::process frames/s, including numerical diagnostics | 469.94 | 547.14 |
+
+Every run accepted all 300 frames and passed the unchanged reference gates. All four before/after `.dat` pairs were **byte-identical**. Full-video RGB FNV64 stayed `7c112d90f2f74beb`; the independent luma oracle stayed `7e8d27f58358523f`. The 120-frame known-motion release demo passed at rotation-component RMSE 0.0003040497 rad against its unchanged 0.003 gate (597.68 end-to-end fps for this separate 160×160 pairwise fixture). Core known-motion atlas/recovery tests also passed.
+
+The supplied C++ log reports **517.25 fps**. The new Rust end-to-end result remains below that figure; the tracker-only number has a different timing boundary and does not establish a faster complete application. Hardware/build conditions of the supplied C++ run were not reproduced.
+
+A separate serial experiment used one warmup/mode followed by five alternating full-video agent runs with outputs disabled or simultaneous UDP+ZMQ plus independent receivers. Median request/run-response wall time was **1.46040 s disabled** versus **1.49956 s enabled**, a descriptive **2.68% increase**, including subscriber CPU. All six enabled runs delivered exactly 300 UDP and 300 libzmq packets matching numeric rows, with zero publisher drops/failures. PUB delivery to arbitrary future subscribers is not guaranteed. `runs/zmq-output-benchmark/` contains the complete traces; `docs/benchmarks/v0.1.1.json` records summarized timings and boundaries.

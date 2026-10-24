@@ -311,7 +311,7 @@ impl eframe::App for Desktop {
             ctx.show_viewport_immediate(
                 id,
                 egui::ViewportBuilder::default()
-                    .with_title(format!("hejjetrak · VR{}", session.id))
+                    .with_title(format!("hejjetrak · {}", session.display_name()))
                     .with_inner_size([self.window_size.0, self.window_size.1])
                     .with_position([
                         self.window_origin.0
