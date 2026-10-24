@@ -1,7 +1,7 @@
 //! FicTrac-style accumulated atlas, bounded local fitting and deterministic global recovery.
 use crate::{Config, DebugViews, Diagnostics, Error, GrayFrame, MapSettings, Result, TrackRow};
 use bobyqa::{Bobyqa, Config as SolverConfig};
-use glam::{DQuat, DVec3};
+use glam::{DMat3, DQuat, DVec3};
 use std::f64::consts::{PI, TAU};
 
 /// Equal-area atlas in FicTrac ROI/material axes. Value 128 denotes unseen surface.
@@ -38,6 +38,8 @@ pub(crate) struct MapTracker {
     // Fixed ROI-to-atlas rays: preserve the exact per-site quaternion transform,
     // computing it once per calibration instead of every optimizer evaluation.
     atlas_sites: Vec<Option<DVec3>>,
+    active_sites: Vec<(DVec3, usize)>,
+    prepared_roi: Option<Vec<u8>>,
     solver: Bobyqa,
     settings: MapSettings,
     bound: f64,
@@ -72,14 +74,21 @@ impl MapTracker {
         let solver =
             Bobyqa::new(3, solver_config).map_err(|e| Error::Config(format!("BOBYQA: {e}")))?;
         let template = sampler.map.clone();
-        let atlas_sites = sampler
+        let atlas_sites: Vec<_> = sampler
             .points
             .iter()
             .map(|site| site.map(|(p, _)| sampler.basis * p))
             .collect();
+        let active_sites = atlas_sites
+            .iter()
+            .enumerate()
+            .filter_map(|(index, point)| point.map(|p| (p, index)))
+            .collect();
         Ok(Self {
             sampler,
             atlas_sites,
+            active_sites,
+            prepared_roi: None,
             solver,
             settings,
             bound: config.max_rotation,
@@ -100,6 +109,7 @@ impl MapTracker {
         self.guess = DVec3::ZERO;
         self.ready = false;
         self.sampler.reset_history();
+        self.prepared_roi = None;
         self.views = None;
     }
     pub fn load_template(&mut self, template: SphereTemplate) -> Result<()> {
@@ -117,6 +127,7 @@ impl MapTracker {
         self.orientation = DQuat::IDENTITY;
         self.guess = DVec3::ZERO;
         self.sampler.reset_history();
+        self.prepared_roi = None;
         self.views = None;
         Ok(())
     }
@@ -128,10 +139,9 @@ impl MapTracker {
         }
     }
     pub fn estimate(&mut self, frame: &GrayFrame) -> Estimate {
-        let roi = self.sampler.prepare(frame);
-        let sites = &self.sampler.points;
+        let roi = self.prepared_roi.insert(self.sampler.prepare(frame));
         let basis = self.sampler.basis;
-        let count = sites.iter().flatten().count();
+        let count = self.active_sites.len();
         let failure = |error| Estimate {
             rotation: DVec3::ZERO,
             absolute: None,
@@ -158,7 +168,8 @@ impl MapTracker {
         }
         let objective = AtlasObjective {
             sites: &self.atlas_sites,
-            roi: &roi,
+            active_sites: &self.active_sites,
+            roi,
             map: &self.sampler.map,
             width: self.sampler.map_width,
             height: self.sampler.map_height,
@@ -229,7 +240,11 @@ impl MapTracker {
             self.ready = true;
             self.clean_map = false;
         }
-        self.views = Some(self.sampler.update(frame, Some(row)));
+        self.views = Some(if let Some(roi) = self.prepared_roi.take() {
+            self.sampler.update_prepared(frame, Some(row), roi)
+        } else {
+            self.sampler.update(frame, Some(row))
+        });
     }
 }
 fn acceptable(error: f64, threshold: f64) -> bool {
@@ -237,6 +252,7 @@ fn acceptable(error: f64, threshold: f64) -> bool {
 }
 struct AtlasObjective<'a> {
     sites: &'a [Option<DVec3>],
+    active_sites: &'a [(DVec3, usize)],
     roi: &'a [u8],
     map: &'a [u8],
     width: usize,
@@ -245,22 +261,34 @@ struct AtlasObjective<'a> {
 }
 impl AtlasObjective<'_> {
     fn cost(&self, rotation: DQuat, stride: usize) -> f64 {
-        let inverse = rotation.inverse();
+        // One transform per candidate, rather than expanding quaternion-vector
+        // products for every ROI site. Dense sites retain original pixel order.
+        let inverse = DMat3::from_quat(rotation.inverse());
         let mut squared = 0.0;
         let mut count = 0;
         let mut good = 0;
-        for i in (0..self.sites.len()).step_by(stride) {
-            let Some(p) = self.sites[i] else {
-                continue;
-            };
+        let mut observe = |p, i| {
             count += 1;
             let value = self.map[map_index(inverse * p, self.width, self.height)];
             if value == 128 {
-                continue;
+                return;
             }
             let d = f64::from(self.roi[i]) - f64::from(value);
             squared += d * d;
             good += 1;
+        };
+        if stride == 1 {
+            for &(point, index) in self.active_sites {
+                observe(point, index);
+            }
+        } else {
+            // Global coarse search keeps its original lattice, including mask
+            // holes; compacting before stepping would change its candidates.
+            for i in (0..self.sites.len()).step_by(stride) {
+                if let Some(point) = self.sites[i] {
+                    observe(point, i);
+                }
+            }
         }
         if good * 4 <= count || count == 0 {
             1e12

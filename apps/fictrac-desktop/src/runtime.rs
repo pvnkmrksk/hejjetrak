@@ -175,7 +175,7 @@ impl Drop for Worker {
     }
 }
 enum Input {
-    File(Box<VideoSource>),
+    File(Box<fictrac_io::PrefetchedVideoSource>),
     Camera(fictrac_camera::Camera),
 }
 impl Input {
@@ -185,7 +185,9 @@ impl Input {
                 let mut v =
                     VideoSource::open(&path).map_err(|e| format!("{}: {e}", path.display()))?;
                 v.enable_color();
-                Ok(Self::File(Box::new(v)))
+                Ok(Self::File(Box::new(
+                    v.prefetch().map_err(|e| e.to_string())?,
+                )))
             }
             SourceSpec::Camera(id) => {
                 let width = doc.number("rust_camera_width", 0.0);
@@ -639,8 +641,7 @@ fn run(
                 } else {
                     0.0
                 };
-                GrayFrame::new(frame.width(), frame.height(), frame.pixels().to_vec(), time)
-                    .map_err(|e| e.to_string())?
+                frame.with_timestamp(time).map_err(|e| e.to_string())?
             } else {
                 frame
             };

@@ -3,9 +3,11 @@ mod comparison;
 mod config;
 mod document;
 mod output;
+mod prefetch;
 mod video;
 pub use config::{LoadedConfig, load_config, load_config_text, load_source_hint};
 pub use output::{write_dat, write_path_svg};
+pub use prefetch::PrefetchedVideoSource;
 pub use video::{VideoInfo, VideoSource, rgb_tracking_frame, write_y4m_frame, write_y4m_header};
 #[derive(Debug, thiserror::Error)]
 pub enum Error {

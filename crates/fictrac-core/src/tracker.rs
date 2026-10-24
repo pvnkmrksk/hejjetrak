@@ -176,8 +176,12 @@ impl Tracker {
         }
         let ts = frame.timestamp_ms();
         let mut pyramid = vec![frame];
-        for level in 0..2 {
-            pyramid.push(pyramid[level].half());
+        // The atlas estimator uses its calibrated ROI, not the pairwise image
+        // pyramid. Avoid full-image reductions and retained frames for it.
+        if self.spherical.is_none() {
+            for level in 0..2 {
+                pyramid.push(pyramid[level].half());
+            }
         }
         let mut rotation = DVec3::ZERO;
         let mut error = 0.0;
@@ -386,7 +390,7 @@ impl Tracker {
                 self.geometry.config.legacy_roi_coordinates,
             );
         }
-        self.previous = Some(pyramid);
+        self.previous = self.spherical.is_none().then_some(pyramid);
         self.last_time = Some(ts);
         if accepted {
             self.last_accepted_time = Some(ts);

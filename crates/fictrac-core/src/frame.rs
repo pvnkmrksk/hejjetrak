@@ -1,13 +1,57 @@
 use crate::{Error, Result};
+use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub struct GrayFrame {
     width: usize,
     height: usize,
-    pixels: Vec<f32>,
+    // Validated pixels are immutable. Frontends, tracking and recording can
+    // retain one observation without copying a full image on every handoff.
+    pixels: Arc<Vec<f32>>,
     timestamp_ms: f64,
 }
 impl GrayFrame {
+    /// Normalize byte pixels in one pass. The byte type proves the value range;
+    /// unlike arbitrary f32 input it needs no second scan for NaNs/range errors.
+    pub fn from_u8(width: usize, height: usize, pixels: &[u8], timestamp_ms: f64) -> Result<Self> {
+        Self::from_u8_iter(width, height, pixels.iter().copied(), timestamp_ms)
+    }
+    pub fn from_u8_iter(
+        width: usize,
+        height: usize,
+        pixels: impl ExactSizeIterator<Item = u8>,
+        timestamp_ms: f64,
+    ) -> Result<Self> {
+        let size = width.checked_mul(height).filter(|n| *n <= 32_000_000);
+        let count = pixels.len();
+        if width < 2
+            || height < 2
+            || size != Some(count)
+            || !timestamp_ms.is_finite()
+            || timestamp_ms < 0.0
+        {
+            return Err(Error::Frame(
+                "invalid dimensions, pixels or timestamp".into(),
+            ));
+        }
+        // Even an iterator with a false size hint cannot allocate without bound
+        // or create an invalid frame. This count check precedes publication.
+        let values: Vec<_> = pixels
+            .take(count + 1)
+            .map(|p| f32::from(p) / 255.0)
+            .collect();
+        if values.len() != count {
+            return Err(Error::Frame(
+                "byte iterator length differs from frame dimensions".into(),
+            ));
+        }
+        Ok(Self {
+            width,
+            height,
+            pixels: Arc::new(values),
+            timestamp_ms,
+        })
+    }
     pub fn new(width: usize, height: usize, pixels: Vec<f32>, timestamp_ms: f64) -> Result<Self> {
         let size = width.checked_mul(height).filter(|n| *n <= 32_000_000);
         if width < 2
@@ -26,7 +70,7 @@ impl GrayFrame {
         Ok(Self {
             width,
             height,
-            pixels,
+            pixels: Arc::new(pixels),
             timestamp_ms,
         })
     }
@@ -41,6 +85,16 @@ impl GrayFrame {
     }
     pub fn timestamp_ms(&self) -> f64 {
         self.timestamp_ms
+    }
+    /// Change only the clock, retaining the already validated immutable pixels.
+    pub fn with_timestamp(mut self, timestamp_ms: f64) -> Result<Self> {
+        if !timestamp_ms.is_finite() || timestamp_ms < 0.0 {
+            return Err(Error::Frame(
+                "invalid timestamp: expected a finite, nonnegative number".into(),
+            ));
+        }
+        self.timestamp_ms = timestamp_ms;
+        Ok(self)
     }
     pub fn sample(&self, x: f64, y: f64) -> Option<f64> {
         if !x.is_finite()
@@ -83,7 +137,7 @@ impl GrayFrame {
         Self {
             width,
             height,
-            pixels,
+            pixels: Arc::new(pixels),
             timestamp_ms: self.timestamp_ms,
         }
     }

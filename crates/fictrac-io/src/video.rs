@@ -62,6 +62,12 @@ pub(crate) fn validate_size(width: usize, height: usize) -> Result<()> {
     Ok(())
 }
 impl VideoSource {
+    /// Transfer the configured decoder to an ordered, bounded worker. Set color
+    /// mode first; camera capture retains its separate latest-frame policy.
+    pub fn prefetch(self) -> Result<crate::PrefetchedVideoSource> {
+        let color = self.color;
+        crate::PrefetchedVideoSource::new(self, color)
+    }
     pub fn open(path: &Path) -> Result<Self> {
         let mut file = File::open(path)?;
         let mut magic = [0u8; 9];
@@ -288,20 +294,15 @@ impl VideoSource {
                 let Some((rgb, timestamp)) = avi.next_rgb()? else {
                     return Ok(None);
                 };
-                let values = rgb
-                    .as_chunks::<3>()
-                    .0
-                    .iter()
-                    .map(|p| {
-                        ((4899 * u32::from(p[0])
-                            + 9617 * u32::from(p[1])
-                            + 1868 * u32::from(p[2])
-                            + 8192)
-                            >> 14) as f32
-                            / 255.0
-                    })
-                    .collect();
-                let frame = GrayFrame::new(self.info.width, self.info.height, values, timestamp)?;
+                let values = rgb.as_chunks::<3>().0.iter().map(|p| {
+                    ((4899 * u32::from(p[0])
+                        + 9617 * u32::from(p[1])
+                        + 1868 * u32::from(p[2])
+                        + 8192)
+                        >> 14) as u8
+                });
+                let frame =
+                    GrayFrame::from_u8_iter(self.info.width, self.info.height, values, timestamp)?;
                 if self.color {
                     self.last_rgb = Some(rgb);
                 }
@@ -351,11 +352,10 @@ impl Mp4 {
                         ));
                     }
                     self.last = Some(timestamp);
-                    let pixels = plane.data.iter().map(|p| f32::from(*p) / 255.0).collect();
-                    return Ok(Some(GrayFrame::new(
+                    return Ok(Some(GrayFrame::from_u8(
                         self.width,
                         self.height,
-                        pixels,
+                        &plane.data,
                         timestamp,
                     )?));
                 }
@@ -412,10 +412,10 @@ impl Y4m {
         }
         let timestamp = self.count as f64 * 1000.0 / self.fps;
         self.count += 1;
-        Ok(Some(GrayFrame::new(
+        Ok(Some(GrayFrame::from_u8(
             self.width,
             self.height,
-            pixels.into_iter().map(|p| f32::from(p) / 255.0).collect(),
+            &pixels,
             timestamp,
         )?))
     }
@@ -577,21 +577,15 @@ pub fn rgb_tracking_frame(
     if rgb.len() != frame.width() * frame.height() * 3 || channel.is_some_and(|c| c > 2) {
         return Err(Error::Video("invalid tracking color buffer/channel".into()));
     }
-    let pixels = rgb
-        .as_chunks::<3>()
-        .0
-        .iter()
-        .map(|p| {
-            let value = if let Some(c) = channel {
-                p[c]
-            } else {
-                ((4899 * u32::from(p[0]) + 9617 * u32::from(p[1]) + 1868 * u32::from(p[2]) + 8192)
-                    >> 14) as u8
-            };
-            f32::from(value) / 255.0
-        })
-        .collect();
-    Ok(GrayFrame::new(
+    let pixels = rgb.as_chunks::<3>().0.iter().map(|p| {
+        if let Some(c) = channel {
+            p[c]
+        } else {
+            ((4899 * u32::from(p[0]) + 9617 * u32::from(p[1]) + 1868 * u32::from(p[2]) + 8192)
+                >> 14) as u8
+        }
+    });
+    Ok(GrayFrame::from_u8_iter(
         frame.width(),
         frame.height(),
         pixels,

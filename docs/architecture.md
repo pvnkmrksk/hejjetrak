@@ -12,6 +12,13 @@ The engine and native frontends are separate. [PhotoCraft's architecture](https:
 
 ## Legacy spherical-map estimation
 
+Recorded-video frontends use a one-slot bounded decode producer, overlapping
+codec work and tracking without skipping frames. The synchronous adapter
+remains available for oracles. Core frames share validated immutable pixels;
+clock edits do not copy images. Map fitting reuses each prepared observation
+for its atlas/diagnostic commit and avoids unused pairwise pyramids.
+See [measured performance](performance.md).
+
 Legacy `.txt` configs default to map fitting. Image rays are recentered into FicTrac's ROI basis, sampled onto a square angular ROI and intersected with the sphere. Exclusion polygons mask source pixels. Local masked minima/maxima, `thr_ratio`, `thr_win_pc` and a median filter create a binary ROI. Visible surface points are projected onto a persistent equal-area sphere map. Initial pixels receive the original confidence bonus; subsequent binary evidence updates its saturated values.
 
 For each new frame, pure Rust PRIMA BOBYQA minimizes mean squared binary-map error against the accumulated atlas within `guess ± opt_bound` on each axis. `opt_tol`, `opt_max_evals`, `opt_max_err` and `q_factor` control the fit. A filtered previous delta supplies the next guess. The fitted map and the displayed accumulated map are the same state. On a failed local fit or a loaded-map reset, optional deterministic SO(3) covering and bounded multistart BOBYQA search the atlas. This differs from upstream stochastic CRS2. A successful global fit sets absolute pose with zero relative delta, preserving missing-motion semantics. More than `max_bad_frames` consecutive failures trigger the original reset policy. A reset preserves source count/time and heading-independent integrated displacement; sequence restarts at zero. Imported confidence maps are validated before mutation; rejected frames do not contaminate the atlas.

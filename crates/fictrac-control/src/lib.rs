@@ -56,7 +56,7 @@ struct Session {
     source_base: Option<PathBuf>,
     input: PathBuf,
     history: DocumentHistory,
-    source: VideoSource,
+    source: fictrac_io::PrefetchedVideoSource,
     config: Config,
     tracker: Tracker,
     diagnostics: Diagnostics,
@@ -128,7 +128,7 @@ impl Session {
             source_base,
             input,
             history: DocumentHistory::new(text),
-            source,
+            source: source.prefetch().map_err(display)?,
             config: loaded.config,
             tracker,
             diagnostics,
@@ -180,13 +180,7 @@ impl Session {
                     previous.clone()
                 };
                 if let Some(timestamp) = next.emitted_timestamp {
-                    frame = GrayFrame::new(
-                        frame.width(),
-                        frame.height(),
-                        frame.pixels().to_vec(),
-                        timestamp,
-                    )
-                    .map_err(display)?;
+                    frame = frame.with_timestamp(timestamp).map_err(display)?;
                 }
                 let row = next.tracker.process(frame.clone()).map_err(display)?;
                 next.views = Some(
@@ -274,13 +268,7 @@ impl Session {
             } else {
                 source_time
             };
-            let frame = GrayFrame::new(
-                frame.width(),
-                frame.height(),
-                frame.pixels().to_vec(),
-                timestamp,
-            )
-            .map_err(display)?;
+            let frame = frame.with_timestamp(timestamp).map_err(display)?;
             if self.realtime {
                 let origin = *pacing_timestamp.get_or_insert(timestamp);
                 let duration = std::time::Duration::try_from_secs_f64((timestamp - origin) / 1000.)

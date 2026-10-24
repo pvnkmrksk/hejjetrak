@@ -149,10 +149,20 @@ impl Diagnostics {
         roi
     }
     pub fn update(&mut self, frame: &GrayFrame, row: Option<&TrackRow>) -> DebugViews {
+        let roi = self.prepare(frame);
+        self.update_prepared(frame, row, roi)
+    }
+    /// The atlas estimator and its committed map must use the same thresholded
+    /// observation. Reuse it rather than sampling/filtering the image twice.
+    pub(crate) fn update_prepared(
+        &mut self,
+        frame: &GrayFrame,
+        row: Option<&TrackRow>,
+        roi: Vec<u8>,
+    ) -> DebugViews {
         let n = self.size;
         let mw = self.map_width;
         let mh = self.map_height;
-        let roi = self.prepare(frame);
         let mut diff = vec![0; n * n];
         let mut instant = vec![128; mw * mh];
         let orientation = row

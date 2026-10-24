@@ -162,7 +162,7 @@ fn track(
     };
     let requested_fps = document.number("src_fps", -1.);
     let media_enabled = document.boolean("save_raw") || document.boolean("save_debug");
-    if media_enabled {
+    if media_enabled || loaded.config.spherical_map.is_some() {
         source.enable_color();
     }
     let fps = if requested_fps > 0. {
@@ -186,6 +186,7 @@ fn track(
         tracker.load_sphere_template(fictrac_io::load_sphere_map(&path)?)?;
     }
     let mut sinks = fictrac_io::OutputSinks::from_config(&document)?;
+    let mut source = source.prefetch()?;
     // Validate the first decoded frame before creating output artifacts.
     let first = next_tracking(&mut source, map_settings.as_ref())?
         .ok_or("input contains no video frames")?;
@@ -245,12 +246,7 @@ fn track(
     let mut current = Some(first);
     while let Some(frame) = current {
         let frame = if requested_fps > 0. {
-            fictrac_core::GrayFrame::new(
-                frame.width(),
-                frame.height(),
-                frame.pixels().to_vec(),
-                summary.frames as f64 * 1000. / requested_fps,
-            )?
+            frame.with_timestamp(summary.frames as f64 * 1000. / requested_fps)?
         } else {
             frame
         };
@@ -642,7 +638,7 @@ fn main() -> std::process::ExitCode {
 }
 
 fn next_tracking(
-    source: &mut VideoSource,
+    source: &mut fictrac_io::PrefetchedVideoSource,
     settings: Option<&fictrac_core::MapSettings>,
 ) -> Result<Option<fictrac_core::GrayFrame>> {
     Ok(if let Some(s) = settings {
