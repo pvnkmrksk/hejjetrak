@@ -16,14 +16,14 @@ Assessed against pvnkmrksk/fictrac commit `10fc4472af1fc9062b9bf5a92738e835b98cc
 | Config/file state | Lossless comments/unknown fields/CRLF, raw/field synchronization, history, external conflict guard; transactional agent edits |
 | Multi-instance | Independent native windows/headless sessions; VR/BR files, incremented camera IDs/ports, preserved video paths; explicit window size/position and up to 16 grid cells |
 | Full CLI | Conventional commands plus legacy positional config invocation; structured status, schema, all numerical/calibration/recording operations through JSONL |
-| AI agent control | JSONL and MCP stdio over shared controller; native GUI JSONL over displayed sessions; actual 299-command native run and full-video headless transcript |
+| AI agent control | JSONL and MCP stdio over shared controller; native GUI JSONL over displayed sessions; current 168-command video and 115-command camera runs, sixteen-window run, plus historical native/headless transcripts |
 | Video inputs | H.264 MP4/MOV/AVI (including B-frame ordering), MPEG-4 Part 2 MP4/MOV/AVI, MJPEG/raw AVI and mono/420 Y4M |
 | Video recording | All original codec settings: H.264 AVI default, XVID AVI, MPEG-4 MP4, MJPEG/raw AVI; explicit H.264 MP4; exact FPS/container tests, calibrated debug mosaic, safe partial finalization |
 | Video codec boundaries | Segmented OpenDML AVI supports >4 GiB offsets; H.264 encodes even dimensions with SPS cropping; odd H.264 4:2:0 dimensions fail explicitly; exotic profiles/formats remain outside tested coverage |
 | Serial/UDP | Native Rust serial2 and datagram sinks with original prefix/full row; actual OS pseudo-terminal and loopback tests; physical serial hardware untested |
-| Camera | Built-in FaceTime HD camera: actual 640×480, nominal 30 fps, 126 native GUI agent commands, pause/step/config, two 62-frame H.264 recordings, source switch and reopen; physical sphere accuracy/iPhone/industrial SDKs unverified |
-| Native platforms | Mac GUI/CLI executed locally; GitHub-hosted Windows/Linux/Mac ARM+Intel full tests and synthetic CLI execution passed at the POC checkpoint; their GUI visual behavior and other-OS camera hardware remain unverified |
-| Packaging | Public source/releases and GitHub Actions archives; Mac ad hoc signing and dependency notices. POC ZIP timestamp failure repaired in the patch packager. No installer, Developer ID notarization or Windows Authenticode signing |
+| Camera | Built-in FaceTime HD camera: actual 640×480/30 and 1280×720/15 format/readback, pause/step/config, two 35-frame H.264 recordings, source switch and reopen; unsupported exposure/gain controls explain limitations; physical sphere accuracy/iPhone/industrial SDKs unverified |
+| Native platforms | Mac GUI/CLI executed locally; v0.1.1 GitHub-hosted Windows/Linux/Mac ARM+Intel formatting, strict Clippy, full tests, release builds and synthetic CLI demo passed. Windows static-CRT rebuild repeated those checks. Other-platform GUI visual behavior and camera hardware remain unverified |
+| Packaging | All four v0.1.1 platform archives uploaded; extracted official Mac ARM app ran the full sample, with ad hoc signature verified. Windows import audit verifies no separate VC redistributable DLL dependency. Dependency notices included. No installer, Developer ID notarization or Windows Authenticode signing |
 
 A protocol request accepted into a GUI worker queue is not proof the action completed. Clients poll revision/frame/advance/recording/notice state and validate files. Synchronous headless commands expose the same numerical operations; playback and OS-window scheduling differ deliberately.
 

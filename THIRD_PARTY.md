@@ -13,12 +13,13 @@ Cargo.lock pins the complete dependency graph. These are Rust libraries, not ext
 | rfd 0.15 | Native file dialogs | MIT |
 | image 0.25 | Rust image buffers/PNG | MIT OR Apache-2.0 |
 | serial2 0.2 | Native serial configuration and bounded writes | BSD-2-Clause OR Apache-2.0 |
+| zeromq 0.6, tokio 1 | Pure Rust ZMQ transport and bounded asynchronous publisher | MIT |
 | rustix (test dependency) | Native pseudo-terminal serial test harness | MIT OR Apache-2.0 |
 | nokhwa 0.10 | Windows/Linux native capture | Apache-2.0 |
 | objc2 and framework crates, block2, dispatch2 | Rust bindings to macOS native APIs | MIT |
 
 OxideAV supplies Rust codec/container implementations. No FFmpeg/OpenH264/libav/OpenCV/NLopt C/C++ implementation is linked or invoked. Nokhwa's decoding/MJPEG features are disabled. OS libraries and graphics drivers are native system dependencies, accessed through Rust bindings; this is not a claim that the operating system itself is Rust. The CLI links libSystem on macOS; the GUI additionally links native Apple frameworks.
 
-Dependency sources, authorship and full license texts remain in Cargo registry distributions. CI vendors dependency sources alongside artifacts. The local development app includes 707 available license/notice files for 461 cached locked registry packages under `Contents/Resources/DependencyLicenses/`, with a package/license/source manifest. Future binary distributions must carry appropriate notices. The historical v0.1 zip in this workspace predates the GUI and must not be confused with the current app.
+Dependency sources, authorship and full license texts remain in Cargo registry distributions. CI vendors the locked dependency graph, and the packager copies its available license/notice files into `DependencyLicenses/` with a manifest listing each package's included files. On macOS this directory is under `Contents/Resources/`. Windows x64 releases use [Rust's static CRT linkage](https://doc.rust-lang.org/reference/linkage.html#static-and-dynamic-c-runtimes) to avoid a separately installed Visual C++ redistributable; native Windows system DLLs remain OS dependencies. Historical development archives in this workspace must not be confused with current GitHub releases.
 
 Upstream FicTrac's CC BY-NC-SA terms remain in LICENSE and ATTRIBUTION.md. Permissive dependency licenses do not remove those terms.
