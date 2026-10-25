@@ -19,9 +19,10 @@ the hidden interval. See [the output contract](output.md).
 
 ## How the protection works
 
-The following describes v0.1.3 development. The published v0.1.2 protection and
-long-occlusion fixtures remain the baseline; current full-suite/platform checks
-are recorded separately in [validation](validation.md).
+The following describes v0.1.3. Local formatting, strict Clippy, all 173 workspace
+tests and the release build pass. All four v0.1.3 native release jobs and the
+downloaded Mac archive checks pass too. The v0.1.2 protection and long-occlusion
+fixtures remain the historical baseline. See [validation](validation.md).
 
 The normal local fit keeps its complete final ROI score. Resilient mode also
 checks for an almost uniform/textureless ROI and for a large drop in edge density
@@ -103,15 +104,16 @@ rad/frame. It requires rejecting the first jump, recovering on the fourth good
 image, then measuring 86 subsequent deltas with component RMS
 `[0.002160993677, 0.001679486020, 0.003679960497]` rad, within the unchanged
 0.008 rad/component RMS gate. A separate stationary-to-moving fixture also
-retains its existing 0.008 rad sequence gate. Full current-source and platform validation
-remain pending; the fixture is not a physical-camera acceleration bound.
+retains its existing 0.008 rad sequence gate. These fixtures pass in the complete
+173-test local workspace suite; they are not physical-camera acceleration bounds.
 
 The v0.1.2 baseline fixtures below have completed evidence. For v0.1.3, a new
 deterministic textured-outlier fixture reproduces the previous false acceptance
 of approximately 0.063 rad at complete MSE 3749.68. Its regression checks exact
 atlas preservation and an ensuing 180-frame clear suffix against unchanged
-0.075 sphere rad path, 0.025 rad heading and 0.012 rad/component limits. Full
-current-source and native platform results remain pending final validation.
+0.075 sphere rad path, 0.025 rad heading and 0.012 rad/component limits. The local
+workspace suite, all four native release jobs and downloaded Mac archive
+checks pass.
 
 The known-motion core regression learns 400 clean textured-sphere images, then
 inserts 240 images covering uniform, gradient and unrelated patterned occluders.
@@ -155,8 +157,9 @@ are not timing measurements.
 These focused fixture results use complete-ROI recovery refinement. The previous
 sampled recovery refinement missed the existing heading gate (0.025728 versus
 0.025); the solver objective was corrected rather than loosening that tolerance.
-Current full-suite, native visual and platform CI results remain separate pending
-items in [validation](validation.md).
+The complete local suite, native lifecycle checks, four-platform release CI
+and downloaded Mac archive checks pass. Native hover/loupe pointer interaction
+remains incomplete; [validation](validation.md) records each boundary separately.
 
 These are deterministic fixtures, not proof that every real obstruction can be
 recognized. A patterned occluder resembling the ball, very little learned map,

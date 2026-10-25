@@ -1,5 +1,12 @@
 # Recording and files
 
+![Native recording state on the public sample](images/recording.png)
+
+The active recording control changes to a red Stop icon and shows **REC** where
+space permits. Healthy tracking uses green; unreliable tracking uses amber.
+Labels, icon changes and tooltips retain meaning without relying on colour alone.
+This is an actual v0.1.3 downloaded Mac build recording the bundled sample.
+
 Use the Record control to start or stop immediately. Select data only, raw video, processed diagnostic video or both. The transient selection does not change the saved config or reset tracking. Canonical `save_raw` and `save_debug` still select media when a recording starts from config.
 
 ## Keep the whole take

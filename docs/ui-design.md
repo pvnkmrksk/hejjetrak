@@ -38,6 +38,15 @@ The ball crop is projected with the selected camera model. Letterboxing fits the
 
 The native square editor keeps the legacy corner slots. Right-click can remove a corner, and the next click fills the missing slot without cycling the other corner labels. F changes the pose branch through the shared reflected-seed refit; it does not permute corners or silently choose a new coordinate convention.
 
+## Colour carries state
+
+The neutral interface reserves colour for readable state: red for active recording
+and errors/overload, amber for unreliable tracking, green for accepted tracking,
+and distinct colours for calibration geometry. Recording also changes its icon
+to Stop and shows REC where space allows; Lost/Paused/Done labels and tooltips
+keep meaning available without relying on colour alone. Secondary controls remain
+neutral rather than competing with the video.
+
 ## Guided calibration and precision aids
 
 **Calibrate again…** starts saved Ball review, then Exclusions, then Lab.

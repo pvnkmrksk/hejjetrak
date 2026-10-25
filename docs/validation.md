@@ -1,18 +1,35 @@
 # hejjetrak validation evidence
 
-## v0.1.3 local validation — 2026-10-25
+## v0.1.3 release validation — 2026-10-25
 
 On the same M2 Pro/Mac/toolchain below, formatting, strict locked all-target
 Clippy and the complete locked workspace suite pass **173 tests**, zero failures
 across 26 suites. The release workspace binaries/examples build successfully.
-Linux package-format tests, download-selection tests and the 1298-reference site
-build also pass locally. Current v0.1.3 native platform CI and downloaded-release
-validation remain pending; v0.1.2 remote evidence below is historical.
+Linux package-format tests, download-selection tests and the static-site link
+check also pass locally. The [v0.1.3 release workflow](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40180700262)
+passes all four native jobs: Mac Apple Silicon, Mac Intel, Windows x64 and Linux
+x64. Mac and Linux pass 173 workspace tests each; Windows passes 170 with
+platform-specific exclusions. All pass the separate 1,353-test Rust decoder
+suite. The [published release](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.3)
+contains all five platform assets, including the Linux Debian/Ubuntu installer.
+Its metadata, relative launcher links, extracted CLI, desktop entry and package
+installation simulation pass on Ubuntu 24.04; glibc 2.39 or newer is required.
+Native Windows/Linux camera hardware and GUI appearance remain unverified.
+
+The official Apple Silicon ZIP SHA-256 is
+`ba18e7856cec83d7b6ff5c25c9c775df5c383900ececb780d5f927966804aeb1`,
+matching GitHub's asset digest. After extraction outside the workspace, strict
+ad hoc signature verification, CLI version, bundled Lucide notice, all 300
+sample frames and unchanged reference comparison pass. Its native preview and
+red recording Stop/REC state were visually verified. This does not establish
+notarization, Gatekeeper first-launch behavior or completion of the loupe check
+below. [Release jobs, asset hashes and downloaded-app evidence](benchmarks/release-v013-20261025.json)
+retain the exact checks.
 
 The release 120-frame known-motion demo retains component RMS 0.000304049695 rad.
 All 300 sample frames process, 299 tracked and zero rejected; all-frame numeric
 bytes match the official v0.1.2 Mac run. Original path/heading/component gates
-remain passing with path RMS0.025593842 sphere rad and heading RMS0.013651430 rad.
+remain passing with path RMS 0.025593842 sphere rad and heading RMS 0.013651430 rad.
 A serial predecoded benchmark with one warmup/five measured runs reports
 **0.537 ms** median run-mean. Its boundary remains Tracker::process only, excluding
 initialization, capture/decode/conversion, pacing, outputs and GUI.
@@ -29,20 +46,20 @@ regressions. The **native hover/loupe mouse check remains incomplete**: desktop
 automation lost its window binding and reported noWindowsAvailable. No broader
 physical interaction claim is made.
 
-Focused actual-video recovery uses 80 black, 80 gradient and80 unrelated-pattern
+Focused actual-video recovery uses 80 black, 80 gradient and 80 unrelated-pattern
 occluders after 900 learned frames. It recovers on the second clear image;
-178 measured suffix rows have path RMS**0.0156229003** sphere rad and heading
-RMS**0.0106615281** rad. The 70% partial-obstruction suffix has path RMS
-**0.0154191124** and heading RMS**0.0105766746**. Every rotation component stays
+178 measured suffix rows have path RMS **0.0156229003** sphere rad and heading
+RMS **0.0106615281** rad. The 70% partial-obstruction suffix has path RMS
+**0.0154191124** and heading RMS **0.0105766746**. Every rotation component stays
 below the unchanged 0.020 rad gate; path/heading limits remain 0.075/0.025.
 Rare recovery now optimizes the complete ROI, addressing the sampled-refinement
 heading regression without changing healthy-frame fitting. See the
 [full recovery evidence](benchmarks/recovery-20261025.json).
 
-Final binary 3ed79a4e06e2d08fce62f57ddd9a27c15f32d086fa547b63cc29daf0e762c05a
-sustains 120.12 FPS for one replay using**3.19% of total 12-core CPU capacity**
+Final binary `3ed79a4e06e2d08fce62f57ddd9a27c15f32d086fa547b63cc29daf0e762c05a`
+sustains 120.12 FPS for one replay using **3.19% of total 12-core CPU capacity**
 and 160.0 MiB median RSS. Sixteen replays with UDP/ZMQ sustain 119.97–120.12 FPS each,
-using**22.65% total CPU** and 291.3 MiB combined RSS. All publishers remain alive
+using **22.65% total CPU** and 291.3 MiB combined RSS. All publishers remain alive
 without application discards/failures. One paused replay uses 0.26% total CPU in
 this case; prior idle variability remains unresolved. No physical 120 FPS camera,
 GPU percentage or power measurement is implied. [Raw resource/profile/lifetime
@@ -60,7 +77,7 @@ changes that retain timestamps and every recorded row. The published
 passed all four native platform jobs and uploaded the four archives. The official
 Mac archive passed ad hoc signature verification, the complete sample comparison
 with unchanged RMS, and a native visual smoke test. These are v0.1.2 results;
-v0.1.3 local results are above; its native CI and release validation remain pending.
+v0.1.3 release results are recorded separately above.
 
 The release known-motion demo processes **120 frames**, with rotation-component
 RMS **0.000304049695 rad** against the unchanged **0.003** gate. The release sample
@@ -92,8 +109,8 @@ gates remain unchanged. The real-video case learns **900 forward/backward
 frames**, inserts **240 occluders**, checks **180 clear frames**, adds **120 frames**
 with a panel covering approximately **70%** of the visible ROI, then checks
 another **180 clear frames**. Aligned measured-suffix limits remain **0.020 rad
-per rotation component**, **0.075 sphere rad path RMS** and **0.025 rad heading
-RMS**. Missing gap motion is never reconstructed. See [recovery policy and
+per rotation component**, **0.075 sphere rad path RMS ** and **0.025 rad heading
+RMS **. Missing gap motion is never reconstructed. See [recovery policy and
 boundaries](recovery.md).
 
 The final-source output-enabled spot check repeats sixteen sessions at approximately

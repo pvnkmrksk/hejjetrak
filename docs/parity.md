@@ -1,8 +1,12 @@
-# Behavioral parity assessment — hejjetrak v0.1.3 development
+# Behavioral parity assessment — hejjetrak v0.1.3
 
-Published [v0.1.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.2)
-has completed four-platform release checks and official Mac smoke evidence.
-The v0.1.3 source refinements below await final current-source validation.
+Published [v0.1.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.3)
+passed all four [native release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40180700262),
+with 173 workspace tests on Linux and both Macs, 170 platform-applicable tests
+on Windows, and 1,353 decoder tests on each platform. The official Apple Silicon
+archive passed strict signature/version checks, the complete sample comparison
+and native preview/recording inspection. Native hover/loupe pointer verification
+remains incomplete; physical camera and GUI coverage limits below still apply.
 
 Current source additionally uses the [accelerated local search](tracking-performance.md).
 It changes candidate generation while retaining complete error/quality scoring,
@@ -23,7 +27,7 @@ Assessed against pvnkmrksk/fictrac commit `10fc4472af1fc9062b9bf5a92738e835b98cc
 | Local optimizer | Pure Rust PRIMA BOBYQA; differs from upstream NLopt Powell implementation |
 | Global search | Legacy mode uses deterministic SO(3) covering/BOBYQA multistart, differing from upstream stochastic CRS2. Default resilient mode additionally uses accepted-view seeds, throttled bounded recovery and complete final verification; no universal recovery guarantee |
 | Templates | Real equal-area PNG confidence image import/export; matching dimensions validated atomically |
-| Bad-frame/reset handling | Default resilient policy preserves atlas/pose/path on unreliable frames, rejects low texture/adaptive excessive complete-score errors even with negative `opt_max_err`, suppresses automatic atlas clearing and confirms recovery across two matches. `max_bad_frames` auto-reset is the legacy `rust_resilient=n` policy. Explicit reset remains available |
+| Bad-frame/reset handling | Default resilient policy preserves atlas/pose/path on unreliable frames, rejects low texture/adaptive excessive complete-score errors even with negative `opt_max_err`, suppresses automatic atlas clearing and confirms recovery across two matches, or four good images for a consistent new-speed epoch. `max_bad_frames` auto-reset is the legacy `rust_resilient=n` policy. Explicit reset remains available |
 | Missing motion | `rejected` and unaccepted `recovering` rows remain in quality/all-frame evidence; successful confirmed relocalisation sets absolute pose with zero relative motion. No hidden-interval trajectory is invented |
 | Legacy axes and 25-column data | ROI export basis, original signs/units, principal Rodrigues orientation, independent sequence counter; supplied reference gates unchanged |
 | Legacy accepted-only output | `.dat`, serial and UDP emit accepted rows; companion all-frame output prevents missing decisions from being hidden |
@@ -38,8 +42,8 @@ Assessed against pvnkmrksk/fictrac commit `10fc4472af1fc9062b9bf5a92738e835b98cc
 | Video codec boundaries | Segmented OpenDML AVI supports >4 GiB offsets; H.264 encodes even dimensions with SPS cropping; odd H.264 4:2:0 dimensions fail explicitly; exotic profiles/formats remain outside tested coverage |
 | Serial/UDP | Native Rust serial2 and datagram sinks with original prefix/full row; actual OS pseudo-terminal and loopback tests; physical serial hardware untested |
 | Camera | Built-in FaceTime HD camera: actual 640×480/30 and 1280×720/15 format/readback, pause/step/config, two 35-frame H.264 recordings, source switch and reopen; unsupported exposure/gain controls explain limitations; physical sphere accuracy/iPhone/industrial SDKs unverified |
-| Native platforms | Published v0.1.2 passed all four native release jobs. Official Mac archive signature/sample/native visual smoke passed; Windows/Linux GUI appearance and camera hardware remain unverified. v0.1.3 full checks/platform CI remain pending |
-| Packaging | Published v0.1.2 has four native archives and dependency notices; its official Mac bundle passed signature/sample/visual smoke. New package formats follow their release notes and validation, not an assumption from filenames. No Developer ID notarization or Windows Authenticode signing |
+| Native platforms | Published v0.1.3 passed all four native release jobs. Official Apple Silicon archive signature/version/sample and native preview/recording checks passed. Native hover/loupe pointer testing remains incomplete; Windows/Linux GUI appearance and camera hardware remain unverified |
+| Packaging | Published v0.1.3 has five assets: two Mac ZIPs, Windows ZIP, Linux portable tar and Linux amd64 `.deb`, with dependency notices. The Linux package passed extraction, dependency/desktop-entry and CLI smoke validation on its build host; ABI requirements remain explicit. No Developer ID notarization or Windows Authenticode signing |
 | Resource scheduling | Interruptible source deadlines/idle waits, bounded queues/staged frame, coalesced preview publication, unchanged per-frame numerical/recording evidence, cached geometry/textures and deque history. CPU/RSS methodology/results in resources.md; no wattage or sixteen high-rate camera capacity claim |
 
 A protocol request accepted into a GUI worker queue is not proof the action completed. Clients poll revision/frame/advance/recording/notice state and validate files. Synchronous headless commands expose the same numerical operations; playback and OS-window scheduling differ deliberately.
@@ -81,7 +85,7 @@ and acquisition/recording limits are recorded separately from tracking-call
 latency. GPU tracking, NVIDIA hardware, battery drain/wattage and modern Intel
 laptop capacity have not been measured.
 
-## v0.1.3 source refinements awaiting final validation
+## v0.1.3 refinements
 
 Saved calibration is reviewed read-only before Keep, Edit or Redraw. The larger
 loupe and small-preview chrome do not change source coordinates or font sizes.

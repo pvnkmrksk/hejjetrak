@@ -1,0 +1,502 @@
+{
+  "tag": "v0.1.3",
+  "source_commit": "fe56dab81677ae44959c0460ea878eceb3c7cbff",
+  "run_id": 40180700262,
+  "run_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40180700262",
+  "run_conclusion": "success",
+  "captured_at_utc": "2026-10-25T09:46:35.736241+00:00",
+  "platforms": [
+    {
+      "job": "package (macos-15-intel)",
+      "job_id": 121130959893,
+      "conclusion": "success",
+      "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40180700262/job/121130959893",
+      "workspace_test_totals": {
+        "passed": 173,
+        "failed": 0,
+        "ignored": 0
+      },
+      "decoder_test_totals": {
+        "passed": 1353,
+        "failed": 0,
+        "ignored": 0
+      },
+      "synthetic_demo_frames": 120,
+      "synthetic_component_rmse_rad": 0.0003040496948914138,
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run dtolnay/rust-toolchain@stable",
+          "conclusion": "success"
+        },
+        {
+          "name": "Portable Windows runtime linkage",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Linux development libraries",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run cargo fmt --all -- --check",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo clippy --workspace --all-targets --locked -- -D warnings",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo test --workspace --locked",
+          "conclusion": "success"
+        },
+        {
+          "name": "Patched Rust decoder regression suite",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo build --workspace --release --locked",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify Windows redistributable independence",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run cargo vendor --locked third-party-source",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run python scripts/package.py",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify Linux installer metadata and extracted payload",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Attach platform archive to release",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ],
+      "local_log_filename": "hejjetrak-v013-mac-intel-release.log"
+    },
+    {
+      "job": "package (ubuntu-latest)",
+      "job_id": 121130960051,
+      "conclusion": "success",
+      "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40180700262/job/121130960051",
+      "workspace_test_totals": {
+        "passed": 173,
+        "failed": 0,
+        "ignored": 0
+      },
+      "decoder_test_totals": {
+        "passed": 1353,
+        "failed": 0,
+        "ignored": 0
+      },
+      "synthetic_demo_frames": 120,
+      "synthetic_component_rmse_rad": 0.0003040496948914138,
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run dtolnay/rust-toolchain@stable",
+          "conclusion": "success"
+        },
+        {
+          "name": "Portable Windows runtime linkage",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Linux development libraries",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo fmt --all -- --check",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo clippy --workspace --all-targets --locked -- -D warnings",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo test --workspace --locked",
+          "conclusion": "success"
+        },
+        {
+          "name": "Patched Rust decoder regression suite",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo build --workspace --release --locked",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify Windows redistributable independence",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run cargo vendor --locked third-party-source",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run python scripts/package.py",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify Linux installer metadata and extracted payload",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Attach platform archive to release",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ],
+      "local_log_filename": "hejjetrak-v013-linux-release.log"
+    },
+    {
+      "job": "package (macos-latest)",
+      "job_id": 121130960077,
+      "conclusion": "success",
+      "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40180700262/job/121130960077",
+      "workspace_test_totals": {
+        "passed": 173,
+        "failed": 0,
+        "ignored": 0
+      },
+      "decoder_test_totals": {
+        "passed": 1353,
+        "failed": 0,
+        "ignored": 0
+      },
+      "synthetic_demo_frames": 120,
+      "synthetic_component_rmse_rad": 0.0003040496948914138,
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run dtolnay/rust-toolchain@stable",
+          "conclusion": "success"
+        },
+        {
+          "name": "Portable Windows runtime linkage",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Linux development libraries",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run cargo fmt --all -- --check",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo clippy --workspace --all-targets --locked -- -D warnings",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo test --workspace --locked",
+          "conclusion": "success"
+        },
+        {
+          "name": "Patched Rust decoder regression suite",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo build --workspace --release --locked",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify Windows redistributable independence",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run cargo vendor --locked third-party-source",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run python scripts/package.py",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify Linux installer metadata and extracted payload",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Attach platform archive to release",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ],
+      "local_log_filename": "hejjetrak-v013-mac-arm-release.log"
+    },
+    {
+      "job": "package (windows-latest)",
+      "job_id": 121130960129,
+      "conclusion": "success",
+      "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40180700262/job/121130960129",
+      "workspace_test_totals": {
+        "passed": 170,
+        "failed": 0,
+        "ignored": 0
+      },
+      "decoder_test_totals": {
+        "passed": 1353,
+        "failed": 0,
+        "ignored": 0
+      },
+      "synthetic_demo_frames": 120,
+      "synthetic_component_rmse_rad": 0.0003040496948914138,
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run dtolnay/rust-toolchain@stable",
+          "conclusion": "success"
+        },
+        {
+          "name": "Portable Windows runtime linkage",
+          "conclusion": "success"
+        },
+        {
+          "name": "Linux development libraries",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run cargo fmt --all -- --check",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo clippy --workspace --all-targets --locked -- -D warnings",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo test --workspace --locked",
+          "conclusion": "success"
+        },
+        {
+          "name": "Patched Rust decoder regression suite",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo build --workspace --release --locked",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify Windows redistributable independence",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run cargo vendor --locked third-party-source",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run python scripts/package.py",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify Linux installer metadata and extracted payload",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Attach platform archive to release",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ],
+      "local_log_filename": "hejjetrak-v013-windows-release.log"
+    }
+  ],
+  "assets": [
+    {
+      "name": "hejjetrak-linux-amd64.deb",
+      "size": 16733870,
+      "digest": "sha256:755d2f4667da536090624425c654f34e8b22665eb83c3c525baa71395b825e4c",
+      "url": "https://github.com/pvnkmrksk/hejjetrak/releases/download/untagged-977135938dd99de5f140/hejjetrak-linux-amd64.deb",
+      "integrity_scope": "GitHub-provided SHA-256 digest; downloaded Mac Apple Silicon hash is independently verified in downloaded_mac."
+    },
+    {
+      "name": "hejjetrak-linux-x86_64.tar.gz",
+      "size": 16777109,
+      "digest": "sha256:df5a291417b09a33f53228ce904506cebcfcbabd83cdf03980590db2d87b293d",
+      "url": "https://github.com/pvnkmrksk/hejjetrak/releases/download/untagged-977135938dd99de5f140/hejjetrak-linux-x86_64.tar.gz",
+      "integrity_scope": "GitHub-provided SHA-256 digest; downloaded Mac Apple Silicon hash is independently verified in downloaded_mac."
+    },
+    {
+      "name": "hejjetrak-macos-arm64.zip",
+      "size": 15430887,
+      "digest": "sha256:ba18e7856cec83d7b6ff5c25c9c775df5c383900ececb780d5f927966804aeb1",
+      "url": "https://github.com/pvnkmrksk/hejjetrak/releases/download/untagged-977135938dd99de5f140/hejjetrak-macos-arm64.zip",
+      "integrity_scope": "GitHub-provided SHA-256 digest; downloaded Mac Apple Silicon hash is independently verified in downloaded_mac."
+    },
+    {
+      "name": "hejjetrak-macos-x86_64.zip",
+      "size": 16278958,
+      "digest": "sha256:091d397d166064f066e0e0ac8fddb84e0b825360a176c0b25609194a5e69b485",
+      "url": "https://github.com/pvnkmrksk/hejjetrak/releases/download/untagged-977135938dd99de5f140/hejjetrak-macos-x86_64.zip",
+      "integrity_scope": "GitHub-provided SHA-256 digest; downloaded Mac Apple Silicon hash is independently verified in downloaded_mac."
+    },
+    {
+      "name": "hejjetrak-windows-amd64.zip",
+      "size": 15545289,
+      "digest": "sha256:fa3733a3c13981863b9bc93850282b9fbeadad95272fda7cc21447e0c77247e9",
+      "url": "https://github.com/pvnkmrksk/hejjetrak/releases/download/untagged-977135938dd99de5f140/hejjetrak-windows-amd64.zip",
+      "integrity_scope": "GitHub-provided SHA-256 digest; downloaded Mac Apple Silicon hash is independently verified in downloaded_mac."
+    }
+  ],
+  "linux_installer": {
+    "package": "hejjetrak",
+    "version": "0.1.3",
+    "architecture": "amd64",
+    "build_host": "Ubuntu 24.04.5 LTS / ubuntu-24.04",
+    "depends": "libc6 (>= 2.39), libgcc-s1 (>= 4.2), libudev1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libegl1, libgles2, libvulkan1",
+    "recommends": "xdg-desktop-portal, xdg-desktop-portal-gtk | xdg-desktop-portal-kde",
+    "validation_passed": [
+      "2 root-free package structure/extraction tests",
+      "dpkg-deb --info",
+      "dpkg-deb --contents",
+      "dpkg-deb --extract",
+      "desktop-file-validate",
+      "extracted relative-symlink CLI schema",
+      "bundled sample existence",
+      "apt-get --simulate install (10 new packages including recommended portal stack)"
+    ],
+    "abi_scope": "glibc >=2.39 and declared library requirements; not compatible with Ubuntu22.04/Debian12 standard glibc. No physical Linux camera or native graphical desktop validation claimed."
+  },
+  "scope": "Hosted native build/test/package/CLI evidence. Independent downloaded Mac Apple Silicon signature, sample and native preview/recording evidence is retained under downloaded_mac. Camera hardware and native pointer limits remain explicit.",
+  "publication": {
+    "verified_at_utc": "2026-10-25T09:47:45.041699+00:00",
+    "published_at": "2026-10-25T09:46:13Z",
+    "url": "https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.3",
+    "draft": false,
+    "asset_count": 5
+  },
+  "downloaded_mac": {
+    "version": "hejjetrak-cli 0.1.3",
+    "archive_sha256": "ba18e7856cec83d7b6ff5c25c9c775df5c383900ececb780d5f927966804aeb1",
+    "github_digest": "sha256:ba18e7856cec83d7b6ff5c25c9c775df5c383900ececb780d5f927966804aeb1",
+    "comparison": {
+      "comparison": {
+        "candidate_final_position": [
+          3.64168489651,
+          -2.646768112362
+        ],
+        "endpoint_error_sphere_rad": 0.041252009416150356,
+        "frames": 300,
+        "heading_rmse_rad": 0.013651430288528159,
+        "path_point_rmse_sphere_rad": 0.025593841799898084,
+        "reference_final_position": [
+          3.674266189723,
+          -2.6214661833162
+        ],
+        "rotation_component_rmse_rad": [
+          0.009475898823054007,
+          0.010924711781146961,
+          0.01781987973491448
+        ],
+        "timestamp_max_error_ms": 3.456079866737127e-11
+      },
+      "limits": {
+        "heading_rmse_rad": 0.025,
+        "path_rmse_sphere_rad": 0.075,
+        "rotation_component_rmse_rad": 0.02
+      },
+      "passed": true
+    },
+    "signature_verified": true,
+    "lucide_notice_present": true,
+    "native_preview_verified": true,
+    "native_recording_state_verified": true,
+    "native_hover_loupe_pointer_verified": false,
+    "sample_all_frame_bytes_identical_to_v012": true,
+    "native_gui_config_format": "Legacy key : value configuration copied from bundled benchmark with explicit sample path; CLI also accepts JSON."
+  }
+}

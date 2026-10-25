@@ -58,8 +58,9 @@ macOS 27.0.1 arm64, Rust 1.99.1**. Release uses thin LTO and one codegen unit,
 without a target-CPU native override. The before build is commit `51dca654`;
 the measured after build is `cd249662`. The final v0.1.2 spot check followed
 its tiny-window CLI-bound/documentation fixes, which did not alter that engine/
-scheduler. v0.1.3 changes numerical acceptance and UI behavior and needs separate
-measurements; see [validation](validation.md).
+scheduler. These are historical v0.1.2 measurements. Separate final v0.1.3
+measurements appear below; see [validation](validation.md) for completed local,
+native-platform CI and downloaded-release checks.
 
 Each table entry is a measured case after three seconds of warmup and at least
 20 seconds of sampling, not a cross-machine or experiment-length guarantee.
@@ -116,8 +117,8 @@ power states mean it is not an energy or equal-performance-core measurement.
 | One grayscale replay, 240 Hz | 0.529 | **4.41%** |
 | Sixteen 120 Hz replays with UDP/ZMQ, recorded cases | 2.55–2.92 | **21–24%** |
 
-These remain v0.1.2-era observations, not new v0.1.3 measurements. A source or UI
-change needs its own resource check before inheriting a timing claim.
+This normalization table describes the v0.1.2-era cases. The separate v0.1.3
+repeat below measures the updated acceptance and UI behavior directly.
 
 For a **purely arithmetic illustration**, the same 0.371-core workload would be
 9.28% of a four-core CPU, 4.64% of eight cores, 3.09% of twelve, or 1.16% of
@@ -129,6 +130,12 @@ A GPU model or total core count alone does not predict acquisition capacity.
 GPU tracking and wattage/battery use remain unmeasured.
 
 ## v0.1.3 final repeat
+
+Local formatting, strict Clippy, all 173 workspace tests and the release build
+pass. Native lifecycle checks, all four release CI jobs and downloaded Mac
+archive checks also pass; see [release validation](validation.md). The
+measurements below use the final local binary, not a cross-platform performance
+claim.
 
 The same serial fixture on the same Mac uses 3.19% of total 12-core CPU capacity
 for one 120 Hz replay (38.3% of one core), with 160.0 MiB median RSS. Sixteen visible

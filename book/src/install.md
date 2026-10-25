@@ -2,7 +2,7 @@
 
 [**Download the latest release**](../#download) or [choose a package on GitHub](https://github.com/pvnkmrksk/hejjetrak/releases/latest). The download page reads the latest published release and offers every available platform explicitly.
 
-Published **v0.1.2** supplies four portable archives. The additional Debian/Ubuntu `.deb` belongs to **v0.1.3 development** and is offered only when an asset is actually present in the selected published release.
+Published **v0.1.3** supplies four portable archives plus a Debian/Ubuntu `.deb`. The download dialog offers only assets present in the selected published release. The Linux binaries require **glibc 2.39 or newer**; see the distribution requirements below.
 
 Choose a platform download, **not** GitHub's “Source code” ZIP. No compiler or Rust installation is needed. Portable archives need no system installation; the optional Debian/Ubuntu installer uses your package manager.
 
@@ -52,7 +52,7 @@ sudo apt install ./hejjetrak-linux-amd64.deb
 
 That command installs the package; never run the tracking app with `sudo`. Use the portable archive below if you want no system installation. The package installs resources under `/usr/lib/hejjetrak`; copy rig/example configs into your own writable experiment folder before editing/saving them. Your recordings/configs stay separate from managed application files. Remove the installed application through the package manager (`sudo apt remove hejjetrak`); preserve your experiment files independently.
 
-The installer declares actual linked ABI requirements detected from the release binaries plus the desktop, graphics-loader and camera libraries loaded at runtime. It recommends a desktop portal for the file chooser. Graphics drivers, a running graphical session and device permissions still belong to your distribution. Builds use the release's Ubuntu runner: an older Debian/Ubuntu may not satisfy its C-library versions. Do not bypass dependency checks; the portable archive uses the same binary ABI and is not a fix for an older system.
+The installer declares actual linked ABI requirements detected from the release binaries plus the desktop, graphics-loader and camera libraries loaded at runtime. It recommends a desktop portal for the file chooser. Graphics drivers, a running graphical session and device permissions still belong to your distribution. The v0.1.3 build uses Ubuntu 24.04 and requires **glibc 2.39 or newer**. Ubuntu 22.04 and Debian 12 do not meet that requirement. Do not bypass dependency checks; the portable archive uses the same binary ABI and is not a fix for an older system. Other distributions still need the listed desktop/camera libraries and working graphics drivers.
 
 ### Portable archive
 
