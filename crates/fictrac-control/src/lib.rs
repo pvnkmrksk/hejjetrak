@@ -551,6 +551,12 @@ impl Controller {
                             polygons.push(p.into_iter().flatten().collect());
                             doc.set("roi_ignr", &legacy(polygons)?).map_err(display)?;
                         }
+                        "replace_exclusions" => {
+                            let polygons: Vec<Vec<[f64; 2]>> =
+                                serde_json::from_value(field(a, "polygons")?.clone())
+                                    .map_err(display)?;
+                            doc = replace_exclusions_document(&doc, &polygons)?;
+                        }
                         "remove_exclusion" => {
                             let mut polygons: Vec<Vec<f64>> =
                                 doc.vector("roi_ignr").map_err(display)?;
@@ -1116,6 +1122,40 @@ pub fn record_options(args: &Value) -> Result<Option<RecordOptions>> {
         .map(|value| serde_json::from_value(value.clone()).map_err(display))
         .transpose()
 }
+/// Replace optional exclusion polygons atomically, sharing GUI/agent validation.
+pub fn replace_exclusions_document(
+    document: &ConfigDocument,
+    polygons: &[Vec<[f64; 2]>],
+) -> Result<ConfigDocument> {
+    fictrac_core::Config {
+        ignore_polygons: polygons.to_vec(),
+        ..fictrac_core::Config::default()
+    }
+    .validate()
+    .map_err(display)?;
+    for polygon in polygons {
+        let twice_area: f64 = polygon
+            .iter()
+            .zip(polygon.iter().cycle().skip(1))
+            .map(|(a, b)| a[0] * b[1] - b[0] * a[1])
+            .sum();
+        if twice_area.abs() < 1.0 {
+            return Err("An exclusion must enclose a visible area".into());
+        }
+    }
+    let values: Vec<Vec<f64>> = polygons
+        .iter()
+        .map(|p| p.iter().flatten().copied().collect())
+        .collect();
+    let mut next = document.clone();
+    next.set("roi_ignr", &legacy(values)?).map_err(display)?;
+    if next.get("rust_calibration_size").is_some() {
+        let [width, height]: [usize; 2] = next.vector("rust_calibration_size").map_err(display)?;
+        next = fictrac_io::capture_calibration_reference(&next, width, height).map_err(display)?;
+    }
+    Ok(next)
+}
+
 /// Preserve corner correspondence and c2a_src while applying the shared F re-fit.
 pub fn cycle_square_document(
     document: &ConfigDocument,

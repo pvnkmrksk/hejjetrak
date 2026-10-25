@@ -140,6 +140,7 @@ struct Desktop {
     window_size: Pair,
     window_origin: Pair,
     tile_columns: usize,
+    root_hidden: bool,
 }
 impl Desktop {
     fn new(cc: &eframe::CreationContext<'_>, args: Args) -> Result<Self, String> {
@@ -220,6 +221,7 @@ impl Desktop {
             window_size,
             window_origin,
             tile_columns: grid.0 as usize,
+            root_hidden: false,
         };
         for _ in 1..app.args.windows.clamp(1, 16) {
             app.spawn_from(app.sessions.len() - 1);
@@ -227,7 +229,13 @@ impl Desktop {
         Ok(app)
     }
     fn spawn_from(&mut self, index: usize) {
-        if self.sessions.len() >= 16 {
+        if self
+            .sessions
+            .iter()
+            .filter(|session| !session.closed)
+            .count()
+            >= 16
+        {
             self.sessions[index].error = "At most 16 active instances".into();
             return;
         }
@@ -246,12 +254,14 @@ impl Desktop {
                 let (next, next_path) = doc
                     .next_instance(path.as_deref())
                     .map_err(|e| e.to_string())?;
-                let used_path = next_path
-                    .as_ref()
-                    .is_some_and(|p| self.sessions.iter().any(|s| s.path.as_ref() == Some(p)));
+                let used_path = next_path.as_ref().is_some_and(|p| {
+                    self.sessions
+                        .iter()
+                        .any(|s| !s.closed && s.path.as_ref() == Some(p))
+                });
                 let camera = next.get("src_fn").and_then(|v| v.parse::<u32>().ok());
                 let used_camera = camera.is_some_and(|id| {
-                    self.sessions.iter().any(|s| {
+                    self.sessions.iter().filter(|s| !s.closed).any(|s| {
                         s.document()
                             .ok()
                             .and_then(|d| d.get("src_fn").and_then(|v| v.parse::<u32>().ok()))
@@ -305,8 +315,13 @@ impl eframe::App for Desktop {
             bridge.poll(self);
             self.control = Some(bridge);
         }
-        self.sessions[0].show(ctx);
+        if !self.sessions[0].closed {
+            self.sessions[0].show(ctx);
+        }
         for (index, session) in self.sessions.iter_mut().enumerate().skip(1) {
+            if session.closed {
+                continue;
+            }
             let id = egui::ViewportId::from_hash_of(("fictrac", session.id));
             ctx.show_viewport_immediate(
                 id,
@@ -338,7 +353,7 @@ impl eframe::App for Desktop {
             .collect();
         for (mut i, requested) in requests {
             let n = if requested == 3 {
-                4usize.saturating_sub(self.sessions.len())
+                4usize.saturating_sub(self.sessions.iter().filter(|s| !s.closed).count())
             } else {
                 requested
             };
@@ -347,9 +362,25 @@ impl eframe::App for Desktop {
                 i = self.sessions.len() - 1;
             }
         }
-        if self.sessions[0].closed {
+        if self.sessions.iter().all(|s| s.closed) {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             return;
+        }
+        if self.sessions[0].closed {
+            // eframe owns a root event-loop window. Closing a tracking session
+            // must not close other sessions: retain only a hidden event host,
+            // and release this session's capture, outputs and image memory.
+            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            if !self.root_hidden {
+                ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
+                let root = &mut self.sessions[0];
+                root.worker = None;
+                root.show_settings = false;
+                root.snapshot = runtime::Snapshot::default();
+                root.textures.clear();
+                root.texture_image = None;
+                self.root_hidden = true;
+            }
         }
         let root = self.sessions[0].id;
         self.sessions.retain(|s| s.id == root || !s.closed);
@@ -395,7 +426,7 @@ impl eframe::App for Desktop {
         if self.last_state.elapsed().as_millis() > 400
             && let Some(path) = &self.args.state_output
         {
-            let instances:Vec<_>=self.sessions.iter().map(|s|serde_json::json!({"id":s.id,"frames":s.snapshot.frames,"source":s.source_edit,"config_path":s.path,"paused":s.snapshot.paused,"native_window":s.native_window,"window_rect":s.window_rect,"revision":s.snapshot.revision,"notice":s.snapshot.notice,"error":s.error,"config_text":s.history.text})).collect();
+            let instances:Vec<_>=self.sessions.iter().filter(|s| !s.closed).map(|s|serde_json::json!({"id":s.id,"frames":s.snapshot.frames,"source":s.source_edit,"config_path":s.path,"paused":s.snapshot.paused,"native_window":s.native_window,"window_rect":s.window_rect,"window_title":s.window_title(),"revision":s.snapshot.revision,"notice":s.snapshot.notice,"error":s.error,"config_text":s.history.text})).collect();
             let value = serde_json::json!({"instances":instances,"elapsed_seconds":elapsed});
             match serde_json::to_vec_pretty(&value)
                 .map_err(|e| e.to_string())

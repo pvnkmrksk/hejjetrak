@@ -39,10 +39,13 @@ pub struct Session {
     pub realtime: bool,
     pub tool: Tool,
     pub edit_existing: bool,
+    pub calibration_review: bool,
+    pub calibration_redraw: bool,
     pub magnifier: bool,
     pub points: Vec<[f64; 2]>,
     pub square_slots: Option<[Option<[f64; 2]>; 4]>,
     pub window_rect: Option<[f32; 4]>,
+    pub calibration_preview_size: Option<egui::Vec2>,
     pub last_title: String,
     pub plane: String,
     pub full_image: bool,
@@ -94,10 +97,13 @@ impl Session {
             realtime: true,
             tool: Tool::Inspect,
             edit_existing: false,
+            calibration_review: true,
+            calibration_redraw: false,
             magnifier: true,
             points: vec![],
             square_slots: None,
             window_rect: None,
+            calibration_preview_size: None,
             last_title: String::new(),
             plane: "xy".into(),
             full_image: false,
@@ -192,24 +198,27 @@ impl Session {
         ));
     }
     pub fn window_title(&self) -> String {
+        self.window_title_for_width(self.window_rect.map(|r| r[2]).unwrap_or(520.0))
+    }
+    fn window_title_for_width(&self, width: f32) -> String {
         let source = if self.snapshot.source_label.is_empty() {
-            self.source_edit.clone()
+            if self.running_source.is_empty() {
+                self.source_edit.clone()
+            } else {
+                self.running_source.clone()
+            }
         } else {
             self.snapshot.source_label.clone()
         };
-        let camera_name = if self.snapshot.source_label.is_empty() {
-            self.running_source
-                .parse::<u32>()
-                .ok()
-                .and_then(|id| self.cameras.iter().find(|camera| camera.id == id))
-                .map(|c| format!(" · {}", c.name))
-                .unwrap_or_default()
+        let input = if self.running_source.is_empty() {
+            &self.source_edit
         } else {
-            String::new()
+            &self.running_source
         };
+        let short_source = short_source_label(input, &source);
         // Show applied transport state. A rejected draft edit stays visible in
         // the inspector, but must not relabel the old running output ports.
-        let ports = if let Some(outputs) = &self.snapshot.outputs {
+        let (udp, zmq) = if let Some(outputs) = &self.snapshot.outputs {
             let udp = outputs
                 .udp_destination
                 .as_deref()
@@ -229,7 +238,7 @@ impl Session {
                     }
                 })
                 .unwrap_or_else(|| "off".into());
-            format!("UDP {udp} · ZMQ {zmq}")
+            (udp, zmq)
         } else {
             self.document()
                 .map(|doc| {
@@ -238,17 +247,23 @@ impl Session {
                             .filter(|value| !matches!(*value, "-1" | "0"))
                             .unwrap_or("off")
                     };
-                    format!("UDP {} · ZMQ {}", port("sock_port"), port("zmq_port"))
+                    (port("sock_port").to_owned(), port("zmq_port").to_owned())
                 })
                 .unwrap_or_default()
         };
-        format!(
-            "{} · {}{} · {} · hejjetrak",
-            self.display_name(),
-            source,
-            camera_name,
-            ports
-        )
+        if width >= 900.0 {
+            format!(
+                "{} · ZMQ {zmq} · {short_source} · UDP {udp} · hejjetrak · {source}",
+                self.display_name()
+            )
+        } else if width >= 650.0 {
+            format!(
+                "{} · ZMQ {zmq} · {short_source} · UDP {udp} · hejjetrak",
+                self.display_name()
+            )
+        } else {
+            format!("{} · ZMQ {zmq} · {short_source}", self.display_name())
+        }
     }
     pub fn display_name(&self) -> String {
         self.document()
@@ -383,7 +398,12 @@ impl Session {
         let tmp = path.with_extension(format!("fictrac-{}.tmp", std::process::id()));
         fs::write(&tmp, doc.text())
             .and_then(|_| fs::rename(&tmp, &path))
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| {
+                format!(
+                    "Cannot save {}: {e}. Use Save As to choose a writable configuration folder.",
+                    path.display()
+                )
+            })?;
         self.history.replace(doc.text().to_owned());
         self.source_edit = doc.get("src_fn").unwrap_or("").into();
         self.saved = doc.text().to_owned();
@@ -451,6 +471,26 @@ impl Session {
     }
 }
 
+fn short_source_label(input: &str, actual: &str) -> String {
+    if let Ok(id) = input.parse::<u32>() {
+        // Use an actual V4L path when the backend provided one; never infer a
+        // device path from an enumeration ordinal on a different platform.
+        if let Some(start) = actual.find("/dev/video") {
+            let path = &actual[start..];
+            let end = path
+                .find(|c: char| c.is_whitespace() || c == ')')
+                .unwrap_or(path.len());
+            return path[..end].to_owned();
+        }
+        return format!("Camera {id}");
+    }
+    actual
+        .rsplit(['/', '\\'])
+        .find(|s| !s.is_empty())
+        .unwrap_or(actual)
+        .to_owned()
+}
+
 pub(crate) struct CalibrationCache {
     pub text: String,
     pub width: usize,
@@ -489,8 +529,13 @@ mod tests {
         });
         let title = session.window_title();
         assert!(title.contains("VR7"));
-        assert!(title.contains("/actual/input.mp4"));
-        assert!(title.contains("UDP 1111 · ZMQ 9871"));
+        assert_eq!(title, "VR7 · ZMQ 9871 · input.mp4");
+        assert!(
+            session
+                .window_title_for_width(960.0)
+                .contains("/actual/input.mp4")
+        );
+        assert!(session.window_title_for_width(700.0).contains("UDP 1111"));
         assert!(!title.contains("2222") && !title.contains("9999"));
         if let Some(publisher) = session
             .snapshot
@@ -503,7 +548,23 @@ mod tests {
         }
         assert!(session.window_title().contains("ZMQ 9871 failed"));
         session.snapshot.outputs = None;
-        assert!(session.window_title().contains("UDP 2222 · ZMQ 9999"));
+        assert!(session.window_title().contains("ZMQ 9999"));
+        assert!(session.window_title_for_width(700.0).contains("UDP 2222"));
         Ok(())
+    }
+    #[test]
+    fn camera_titles_are_short_and_never_invent_device_paths() {
+        assert_eq!(
+            short_source_label("2", "Huge camera name (AVFoundation: 0x00000001)"),
+            "Camera 2"
+        );
+        assert_eq!(
+            short_source_label("7", "External camera (/dev/video7)"),
+            "/dev/video7"
+        );
+        assert_eq!(
+            short_source_label("C:\\Videos\\trial.mp4", "C:\\Videos\\trial.mp4"),
+            "trial.mp4"
+        );
     }
 }

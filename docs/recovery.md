@@ -11,28 +11,73 @@ A rejected image does not update the atlas, absolute pose, path or integrated
 movement. It remains present in all-frame numeric data and quality.csv. A frozen
 path means **missing measurement**, not zero physical movement. When the ball is
 visible again, the first plausible absolute-pose match is held for confirmation
-on the following image. Only a second matching image produces `relocalized`;
-that row has zero relative rotation and preserves measured displacement. Later
+on subsequent images. Ordinary recovery needs two matching images; a genuine
+rate change uses the stronger four-image confirmation described below. The
+`relocalized` row has zero relative rotation and preserves measured displacement. Later
 `tracked` rows measure new relative movement. No trajectory is invented across
 the hidden interval. See [the output contract](output.md).
 
 ## How the protection works
 
+The following describes v0.1.3 development. The published v0.1.2 protection and
+long-occlusion fixtures remain the baseline; current full-suite/platform checks
+are recorded separately in [validation](validation.md).
+
 The normal local fit keeps its complete final ROI score. Resilient mode also
 checks for an almost uniform/textureless ROI and for a large drop in edge density
 relative to accepted images. Its complete-score limit adapts from accepted-fit
-history: `clamp(1.8 × mean_error + 2000, 10000, 18000)`. A nonnegative
-`opt_max_err` remains an additional, potentially stricter ceiling. These are
-binary map MSE units, not pixel distances or physical accuracy. The error/texture
-history learns only from accepted images. Ordinary clean tracking still uses
-`opt_max_evals` and the shared numerical engine.
+history using the existing exponentially smoothed mean ceiling. Once eight
+teaching samples exist, it also applies
+`clamp(1.8 × median(last 32 teaching errors) + 2000, 10000, 18000)`.
+The smallest applicable limit wins, including nonnegative `opt_max_err`; the
+robust median never loosens the previous ceiling. These are binary map MSE
+units, not pixel distances or physical accuracy. Ordinary clean tracking still
+uses `opt_max_evals` and complete final scoring.
+
+A separate accepted-motion guard addresses low-error textured impostors. After
+eight accepted tracked motions, it estimates rotation rate from the last 32
+accepted rotation magnitudes divided by their processed-frame intervals.
+A candidate must satisfy
+`angle <= max(0.04 rad, (4 × median(rate) + 8 × MAD(rate)) × current delta_ms)`.
+MAD is the median absolute deviation of accepted rates. The 0.04 rad floor
+is a **per-frame allowance**, not an FPS-independent physical velocity. The rate
+term accounts for each processed-frame period. During bootstrap, before eight
+motion samples exist, image/score gates still apply but this history-based motion
+restriction does not. This is a consistency heuristic, not physical ground truth
+or a universal speed limit.
+
+Ordinary recovery confirmation checks motion between consecutive proposed visible
+poses against the same guard. A good image-score motion outlier remains only an
+unaccepted candidate; it never teaches the atlas or appears as measured motion.
+To avoid permanent lock after genuine acceleration, an alternate confirmation
+requires **three mutually consistent fitted angular velocities over four good
+images**. Each increment must remain within `sqrt(3) × opt_bound`; rate consistency
+uses `max(0.006 rad / current interval, 35% of current rate)` in rad/ms. This
+stronger confirmation starts a fresh accepted-motion-rate epoch and reports
+zero-delta relocalization. It constrains visible confirmation increments, not
+absolute displacement across the hidden interval, and invents no gap trajectory. A rejected
+motion retains its actual complete-ROI MSE, even if low; a small image error alone
+therefore does not imply an accepted measurement.
+
+After a confirmed `relocalized` row, that row and the next three accepted
+`tracked` rows do not update the atlas, error/edge learning or known-view bank.
+Their accepted relative motion still updates path/output normally; accepted
+tracked motion history continues to update. This short atlas-learning probation
+keeps a newly recovered pose from immediately rewriting its own reference.
+Ordinary teaching resumes afterward. Acceleration-epoch recovery instead freezes
+atlas/error/edge/known-view teaching for **eight** following accepted tracked
+rows, matching motion-history bootstrap. Rejected rows change none of those
+learned histories, pose, path or integrated displacement.
 
 Accepted orientations form a bounded bank of up to 256 known views, separated by
 at least approximately 0.08 radians. This costs about 8 KiB of quaternion storage
 per instance. Reacquisition first rescans known views rather than asking a very
 coarse whole-sphere search to rediscover an earlier viewpoint. A rotating,
 deterministic SO(3) cover remains a fallback for unfamiliar poses. Every proposed
-pose receives complete ROI verification before it can be confirmed.
+pose receives complete ROI verification before it can be confirmed. In v0.1.3,
+rare recovery solver refinements also optimize the **complete ROI objective**,
+rather than merely checking a sampled-objective result afterward. The healthy
+local optimizer stays unchanged and the same recovery evaluation cap applies.
 
 Recovery runs local checks selectively and a broader known-view/fallback search
 at most once per 30 unresolved textured frames. A single recovery call spends at
@@ -41,7 +86,7 @@ probes, local solver calls and complete final scores. Budget exhaustion cannot
 publish an unverified candidate. It does not start additional tracker threads,
 run a GPU search or consume the full default 100000-evaluation global allowance
 on every occluded image. Uniform images fail before search. The pose bank is
-updated only by accepted frames and is cleared by an explicit tracker reset or
+updated only by accepted teaching frames outside recovery probation and is cleared by an explicit tracker reset or
 new template/configuration.
 
 In resilient mode, `max_bad_frames` cannot automatically discard the learned
@@ -52,6 +97,21 @@ calibration, ball appearance or initial reference is wrong; initialize while the
 ball is visible.
 
 ## What is tested
+
+A v0.1.3 known-motion acceleration fixture changes roughly 0.0054 to 0.065
+rad/frame. It requires rejecting the first jump, recovering on the fourth good
+image, then measuring 86 subsequent deltas with component RMS
+`[0.002160993677, 0.001679486020, 0.003679960497]` rad, within the unchanged
+0.008 rad/component RMS gate. A separate stationary-to-moving fixture also
+retains its existing 0.008 rad sequence gate. Full current-source and platform validation
+remain pending; the fixture is not a physical-camera acceleration bound.
+
+The v0.1.2 baseline fixtures below have completed evidence. For v0.1.3, a new
+deterministic textured-outlier fixture reproduces the previous false acceptance
+of approximately 0.063 rad at complete MSE 3749.68. Its regression checks exact
+atlas preservation and an ensuing 180-frame clear suffix against unchanged
+0.075 sphere rad path, 0.025 rad heading and 0.012 rad/component limits. Full
+current-source and native platform results remain pending final validation.
 
 The known-motion core regression learns 400 clean textured-sphere images, then
 inserts 240 images covering uniform, gradient and unrelated patterned occluders.
@@ -71,6 +131,32 @@ radians per rotation component, 0.075 sphere radians path RMSE and 0.025 radians
 heading RMSE. It also overlays a panel over approximately 70% of actual visible,
 exclusion-masked ball pixels, tests rejection protection or accurate retained
 motion, removes the panel and checks the subsequent measured rotations.
+
+### Stronger actual-video recovery checks in v0.1.3
+
+The strengthened actual-sample fixture inserts 240 full obstructions: 80 black,
+80 horizontal-gradient and 80 unrelated-pattern frames. Recovery occurs on the
+**second clear image**; its remaining 178 measured suffix rows are compared with
+the unobstructed control after aligning only the unknown initial
+translation/heading offsets. The partial-obstruction case covers approximately
+70% of visible ball pixels with 60 black and 60 vertical-gradient frames, then
+likewise checks 178 measured suffix rows.
+
+| Actual-video fixture | Path RMS, sphere rad | Heading RMS, rad | Rotation component RMS, rad |
+|---|---:|---:|---|
+| Full obstruction, 80/80/80 sequence | 0.015623 | 0.010662 | [0.007349, 0.007956, 0.012259] |
+| Approximately 70% partial obstruction | 0.015419 | 0.010577 | [0.008069, 0.008420, 0.014038] |
+| Unchanged gates | 0.075 | 0.025 | 0.020 each |
+
+Exact metrics, input, build profile and unchanged gates are retained in the
+[recovery evidence](benchmarks/recovery-20261025.json). These correctness tests
+are not timing measurements.
+
+These focused fixture results use complete-ROI recovery refinement. The previous
+sampled recovery refinement missed the existing heading gate (0.025728 versus
+0.025); the solver objective was corrected rather than loosening that tolerance.
+Current full-suite, native visual and platform CI results remain separate pending
+items in [validation](validation.md).
 
 These are deterministic fixtures, not proof that every real obstruction can be
 recognized. A patterned occluder resembling the ball, very little learned map,

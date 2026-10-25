@@ -1,5 +1,53 @@
 # hejjetrak validation evidence
 
+## v0.1.3 local validation — 2026-10-25
+
+On the same M2 Pro/Mac/toolchain below, formatting, strict locked all-target
+Clippy and the complete locked workspace suite pass **173 tests**, zero failures
+across 26 suites. The release workspace binaries/examples build successfully.
+Linux package-format tests, download-selection tests and the 1298-reference site
+build also pass locally. Current v0.1.3 native platform CI and downloaded-release
+validation remain pending; v0.1.2 remote evidence below is historical.
+
+The release 120-frame known-motion demo retains component RMS 0.000304049695 rad.
+All 300 sample frames process, 299 tracked and zero rejected; all-frame numeric
+bytes match the official v0.1.2 Mac run. Original path/heading/component gates
+remain passing with path RMS0.025593842 sphere rad and heading RMS0.013651430 rad.
+A serial predecoded benchmark with one warmup/five measured runs reports
+**0.537 ms** median run-mean. Its boundary remains Tracker::process only, excluding
+initialization, capture/decode/conversion, pacing, outputs and GUI.
+
+Actual native checks verified tiny 96×96 image-only preview, source-paced normal
+preview with Lucide icons, saved-ball geometry/aspect, and the inspector's Keep &
+continue button. A native JSONL regression verifies tiny calibration expands to
+640 px then restores 96 px without advancing its paused source. After the initial
+window closes, another session records 100 additional numeric/quality frames;
+a new window created afterward processes all 300 sample frames. Closing the
+remaining sessions exits successfully. Point placement/deletion, transactional
+Keep/Edit/Redraw, invalid-view atomicity and inspector/loupe placement pass the
+regressions. The **native hover/loupe mouse check remains incomplete**: desktop
+automation lost its window binding and reported noWindowsAvailable. No broader
+physical interaction claim is made.
+
+Focused actual-video recovery uses 80 black, 80 gradient and80 unrelated-pattern
+occluders after 900 learned frames. It recovers on the second clear image;
+178 measured suffix rows have path RMS**0.0156229003** sphere rad and heading
+RMS**0.0106615281** rad. The 70% partial-obstruction suffix has path RMS
+**0.0154191124** and heading RMS**0.0105766746**. Every rotation component stays
+below the unchanged 0.020 rad gate; path/heading limits remain 0.075/0.025.
+Rare recovery now optimizes the complete ROI, addressing the sampled-refinement
+heading regression without changing healthy-frame fitting. See the
+[full recovery evidence](benchmarks/recovery-20261025.json).
+
+Final binary 3ed79a4e06e2d08fce62f57ddd9a27c15f32d086fa547b63cc29daf0e762c05a
+sustains 120.12 FPS for one replay using**3.19% of total 12-core CPU capacity**
+and 160.0 MiB median RSS. Sixteen replays with UDP/ZMQ sustain 119.97–120.12 FPS each,
+using**22.65% total CPU** and 291.3 MiB combined RSS. All publishers remain alive
+without application discards/failures. One paused replay uses 0.26% total CPU in
+this case; prior idle variability remains unresolved. No physical 120 FPS camera,
+GPU percentage or power measurement is implied. [Raw resource/profile/lifetime
+results](benchmarks/resources-v013-20261025.json) retain boundaries and hashes.
+
 ## Resource, calibration and recovery pass — 2026-10-25
 
 Local platform: Apple M2 Pro, 12 logical cores, 32 GiB RAM, macOS 27.0.1 arm64,
@@ -7,9 +55,12 @@ Rust 1.99.1 / LLVM 23.1.1. The complete locked workspace check passes **157 test
 with formatting and strict all-target Clippy. Coverage includes actual video/agent
 operations, gapped Linux device-ID mapping, explicit resolution-reference edits,
 interruptible source waits, immediate manual steps and running **120 → 30 → 120 FPS**
-changes that retain timestamps and every recorded row. Current-source native
-platform CI and four-platform release builds remain pending verification;
-completed historical platform evidence is recorded below.
+changes that retain timestamps and every recorded row. The published
+[v0.1.2 release workflow](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40174402745)
+passed all four native platform jobs and uploaded the four archives. The official
+Mac archive passed ad hoc signature verification, the complete sample comparison
+with unchanged RMS, and a native visual smoke test. These are v0.1.2 results;
+v0.1.3 local results are above; its native CI and release validation remain pending.
 
 The release known-motion demo processes **120 frames**, with rotation-component
 RMS **0.000304049695 rad** against the unchanged **0.003** gate. The release sample

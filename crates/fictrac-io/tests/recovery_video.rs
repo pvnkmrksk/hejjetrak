@@ -72,7 +72,7 @@ fn looping_real_video_rejects_240_occluders_and_resumes_without_corrupting_atlas
         let pixels = (0..config.width * config.height)
             .map(|index| {
                 if phase < 80 {
-                    0.5
+                    0.0
                 } else if phase < 160 {
                     0.1 + 0.8 * (index % config.width) as f32 / config.width as f32
                 } else {
@@ -124,6 +124,10 @@ fn looping_real_video_rejects_240_occluders_and_resumes_without_corrupting_atlas
             assert_eq!(row.delta_camera, [0.0; 3]);
             assert_eq!(row.position, last.position);
             assert_eq!(row.integrated, last.integrated);
+            eprintln!(
+                "full recovery frame={j} actual_error={} reference_error={} actual_pose={:?} reference_pose={:?}",
+                row.error, reference.error, row.absolute_camera, reference.absolute_camera
+            );
             recovery_frame = Some(j);
             origins = Some((reference, row));
             continue;
@@ -157,6 +161,9 @@ fn looping_real_video_rejects_240_occluders_and_resumes_without_corrupting_atlas
     let path_rmse = (path_squared / count as f64).sqrt();
     let heading_rmse = (heading_squared / count as f64).sqrt();
     let delta_rmse = delta_squared.map(|v| (v / count as f64).sqrt());
+    eprintln!(
+        "full suffix recovery={recovered}, count={count}, path={path_rmse}, heading={heading_rmse}, delta={delta_rmse:?}"
+    );
     assert!(path_rmse < 0.075, "aligned suffix path RMSE {path_rmse}");
     assert!(
         heading_rmse < 0.025,
@@ -235,13 +242,30 @@ fn looping_real_video_rejects_240_occluders_and_resumes_without_corrupting_atlas
     );
     let mut measured = 0;
     let mut partial_delta_squared = [0.0; 3];
+    let mut partial_origins = None;
+    let mut partial_path_squared = 0.0;
+    let mut partial_heading_squared = 0.0;
     for i in start + 120..start + 300 {
         let frame = frames[sample_index(i, frames.len())]
             .clone()
             .with_timestamp(i as f64 * 10.0)?;
         let reference = control.process(frame.clone())?;
         let row = interrupted.process(frame)?;
+        if row.accepted && partial_origins.is_none() {
+            partial_origins = Some((reference.clone(), row.clone()));
+            continue;
+        }
         if row.accepted && row.status == "tracked" {
+            let (reference_origin, actual_origin) = partial_origins
+                .as_ref()
+                .ok_or("missing partial recovery origin")?;
+            let angle = actual_origin.heading - reference_origin.heading;
+            let expected = translated_path(&reference, reference_origin, angle);
+            let actual = translated_path(&row, actual_origin, 0.0);
+            partial_path_squared +=
+                (actual[0] - expected[0]).powi(2) + (actual[1] - expected[1]).powi(2);
+            let heading = row.heading - reference.heading - angle;
+            partial_heading_squared += heading.sin().atan2(heading.cos()).powi(2);
             for (axis, squared) in partial_delta_squared.iter_mut().enumerate() {
                 *squared += (row.delta_camera[axis] - reference.delta_camera[axis]).powi(2);
             }
@@ -255,9 +279,22 @@ fn looping_real_video_rejects_240_occluders_and_resumes_without_corrupting_atlas
         "only {measured} usable suffix frames after partial obstruction"
     );
     let partial_delta_rmse = partial_delta_squared.map(|v| (v / measured as f64).sqrt());
+    let partial_path_rmse = (partial_path_squared / measured as f64).sqrt();
+    let partial_heading_rmse = (partial_heading_squared / measured as f64).sqrt();
+    assert!(
+        partial_path_rmse < 0.075,
+        "post-partial path RMSE {partial_path_rmse}"
+    );
+    assert!(
+        partial_heading_rmse < 0.025,
+        "post-partial heading RMSE {partial_heading_rmse}"
+    );
     assert!(
         partial_delta_rmse.iter().all(|v| *v < 0.020),
         "post-partial delta RMSE {partial_delta_rmse:?}"
+    );
+    println!(
+        "full obstruction: reacquired after {recovered} clear frames; suffix n={count}, path RMSE={path_rmse}, heading RMSE={heading_rmse}, component RMSE={delta_rmse:?}; partial obstruction: suffix n={measured}, path RMSE={partial_path_rmse}, heading RMSE={partial_heading_rmse}, component RMSE={partial_delta_rmse:?}"
     );
     Ok(())
 }

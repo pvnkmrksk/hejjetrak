@@ -24,6 +24,10 @@ pub struct Config {
     /// Match FicTrac v2 exports: its camera-labelled vectors use the recentered ROI basis.
     pub legacy_roi_coordinates: bool,
     pub ignore_polygons: Vec<Vec<[f64; 2]>>,
+    /// Pairwise: per-frame rotation-norm search limit. Spherical map: each
+    /// ROI-axis search half-window around the prediction (legacy opt_bound),
+    /// not a universal maximum physical angular velocity. Resilient tracking
+    /// adds a recent-motion gate with an explicit per-frame allowance.
     pub max_rotation: f64,
     /// Normalised luminance RMSE (0..1), not the original FicTrac error metric.
     pub max_error: f64,

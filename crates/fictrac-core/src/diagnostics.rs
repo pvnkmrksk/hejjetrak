@@ -171,7 +171,7 @@ impl Diagnostics {
     }
     pub fn update(&mut self, frame: &GrayFrame, row: Option<&TrackRow>) -> DebugViews {
         let roi = self.prepare(frame);
-        self.update_prepared(frame, row, roi)
+        self.update_prepared(frame, row, roi, true)
     }
     /// The atlas estimator and its committed map must use the same thresholded
     /// observation. Reuse it rather than sampling/filtering the image twice.
@@ -180,6 +180,7 @@ impl Diagnostics {
         frame: &GrayFrame,
         row: Option<&TrackRow>,
         roi: Vec<u8>,
+        allow_learning: bool,
     ) -> DebugViews {
         let n = self.size;
         let mw = self.map_width;
@@ -232,7 +233,7 @@ impl Diagnostics {
                 let my = (p.y + 1.0) * 0.5 * mh as f64;
                 let mi = (my.floor() as usize).min(mh - 1) * mw + (mx.floor() as usize).min(mw - 1);
                 instant[mi] = value;
-                if row.is_none_or(|r| r.accepted) {
+                if allow_learning && row.is_none_or(|r| r.accepted) {
                     self.map[mi] = match self.map[mi] {
                         0 => 0,
                         255 => 255,

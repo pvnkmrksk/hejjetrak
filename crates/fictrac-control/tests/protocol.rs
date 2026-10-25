@@ -6,6 +6,63 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 type Result<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;
+
+#[test]
+fn replacement_exclusions_are_atomic_undoable_and_keep_other_calibration_and_clock() -> Result {
+    let mut controller = Controller::new();
+    let id = open(&mut controller)?;
+    request(&mut controller, "step", Some(id), json!({"frames":2}))?;
+    let before = request(&mut controller, "config", Some(id), json!({}))?;
+    request(
+        &mut controller,
+        "calibrate",
+        Some(id),
+        json!({"kind":"replace_exclusions","polygons":[[[10,10],[25,10],[20,30]]]}),
+    )?;
+    let edited = request(&mut controller, "config", Some(id), json!({}))?;
+    assert_eq!(edited["fields"]["roi_circ"], before["fields"]["roi_circ"]);
+    assert_eq!(edited["fields"]["c2a_r"], before["fields"]["c2a_r"]);
+    let invalid = controller.execute(Request {
+        id: json!("invalid replacement"),
+        command: "calibrate".into(),
+        session: Some(id),
+        args: json!({"kind":"replace_exclusions","polygons":[[[1,1],[2,2],[3,3]]]}),
+    });
+    assert!(!invalid.ok);
+    assert_eq!(
+        request(&mut controller, "config", Some(id), json!({}))?,
+        edited
+    );
+    request(&mut controller, "undo", Some(id), json!({}))?;
+    assert_eq!(
+        request(&mut controller, "config", Some(id), json!({}))?["text"],
+        before["text"]
+    );
+    request(
+        &mut controller,
+        "calibrate",
+        Some(id),
+        json!({"kind":"replace_exclusions","polygons":[]}),
+    )?;
+    let empty = request(&mut controller, "config", Some(id), json!({}))?;
+    let document = fictrac_io::ConfigDocument::parse(
+        empty["text"]
+            .as_str()
+            .ok_or("missing config text")?
+            .to_owned(),
+    )?;
+    assert!(document.vector::<Vec<Vec<f64>>>("roi_ignr")?.is_empty());
+    let next = request(&mut controller, "step", Some(id), json!({}))?;
+    assert!(
+        (next["status"]["last_row"]["timestamp_ms"]
+            .as_f64()
+            .ok_or("missing source timestamp")?
+            - 2000.0 / 30.0)
+            .abs()
+            < 1e-8
+    );
+    Ok(())
+}
 static NEXT: AtomicUsize = AtomicUsize::new(0);
 struct Temp(PathBuf);
 impl Temp {

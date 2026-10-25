@@ -1,4 +1,8 @@
-# Behavioral parity assessment — hejjetrak v0.1.2
+# Behavioral parity assessment — hejjetrak v0.1.3 development
+
+Published [v0.1.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.2)
+has completed four-platform release checks and official Mac smoke evidence.
+The v0.1.3 source refinements below await final current-source validation.
 
 Current source additionally uses the [accelerated local search](tracking-performance.md).
 It changes candidate generation while retaining complete error/quality scoring,
@@ -34,8 +38,8 @@ Assessed against pvnkmrksk/fictrac commit `10fc4472af1fc9062b9bf5a92738e835b98cc
 | Video codec boundaries | Segmented OpenDML AVI supports >4 GiB offsets; H.264 encodes even dimensions with SPS cropping; odd H.264 4:2:0 dimensions fail explicitly; exotic profiles/formats remain outside tested coverage |
 | Serial/UDP | Native Rust serial2 and datagram sinks with original prefix/full row; actual OS pseudo-terminal and loopback tests; physical serial hardware untested |
 | Camera | Built-in FaceTime HD camera: actual 640×480/30 and 1280×720/15 format/readback, pause/step/config, two 35-frame H.264 recordings, source switch and reopen; unsupported exposure/gain controls explain limitations; physical sphere accuracy/iPhone/industrial SDKs unverified |
-| Native platforms | Mac GUI/CLI executed locally; v0.1.1 GitHub-hosted Windows/Linux/Mac ARM+Intel formatting, strict Clippy, full tests, release builds and synthetic CLI demo passed. Windows static-CRT rebuild repeated those checks. Other-platform GUI visual behavior and camera hardware remain unverified |
-| Packaging | Four-platform native archive workflow and dependency notices. Published v0.1.1 Mac ARM extraction/runtime and Windows static-CRT imports were audited; the selected current release and validation record identify newer evidence. No installer, Developer ID notarization or Windows Authenticode signing |
+| Native platforms | Published v0.1.2 passed all four native release jobs. Official Mac archive signature/sample/native visual smoke passed; Windows/Linux GUI appearance and camera hardware remain unverified. v0.1.3 full checks/platform CI remain pending |
+| Packaging | Published v0.1.2 has four native archives and dependency notices; its official Mac bundle passed signature/sample/visual smoke. New package formats follow their release notes and validation, not an assumption from filenames. No Developer ID notarization or Windows Authenticode signing |
 | Resource scheduling | Interruptible source deadlines/idle waits, bounded queues/staged frame, coalesced preview publication, unchanged per-frame numerical/recording evidence, cached geometry/textures and deque history. CPU/RSS methodology/results in resources.md; no wattage or sixteen high-rate camera capacity claim |
 
 A protocol request accepted into a GUI worker queue is not proof the action completed. Clients poll revision/frame/advance/recording/notice state and validate files. Synchronous headless commands expose the same numerical operations; playback and OS-window scheduling differ deliberately.
@@ -51,7 +55,7 @@ parity with C++ has not been demonstrated. Decoder pixel oracles and the declare
 remain unchanged. Resilient mode intentionally adds an adaptive acceptance guard
 and suppresses legacy destructive auto-reset; see [recovery](recovery.md).
 
-The default preview hides config and diagnostics and can shrink to 96×96 logical pixels with reset alone. A full-image toggle restores context without aspect distortion. A separate native inspector exposes the same canonical config and shared-core calibration actions. Source images and diagnostic panels use uniform scaling and letterboxing; cropping uses the calibrated pinhole/fisheye projection. Native pointer regressions cover active-tool isolation, nearest-point deletion and preserved square corner order. Camera controls are capability-based: exact formats/rates and readback are implemented, but support for manual exposure/gain depends on the backend and device. See camera-controls.md.
+The default preview hides config and diagnostics and can shrink to 96×96 logical pixels; v0.1.3 hides tiny-preview chrome and retains context-menu controls instead of shrinking fonts. A full-image toggle restores context without aspect distortion. A separate native inspector exposes the same canonical config and shared-core calibration actions. Source images and diagnostic panels use uniform scaling and letterboxing; cropping uses the calibrated pinhole/fisheye projection. Native pointer regressions cover active-tool isolation, nearest-point deletion and preserved square corner order. Camera controls are capability-based: exact formats/rates and readback are implemented, but support for manual exposure/gain depends on the backend and device. See camera-controls.md.
 
 ZeroMQ is a pure Rust localhost PUB with a bounded worker queue, alongside UDP/serial. PUB startup/subscriber reconnect loss and overload are observable, not guaranteed delivery. Accepted-row wire compatibility is verified independently with libzmq; full rejected-frame evidence remains in files. Busy-port edits roll back outputs while retaining the numerical source state.
 
@@ -76,3 +80,22 @@ than dropping numerical frames to lower CPU. Platform-specific CPU/RSS evidence
 and acquisition/recording limits are recorded separately from tracking-call
 latency. GPU tracking, NVIDIA hardware, battery drain/wattage and modern Intel
 laptop capacity have not been measured.
+
+## v0.1.3 source refinements awaiting final validation
+
+Saved calibration is reviewed read-only before Keep, Edit or Redraw. The larger
+loupe and small-preview chrome do not change source coordinates or font sizes.
+Closing the initial native window leaves other sessions running. Concise titles
+prioritize VR, applied ZMQ port and camera index/video basename; larger windows
+also show UDP and the full identity.
+
+Resilient fitting additionally bounds accepted motion using robust recent
+accepted rates, never relaxes the previous image-error ceiling, and delays atlas
+teaching after recovery. Ordinary confirmation uses two images/three following
+teaching-probation rows; a consistent acceleration change requires four good
+images, restarts accepted-motion history and defers teaching for eight rows. A low-MSE
+motion outlier can therefore remain rejected with its real score intact. The
+legacy opt-out remains `rust_resilient : n`. See [recovery](recovery.md) for exact
+bootstrap/probation limits and the inherent ambiguity of a plausible lookalike.
+These are intentional acceptance changes; the declared reference gates, pixel
+oracles, coordinate conventions and numeric/wire columns are not redefined.

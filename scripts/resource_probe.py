@@ -102,6 +102,8 @@ def main():
     parser.add_argument('--outputs', action='store_true',
                         help='enable localhost UDP1111+session index and ZMQ9871+session index; no subscriber receipt claim')
     parser.add_argument('--fps', type=float, default=10.0)
+    parser.add_argument('--udp-base', type=int, default=1111, help='First loopback UDP port when --outputs is set')
+    parser.add_argument('--zmq-base', type=int, default=9871, help='First loopback ZMQ port when --outputs is set')
     parser.add_argument('--seconds', type=float, default=20.0)
     parser.add_argument('--warmup', type=float, default=3.0)
     args = parser.parse_args()
@@ -111,6 +113,8 @@ def main():
         parser.error('fps must be finite0.1..1000')
     if args.mode == 'camera' and args.sessions != 1:
         parser.error('camera case opens exactly one actual device')
+    if not all(1 <= port <= 65536 - args.sessions for port in (args.udp_base, args.zmq_base)):
+        parser.error('output base ports plus session count must stay within1..65535')
     root = Path(__file__).resolve().parent.parent
     binary = args.binary.resolve()
     output = args.output.resolve()
@@ -126,8 +130,8 @@ def main():
     for key, value in [('src_fn', str(args.camera) if args.mode == 'camera' else str(source)),
                        ('src_fps', '-1' if args.mode == 'camera' else str(args.fps)),
                        ('sock_host', '127.0.0.1'), ('zmq_host', '127.0.0.1'),
-                       ('sock_port', '1111' if args.outputs else '-1'),
-                       ('zmq_port', '9871' if args.outputs else '-1'), ('com_port', ''),
+                       ('sock_port', str(args.udp_base) if args.outputs else '-1'),
+                       ('zmq_port', str(args.zmq_base) if args.outputs else '-1'), ('com_port', ''),
                        ('save_raw', 'n'), ('save_debug', 'n'), ('do_display', args.display), ('rust_instance_name', 'VR1')]:
         text = field(text, key, value)
     config = output / 'resource.txt'
@@ -227,6 +231,7 @@ def main():
         result = {'binary': str(binary), 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
                   'mode': args.mode, 'sessions': args.sessions, 'window_size': args.window_size, 'display': args.display,
                   'outputs_enabled': args.outputs,
+                  'udp_base': args.udp_base if args.outputs else None, 'zmq_base': args.zmq_base if args.outputs else None,
                   'input': str(source) if args.mode != 'camera' else f'camera:{args.camera}',
                   'input_sha256': hashlib.sha256(source.read_bytes()).hexdigest() if args.mode != 'camera' else None,
                   'config_source': str(config_source), 'field_overrides': args.field, 'requested_source_fps': args.fps if args.mode != 'camera' else None,
@@ -243,7 +248,10 @@ def main():
                   'quality_scope': 'Sampled last_row states only; not a complete log or acceptance count.',
                   'scope': 'Measured process resources; no physical sphere accuracy or unsupported high-rate camera claim.'}
         (output / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
-        request('close', 1, discard=True)
+        # Sessions have independent lifetimes; closing the first leaves the
+        # other captures/outputs alive. Close every measured session explicitly.
+        for state in after:
+            request('close', state['session'], discard=True)
         process.stdin.close()
         if process.wait(timeout=15):
             raise RuntimeError('desktop closed with an error')

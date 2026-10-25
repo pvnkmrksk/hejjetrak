@@ -1,0 +1,462 @@
+{
+  "date": "2026-10-25",
+  "application_version": "0.1.3",
+  "platform": "Apple M2 Pro, 12 logical cores, 32 GiB RAM, macOS27.0.1 arm64",
+  "toolchain": "rustc1.99.1/LLVM23.1.1",
+  "profile": "release, thinLTO, codegen-units1",
+  "cases": [
+    {
+      "binary_sha256": "3ed79a4e06e2d08fce62f57ddd9a27c15f32d086fa547b63cc29daf0e762c05a",
+      "mode": "video",
+      "sessions": 1,
+      "window_size": null,
+      "display": "y",
+      "outputs_enabled": false,
+      "udp_base": null,
+      "zmq_base": null,
+      "input_sha256": "62017b5c34a9e62272e20ef44ecd3f9066b64bfaa655f96527268d2f17f15ba1",
+      "field_overrides": [],
+      "requested_source_fps": 120.0,
+      "seconds": 20.037907875000002,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 7.680000000000001,
+      "cpu_percent_one_core": 38.32735457169078,
+      "rss_median_bytes": 167788544.0,
+      "rss_max_bytes": 168706048,
+      "threads_median": 13.0,
+      "threads_max": 20,
+      "frame_deltas": [
+        2407
+      ],
+      "delivered_fps": [
+        120.12232090372358
+      ],
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "scope": "Measured process resources; no physical sphere accuracy or unsupported high-rate camera claim.",
+      "label": "one-120",
+      "cpu_percent_total_12_cores": 3.1939462143075654,
+      "rss_median_mib": 160.015625,
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          1504.0,
+          868.0
+        ]
+      ],
+      "last_row_status": [
+        "tracked"
+      ]
+    },
+    {
+      "binary_sha256": "3ed79a4e06e2d08fce62f57ddd9a27c15f32d086fa547b63cc29daf0e762c05a",
+      "mode": "video",
+      "sessions": 16,
+      "window_size": null,
+      "display": "y",
+      "outputs_enabled": true,
+      "udp_base": 21111,
+      "zmq_base": 19871,
+      "input_sha256": "62017b5c34a9e62272e20ef44ecd3f9066b64bfaa655f96527268d2f17f15ba1",
+      "field_overrides": [],
+      "requested_source_fps": 120.0,
+      "seconds": 20.030624916999997,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 54.45,
+      "cpu_percent_one_core": 271.83375568971024,
+      "rss_median_bytes": 305438720.0,
+      "rss_max_bytes": 333021184,
+      "threads_median": 62.0,
+      "threads_max": 72,
+      "frame_deltas": [
+        2405,
+        2403,
+        2404,
+        2406,
+        2404,
+        2405,
+        2405,
+        2403,
+        2404,
+        2405,
+        2403,
+        2404,
+        2405,
+        2404,
+        2403,
+        2406
+      ],
+      "delivered_fps": [
+        120.06614920730085,
+        119.96630209777295,
+        120.0162256525369,
+        120.1160727620648,
+        120.0162256525369,
+        120.06614920730085,
+        120.06614920730085,
+        119.96630209777295,
+        120.0162256525369,
+        120.06614920730085,
+        119.96630209777295,
+        120.0162256525369,
+        120.06614920730085,
+        120.0162256525369,
+        119.96630209777295,
+        120.1160727620648
+      ],
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "scope": "Measured process resources; no physical sphere accuracy or unsupported high-rate camera claim.",
+      "label": "sixteen-120-outputs",
+      "cpu_percent_total_12_cores": 22.65281297414252,
+      "rss_median_mib": 291.2890625,
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          735.0,
+          370.0,
+          233.0
+        ]
+      ],
+      "last_row_status": [
+        "tracked",
+        "tracked",
+        "tracked",
+        "tracked",
+        "tracked",
+        "tracked",
+        "tracked",
+        "tracked",
+        "tracked",
+        "tracked",
+        "tracked",
+        "tracked",
+        "tracked",
+        "tracked",
+        "tracked",
+        "tracked"
+      ],
+      "publishers": [
+        {
+          "alive": true,
+          "dropped": 0,
+          "failures": 0,
+          "published": 2793
+        },
+        {
+          "alive": true,
+          "dropped": 0,
+          "failures": 0,
+          "published": 2865
+        },
+        {
+          "alive": true,
+          "dropped": 0,
+          "failures": 0,
+          "published": 2864
+        },
+        {
+          "alive": true,
+          "dropped": 0,
+          "failures": 0,
+          "published": 2869
+        },
+        {
+          "alive": true,
+          "dropped": 0,
+          "failures": 0,
+          "published": 2866
+        },
+        {
+          "alive": true,
+          "dropped": 0,
+          "failures": 0,
+          "published": 2867
+        },
+        {
+          "alive": true,
+          "dropped": 0,
+          "failures": 0,
+          "published": 2866
+        },
+        {
+          "alive": true,
+          "dropped": 0,
+          "failures": 0,
+          "published": 2865
+        },
+        {
+          "alive": true,
+          "dropped": 0,
+          "failures": 0,
+          "published": 2866
+        },
+        {
+          "alive": true,
+          "dropped": 0,
+          "failures": 0,
+          "published": 2866
+        },
+        {
+          "alive": true,
+          "dropped": 0,
+          "failures": 0,
+          "published": 2865
+        },
+        {
+          "alive": true,
+          "dropped": 0,
+          "failures": 0,
+          "published": 2866
+        },
+        {
+          "alive": true,
+          "dropped": 0,
+          "failures": 0,
+          "published": 2867
+        },
+        {
+          "alive": true,
+          "dropped": 0,
+          "failures": 0,
+          "published": 2866
+        },
+        {
+          "alive": true,
+          "dropped": 0,
+          "failures": 0,
+          "published": 2865
+        },
+        {
+          "alive": true,
+          "dropped": 0,
+          "failures": 0,
+          "published": 2868
+        }
+      ]
+    },
+    {
+      "binary_sha256": "3ed79a4e06e2d08fce62f57ddd9a27c15f32d086fa547b63cc29daf0e762c05a",
+      "mode": "paused",
+      "sessions": 1,
+      "window_size": null,
+      "display": "y",
+      "outputs_enabled": false,
+      "udp_base": null,
+      "zmq_base": null,
+      "input_sha256": "62017b5c34a9e62272e20ef44ecd3f9066b64bfaa655f96527268d2f17f15ba1",
+      "field_overrides": [],
+      "requested_source_fps": 120.0,
+      "seconds": 20.055201209,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 0.6200000000000001,
+      "cpu_percent_one_core": 3.091467363198371,
+      "rss_median_bytes": 158220288.0,
+      "rss_max_bytes": 167280640,
+      "threads_median": 13.0,
+      "threads_max": 20,
+      "frame_deltas": [
+        0
+      ],
+      "delivered_fps": [
+        0.0
+      ],
+      "platform": "macOS-27.0.1-arm64-arm-64bit",
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "scope": "Measured process resources; no physical sphere accuracy or unsupported high-rate camera claim.",
+      "label": "paused-one",
+      "cpu_percent_total_12_cores": 0.25762228026653095,
+      "rss_median_mib": 150.890625,
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          1504.0,
+          868.0
+        ]
+      ],
+      "last_row_status": [
+        "tracked"
+      ]
+    }
+  ],
+  "tracking_profile": {
+    "frames": 300,
+    "repeats": 5,
+    "boundary": "Tracker::process only, including ROI, fitting, integration, map and numerical debug views; predecoded/preconverted immutable frames; no I/O, capture, pacing, UI or recording; initialization excluded",
+    "median_run_mean_us": 537.2541872909698,
+    "runs": [
+      {
+        "frames": 300,
+        "max_us": 787.875,
+        "mean_us": 537.2541872909698,
+        "median_us": 531.75,
+        "p95_us": 602.833,
+        "rejected": 0
+      },
+      {
+        "frames": 300,
+        "max_us": 774.417,
+        "mean_us": 533.6373846153843,
+        "median_us": 527.041,
+        "p95_us": 598.5,
+        "rejected": 0
+      },
+      {
+        "frames": 300,
+        "max_us": 776.25,
+        "mean_us": 534.7896755852844,
+        "median_us": 526.75,
+        "p95_us": 596.542,
+        "rejected": 0
+      },
+      {
+        "frames": 300,
+        "max_us": 795.5,
+        "mean_us": 541.5141772575247,
+        "median_us": 534.042,
+        "p95_us": 598.042,
+        "rejected": 0
+      },
+      {
+        "frames": 300,
+        "max_us": 1536.0420000000001,
+        "mean_us": 543.426762541806,
+        "median_us": 533.1669999999999,
+        "p95_us": 608.25,
+        "rejected": 0
+      }
+    ],
+    "reference_comparison": {
+      "candidate_final_position": [
+        3.64168489651,
+        -2.646768112362
+      ],
+      "endpoint_error_sphere_rad": 0.041252009416150356,
+      "frames": 300,
+      "heading_rmse_rad": 0.013651430288528159,
+      "path_point_rmse_sphere_rad": 0.025593841799898084,
+      "reference_final_position": [
+        3.674266189723,
+        -2.6214661833162
+      ],
+      "rotation_component_rmse_rad": [
+        0.009475898823054007,
+        0.010924711781146961,
+        0.01781987973491448
+      ],
+      "timestamp_max_error_ms": 3.456079866737127e-11
+    },
+    "passed": true
+  },
+  "native_window_lifetime": {
+    "passed": true,
+    "tiny_calibration_expands_and_restores": true,
+    "recorded_frames_after_initial_window_closed": 100,
+    "new_window_created_after_close": 3,
+    "new_window_processed_frames": 300,
+    "final_exit_code": 0,
+    "elapsed_seconds": 2.6906
+  },
+  "limitations": [
+    "Three-second warmup then20-second process CPU/RSS samples; cases serial after checks/builds.",
+    "CPU100% means one logical core; total capacity denominator12 includes heterogeneous cores and is approximate.",
+    "Native previews visible, recording disabled during resource sampling.",
+    "Uncompressed384x288 replay; excludes RGB capture/USB costs of a physical120FPS camera.",
+    "Loopback outputs have no receiving client; publisher counters do not prove receiver delivery.",
+    "GPU and electrical power unmeasured; no other-computer CPU benchmark.",
+    "Last-row sampled quality only; full300-frame correctness validated separately.",
+    "PausedCPU variability from the earlier evidence remains unresolved."
+  ]
+}

@@ -26,7 +26,9 @@ fn index(p: DVec3, width: usize, height: usize) -> usize {
     y.min(height - 1) * width + x.min(width - 1)
 }
 fn known_template() -> fictrac_core::Result<SphereTemplate> {
-    let (w, h) = (180, 90);
+    known_template_dimensions(180, 90)
+}
+fn known_template_dimensions(w: usize, h: usize) -> fictrac_core::Result<SphereTemplate> {
     let mut pixels = Vec::with_capacity(w * h);
     for y in 0..h {
         for x in 0..w {
@@ -393,5 +395,285 @@ fn resilient_atlas_survives_240_occluder_frames_and_reacquires_without_path_jump
     assert!(row.accepted);
     assert_eq!(row.status, "tracked");
     assert!((DVec3::from_array(row.delta_camera) - delta).length() < 0.012);
+    Ok(())
+}
+
+#[test]
+fn textured_motion_outlier_cannot_teach_a_learned_atlas() -> Result {
+    let mut c = config(false);
+    if let Some(m) = &mut c.spherical_map {
+        m.resilient = true;
+        m.max_evaluations = 150;
+        m.max_error = -1.0;
+    }
+    let texture = known_template()?;
+    let delta = DVec3::new(0.003, -0.005, 0.002);
+    let mut tracker = Tracker::new(c.clone())?;
+    let mut control = Tracker::new(c.clone())?;
+    let mut last = None;
+    for i in 0..80 {
+        let frame = render_template(
+            &c,
+            &texture,
+            DQuat::from_scaled_axis(delta * i as f64),
+            i as f64 * 10.0,
+        )?;
+        control.process(frame.clone())?;
+        let row = tracker.process(frame)?;
+        assert!(row.accepted, "training {i}: {} {}", row.status, row.error);
+        last = Some(row);
+    }
+    let last = last.ok_or("no learned row")?;
+    let atlas = tracker.sphere_template().ok_or("missing atlas")?;
+    // A textured but temporally implausible view can score well against the
+    // same atlas. The score alone must not authorize teaching or displacement.
+    let false_pose = DQuat::from_scaled_axis(DVec3::new(0.055, 0.0, 0.0))
+        * DQuat::from_scaled_axis(delta * 79.0);
+    let row = tracker.process(render_template(&c, &texture, false_pose, 800.0)?)?;
+    assert!(
+        !row.accepted,
+        "textured outlier accepted: delta={:?}, score={}",
+        row.delta_camera, row.error
+    );
+    assert!(
+        row.error < 10000.0,
+        "outlier must retain its good complete score, not fabricated error"
+    );
+    control.process(render_template(
+        &c,
+        &texture,
+        DQuat::from_scaled_axis(delta * 80.0),
+        800.0,
+    )?)?;
+    assert_eq!(row.delta_camera, [0.0; 3]);
+    assert_eq!(row.position, last.position);
+    assert_eq!(row.integrated, last.integrated);
+    assert_eq!(tracker.sphere_template().as_ref(), Some(&atlas));
+    // A few additional inconsistent textured views cannot erase long history,
+    // including when a tentative absolute pose happens to pass confirmation.
+    for (i, offset) in [(81, -0.055), (82, 0.060)] {
+        let q = DQuat::from_scaled_axis(DVec3::new(offset, 0.0, 0.0))
+            * DQuat::from_scaled_axis(delta * 79.0);
+        let row = tracker.process(render_template(&c, &texture, q, i as f64 * 10.0)?)?;
+        control.process(render_template(
+            &c,
+            &texture,
+            DQuat::from_scaled_axis(delta * i as f64),
+            i as f64 * 10.0,
+        )?)?;
+        assert_eq!(
+            tracker.sphere_template().as_ref(),
+            Some(&atlas),
+            "transient recovery taught the atlas"
+        );
+        assert_eq!(row.delta_camera, [0.0; 3]);
+        assert_eq!(row.position, last.position);
+        assert_eq!(row.integrated, last.integrated);
+    }
+    let mut origins = None;
+    let mut count = 0usize;
+    let mut path_squared = 0.0;
+    let mut heading_squared = 0.0;
+    let mut delta_squared = [0.0; 3];
+    for i in 83..263 {
+        let frame = render_template(
+            &c,
+            &texture,
+            DQuat::from_scaled_axis(delta * i as f64),
+            i as f64 * 10.0,
+        )?;
+        let expected = control.process(frame.clone())?;
+        let actual = tracker.process(frame)?;
+        if origins.is_none() {
+            if !actual.accepted {
+                assert_eq!(tracker.sphere_template().as_ref(), Some(&atlas));
+                continue;
+            }
+            assert_eq!(actual.status, "relocalized");
+            assert_eq!(actual.delta_camera, [0.0; 3]);
+            assert_eq!(actual.position, last.position);
+            assert_eq!(
+                tracker.sphere_template().as_ref(),
+                Some(&atlas),
+                "confirmed pose is still on atlas-learning probation"
+            );
+            origins = Some((expected, actual));
+            continue;
+        }
+        assert!(
+            actual.accepted && actual.status == "tracked",
+            "clear suffix {i}: {} {}",
+            actual.status,
+            actual.error
+        );
+        let (expected_origin, actual_origin) = origins.as_ref().ok_or("no suffix origin")?;
+        let angle = actual_origin.heading - expected_origin.heading;
+        let (sin, cos) = angle.sin_cos();
+        let p = [
+            expected.position[0] - expected_origin.position[0],
+            expected.position[1] - expected_origin.position[1],
+        ];
+        let p = [cos * p[0] - sin * p[1], sin * p[0] + cos * p[1]];
+        for (axis, expected_position) in p.iter().enumerate() {
+            path_squared +=
+                (actual.position[axis] - actual_origin.position[axis] - expected_position).powi(2);
+        }
+        let h = actual.heading - expected.heading - angle;
+        heading_squared += h.sin().atan2(h.cos()).powi(2);
+        for (axis, squared) in delta_squared.iter_mut().enumerate() {
+            *squared += (actual.delta_camera[axis] - expected.delta_camera[axis]).powi(2);
+        }
+        count += 1;
+        if count <= 3 {
+            assert_eq!(
+                tracker.sphere_template().as_ref(),
+                Some(&atlas),
+                "probation frame rewrote atlas"
+            );
+        }
+    }
+    assert!(count >= 120, "only {count} measured clear suffix frames");
+    let path = (path_squared / count as f64).sqrt();
+    let heading = (heading_squared / count as f64).sqrt();
+    let rotation = delta_squared.map(|v| (v / count as f64).sqrt());
+    assert!(path < 0.075, "aligned suffix path RMS {path}");
+    assert!(heading < 0.025, "aligned suffix heading RMS {heading}");
+    assert!(
+        rotation.iter().all(|v| *v < 0.012),
+        "suffix rotation RMS {rotation:?}"
+    );
+    Ok(())
+}
+
+#[test]
+fn resilient_motion_floor_preserves_real_acceleration_after_stationary_history() -> Result {
+    let mut c = config(false);
+    // Keep the search bound appropriate for this known physical motion.
+    c.max_rotation = 0.08;
+    if let Some(m) = &mut c.spherical_map {
+        m.resilient = true;
+        m.max_evaluations = 150;
+        m.max_error = -1.0;
+    }
+    let texture = known_template()?;
+    let mut tracker = Tracker::new(c.clone())?;
+    for i in 0..40 {
+        let row = tracker.process(render_template(
+            &c,
+            &texture,
+            DQuat::IDENTITY,
+            i as f64 * 10.0,
+        )?)?;
+        assert!(row.accepted);
+    }
+    let delta = DVec3::new(0.025, -0.008, 0.005);
+    let mut squared = DVec3::ZERO;
+    for i in 1..=30 {
+        let row = tracker.process(render_template(
+            &c,
+            &texture,
+            DQuat::from_scaled_axis(delta * i as f64),
+            (39 + i) as f64 * 10.0,
+        )?)?;
+        assert!(
+            row.accepted && row.status == "tracked",
+            "real acceleration frame {i}: {} {}",
+            row.status,
+            row.error
+        );
+        let error = DVec3::from_array(row.delta_camera) - delta;
+        squared += error * error;
+    }
+    let rms = (squared / 30.0).to_array().map(f64::sqrt);
+    assert!(
+        rms.iter().all(|v| *v < 0.008),
+        "accelerated component RMS {rms:?}"
+    );
+    Ok(())
+}
+
+#[test]
+fn sustained_faster_known_motion_can_establish_a_new_rate_without_erasing_atlas() -> Result {
+    let mut c = config(true);
+    c.max_rotation = 0.12;
+    if let Some(m) = &mut c.spherical_map {
+        m.resilient = true;
+        m.max_evaluations = 150;
+        m.max_error = -1.0;
+        m.quality = 12;
+    }
+    let texture = known_template_dimensions(360, 180)?;
+    let mut tracker = Tracker::new(c.clone())?;
+    tracker.load_sphere_template(texture.clone())?;
+    let slow = DVec3::new(0.003, -0.004, 0.002);
+    let mut last = None;
+    for i in 0..60 {
+        let row = tracker.process(render_template(
+            &c,
+            &texture,
+            DQuat::from_scaled_axis(slow * i as f64),
+            i as f64 * 10.0,
+        )?)?;
+        if i > 5 {
+            assert!(
+                row.accepted && row.status == "tracked",
+                "warmup {i}: {} {}",
+                row.status,
+                row.error
+            );
+        }
+        last = Some(row);
+    }
+    let last = last.ok_or("missing warmup")?;
+    let atlas = tracker.sphere_template().ok_or("missing atlas")?;
+    let fast = DVec3::new(0.065, 0.0, 0.0);
+    let start = DQuat::from_scaled_axis(slow * 59.0);
+    let mut recovered = None;
+    let mut squared = DVec3::ZERO;
+    let mut measured = 0;
+    let mut tracked_since_recovery = 0;
+    for j in 1..=90 {
+        let pose = DQuat::from_scaled_axis(fast * j as f64) * start;
+        let row = tracker.process(render_template(&c, &texture, pose, (59 + j) as f64 * 10.0)?)?;
+        if recovered.is_none() {
+            assert_eq!(tracker.sphere_template().as_ref(), Some(&atlas));
+            assert_eq!(row.position, last.position);
+            assert_eq!(row.integrated, last.integrated);
+            assert_eq!(row.delta_camera, [0.0; 3]);
+            if row.accepted {
+                assert_eq!(row.status, "relocalized");
+                recovered = Some(j);
+            }
+        } else {
+            assert!(
+                row.accepted && row.status == "tracked",
+                "fast suffix {j}: {} {}",
+                row.status,
+                row.error
+            );
+            tracked_since_recovery += 1;
+            if tracked_since_recovery <= 8 {
+                assert_eq!(
+                    tracker.sphere_template().as_ref(),
+                    Some(&atlas),
+                    "fast bootstrap rewrote atlas"
+                );
+            }
+            let error = DVec3::from_array(row.delta_camera) - fast;
+            squared += error * error;
+            measured += 1;
+        }
+    }
+    assert!(
+        recovered.is_some_and(|j| j <= 30),
+        "healthy faster motion never recovered: {recovered:?}"
+    );
+    assert!(measured >= 60);
+    let rms = (squared / measured as f64).to_array().map(f64::sqrt);
+    eprintln!("sustained fast recovery={recovered:?}, measured={measured}, component RMS={rms:?}");
+    assert!(
+        rms.iter().all(|v| *v < 0.008),
+        "faster suffix component RMS {rms:?}"
+    );
     Ok(())
 }

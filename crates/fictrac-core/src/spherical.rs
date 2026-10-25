@@ -42,6 +42,8 @@ pub(crate) struct MapTracker {
     active_sites: Vec<(DVec3, usize)>,
     prepared_roi: Option<Vec<u8>>,
     prepared_edge: f64,
+    previous_time: Option<f64>,
+    prepared_delta_ms: f64,
     solver: Bobyqa,
     local_stride: usize,
     settings: MapSettings,
@@ -103,6 +105,8 @@ impl MapTracker {
             active_sites,
             prepared_roi: None,
             prepared_edge: 0.0,
+            previous_time: None,
+            prepared_delta_ms: 0.0,
             solver,
             local_stride,
             settings,
@@ -128,6 +132,8 @@ impl MapTracker {
         self.prepared_roi = None;
         self.views = None;
         self.recovery = crate::resilience::Recovery::default();
+        self.previous_time = None;
+        self.prepared_delta_ms = 0.0;
     }
     pub fn load_template(&mut self, template: SphereTemplate) -> Result<()> {
         template.validate()?;
@@ -147,6 +153,8 @@ impl MapTracker {
         self.prepared_roi = None;
         self.views = None;
         self.recovery = crate::resilience::Recovery::default();
+        self.previous_time = None;
+        self.prepared_delta_ms = 0.0;
         Ok(())
     }
     pub fn template(&self) -> SphereTemplate {
@@ -157,6 +165,10 @@ impl MapTracker {
         }
     }
     pub fn estimate(&mut self, frame: &GrayFrame) -> Estimate {
+        self.prepared_delta_ms = self
+            .previous_time
+            .map_or(0.0, |previous| frame.timestamp_ms() - previous);
+        self.previous_time = Some(frame.timestamp_ms());
         let roi = self.sampler.prepare(frame);
         self.prepared_edge = if self.settings.resilient {
             crate::resilience::edge_density(&roi, self.sampler.size)
@@ -214,9 +226,13 @@ impl MapTracker {
         };
         let orientation = self.orientation;
         if self.settings.resilient && self.recovery.lost_frames > 0 {
-            let (pose, error) =
-                self.recovery
-                    .reacquire(&objective, orientation, self.bound, &self.settings);
+            let (pose, error) = self.recovery.reacquire(
+                &objective,
+                orientation,
+                self.bound,
+                &self.settings,
+                self.prepared_delta_ms,
+            );
             self.guess = DVec3::ZERO;
             return Estimate {
                 rotation: DVec3::ZERO,
@@ -259,7 +275,7 @@ impl MapTracker {
         } else {
             1e12
         };
-        let local_good = acceptable(
+        let score_good = acceptable(
             error,
             if self.settings.resilient {
                 self.recovery.limit(&self.settings)
@@ -267,8 +283,19 @@ impl MapTracker {
                 self.settings.max_error
             },
         );
+        let local_good = score_good
+            && (!self.settings.resilient
+                || self
+                    .recovery
+                    .motion_ok(DVec3::from_array(x).length(), self.prepared_delta_ms));
         if self.settings.resilient && !local_good {
-            self.recovery.reject();
+            if score_good {
+                self.recovery.reject_motion_candidate(
+                    DQuat::from_scaled_axis(DVec3::from_array(x)) * orientation,
+                );
+            } else {
+                self.recovery.reject();
+            }
             self.guess = DVec3::ZERO;
             return failure(if error.is_finite() { error } else { 1e12 });
         }
@@ -305,6 +332,8 @@ impl MapTracker {
         }
     }
     pub fn commit(&mut self, frame: &GrayFrame, row: &TrackRow, legacy: bool) {
+        let allow_learning =
+            row.accepted && (!self.settings.resilient || self.recovery.allow_learning(row.status));
         if row.accepted {
             let absolute = DQuat::from_scaled_axis(DVec3::from_array(row.absolute_camera));
             self.orientation = if legacy {
@@ -314,13 +343,20 @@ impl MapTracker {
             };
             self.ready = true;
             self.clean_map = false;
-            if self.settings.resilient && self.prepared_roi.is_some() {
+            if self.settings.resilient && row.status == "tracked" {
+                self.recovery.observe_motion(
+                    DVec3::from_array(row.delta_camera).length(),
+                    self.prepared_delta_ms,
+                );
+            }
+            if self.settings.resilient && allow_learning && self.prepared_roi.is_some() {
                 self.recovery
                     .observe(row.error, self.prepared_edge, self.orientation);
             }
         }
         self.views = Some(if let Some(roi) = self.prepared_roi.take() {
-            self.sampler.update_prepared(frame, Some(row), roi)
+            self.sampler
+                .update_prepared(frame, Some(row), roi, allow_learning)
         } else {
             self.sampler.update(frame, Some(row))
         });
@@ -539,6 +575,37 @@ impl AtlasProjection {
 #[cfg(test)]
 mod projection_tests {
     use super::*;
+    #[test]
+    fn reset_and_template_import_clear_motion_and_quality_history() -> Result<()> {
+        let config = Config::default();
+        let settings = MapSettings::default();
+        let mut tracker = MapTracker::new(&config, settings.clone())?;
+        for _ in 0..32 {
+            tracker.recovery.observe_motion(0.006, 10.0);
+            tracker.recovery.observe(2000.0, 0.1, DQuat::IDENTITY);
+        }
+        assert!(!tracker.recovery.motion_ok(0.1, 10.0));
+        assert_eq!(tracker.recovery.limit(&settings), 10000.0);
+        tracker.previous_time = Some(200.0);
+        tracker.reset();
+        assert!(tracker.recovery.motion_ok(0.1, 10.0));
+        assert_eq!(tracker.recovery.limit(&settings), 18000.0);
+        assert_eq!(tracker.previous_time, None);
+        for _ in 0..32 {
+            tracker.recovery.observe_motion(0.006, 10.0);
+        }
+        assert!(!tracker.recovery.motion_ok(0.1, 10.0));
+        let template = SphereTemplate::new(
+            tracker.sampler.map_width,
+            tracker.sampler.map_height,
+            vec![0; tracker.sampler.map.len()],
+        )?;
+        tracker.load_template(template)?;
+        assert!(tracker.recovery.motion_ok(0.1, 10.0));
+        assert_eq!(tracker.previous_time, None);
+        Ok(())
+    }
+
     #[test]
     fn sampled_blind_spot_cannot_hide_error_from_final_quality_decision() {
         let point = DVec3::new(0.17, 0.28, 0.95).normalize();

@@ -203,17 +203,21 @@ fn dispatch(app: &mut Desktop, r: Request) -> Result<Value> {
             }
             return Ok(
                 json!({"protocol_version":1,"transport":"native-gui-jsonl","commands":COMMANDS,
-                "execution":"GUI-thread config edits are immediate. Worker commands return queued:true. Poll status until frames/revision/paused/recording/notice confirm the requested change; queued is not completion. Native windows render these same sessions. Closing the root session closes every native window; discard:true explicitly discards unsaved edits, otherwise any dirty window prevents root close.",
+                "execution":"GUI-thread config edits are immediate. Worker commands return queued:true. Poll status until frames/revision/paused/recording/notice confirm the requested change; queued is not completion. Each native session closes independently, including the first window. discard:true discards only the selected session's unsaved edits. The application exits after the last session closes.",
                 "request_schema":schema,"snapshot":"computed diagnostic images, not an operating-system screenshot"}),
             );
         }
         "sessions" => {
             return Ok(json!(
-                app.sessions.iter_mut().map(status).collect::<Vec<_>>()
+                app.sessions
+                    .iter_mut()
+                    .filter(|s| !s.closed)
+                    .map(status)
+                    .collect::<Vec<_>>()
             ));
         }
         "open" => {
-            if app.sessions.len() >= 16 {
+            if app.sessions.iter().filter(|s| !s.closed).count() >= 16 {
                 return Err("at most 16 native sessions".into());
             }
             let path = r
@@ -264,26 +268,6 @@ fn dispatch(app: &mut Desktop, r: Request) -> Result<Value> {
         .iter()
         .position(|s| s.id == id && !s.closed)
         .ok_or_else(|| format!("unknown native session {id}"))?;
-    if r.command == "close"
-        && index == 0
-        && !r
-            .args
-            .get("discard")
-            .and_then(Value::as_bool)
-            .unwrap_or(false)
-    {
-        let dirty: Vec<_> = app
-            .sessions
-            .iter()
-            .filter(|s| !s.closed && s.history.text != s.saved)
-            .map(|s| s.id)
-            .collect();
-        if !dirty.is_empty() {
-            return Err(format!(
-                "closing the root window closes all instances; save_config unsaved sessions {dirty:?} first"
-            ));
-        }
-    }
     if r.command == "new_instance" {
         let before = app.sessions.len();
         app.spawn_from(index);
@@ -296,24 +280,23 @@ fn dispatch(app: &mut Desktop, r: Request) -> Result<Value> {
             .ok_or("new native session unavailable")?;
         return Ok(json!({"queued":true,"status":status(session)}));
     }
-    let mut result = execute_session(&mut app.sessions[index], &r.command, &r.args)?;
-    if r.command == "close" && index == 0 {
-        result["closes_all_windows"] = json!(true);
-        result["discard_requested"] = json!(
-            r.args
-                .get("discard")
-                .and_then(Value::as_bool)
-                .unwrap_or(false)
-        );
-    }
-    Ok(result)
+    execute_session(&mut app.sessions[index], &r.command, &r.args)
 }
 fn status(s: &mut Session) -> Value {
     if let Some(worker) = &s.worker {
         s.snapshot = worker.latest();
     }
-    let view = json!({"settings":s.show_settings,"diagnostics":s.show_diagnostics,"overlays":s.show_overlays,"full_image":s.full_image,"calibration_step":match s.tool { crate::session::Tool::Rim => "ball", crate::session::Tool::Exclude => "exclude", crate::session::Tool::Square => "lab", _ => "view" },"edit_marks":s.edit_existing,"magnifier":s.magnifier});
-    json!({"session":s.id,"source":s.source_edit,"config_path":s.path,"native_window":s.native_window,"window_rect":s.window_rect,"realtime":s.realtime,
+    let mut view = json!({"settings":s.show_settings,"diagnostics":s.show_diagnostics,"overlays":s.show_overlays,"full_image":s.full_image,"calibration_step":match s.tool { crate::session::Tool::Rim => "ball", crate::session::Tool::Exclude => "exclude", crate::session::Tool::Square => "lab", _ => "view" },"edit_marks":s.edit_existing,"magnifier":s.magnifier});
+    view["calibration_action"] = json!(if s.calibration_review {
+        "inspect"
+    } else if s.edit_existing {
+        "edit"
+    } else if s.calibration_redraw {
+        "redraw"
+    } else {
+        "add"
+    });
+    json!({"session":s.id,"source":s.source_edit,"config_path":s.path,"native_window":s.native_window,"window_rect":s.window_rect,"window_title":s.window_title(),"realtime":s.realtime,
         "frames":s.snapshot.frames,"revision":s.snapshot.revision,"requested_revision":s.revision,
         "paused":s.snapshot.paused,"ended":s.snapshot.ended,"recording":s.snapshot.recording,
         "last_row":s.snapshot.row,"notice":s.snapshot.notice,"error":s.error,"status":s.status,
@@ -513,17 +496,38 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
             send(s, Command::SaveMap(path))
         }
         "view" => {
-            if let Some(step) = a.get("calibration_step").and_then(Value::as_str) {
-                s.tool = match step {
+            let proposed_tool = a
+                .get("calibration_step")
+                .and_then(Value::as_str)
+                .map(|step| match step {
                     "ball" => crate::session::Tool::Rim,
                     "exclude" => crate::session::Tool::Exclude,
                     "lab" => crate::session::Tool::Square,
                     _ => crate::session::Tool::Inspect,
-                };
+                })
+                .unwrap_or(s.tool);
+            if proposed_tool != s.tool && !s.points.is_empty() {
+                return Err(
+                    "Apply or cancel the current draft before changing calibration steps".into(),
+                );
+            }
+            if a.get("edit_marks").and_then(Value::as_bool) == Some(true) {
+                s.validate_calibration_action(proposed_tool, "edit")?;
+            }
+            if let Some(action) = a.get("calibration_action").and_then(Value::as_str) {
+                s.validate_calibration_action(proposed_tool, action)?;
+            }
+            if proposed_tool != s.tool {
+                s.tool = proposed_tool;
                 s.begin_calibration_step();
             }
             if let Some(value) = a.get("edit_marks").and_then(Value::as_bool) {
                 s.edit_existing = value;
+                s.calibration_review = false;
+                s.calibration_redraw = false;
+            }
+            if let Some(action) = a.get("calibration_action").and_then(Value::as_str) {
+                s.choose_calibration_action(action)?;
             }
             if let Some(value) = a.get("magnifier").and_then(Value::as_bool) {
                 s.magnifier = value;
@@ -670,6 +674,12 @@ fn calibrate(s: &Session, doc: &mut ConfigDocument, a: &Value) -> Result<()> {
             }
             polygons.push(p.into_iter().flatten().collect());
             doc.set("roi_ignr", &legacy(polygons)?).map_err(display)?;
+        }
+        "replace_exclusions" => {
+            let polygons: Vec<Vec<[f64; 2]>> =
+                serde_json::from_value(a.get("polygons").ok_or("args.polygons required")?.clone())
+                    .map_err(display)?;
+            *doc = fictrac_control::replace_exclusions_document(doc, &polygons)?;
         }
         "remove_exclusion" => {
             let mut polygons: Vec<Vec<f64>> = if doc.get("roi_ignr").is_some() {
@@ -938,7 +948,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn root_close_checks_unsaved_edits_in_every_native_window() -> TestResult {
+    fn first_session_closes_without_discarding_other_unsaved_windows() -> TestResult {
         use clap::Parser;
         let mut child = session()?;
         child.id = 2;
@@ -954,13 +964,14 @@ mod tests {
             tile_columns: 2,
             window_origin: crate::Pair(12., 36.),
             window_size: crate::Pair(520., 480.),
+            root_hidden: false,
         };
         let request =
             serde_json::from_value(json!({"id":"root-close","command":"close","session":1}))?;
         let response = Bridge::execute(&mut app, request);
-        assert!(!response.ok);
+        assert!(response.ok);
         assert_eq!(response.id, json!("root-close"));
-        assert!(!app.sessions[0].closed);
+        assert!(app.sessions[0].closed);
         assert!(!app.sessions[1].closed);
         let discover = serde_json::from_value(json!({"id":42,"command":"discover"}))?;
         let response = Bridge::execute(&mut app, discover);
@@ -972,14 +983,14 @@ mod tests {
                 .iter()
                 .any(|v| v == "calibrate")
         );
-        let history = app.sessions[0].history.text.clone();
-        let previous = app.sessions[0].show_settings;
+        let history = app.sessions[1].history.text.clone();
+        let previous = app.sessions[1].show_settings;
         let invalid_view = serde_json::from_value(
-            json!({"id":"bad-view","command":"view","session":1,"args":{"settings":!previous,"overlays":"false"}}),
+            json!({"id":"bad-view","command":"view","session":2,"args":{"settings":!previous,"overlays":"false"}}),
         )?;
         assert!(!Bridge::execute(&mut app, invalid_view).ok);
-        assert_eq!(app.sessions[0].show_settings, previous);
-        assert_eq!(app.sessions[0].history.text, history);
+        assert_eq!(app.sessions[1].show_settings, previous);
+        assert_eq!(app.sessions[1].history.text, history);
         Ok(())
     }
     #[test]
@@ -1090,6 +1101,97 @@ mod tests {
             assert!(error.contains("Video inputs have no live camera controls"));
             assert_eq!(s.history.text, before);
         }
+        Ok(())
+    }
+    #[test]
+    fn native_calibration_choices_review_keep_edit_and_redraw_without_incidental_edits()
+    -> TestResult {
+        let mut s = session()?;
+        let original = s.history.text.clone();
+        let review = execute_session(&mut s, "view", &json!({"calibration_step":"ball"}))?;
+        assert_eq!(review["view"]["calibration_action"], "inspect");
+        let edit = execute_session(&mut s, "view", &json!({"calibration_action":"edit"}))?;
+        assert_eq!(edit["view"]["calibration_action"], "edit");
+        execute_session(&mut s, "view", &json!({"calibration_action":"inspect"}))?;
+        let next = execute_session(&mut s, "view", &json!({"calibration_action":"keep"}))?;
+        assert_eq!(next["view"]["calibration_step"], "exclude");
+        let draft = execute_session(&mut s, "view", &json!({"calibration_action":"redraw"}))?;
+        assert_eq!(draft["view"]["calibration_action"], "redraw");
+        assert_eq!(s.history.text, original);
+        execute_session(&mut s, "view", &json!({"calibration_action":"inspect"}))?;
+        execute_session(&mut s, "view", &json!({"calibration_action":"keep"}))?;
+        let done = execute_session(&mut s, "view", &json!({"calibration_action":"keep"}))?;
+        assert_eq!(done["view"]["calibration_step"], "view");
+        assert_eq!(s.history.text, original);
+        Ok(())
+    }
+    #[test]
+    fn invalid_calibration_view_choices_preserve_view_document_and_real_source_clock() -> TestResult
+    {
+        let mut s = session()?;
+        s.source_base = Some(
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/upstream-config.txt"),
+        );
+        s.start()?;
+        execute_session(&mut s, "pause", &json!({}))?;
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+        while !status(&mut s)["paused"].as_bool().unwrap_or(false) {
+            if std::time::Instant::now() > deadline {
+                return Err("worker did not pause".into());
+            }
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        execute_session(&mut s, "step", &json!({"frames":2}))?;
+        loop {
+            let state = status(&mut s);
+            if state["frames"].as_u64().unwrap_or(0) >= 2 && state["advance_remaining"] == 0 {
+                break;
+            }
+            if std::time::Instant::now() > deadline {
+                return Err("worker did not process sample frames".into());
+            }
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        for args in [
+            json!({"calibration_step":"ball","calibration_action":"add","settings":true}),
+            json!({"calibration_step":"view","calibration_action":"edit","full_image":true}),
+        ] {
+            let before = status(&mut s);
+            let text = s.history.text.clone();
+            assert!(execute_session(&mut s, "view", &args).is_err());
+            let after = status(&mut s);
+            for field in [
+                "view",
+                "frames",
+                "last_row",
+                "revision",
+                "requested_revision",
+                "paused",
+            ] {
+                assert_eq!(after[field], before[field], "mutated {field}");
+            }
+            assert_eq!(s.history.text, text);
+        }
+        let geometry = s.core_config()?;
+        let mut doc = s.document()?;
+        doc.set("roi_c", &legacy(geometry.sphere.centre)?)?;
+        doc.set("roi_r", &geometry.sphere.angular_radius.to_string())?;
+        doc.set("roi_circ", "{}")?;
+        s.history.replace(doc.text().to_owned());
+        let before = status(&mut s);
+        let text = s.history.text.clone();
+        assert!(
+            execute_session(
+                &mut s,
+                "view",
+                &json!({"calibration_step":"ball","calibration_action":"edit","settings":true})
+            )
+            .is_err()
+        );
+        let after = status(&mut s);
+        assert_eq!(after["view"], before["view"]);
+        assert_eq!(after["last_row"], before["last_row"]);
+        assert_eq!(s.history.text, text);
         Ok(())
     }
     #[test]

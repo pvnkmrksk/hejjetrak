@@ -103,6 +103,7 @@ pub fn request_schema() -> Value {
         object(json!({"kind":{"const":"rim"},"points":points(3,4096)}),&["kind","points"]),
         object(json!({"kind":{"const":"exclude"},"points":points(3,256)}),&["kind","points"]),
         object(json!({"kind":{"const":"remove_exclusion"}}),&["kind"]),
+        object(json!({"kind":{"const":"replace_exclusions"},"polygons":{"type":"array","maxItems":64,"items":points(3,256)}}),&["kind","polygons"]),
         object(json!({"kind":{"const":"forward"},"start":point(),"end":point()}),&["kind","start","end"]),
         object(json!({"kind":{"const":"square_cycle"}}),&["kind"]),
         object(json!({"kind":{"const":"resolution_reference"},"width":{"type":"integer","minimum":2,"maximum":32000000},"height":{"type":"integer","minimum":2,"maximum":32000000}}),&["kind"]),
@@ -110,7 +111,7 @@ pub fn request_schema() -> Value {
         object(json!({"kind":{"const":"square"},"plane":{"enum":["xy","yz","xz"]},"points":points(4,4)}),&["kind","plane","points"])
     ]});
     variants.push(descriptor("calibrate", calibration));
-    variants.push(descriptor("view",object(json!({"settings":{"type":"boolean"},"diagnostics":{"type":"boolean"},"overlays":{"type":"boolean"},"full_image":{"type":"boolean"},"calibration_step":{"enum":["view","ball","exclude","lab"]},"edit_marks":{"type":"boolean"},"magnifier":{"type":"boolean"}}),&[])));
+    variants.push(descriptor("view",object(json!({"settings":{"type":"boolean"},"diagnostics":{"type":"boolean"},"overlays":{"type":"boolean"},"full_image":{"type":"boolean"},"calibration_step":{"enum":["view","ball","exclude","lab"]},"calibration_action":{"enum":["inspect","edit","redraw","add","keep"]},"edit_marks":{"type":"boolean"},"magnifier":{"type":"boolean"}}),&[])));
     variants.push(descriptor("camera_status", none()));
     variants.push(descriptor("camera_format",object(json!({"width":{"type":"integer","minimum":16,"maximum":8192},"height":{"type":"integer","minimum":16,"maximum":8192},"fps":{"type":["number","null"],"minimum":0.1,"maximum":1000}}),&["width","height"])));
     variants.push(descriptor("camera_set",json!({"oneOf":[object(json!({"control":{"const":"exposure_mode"},"mode":{"enum":["automatic","locked"]}}),&["control","mode"]),object(json!({"control":{"enum":["exposure","gain"]},"value":{"type":"number"}}),&["control","value"])]})));
@@ -137,6 +138,7 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
             "overlays",
             "full_image",
             "calibration_step",
+            "calibration_action",
             "edit_marks",
             "magnifier",
         ],
@@ -145,7 +147,9 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
         "camera_set" => &["control", "mode", "value"],
         "step" | "run" => &["frames"],
         "rows" => &["offset", "limit"],
-        "calibrate" => &["kind", "points", "start", "end", "plane", "width", "height"],
+        "calibrate" => &[
+            "kind", "points", "start", "end", "plane", "width", "height", "polygons",
+        ],
         _ => return Err(format!("unknown command {command}; use discover")),
     };
     if args.is_null() {
@@ -180,6 +184,14 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
             .is_some_and(|s| matches!(s, "view" | "ball" | "exclude" | "lab"))
     {
         return Err("args.calibration_step must be view/ball/exclude/lab".into());
+    }
+    if command == "view"
+        && let Some(action) = object.get("calibration_action")
+        && !action
+            .as_str()
+            .is_some_and(|s| matches!(s, "inspect" | "edit" | "redraw" | "add" | "keep"))
+    {
+        return Err("args.calibration_action must be inspect/edit/redraw/add/keep".into());
     }
     if command == "calibrate" {
         for key in ["width", "height"] {

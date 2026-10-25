@@ -1,0 +1,76 @@
+{
+  "platform": "macOS 27.0.1 arm64, Apple M2 Pro",
+  "toolchain": "rustc 1.99.1 / LLVM 23.1.1",
+  "profile": "test, debug=0, incremental=false",
+  "purpose": "deterministic correctness regressions; not performance measurements",
+  "input": "examples/sample.mp4",
+  "decoded_frames": 300,
+  "warmup_frames": 900,
+  "occluded_frames": 240,
+  "full_occluders": [
+    "80 black",
+    "80 horizontal gradient",
+    "80 unrelated pattern"
+  ],
+  "full_clear_suffix": {
+    "recovered_frame_zero_based": 1,
+    "measured_rows": 178,
+    "path_rmse": 0.015622900289682733,
+    "heading_rmse": 0.010661528116696092,
+    "component_rmse": [
+      0.0073494446782363075,
+      0.007955788389072594,
+      0.012259253032265995
+    ]
+  },
+  "partial_occlusion": {
+    "frames": 120,
+    "coverage_about": 0.7,
+    "pattern": [
+      "60 black",
+      "60 vertical gradient"
+    ],
+    "measured_clear_suffix_rows": 178,
+    "path_rmse": 0.015419112380507537,
+    "heading_rmse": 0.010576674575242207,
+    "component_rmse": [
+      0.008068676673392764,
+      0.00841973486431192,
+      0.014038066924699812
+    ]
+  },
+  "unchanged_real_video_gates": {
+    "path": 0.075,
+    "heading": 0.025,
+    "per_component": 0.02
+  },
+  "before_full_roi_recovery_refinement": {
+    "path_rmse": 0.041611489171060896,
+    "heading_rmse": 0.025728397170593515,
+    "component_rmse": [
+      0.009707901130400237,
+      0.007823942540970344,
+      0.01357422969309981
+    ],
+    "failed_unchanged_heading_gate": true
+  },
+  "fast_known_motion": {
+    "slow_rad_per_frame": 0.005385164807134504,
+    "fast_rad_per_frame": 0.065,
+    "relocalized_on_good_image": 4,
+    "measured_suffix": 86,
+    "component_rmse": [
+      0.0021609936771224292,
+      0.0016794860203966698,
+      0.0036799604974422275
+    ],
+    "unchanged_per_component_gate": 0.008
+  },
+  "core_tests": 44,
+  "strict_core_io_clippy": "pass",
+  "limitations": [
+    "Uninterrupted control is another estimate, not physical ground truth.",
+    "No live-ball or arbitrary patterned-occluder guarantee.",
+    "No motion reconstructed across missing intervals."
+  ]
+}

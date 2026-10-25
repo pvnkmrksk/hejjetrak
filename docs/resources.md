@@ -56,9 +56,10 @@ acquisition at 120 or 240 FPS. The built-in Mac camera is 30 FPS.
 Measured on **2026-10-25, Apple M2 Pro, 12 logical CPU cores, 32 GiB RAM,
 macOS 27.0.1 arm64, Rust 1.99.1**. Release uses thin LTO and one codegen unit,
 without a target-CPU native override. The before build is commit `51dca654`;
-the measured after build is `cd249662`. Later source changes to tiny-window CLI
-bounds and documentation do not alter the engine/scheduler; final-source checks
-are recorded separately in [validation](validation.md).
+the measured after build is `cd249662`. The final v0.1.2 spot check followed
+its tiny-window CLI-bound/documentation fixes, which did not alter that engine/
+scheduler. v0.1.3 changes numerical acceptance and UI behavior and needs separate
+measurements; see [validation](validation.md).
 
 Each table entry is a measured case after three seconds of warmup and at least
 20 seconds of sampling, not a cross-machine or experiment-length guarantee.
@@ -99,6 +100,50 @@ measures **0.495 ms** median run-mean, excluding initialization, I/O, capture,
 pacing, display and recording. It is not an end-to-end resource percentage.
 
 A final-source repeat (`f92efbb`, binary SHA-256 `8cdc3c9bd0e80003dc728cd33a15b366ae52123af764b2cd3336845a78c9f2a0`) sustains 120.05 FPS per session with both outputs, using **2.55 cores and 290.6 MiB median RSS**. This repeats the same workload; it is not an additional algorithmic improvement. The two output-enabled samples span 2.55–2.92 cores. No application publisher discards/failures were observed; receiver delivery remains unmeasured.
+
+## Reading CPU percentages on a multi-core computer
+
+The table above uses the common process convention: **100% equals one logical
+core**. Dividing by this Mac's twelve logical cores gives the fraction of its
+total nominal CPU capacity. This changes the percentage's denominator, not the
+amount of work measured. It is CPU-time normalization; differing core speeds and
+power states mean it is not an energy or equal-performance-core measurement.
+
+| Measured workload on the 12-core M2 Pro | Core equivalents | Total CPU capacity |
+|---|---:|---:|
+| Actual room camera, 30 FPS | 0.326 | **2.72%** |
+| One grayscale replay, 120 Hz | 0.371 | **3.09%** |
+| One grayscale replay, 240 Hz | 0.529 | **4.41%** |
+| Sixteen 120 Hz replays with UDP/ZMQ, recorded cases | 2.55–2.92 | **21–24%** |
+
+These remain v0.1.2-era observations, not new v0.1.3 measurements. A source or UI
+change needs its own resource check before inheriting a timing claim.
+
+For a **purely arithmetic illustration**, the same 0.371-core workload would be
+9.28% of a four-core CPU, 4.64% of eight cores, 3.09% of twelve, or 1.16% of
+thirty-two, **if per-core performance and every surrounding cost were identical**.
+Those are estimates, not measurements on Intel, AMD or another Mac. Fewer cores
+do not inherently increase this workload's per-frame compute; different single-
+core speed, capture conversion, drivers and recording can change the actual cost.
+A GPU model or total core count alone does not predict acquisition capacity.
+GPU tracking and wattage/battery use remain unmeasured.
+
+## v0.1.3 final repeat
+
+The same serial fixture on the same Mac uses 3.19% of total 12-core CPU capacity
+for one 120 Hz replay (38.3% of one core), with 160.0 MiB median RSS. Sixteen visible
+replays with UDP/ZMQ use 22.65% total CPU (2.72 cores), 291.3 MiB combined RSS,
+and deliver 119.97–120.12 FPS each. Outputs use isolated loopback ports 21111–21126
+and 19871–19886 to avoid disturbing existing sessions; default rig ports are
+unchanged. No subscribers/receivers participate. All publishers remain alive,
+with no application discards/failures. A paused case measures 0.26% total CPU,
+but this single result does not resolve earlier idle variability.
+
+The final healthy-sample tracking profile is 0.537 ms median run-mean; all numeric
+bytes match v0.1.2. Recovery guards add work for accepted history, and rare
+reacquisition now uses complete-ROI refinement. These resource samples do not
+establish an energy saving or guarantee physical camera bandwidth. See the
+[final binary hash, cases, profile and native lifetime evidence](benchmarks/resources-v013-20261025.json).
 
 ## Idle variability remains unresolved
 

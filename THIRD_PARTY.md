@@ -12,6 +12,7 @@ Cargo.lock pins the complete dependency graph. These are Rust libraries, not ext
 | wgpu 27 | Native GPU rendering | MIT OR Apache-2.0 |
 | rfd 0.15 | Native file dialogs | MIT |
 | image 0.25 | Rust image buffers/PNG | MIT OR Apache-2.0 |
+| Lucide icon artwork | Bundled professional toolbar icons | ISC; Feather-derived subset MIT |
 | serial2 0.2 | Native serial configuration and bounded writes | BSD-2-Clause OR Apache-2.0 |
 | zeromq 0.6, tokio 1 | Pure Rust ZMQ transport and bounded asynchronous publisher | MIT |
 | rustix (test dependency) | Native pseudo-terminal serial test harness | MIT OR Apache-2.0 |
@@ -23,6 +24,12 @@ OxideAV supplies Rust codec/container implementations. No FFmpeg/OpenH264/libav/
 Dependency sources, authorship and full license texts remain in Cargo registry distributions. CI vendors the locked dependency graph, and the packager copies its available license/notice files into `DependencyLicenses/` with a manifest listing each package's included files. On macOS this directory is under `Contents/Resources/`. Windows x64 releases use [Rust's static CRT linkage](https://doc.rust-lang.org/reference/linkage.html#static-and-dynamic-c-runtimes) to avoid a separately installed Visual C++ redistributable; native Windows system DLLs remain OS dependencies. Historical development archives in this workspace must not be confused with current GitHub releases.
 
 Upstream FicTrac's CC BY-NC-SA terms remain in LICENSE and ATTRIBUTION.md. Permissive dependency licenses do not remove those terms.
+
+Lucide artwork is pinned to commit `7faf87628a1ad6175975bc595344337ce14a7db4`.
+Original SVGs, rendered PNGs and the full ISC/Feather MIT notices are retained
+under `assets/lucide/`. Release packages include those notices. Icons are decoded
+once and cached by the native GUI; no icon font, download or SVG renderer is
+required at runtime. Source: https://github.com/lucide-icons/lucide.
 
 `oxideav-h264` 0.1.9 is retained under `vendor/oxideav-h264` with its MIT
 license and original tests. A documented local performance patch is selected
