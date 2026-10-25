@@ -1,5 +1,64 @@
 # hejjetrak validation evidence
 
+## Resource, calibration and recovery pass — 2026-10-25
+
+Local platform: Apple M2 Pro, 12 logical cores, 32 GiB RAM, macOS 27.0.1 arm64,
+Rust 1.99.1 / LLVM 23.1.1. The complete locked workspace check passes **157 tests**,
+with formatting and strict all-target Clippy. Coverage includes actual video/agent
+operations, gapped Linux device-ID mapping, explicit resolution-reference edits,
+interruptible source waits, immediate manual steps and running **120 → 30 → 120 FPS**
+changes that retain timestamps and every recorded row. Current-source native
+platform CI and four-platform release builds remain pending verification;
+completed historical platform evidence is recorded below.
+
+The release known-motion demo processes **120 frames**, with rotation-component
+RMS **0.000304049695 rad** against the unchanged **0.003** gate. The release sample
+run processes **300 frames**: 299 tracked, zero rejected. Its all-frame numeric
+bytes are identical to retained build `51dca65`. Reference path RMS is
+**0.025593842 sphere rad**, heading RMS **0.013651430 rad**, and each rotation
+component remains below **0.020 rad**. The serial predecoded profile (one warmup,
+five measured runs) reports a median run-mean of **0.495 ms/frame**. Timing covers
+ROI preparation, fitting, integration, atlas updates and numerical maps; it
+excludes initialization, capture, decoding, conversion, pacing, file/wire output
+and UI. Original Y/RGB decoder oracle constants remain unchanged and pass in the
+full suite.
+
+The long pure Rust monochrome replay contains **7,176 ping-pong frames** at
+384×288, with 120 FPS metadata. Its full CLI run tracks 7,175 frames after
+initialization, with zero rejected. Sixteen visible native replay sessions
+sustain approximately **120 FPS each**, using **2.66 CPU cores** in aggregate;
+enabling loopback UDP and ZMQ uses **2.92 cores**, with no application publisher
+discards/failures. These 20-second process-resource cases test neither sixteen
+physical cameras nor receiving applications. A source-paced **240 FPS** replay
+also executes locally. See [complete measurements, unresolved idle variability
+and limitations](resources.md).
+
+The known-motion recovery regression learns **400 frames**, then rejects
+**240 uniform, gradient or unrelated-pattern obstructions** without altering the
+atlas/path. It confirms a known view under the minimum **256-evaluation**
+recovery budget. Existing **0.08 rad** absolute-pose and **0.012 rad** next-motion
+gates remain unchanged. The real-video case learns **900 forward/backward
+frames**, inserts **240 occluders**, checks **180 clear frames**, adds **120 frames**
+with a panel covering approximately **70%** of the visible ROI, then checks
+another **180 clear frames**. Aligned measured-suffix limits remain **0.020 rad
+per rotation component**, **0.075 sphere rad path RMS** and **0.025 rad heading
+RMS**. Missing gap motion is never reconstructed. See [recovery policy and
+boundaries](recovery.md).
+
+The final-source output-enabled spot check repeats sixteen sessions at approximately
+120 FPS each, using 2.55 cores and 290.6 MiB median RSS. All 16 publishers remain
+alive with no application discards/failures.
+
+Native Mac previews, including 96×96 reset-only and 180×140 reset/record layouts,
+and the guided inspector were visually inspected using the
+public sample. The calibration canvas shows only its active geometry, and the
+full-source view retains image proportions. Source-coordinate pointer, deletion,
+corner-order and cropped-view transformations are additionally exercised by the
+UI regressions. Fresh sample captures are included in the manual; no live-room
+camera image is published. The actual built-in **640×480 / 30 FPS** camera
+resource run has zero running capture skips, but its room view is not a
+calibrated sphere.
+
 ## Tracking-stage refinement — 2026-10-25
 
 Same local Mac/toolchain as below. Required formatting, strict locked all-target

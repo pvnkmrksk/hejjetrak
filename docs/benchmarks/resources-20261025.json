@@ -1,0 +1,2706 @@
+{
+  "date": "2026-10-25",
+  "platform": "macOS27.0.1 arm64",
+  "machine": {
+    "cpu": "Apple M2 Pro",
+    "logical_cores": 12,
+    "memory_bytes": 34359738368
+  },
+  "toolchain": "rustc1.99.1 (58cf8f9c3 2026-10-13), LLVM23.1.1, aarch64-apple-darwin",
+  "build": "cargo build --workspace --bins --examples --release --locked; thin LTO, codegen-units1; no target-cpu native override",
+  "baseline_commit": "51dca654ab848d5d2bba6e6f5b70ada8dbfe5aab",
+  "candidate_commit": "cd249662a266afa747d3a6db0a0cd0d63f1613da",
+  "boundaries": "Process cumulative CPU-time delta after3s warmup, >=20s measured, serial cases without concurrent build/test/benchmark. 100%=one logical core. RSS includes mapped/shared/graphics pages. Python sampler, WindowServer, GPU/driver watts excluded. Last-row quality sampled only. Before/after UI states can affect resource use.",
+  "fixtures": {
+    "sample_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+    "h264_long": {
+      "frames": 7200,
+      "width": 384,
+      "height": 288,
+      "construction": "Developer-only FFmpeg stream copy,24 sample repetitions; app never invokes FFmpeg. Artificial boundary jumps; resilient=n."
+    },
+    "raw": {
+      "cache_limit_bytes": 536870912,
+      "cache_with_metadata_bytes": 33191688,
+      "cached_packet_bytes": 33179400,
+      "cycles": 12,
+      "fps": 120,
+      "frames_per_cycle": 598,
+      "input": "examples/sample.mp4",
+      "output": "/tmp/hejjetrak-resource-pingpong.y4m",
+      "output_bytes": 793651284,
+      "output_frames": 7176,
+      "output_limit_bytes": 2147483648,
+      "pixels": "exact legacy RGB-to-gray8bit bytes through next_tracking_frame(None) and write_y4m_frame",
+      "scope": "development-only grayscale resource fixture; source timing replaced by120FPS; not RGB capture or physical accuracy evidence",
+      "sequence": "0,1,...,N-1,N-2,...,1; repeated without a last-to-first jump",
+      "source_info": {
+        "codec": "h264 (pure Rust)",
+        "duration_ms": 10000.0,
+        "fps": null,
+        "height": 288,
+        "width": 384
+      },
+      "unique_frames": 300
+    }
+  },
+  "clean_video": {
+    "frames": 300,
+    "tracked": 299,
+    "rejected": 0,
+    "all_frame_bytes_identical_to_baseline": true,
+    "comparison": {
+      "comparison": {
+        "candidate_final_position": [
+          3.64168489651,
+          -2.646768112362
+        ],
+        "endpoint_error_sphere_rad": 0.041252009416150356,
+        "frames": 300,
+        "heading_rmse_rad": 0.013651430288528159,
+        "path_point_rmse_sphere_rad": 0.025593841799898084,
+        "reference_final_position": [
+          3.674266189723,
+          -2.6214661833162
+        ],
+        "rotation_component_rmse_rad": [
+          0.009475898823054007,
+          0.010924711781146961,
+          0.01781987973491448
+        ],
+        "timestamp_max_error_ms": 3.456079866737127e-11
+      },
+      "limits": {
+        "heading_rmse_rad": 0.025,
+        "path_rmse_sphere_rad": 0.075,
+        "rotation_component_rmse_rad": 0.02
+      },
+      "passed": true
+    }
+  },
+  "raw_full_validation": {
+    "frames": 7176,
+    "tracked": 7175,
+    "relocalized": 0,
+    "rejected": 0
+  },
+  "tracking_profile": {
+    "boundary": "Tracker::process only, including ROI, fitting, integration, map and numerical debug views; predecoded/preconverted immutable frames; no I/O, capture, pacing, UI or recording; initialization excluded",
+    "config": {
+      "camera_to_lab": [
+        0.722445,
+        -0.131314,
+        -0.460878
+      ],
+      "fisheye": false,
+      "height": 288,
+      "ignore_polygons": [
+        [
+          [
+            96.0,
+            156.0
+          ],
+          [
+            113.0,
+            147.0
+          ],
+          [
+            106.0,
+            128.0
+          ],
+          [
+            82.0,
+            130.0
+          ],
+          [
+            81.0,
+            150.0
+          ]
+        ],
+        [
+          [
+            71.0,
+            213.0
+          ],
+          [
+            90.0,
+            219.0
+          ],
+          [
+            114.0,
+            218.0
+          ],
+          [
+            135.0,
+            211.0
+          ],
+          [
+            154.0,
+            196.0
+          ],
+          [
+            150.0,
+            217.0
+          ],
+          [
+            121.0,
+            228.0
+          ],
+          [
+            99.0,
+            234.0
+          ],
+          [
+            75.0,
+            225.0
+          ]
+        ]
+      ],
+      "iterations": 20,
+      "legacy_roi_coordinates": true,
+      "max_error": 0.16,
+      "max_rotation": 0.35,
+      "sample_stride": 2,
+      "source": "sample.mp4",
+      "sphere": {
+        "angular_radius": 0.12481674439688986,
+        "centre": [
+          -0.22938965658632982,
+          0.0999680947095317,
+          0.9681873607372448
+        ]
+      },
+      "spherical_map": {
+        "channel": null,
+        "global_evaluations": 100000,
+        "global_search": false,
+        "max_bad_frames": -1,
+        "max_error": -1.0,
+        "max_evaluations": 50,
+        "quality": 6,
+        "resilient": true,
+        "threshold_ratio": 1.25,
+        "threshold_window": 0.25,
+        "tolerance": 0.001
+      },
+      "vfov_deg": 45.0,
+      "width": 384
+    },
+    "frames": 300,
+    "input": "examples/sample.mp4",
+    "median_run_mean_us": 495.37513712374573,
+    "passed": true,
+    "reference_comparison": {
+      "candidate_final_position": [
+        3.64168489651,
+        -2.646768112362
+      ],
+      "endpoint_error_sphere_rad": 0.041252009416150356,
+      "frames": 300,
+      "heading_rmse_rad": 0.013651430288528159,
+      "path_point_rmse_sphere_rad": 0.025593841799898084,
+      "reference_final_position": [
+        3.674266189723,
+        -2.6214661833162
+      ],
+      "rotation_component_rmse_rad": [
+        0.009475898823054007,
+        0.010924711781146961,
+        0.01781987973491448
+      ],
+      "timestamp_max_error_ms": 3.456079866737127e-11
+    },
+    "repeats": 5,
+    "runs": [
+      {
+        "frames": 300,
+        "max_us": 768.75,
+        "mean_us": 498.13514046822786,
+        "median_us": 495.04200000000003,
+        "p95_us": 556.75,
+        "rejected": 0
+      },
+      {
+        "frames": 300,
+        "max_us": 754.167,
+        "mean_us": 493.8364280936451,
+        "median_us": 489.458,
+        "p95_us": 563.2919999999999,
+        "rejected": 0
+      },
+      {
+        "frames": 300,
+        "max_us": 749.75,
+        "mean_us": 509.7718628762542,
+        "median_us": 508.667,
+        "p95_us": 579.5,
+        "rejected": 0
+      },
+      {
+        "frames": 300,
+        "max_us": 801.0,
+        "mean_us": 495.37513712374573,
+        "median_us": 488.33299999999997,
+        "p95_us": 590.417,
+        "rejected": 0
+      },
+      {
+        "frames": 300,
+        "max_us": 712.541,
+        "mean_us": 487.9981939799332,
+        "median_us": 479.667,
+        "p95_us": 560.458,
+        "rejected": 0
+      }
+    ]
+  },
+  "idle_diagnostics": {
+    "runs": [
+      {
+        "seconds": 28.040706,
+        "cpu_percent_one_core": 1.7474595682433958
+      },
+      {
+        "seconds": 35.037743167,
+        "cpu_percent_one_core": 1.8266016648092178
+      }
+    ],
+    "sampling": "Separate diagnostic only: tracking thread parked3815/3815 samples; decoder and control threads blocked; main thread mach_msg wait3755/3815. Remaining sampled work included egui/wgpu Metal drawable acquisition. High18.8% paused run did not reproduce; cause unresolved. Profiler overhead invalidates sampled case as a controlled benchmark."
+  },
+  "cases": [
+    {
+      "binary_sha256": "34555a9291666a6d9315dd16ad0aef5dd47efd77d3e5e619fdd0583c5f667c26",
+      "mode": "paused",
+      "sessions": 1,
+      "display": "y",
+      "outputs_enabled": null,
+      "input_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+      "requested_source_fps": 10.0,
+      "seconds": 20.030187333,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 4.18,
+      "cpu_percent_one_core": 20.86850177937874,
+      "rss_median_bytes": 162267136.0,
+      "rss_max_bytes": 162365440,
+      "threads_median": 13.0,
+      "threads_max": 19,
+      "frame_deltas": [
+        0
+      ],
+      "delivered_fps": [
+        0.0
+      ],
+      "field_overrides": [
+        "rust_resilient=n"
+      ],
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "label": "baseline-paused1",
+      "scope": "Visible preview, source pacing; recording/wire disabled; resilient=n to isolate scheduling. Camera is an uncalibrated room view, not physical-sphere accuracy evidence.",
+      "mean_delivered_fps": 0.0,
+      "running_capture_skips": [
+        0
+      ],
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          1504.0,
+          868.0
+        ]
+      ],
+      "preview_updates": [
+        null
+      ]
+    },
+    {
+      "binary_sha256": "7926b7cb6186215a93dd27764dc87e53556101d126fd30e967089596ecbb9103",
+      "mode": "paused",
+      "sessions": 1,
+      "display": "y",
+      "outputs_enabled": null,
+      "input_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+      "requested_source_fps": 10.0,
+      "seconds": 20.040513833,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 3.77,
+      "cpu_percent_one_core": 18.811892905620393,
+      "rss_median_bytes": 167583744.0,
+      "rss_max_bytes": 170835968,
+      "threads_median": 13.0,
+      "threads_max": 19,
+      "frame_deltas": [
+        0
+      ],
+      "delivered_fps": [
+        0.0
+      ],
+      "field_overrides": [
+        "rust_resilient=n"
+      ],
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "label": "candidate-paused1",
+      "scope": "Same workload as baseline; no universal idle CPU guarantee.",
+      "mean_delivered_fps": 0.0,
+      "running_capture_skips": [
+        0
+      ],
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          1504.0,
+          868.0
+        ]
+      ],
+      "preview_updates": [
+        3
+      ]
+    },
+    {
+      "binary_sha256": "34555a9291666a6d9315dd16ad0aef5dd47efd77d3e5e619fdd0583c5f667c26",
+      "mode": "paused",
+      "sessions": 16,
+      "display": "y",
+      "outputs_enabled": null,
+      "input_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+      "requested_source_fps": 10.0,
+      "seconds": 20.021407209000003,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 17.89,
+      "cpu_percent_one_core": 89.35435862848894,
+      "rss_median_bytes": 388726784.0,
+      "rss_max_bytes": 391544832,
+      "threads_median": 44.0,
+      "threads_max": 54,
+      "frame_deltas": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delivered_fps": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "field_overrides": [
+        "rust_resilient=n"
+      ],
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "label": "baseline-paused16",
+      "scope": "Visible preview, source pacing; recording/wire disabled; resilient=n to isolate scheduling. Camera is an uncalibrated room view, not physical-sphere accuracy evidence.",
+      "mean_delivered_fps": 0.0,
+      "running_capture_skips": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          735.0,
+          370.0,
+          233.0
+        ]
+      ],
+      "preview_updates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "binary_sha256": "7926b7cb6186215a93dd27764dc87e53556101d126fd30e967089596ecbb9103",
+      "mode": "paused",
+      "sessions": 16,
+      "display": "y",
+      "outputs_enabled": null,
+      "input_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+      "requested_source_fps": 10.0,
+      "seconds": 20.031896125,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 10.79,
+      "cpu_percent_one_core": 53.86409720113303,
+      "rss_median_bytes": 343064576.0,
+      "rss_max_bytes": 388448256,
+      "threads_median": 46.0,
+      "threads_max": 56,
+      "frame_deltas": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delivered_fps": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "field_overrides": [
+        "rust_resilient=n"
+      ],
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "label": "candidate-paused16",
+      "scope": "Same workload as baseline; no universal idle CPU guarantee.",
+      "mean_delivered_fps": 0.0,
+      "running_capture_skips": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          735.0,
+          370.0,
+          233.0
+        ]
+      ],
+      "preview_updates": [
+        3,
+        7,
+        6,
+        6,
+        7,
+        7,
+        7,
+        6,
+        8,
+        7,
+        8,
+        7,
+        7,
+        7,
+        7,
+        8
+      ]
+    },
+    {
+      "binary_sha256": "34555a9291666a6d9315dd16ad0aef5dd47efd77d3e5e619fdd0583c5f667c26",
+      "mode": "video",
+      "sessions": 1,
+      "display": "y",
+      "outputs_enabled": null,
+      "input_sha256": "e9d2b58e0bdeeca7b375397243b1eff62ebf68e77d521e3a55956a906d9d08ed",
+      "requested_source_fps": 120.0,
+      "seconds": 20.020386291,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 10.78,
+      "cpu_percent_one_core": 53.84511489094523,
+      "rss_median_bytes": 184705024.0,
+      "rss_max_bytes": 193200128,
+      "threads_median": 13.0,
+      "threads_max": 19,
+      "frame_deltas": [
+        2404
+      ],
+      "delivered_fps": [
+        120.07760315197805
+      ],
+      "field_overrides": [
+        "rust_resilient=n"
+      ],
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "label": "baseline-video1-120",
+      "scope": "Visible preview, source pacing; recording/wire disabled; resilient=n to isolate scheduling. Camera is an uncalibrated room view, not physical-sphere accuracy evidence.",
+      "mean_delivered_fps": 120.07760315197805,
+      "running_capture_skips": [
+        0
+      ],
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          1504.0,
+          870.0
+        ]
+      ],
+      "preview_updates": [
+        null
+      ]
+    },
+    {
+      "binary_sha256": "7926b7cb6186215a93dd27764dc87e53556101d126fd30e967089596ecbb9103",
+      "mode": "video",
+      "sessions": 1,
+      "display": "y",
+      "outputs_enabled": null,
+      "input_sha256": "e9d2b58e0bdeeca7b375397243b1eff62ebf68e77d521e3a55956a906d9d08ed",
+      "requested_source_fps": 120.0,
+      "seconds": 20.023400334,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 10.580000000000002,
+      "cpu_percent_one_core": 52.83817844881731,
+      "rss_median_bytes": 128286720.0,
+      "rss_max_bytes": 181141504,
+      "threads_median": 13.0,
+      "threads_max": 19,
+      "frame_deltas": [
+        2404
+      ],
+      "delivered_fps": [
+        120.05952834684007
+      ],
+      "field_overrides": [
+        "rust_resilient=n"
+      ],
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "label": "candidate-video1-120",
+      "scope": "Same workload as baseline; no universal idle CPU guarantee.",
+      "mean_delivered_fps": 120.05952834684007,
+      "running_capture_skips": [
+        0
+      ],
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          1504.0,
+          870.0
+        ]
+      ],
+      "preview_updates": [
+        695
+      ]
+    },
+    {
+      "binary_sha256": "34555a9291666a6d9315dd16ad0aef5dd47efd77d3e5e619fdd0583c5f667c26",
+      "mode": "video",
+      "sessions": 16,
+      "display": "y",
+      "outputs_enabled": null,
+      "input_sha256": "e9d2b58e0bdeeca7b375397243b1eff62ebf68e77d521e3a55956a906d9d08ed",
+      "requested_source_fps": 120.0,
+      "seconds": 20.04044675,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 183.58,
+      "cpu_percent_one_core": 916.0474429044352,
+      "rss_median_bytes": 478158848.0,
+      "rss_max_bytes": 486637568,
+      "threads_median": 45.0,
+      "threads_max": 57,
+      "frame_deltas": [
+        2385,
+        2349,
+        2339,
+        2388,
+        2367,
+        2368,
+        2344,
+        2358,
+        2361,
+        2368,
+        2384,
+        2374,
+        2346,
+        2357,
+        2342,
+        2385
+      ],
+      "delivered_fps": [
+        119.0093229832813,
+        117.212955843911,
+        116.7139649718637,
+        119.15902024489549,
+        118.11113941359615,
+        118.16103850080088,
+        116.96346040788735,
+        117.66204762875358,
+        117.81174489036778,
+        118.16103850080088,
+        118.95942389607656,
+        118.46043302402926,
+        117.06325858229683,
+        117.61214854154885,
+        116.8636622334779,
+        119.0093229832813
+      ],
+      "field_overrides": [
+        "rust_resilient=n"
+      ],
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "label": "baseline-video16-120",
+      "scope": "Visible preview, source pacing; recording/wire disabled; resilient=n to isolate scheduling. Camera is an uncalibrated room view, not physical-sphere accuracy evidence.",
+      "mean_delivered_fps": 117.9333739154293,
+      "running_capture_skips": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          735.0,
+          370.0,
+          233.0
+        ]
+      ],
+      "preview_updates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "binary_sha256": "7926b7cb6186215a93dd27764dc87e53556101d126fd30e967089596ecbb9103",
+      "mode": "video",
+      "sessions": 16,
+      "display": "y",
+      "outputs_enabled": null,
+      "input_sha256": "e9d2b58e0bdeeca7b375397243b1eff62ebf68e77d521e3a55956a906d9d08ed",
+      "requested_source_fps": 120.0,
+      "seconds": 20.045461208,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 174.91,
+      "cpu_percent_one_core": 872.5666034074321,
+      "rss_median_bytes": 442949632.0,
+      "rss_max_bytes": 458457088,
+      "threads_median": 48.0,
+      "threads_max": 58,
+      "frame_deltas": [
+        2407,
+        2411,
+        2410,
+        2407,
+        2408,
+        2407,
+        2408,
+        2409,
+        2408,
+        2408,
+        2408,
+        2410,
+        2412,
+        2410,
+        2407,
+        2409
+      ],
+      "delivered_fps": [
+        120.07705759543131,
+        120.27660401436846,
+        120.22671740963418,
+        120.07705759543131,
+        120.1269442001656,
+        120.07705759543131,
+        120.1269442001656,
+        120.1768308048999,
+        120.1269442001656,
+        120.1269442001656,
+        120.1269442001656,
+        120.22671740963418,
+        120.32649061910276,
+        120.22671740963418,
+        120.07705759543131,
+        120.1768308048999
+      ],
+      "field_overrides": [
+        "rust_resilient=n"
+      ],
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "label": "candidate-video16-120",
+      "scope": "Same workload as baseline; no universal idle CPU guarantee.",
+      "mean_delivered_fps": 120.16124124092042,
+      "running_capture_skips": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          735.0,
+          370.0,
+          233.0
+        ]
+      ],
+      "preview_updates": [
+        669,
+        677,
+        675,
+        674,
+        664,
+        679,
+        675,
+        668,
+        678,
+        669,
+        660,
+        657,
+        668,
+        654,
+        680,
+        658
+      ]
+    },
+    {
+      "binary_sha256": "34555a9291666a6d9315dd16ad0aef5dd47efd77d3e5e619fdd0583c5f667c26",
+      "mode": "camera",
+      "sessions": 1,
+      "display": "y",
+      "outputs_enabled": null,
+      "input_sha256": null,
+      "requested_source_fps": null,
+      "seconds": 20.040090125000003,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 8.48,
+      "cpu_percent_one_core": 42.315178959306195,
+      "rss_median_bytes": 266223616.0,
+      "rss_max_bytes": 267075584,
+      "threads_median": 19.0,
+      "threads_max": 51,
+      "frame_deltas": [
+        601
+      ],
+      "delivered_fps": [
+        29.98988508790451
+      ],
+      "field_overrides": [
+        "rust_resilient=n"
+      ],
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "label": "baseline-camera1",
+      "scope": "Visible preview, source pacing; recording/wire disabled; resilient=n to isolate scheduling. Camera is an uncalibrated room view, not physical-sphere accuracy evidence.",
+      "mean_delivered_fps": 29.98988508790451,
+      "running_capture_skips": [
+        0
+      ],
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          1504.0,
+          870.0
+        ]
+      ],
+      "preview_updates": [
+        null
+      ]
+    },
+    {
+      "binary_sha256": "7926b7cb6186215a93dd27764dc87e53556101d126fd30e967089596ecbb9103",
+      "mode": "camera",
+      "sessions": 1,
+      "display": "y",
+      "outputs_enabled": null,
+      "input_sha256": null,
+      "requested_source_fps": null,
+      "seconds": 20.041731167000002,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 6.540000000000001,
+      "cpu_percent_one_core": 32.631911612348794,
+      "rss_median_bytes": 191397888.0,
+      "rss_max_bytes": 219938816,
+      "threads_median": 20.0,
+      "threads_max": 52,
+      "frame_deltas": [
+        600
+      ],
+      "delivered_fps": [
+        29.937533589310814
+      ],
+      "field_overrides": [
+        "rust_resilient=n"
+      ],
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "label": "candidate-camera1",
+      "scope": "Same workload as baseline; no universal idle CPU guarantee.",
+      "mean_delivered_fps": 29.937533589310814,
+      "running_capture_skips": [
+        0
+      ],
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          1504.0,
+          870.0
+        ]
+      ],
+      "preview_updates": [
+        678
+      ]
+    },
+    {
+      "binary_sha256": "34555a9291666a6d9315dd16ad0aef5dd47efd77d3e5e619fdd0583c5f667c26",
+      "mode": "video",
+      "sessions": 1,
+      "display": "y",
+      "outputs_enabled": null,
+      "input_sha256": "62017b5c34a9e62272e20ef44ecd3f9066b64bfaa655f96527268d2f17f15ba1",
+      "requested_source_fps": 120.0,
+      "seconds": 20.035623375,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 9.15,
+      "cpu_percent_one_core": 45.66865641633673,
+      "rss_median_bytes": 172343296.0,
+      "rss_max_bytes": 176193536,
+      "threads_median": 13.0,
+      "threads_max": 19,
+      "frame_deltas": [
+        2405
+      ],
+      "delivered_fps": [
+        120.03619528009818
+      ],
+      "field_overrides": [],
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "label": "before-raw1-120",
+      "scope": "Uncompressed monochrome ping-pong replay, visible preview, default tracking policy; not physical-camera capacity.",
+      "mean_delivered_fps": 120.03619528009818,
+      "running_capture_skips": [
+        0
+      ],
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          1504.0,
+          870.0
+        ]
+      ],
+      "preview_updates": [
+        null
+      ]
+    },
+    {
+      "binary_sha256": "7926b7cb6186215a93dd27764dc87e53556101d126fd30e967089596ecbb9103",
+      "mode": "video",
+      "sessions": 1,
+      "display": "y",
+      "outputs_enabled": null,
+      "input_sha256": "62017b5c34a9e62272e20ef44ecd3f9066b64bfaa655f96527268d2f17f15ba1",
+      "requested_source_fps": 120.0,
+      "seconds": 20.03965725,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 7.44,
+      "cpu_percent_one_core": 37.126383486424146,
+      "rss_median_bytes": 172679168.0,
+      "rss_max_bytes": 177143808,
+      "threads_median": 13.0,
+      "threads_max": 19,
+      "frame_deltas": [
+        2404
+      ],
+      "delivered_fps": [
+        119.96213158785437
+      ],
+      "field_overrides": [],
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "label": "after-raw1-120",
+      "scope": "Uncompressed monochrome ping-pong replay, visible preview, default tracking policy; not physical-camera capacity.",
+      "mean_delivered_fps": 119.96213158785437,
+      "running_capture_skips": [
+        0
+      ],
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          1504.0,
+          870.0
+        ]
+      ],
+      "preview_updates": [
+        695
+      ]
+    },
+    {
+      "binary_sha256": "34555a9291666a6d9315dd16ad0aef5dd47efd77d3e5e619fdd0583c5f667c26",
+      "mode": "video",
+      "sessions": 16,
+      "display": "y",
+      "outputs_enabled": null,
+      "input_sha256": "62017b5c34a9e62272e20ef44ecd3f9066b64bfaa655f96527268d2f17f15ba1",
+      "requested_source_fps": 120.0,
+      "seconds": 20.031087,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 55.32000000000001,
+      "cpu_percent_one_core": 276.17073401957674,
+      "rss_median_bytes": 343523328.0,
+      "rss_max_bytes": 353353728,
+      "threads_median": 45.0,
+      "threads_max": 55,
+      "frame_deltas": [
+        2409,
+        2408,
+        2408,
+        2409,
+        2408,
+        2408,
+        2408,
+        2409,
+        2408,
+        2408,
+        2408,
+        2412,
+        2408,
+        2408,
+        2408,
+        2412
+      ],
+      "delivered_fps": [
+        120.26306909854668,
+        120.21314669543395,
+        120.21314669543395,
+        120.26306909854668,
+        120.21314669543395,
+        120.21314669543395,
+        120.21314669543395,
+        120.26306909854668,
+        120.21314669543395,
+        120.21314669543395,
+        120.21314669543395,
+        120.41283630788485,
+        120.21314669543395,
+        120.21314669543395,
+        120.21314669543395,
+        120.41283630788485
+      ],
+      "field_overrides": [],
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "label": "before-raw16-120",
+      "scope": "Uncompressed monochrome ping-pong replay, visible preview, default tracking policy; not physical-camera capacity.",
+      "mean_delivered_fps": 120.24746834757394,
+      "running_capture_skips": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          735.0,
+          370.0,
+          233.0
+        ]
+      ],
+      "preview_updates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "binary_sha256": "7926b7cb6186215a93dd27764dc87e53556101d126fd30e967089596ecbb9103",
+      "mode": "video",
+      "sessions": 16,
+      "display": "y",
+      "outputs_enabled": null,
+      "input_sha256": "62017b5c34a9e62272e20ef44ecd3f9066b64bfaa655f96527268d2f17f15ba1",
+      "requested_source_fps": 120.0,
+      "seconds": 20.028571042000003,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 53.35,
+      "cpu_percent_one_core": 266.36947732379315,
+      "rss_median_bytes": 367370240.0,
+      "rss_max_bytes": 371081216,
+      "threads_median": 47.0,
+      "threads_max": 59,
+      "frame_deltas": [
+        2405,
+        2405,
+        2404,
+        2405,
+        2404,
+        2405,
+        2404,
+        2405,
+        2405,
+        2405,
+        2404,
+        2404,
+        2405,
+        2404,
+        2404,
+        2404
+      ],
+      "delivered_fps": [
+        120.07846166142878,
+        120.07846166142878,
+        120.02853298714128,
+        120.07846166142878,
+        120.02853298714128,
+        120.07846166142878,
+        120.02853298714128,
+        120.07846166142878,
+        120.07846166142878,
+        120.07846166142878,
+        120.02853298714128,
+        120.02853298714128,
+        120.07846166142878,
+        120.02853298714128,
+        120.02853298714128,
+        120.02853298714128
+      ],
+      "field_overrides": [],
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "label": "after-raw16-120",
+      "scope": "Uncompressed monochrome ping-pong replay, visible preview, default tracking policy; not physical-camera capacity.",
+      "mean_delivered_fps": 120.05349732428502,
+      "running_capture_skips": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          735.0,
+          370.0,
+          233.0
+        ]
+      ],
+      "preview_updates": [
+        697,
+        712,
+        712,
+        712,
+        712,
+        712,
+        712,
+        712,
+        712,
+        712,
+        712,
+        712,
+        712,
+        712,
+        712,
+        712
+      ]
+    },
+    {
+      "binary_sha256": "7926b7cb6186215a93dd27764dc87e53556101d126fd30e967089596ecbb9103",
+      "mode": "video",
+      "sessions": 1,
+      "display": "y",
+      "outputs_enabled": null,
+      "input_sha256": "62017b5c34a9e62272e20ef44ecd3f9066b64bfaa655f96527268d2f17f15ba1",
+      "requested_source_fps": 240.0,
+      "seconds": 20.037267208,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 10.600000000000001,
+      "cpu_percent_one_core": 52.901425578473535,
+      "rss_median_bytes": 178831360.0,
+      "rss_max_bytes": 181633024,
+      "threads_median": 12.0,
+      "threads_max": 19,
+      "frame_deltas": [
+        4806
+      ],
+      "delivered_fps": [
+        239.85306729258846
+      ],
+      "field_overrides": [],
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "label": "after-raw1-240",
+      "scope": "Uncompressed monochrome replay at240fps; recording/wire disabled; not camera delivery evidence.",
+      "mean_delivered_fps": 239.85306729258846,
+      "running_capture_skips": [
+        0
+      ],
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          1504.0,
+          870.0
+        ]
+      ],
+      "preview_updates": [
+        699
+      ]
+    },
+    {
+      "binary_sha256": "7926b7cb6186215a93dd27764dc87e53556101d126fd30e967089596ecbb9103",
+      "mode": "video",
+      "sessions": 16,
+      "display": "y",
+      "outputs_enabled": true,
+      "input_sha256": "62017b5c34a9e62272e20ef44ecd3f9066b64bfaa655f96527268d2f17f15ba1",
+      "requested_source_fps": 120.0,
+      "seconds": 20.026527291999997,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 58.39,
+      "cpu_percent_one_core": 291.563280785706,
+      "rss_median_bytes": 328908800.0,
+      "rss_max_bytes": 339509248,
+      "threads_median": 63.0,
+      "threads_max": 73,
+      "frame_deltas": [
+        2404,
+        2404,
+        2404,
+        2404,
+        2404,
+        2404,
+        2404,
+        2404,
+        2404,
+        2404,
+        2404,
+        2404,
+        2404,
+        2404,
+        2404,
+        2404
+      ],
+      "delivered_fps": [
+        120.04078215599199,
+        120.04078215599199,
+        120.04078215599199,
+        120.04078215599199,
+        120.04078215599199,
+        120.04078215599199,
+        120.04078215599199,
+        120.04078215599199,
+        120.04078215599199,
+        120.04078215599199,
+        120.04078215599199,
+        120.04078215599199,
+        120.04078215599199,
+        120.04078215599199,
+        120.04078215599199,
+        120.04078215599199
+      ],
+      "field_overrides": [],
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "label": "after-raw16-120-outputs",
+      "scope": "Default tracking, loopback UDP+ZMQ; no subscribers/UDP receiver. Send counters do not prove receipt.",
+      "mean_delivered_fps": 120.04078215599199,
+      "running_capture_skips": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          735.0,
+          370.0,
+          233.0
+        ]
+      ],
+      "preview_updates": [
+        697,
+        714,
+        714,
+        714,
+        714,
+        714,
+        714,
+        714,
+        714,
+        714,
+        714,
+        714,
+        714,
+        714,
+        714,
+        714
+      ],
+      "outputs": [
+        {
+          "session": 1,
+          "udp": "127.0.0.1:1111",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9871",
+            "worker_alive": true,
+            "enqueued": 2785,
+            "published": 2784,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 2,
+          "udp": "127.0.0.1:1112",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9872",
+            "worker_alive": true,
+            "enqueued": 2857,
+            "published": 2856,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 3,
+          "udp": "127.0.0.1:1113",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9873",
+            "worker_alive": true,
+            "enqueued": 2856,
+            "published": 2855,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 4,
+          "udp": "127.0.0.1:1114",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9874",
+            "worker_alive": true,
+            "enqueued": 2857,
+            "published": 2856,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 5,
+          "udp": "127.0.0.1:1115",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9875",
+            "worker_alive": true,
+            "enqueued": 2856,
+            "published": 2856,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 6,
+          "udp": "127.0.0.1:1116",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9876",
+            "worker_alive": true,
+            "enqueued": 2857,
+            "published": 2856,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 7,
+          "udp": "127.0.0.1:1117",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9877",
+            "worker_alive": true,
+            "enqueued": 2857,
+            "published": 2856,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 8,
+          "udp": "127.0.0.1:1118",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9878",
+            "worker_alive": true,
+            "enqueued": 2856,
+            "published": 2855,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 9,
+          "udp": "127.0.0.1:1119",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9879",
+            "worker_alive": true,
+            "enqueued": 2857,
+            "published": 2856,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 10,
+          "udp": "127.0.0.1:1120",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9880",
+            "worker_alive": true,
+            "enqueued": 2857,
+            "published": 2856,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 11,
+          "udp": "127.0.0.1:1121",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9881",
+            "worker_alive": true,
+            "enqueued": 2855,
+            "published": 2854,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 12,
+          "udp": "127.0.0.1:1122",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9882",
+            "worker_alive": true,
+            "enqueued": 2857,
+            "published": 2856,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 13,
+          "udp": "127.0.0.1:1123",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9883",
+            "worker_alive": true,
+            "enqueued": 2855,
+            "published": 2854,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 14,
+          "udp": "127.0.0.1:1124",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9884",
+            "worker_alive": true,
+            "enqueued": 2854,
+            "published": 2853,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 15,
+          "udp": "127.0.0.1:1125",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9885",
+            "worker_alive": true,
+            "enqueued": 2854,
+            "published": 2853,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 16,
+          "udp": "127.0.0.1:1126",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9886",
+            "worker_alive": true,
+            "enqueued": 2854,
+            "published": 2853,
+            "dropped": 0,
+            "failures": 0
+          }
+        }
+      ]
+    },
+    {
+      "binary_sha256": "73e6c749a353a17891cf93e7682999589cf016db61a8046e46ba664303243b77",
+      "mode": "paused",
+      "sessions": 1,
+      "display": "y",
+      "outputs_enabled": null,
+      "input_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+      "requested_source_fps": 10.0,
+      "seconds": 20.023127625,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 0.39,
+      "cpu_percent_one_core": 1.9477476611249438,
+      "rss_median_bytes": 167215104.0,
+      "rss_max_bytes": 171720704,
+      "threads_median": 11.0,
+      "threads_max": 19,
+      "frame_deltas": [
+        0
+      ],
+      "delivered_fps": [
+        0.0
+      ],
+      "field_overrides": [
+        "rust_resilient=n"
+      ],
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "label": "earlier-candidate-paused1",
+      "scope": "Earlier73e6 build before FPS-anchor and tiny-label fixes; retained to disclose idle CPU variability, not substitute for final binary.",
+      "mean_delivered_fps": 0.0,
+      "running_capture_skips": [
+        0
+      ],
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          1504.0,
+          870.0
+        ]
+      ],
+      "preview_updates": [
+        3
+      ]
+    },
+    {
+      "binary_sha256": "73e6c749a353a17891cf93e7682999589cf016db61a8046e46ba664303243b77",
+      "mode": "paused",
+      "sessions": 16,
+      "display": "y",
+      "outputs_enabled": null,
+      "input_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+      "requested_source_fps": 10.0,
+      "seconds": 20.026925459,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 6.66,
+      "cpu_percent_one_core": 33.25522938423396,
+      "rss_median_bytes": 402169856.0,
+      "rss_max_bytes": 402309120,
+      "threads_median": 44.5,
+      "threads_max": 55,
+      "frame_deltas": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "delivered_fps": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "field_overrides": [
+        "rust_resilient=n"
+      ],
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "label": "earlier-candidate-paused16",
+      "scope": "Earlier73e6 build before FPS-anchor and tiny-label fixes; retained to disclose idle CPU variability, not substitute for final binary.",
+      "mean_delivered_fps": 0.0,
+      "running_capture_skips": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "window_rectangles": [
+        [
+          12.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          36.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          269.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          502.0,
+          370.0,
+          233.0
+        ],
+        [
+          12.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          390.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          768.0,
+          735.0,
+          370.0,
+          233.0
+        ],
+        [
+          1146.0,
+          735.0,
+          370.0,
+          233.0
+        ]
+      ],
+      "preview_updates": [
+        4,
+        8,
+        8,
+        10,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        10,
+        9,
+        11,
+        10,
+        11
+      ]
+    },
+    {
+      "binary_sha256": "8cdc3c9bd0e80003dc728cd33a15b366ae52123af764b2cd3336845a78c9f2a0",
+      "mode": "video",
+      "sessions": 16,
+      "display": "y",
+      "outputs_enabled": true,
+      "input_sha256": "62017b5c34a9e62272e20ef44ecd3f9066b64bfaa655f96527268d2f17f15ba1",
+      "requested_source_fps": 120.0,
+      "seconds": 20.031663,
+      "warmup_seconds": 3.0,
+      "application_cpu_seconds": 51.05,
+      "cpu_percent_one_core": 254.84653970067285,
+      "rss_median_bytes": 304758784.0,
+      "rss_max_bytes": 319832064,
+      "threads_median": 60.0,
+      "threads_max": 75,
+      "frame_deltas": [
+        2404,
+        2404,
+        2404,
+        2404,
+        2404,
+        2404,
+        2404,
+        2404,
+        2404,
+        2408,
+        2404,
+        2404,
+        2408,
+        2404,
+        2404,
+        2408
+      ],
+      "delivered_fps": [
+        120.01000615874976,
+        120.01000615874976,
+        120.01000615874976,
+        120.01000615874976,
+        120.01000615874976,
+        120.01000615874976,
+        120.01000615874976,
+        120.01000615874976,
+        120.01000615874976,
+        120.20969002923022,
+        120.01000615874976,
+        120.01000615874976,
+        120.20969002923022,
+        120.01000615874976,
+        120.01000615874976,
+        120.20969002923022
+      ],
+      "field_overrides": [],
+      "quality_scope": "Sampled last_row states only; not a complete log or acceptance count.",
+      "label": "final-source-raw16-120-outputs",
+      "source_commit": "f92efbb8937abf04199396d74483c838be5b36cd",
+      "scope": "Exact final application source; only later docs/site changes. Same raw fixture, visible previews and loopback UDP/PUB sends with no receiver.",
+      "mean_delivered_fps": 120.04744688446485,
+      "outputs": [
+        {
+          "session": 1,
+          "udp": "127.0.0.1:1111",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9871",
+            "worker_alive": true,
+            "enqueued": 2789,
+            "published": 2788,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 2,
+          "udp": "127.0.0.1:1112",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9872",
+            "worker_alive": true,
+            "enqueued": 2850,
+            "published": 2849,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 3,
+          "udp": "127.0.0.1:1113",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9873",
+            "worker_alive": true,
+            "enqueued": 2850,
+            "published": 2849,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 4,
+          "udp": "127.0.0.1:1114",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9874",
+            "worker_alive": true,
+            "enqueued": 2850,
+            "published": 2849,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 5,
+          "udp": "127.0.0.1:1115",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9875",
+            "worker_alive": true,
+            "enqueued": 2850,
+            "published": 2849,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 6,
+          "udp": "127.0.0.1:1116",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9876",
+            "worker_alive": true,
+            "enqueued": 2851,
+            "published": 2850,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 7,
+          "udp": "127.0.0.1:1117",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9877",
+            "worker_alive": true,
+            "enqueued": 2850,
+            "published": 2849,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 8,
+          "udp": "127.0.0.1:1118",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9878",
+            "worker_alive": true,
+            "enqueued": 2851,
+            "published": 2850,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 9,
+          "udp": "127.0.0.1:1119",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9879",
+            "worker_alive": true,
+            "enqueued": 2850,
+            "published": 2850,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 10,
+          "udp": "127.0.0.1:1120",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9880",
+            "worker_alive": true,
+            "enqueued": 2851,
+            "published": 2850,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 11,
+          "udp": "127.0.0.1:1121",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9881",
+            "worker_alive": true,
+            "enqueued": 2851,
+            "published": 2850,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 12,
+          "udp": "127.0.0.1:1122",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9882",
+            "worker_alive": true,
+            "enqueued": 2851,
+            "published": 2850,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 13,
+          "udp": "127.0.0.1:1123",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9883",
+            "worker_alive": true,
+            "enqueued": 2851,
+            "published": 2850,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 14,
+          "udp": "127.0.0.1:1124",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9884",
+            "worker_alive": true,
+            "enqueued": 2850,
+            "published": 2849,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 15,
+          "udp": "127.0.0.1:1125",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9885",
+            "worker_alive": true,
+            "enqueued": 2851,
+            "published": 2850,
+            "dropped": 0,
+            "failures": 0
+          }
+        },
+        {
+          "session": 16,
+          "udp": "127.0.0.1:1126",
+          "zmq": {
+            "endpoint": "tcp://127.0.0.1:9886",
+            "worker_alive": true,
+            "enqueued": 2851,
+            "published": 2850,
+            "dropped": 0,
+            "failures": 0
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "No wattmeter/battery test, Intel-laptop/NVIDIA execution, or16 physical high-rate cameras.",
+    "Network case measures formatting/dispatch with no receiving application.",
+    "Camera room image is not a calibrated sphere.",
+    "Final source spot check repeats sixteen raw120FPS sessions with both outputs; source differs only in CLI/grid bounds and test diagnostics, not tracking or scheduling."
+  ],
+  "final_application_source_commit": "f92efbb8937abf04199396d74483c838be5b36cd"
+}

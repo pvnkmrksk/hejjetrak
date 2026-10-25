@@ -1,0 +1,15 @@
+[book]
+title = "hejjetrak manual"
+authors = ["hejjetrak contributors"]
+language = "en"
+src = "src"
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/pvnkmrksk/hejjetrak"
+additional-css = ["theme/manual.css"]
+site-url = "/hejjetrak/manual/"
+
+[output.html.search]
+limit-results = 20

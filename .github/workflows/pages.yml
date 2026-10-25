@@ -1,0 +1,63 @@
+name: Website and manual
+on:
+  push:
+    branches: [main]
+    paths: ['site/**', 'book/**', 'docs/**', 'scripts/build_site.py', 'scripts/test_downloads.mjs', '.github/workflows/pages.yml']
+  pull_request:
+    branches: [main]
+    paths: ['site/**', 'book/**', 'docs/**', 'scripts/build_site.py', 'scripts/test_downloads.mjs', '.github/workflows/pages.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+env:
+  MDBOOK_VERSION: '0.5.4'
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install official mdBook binary
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "v${MDBOOK_VERSION}" --repo rust-lang/mdBook --pattern "mdbook-v${MDBOOK_VERSION}-x86_64-unknown-linux-gnu.tar.gz" --dir "$RUNNER_TEMP"
+          tar -xzf "$RUNNER_TEMP/mdbook-v${MDBOOK_VERSION}-x86_64-unknown-linux-gnu.tar.gz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - name: Check platform and release asset selection
+        run: node scripts/test_downloads.mjs
+      - name: Build and check all local website links
+        run: python3 scripts/build_site.py _site --url "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check repository Pages setup
+        id: pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          build_type=$(gh api "repos/${{ github.repository }}/pages" --jq .build_type 2>/dev/null || true)
+          if [ "$build_type" = 'workflow' ]; then
+            echo 'enabled=true' >> "$GITHUB_OUTPUT"
+          else
+            echo '::notice title=Enable GitHub Pages::Set Settings → Pages → Source to GitHub Actions, then rerun this workflow. The built site remains available as the build artifact.'
+          fi
+      - uses: actions/deploy-pages@v4
+        id: deployment
+        if: steps.pages.outputs.enabled == 'true'

@@ -1,0 +1,8 @@
+/* Local system typography; no external font or analytics requests. */
+:root { --content-max-width: 850px; }
+.content main { line-height: 1.72; }
+.content h1 { letter-spacing: -.035em; }
+.content img { max-width: 100%; border-radius: 8px; }
+.content table { display: block; max-width: 100%; overflow: auto; font-size: .94em; }
+.content th, .content td { padding: .6em .8em; }
+.content pre { border-radius: 6px; }
