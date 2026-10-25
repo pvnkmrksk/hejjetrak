@@ -1,10 +1,15 @@
-# Behavioral parity assessment — hejjetrak v0.1.1
+# Behavioral parity assessment — hejjetrak v0.1.2
 
 Current source additionally uses the [accelerated local search](tracking-performance.md).
 It changes candidate generation while retaining complete error/quality scoring,
 coordinates, maps and the original reference gates. Its sample path RMS improves
 to 0.025594 sphere radians; component RMS remains within 0.020 rad each.
-Unrestricted numerical identity is not claimed.
+Unrestricted numerical identity is not claimed. Default `rust_resilient : y`
+additionally changes acceptance/recovery policy to preserve a learned atlas on
+unreliable images; `rust_resilient : n` restores the older permissive/reset
+behavior. The new adaptive guard is not described as an unchanged quality gate.
+The fixed healthy-trajectory regression tolerances and complete fit scores remain
+separate from this intentional policy extension.
 
 Assessed against pvnkmrksk/fictrac commit `10fc4472af1fc9062b9bf5a92738e835b98cc3ec` and the supplied FicTrac 2.1.2 sample output. This version closes the previously missing operational features for the supported recorded-video workflow. **It does not establish unrestricted or numerical identity.**
 
@@ -12,24 +17,26 @@ Assessed against pvnkmrksk/fictrac commit `10fc4472af1fc9062b9bf5a92738e835b98cc
 |---|---|
 | Sphere tracking and six-panel display | Shared threshold/atlas fitter and actual numerical maps; native Metal screen inspected |
 | Local optimizer | Pure Rust PRIMA BOBYQA; differs from upstream NLopt Powell implementation |
-| Global search | Deterministic SO(3) covering and BOBYQA multistart; differs from upstream stochastic CRS2; known-pose/occlusion/large-jump/off-axis regressions |
+| Global search | Legacy mode uses deterministic SO(3) covering/BOBYQA multistart, differing from upstream stochastic CRS2. Default resilient mode additionally uses accepted-view seeds, throttled bounded recovery and complete final verification; no universal recovery guarantee |
 | Templates | Real equal-area PNG confidence image import/export; matching dimensions validated atomically |
-| Bad-frame/reset handling | `max_bad_frames` threshold, retained source count and integrated displacement, reset sequence/pose/path/heading, atlas retention when global enabled |
-| Missing motion | Rejected frames explicitly retained in quality/all-frame data; successful relocalisation sets absolute pose with zero relative motion |
+| Bad-frame/reset handling | Default resilient policy preserves atlas/pose/path on unreliable frames, rejects low texture/adaptive excessive complete-score errors even with negative `opt_max_err`, suppresses automatic atlas clearing and confirms recovery across two matches. `max_bad_frames` auto-reset is the legacy `rust_resilient=n` policy. Explicit reset remains available |
+| Missing motion | `rejected` and unaccepted `recovering` rows remain in quality/all-frame evidence; successful confirmed relocalisation sets absolute pose with zero relative motion. No hidden-interval trajectory is invented |
 | Legacy axes and 25-column data | ROI export basis, original signs/units, principal Rodrigues orientation, independent sequence counter; supplied reference gates unchanged |
 | Legacy accepted-only output | `.dat`, serial and UDP emit accepted rows; companion all-frame output prevents missing decisions from being hidden |
-| Calibration | Shared rim/masks/forward/square operations; graphical corner replacement preserves order; F reflected-seed bounded alternate-pose refit differs from NLopt and can report no alternate branch; saved values retain precedence |
+| Calibration | Shared rim/masks/forward/square and resolution-reference operations; guided active-step editor and 4× current-view cursor loupe; saved square slots preserve order. F reflected-seed alternate fit differs from NLopt and can report no alternate branch; saved angular/pose values retain precedence |
+| Resolution portability | Explicit normalized extension reference can regenerate legacy pixel marks for matching aspect/FOV/projection; angular fits stay unchanged. Imported legacy files are never silently normalized; sensor crop/optical changes need review |
 | Config/file state | Lossless comments/unknown fields/CRLF, raw/field synchronization, history, external conflict guard; transactional agent edits |
 | Multi-instance | Independent native windows/headless sessions; VR/BR files, incremented camera IDs/ports, preserved video paths; explicit window size/position and up to 16 grid cells |
 | Full CLI | Conventional commands plus legacy positional config invocation; structured status, schema, all numerical/calibration/recording operations through JSONL |
-| AI agent control | JSONL and MCP stdio over shared controller; native GUI JSONL over displayed sessions; current 168-command video and 115-command camera runs, sixteen-window run, plus historical native/headless transcripts |
+| AI agent control | JSONL/MCP share the numerical controller; native GUI JSONL controls displayed sessions, including calibration steps/edit/loupe/full-image choices. Historical v0.1.1 native video/camera/grid transcripts and current validation are distinguished in validation.md |
 | Video inputs | H.264 MP4/MOV/AVI (including B-frame ordering), MPEG-4 Part 2 MP4/MOV/AVI, MJPEG/raw AVI and mono/420 Y4M |
 | Video recording | All original codec settings: H.264 AVI default, XVID AVI, MPEG-4 MP4, MJPEG/raw AVI; explicit H.264 MP4; exact FPS/container tests, calibrated debug mosaic, safe partial finalization |
 | Video codec boundaries | Segmented OpenDML AVI supports >4 GiB offsets; H.264 encodes even dimensions with SPS cropping; odd H.264 4:2:0 dimensions fail explicitly; exotic profiles/formats remain outside tested coverage |
 | Serial/UDP | Native Rust serial2 and datagram sinks with original prefix/full row; actual OS pseudo-terminal and loopback tests; physical serial hardware untested |
 | Camera | Built-in FaceTime HD camera: actual 640×480/30 and 1280×720/15 format/readback, pause/step/config, two 35-frame H.264 recordings, source switch and reopen; unsupported exposure/gain controls explain limitations; physical sphere accuracy/iPhone/industrial SDKs unverified |
 | Native platforms | Mac GUI/CLI executed locally; v0.1.1 GitHub-hosted Windows/Linux/Mac ARM+Intel formatting, strict Clippy, full tests, release builds and synthetic CLI demo passed. Windows static-CRT rebuild repeated those checks. Other-platform GUI visual behavior and camera hardware remain unverified |
-| Packaging | All four v0.1.1 platform archives uploaded; extracted official Mac ARM app ran the full sample, with ad hoc signature verified. Windows import audit verifies no separate VC redistributable DLL dependency. Dependency notices included. No installer, Developer ID notarization or Windows Authenticode signing |
+| Packaging | Four-platform native archive workflow and dependency notices. Published v0.1.1 Mac ARM extraction/runtime and Windows static-CRT imports were audited; the selected current release and validation record identify newer evidence. No installer, Developer ID notarization or Windows Authenticode signing |
+| Resource scheduling | Interruptible source deadlines/idle waits, bounded queues/staged frame, coalesced preview publication, unchanged per-frame numerical/recording evidence, cached geometry/textures and deque history. CPU/RSS methodology/results in resources.md; no wattage or sixteen high-rate camera capacity claim |
 
 A protocol request accepted into a GUI worker queue is not proof the action completed. Clients poll revision/frame/advance/recording/notice state and validate files. Synchronous headless commands expose the same numerical operations; playback and OS-window scheduling differ deliberately.
 
@@ -40,9 +47,32 @@ The 300-frame sample benchmark checks aligned per-frame Rodrigues deltas, path a
 Performance has a separate [same-machine assessment](performance.md): bounded
 decode/fit overlap and exact-work elimination improve the sample 1.91× over
 v0.1.1. Pure Rust decoding remains the limiting stage; full active-throughput
-parity with C++ has not been demonstrated. Numerical and pixel gates remain
-unchanged.
+parity with C++ has not been demonstrated. Decoder pixel oracles and the declared healthy-trajectory regression gates
+remain unchanged. Resilient mode intentionally adds an adaptive acceptance guard
+and suppresses legacy destructive auto-reset; see [recovery](recovery.md).
 
-The default preview hides config and diagnostics. A separate native inspector exposes the same canonical config and shared-core calibration actions. Source images and diagnostic panels use uniform scaling and letterboxing; cropping uses the calibrated pinhole/fisheye projection. Native pointer regressions cover active-tool isolation, nearest-point deletion and preserved square corner order. Camera controls are capability-based: exact formats/rates and readback are implemented, but support for manual exposure/gain depends on the backend and device. See camera-controls.md.
+The default preview hides config and diagnostics and can shrink to 96×96 logical pixels with reset alone. A full-image toggle restores context without aspect distortion. A separate native inspector exposes the same canonical config and shared-core calibration actions. Source images and diagnostic panels use uniform scaling and letterboxing; cropping uses the calibrated pinhole/fisheye projection. Native pointer regressions cover active-tool isolation, nearest-point deletion and preserved square corner order. Camera controls are capability-based: exact formats/rates and readback are implemented, but support for manual exposure/gain depends on the backend and device. See camera-controls.md.
 
 ZeroMQ is a pure Rust localhost PUB with a bounded worker queue, alongside UDP/serial. PUB startup/subscriber reconnect loss and overload are observable, not guaranteed delivery. Accepted-row wire compatibility is verified independently with libzmq; full rejected-frame evidence remains in files. Busy-port edits roll back outputs while retaining the numerical source state.
+
+## v0.1.2 intentional differences
+
+The protected-atlas policy is a deliberate improvement over an unrestricted
+upstream behavioral clone. Default recovery retains accepted history, rejects
+unreliable observations and requires confirmation. The accepted-view bank is
+bounded to 256 poses; recovery spends at most `min(opt_global_evals, 768)`
+objective evaluations per call and is throttled between broader attempts.
+`rust_resilient : n` is the opt-out for the old acceptance/reset policy. The
+numeric columns, coordinate frames, configuration text preservation and
+accepted-only wire framing are unchanged; which frames qualify for acceptance
+can differ. [Recovery fixtures](recovery.md) cover long learned-map sequences,
+240-frame obstructions, actual sample images and a large partial occlusion.
+They do not establish physical live-ball or arbitrary-occluder accuracy.
+
+The calibration frontend adds guided steps, a view-relative cursor loupe and
+explicit resolution-reference metadata. These are thin shared-command adapters,
+not a new coordinate system. Scheduling improvements reduce housekeeping rather
+than dropping numerical frames to lower CPU. Platform-specific CPU/RSS evidence
+and acquisition/recording limits are recorded separately from tracking-call
+latency. GPU tracking, NVIDIA hardware, battery drain/wattage and modern Intel
+laptop capacity have not been measured.

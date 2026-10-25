@@ -1,6 +1,8 @@
 //! OS-native capture. The only FFI implementation is isolated in macos.rs.
 use fictrac_core::GrayFrame;
 mod controls;
+#[cfg(any(target_os = "linux", test))]
+mod identity;
 pub use controls::*;
 #[cfg(any(target_os = "macos", test))]
 use std::sync::{Arc, Condvar, Mutex};

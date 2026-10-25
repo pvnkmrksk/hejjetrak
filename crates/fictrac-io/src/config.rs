@@ -207,6 +207,11 @@ pub fn load_config_text(text: &str, width: usize, height: usize) -> Result<Loade
             .transpose()?
             .unwrap_or(100000);
         config.spherical_map = Some(MapSettings {
+            resilient: match original.get("rust_resilient").map(String::as_str) {
+                None | Some("y" | "Y" | "true" | "1") => true,
+                Some("n" | "N" | "false" | "0") => false,
+                Some(_) => return Err(Error::Config("rust_resilient requires y or n".into())),
+            },
             global_search,
             max_bad_frames,
             global_evaluations,
@@ -232,6 +237,7 @@ pub fn load_config_text(text: &str, width: usize, height: usize) -> Result<Loade
             "opt_tol",
             "opt_max_err",
             "opt_do_global",
+            "rust_resilient",
             "max_bad_frames",
             "opt_global_evals",
         ] {
@@ -245,6 +251,14 @@ pub fn load_config_text(text: &str, width: usize, height: usize) -> Result<Loade
         "rust_instance_name",
         "rust_camera_width",
         "rust_camera_height",
+        "rust_calibration_size",
+        "rust_calibration_vfov",
+        "rust_calibration_fisheye",
+        "rust_normalized_roi_circ",
+        "rust_normalized_roi_ignr",
+        "rust_normalized_c2a_cnrs_xy",
+        "rust_normalized_c2a_cnrs_yz",
+        "rust_normalized_c2a_cnrs_xz",
         "sphere_map_fn",
         "c2a_cnrs_xy",
         "c2a_cnrs_yz",

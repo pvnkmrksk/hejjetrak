@@ -6,6 +6,9 @@ type Result = std::result::Result<(), Box<dyn std::error::Error>>;
 fn config(global: bool) -> Config {
     Config {
         spherical_map: Some(MapSettings {
+            // These pre-existing cases explicitly exercise legacy global/reset
+            // policy. Separate sustained-occlusion cases cover resilient mode.
+            resilient: false,
             global_search: global,
             global_evaluations: 100_000,
             max_error: 12_000.0,
@@ -292,9 +295,6 @@ fn local_map_search_preserves_known_motion_trajectory_over_120_frames() -> Resul
     let path_rmse = (path_squared / 119.0).sqrt();
     let heading_rmse = (heading_squared / 119.0).sqrt();
     let rotation_rmse = (rotation_squared / 119.0).to_array().map(f64::sqrt);
-    eprintln!(
-        "known map motion path={path_rmse}, heading={heading_rmse}, rotation={rotation_rmse:?}"
-    );
     assert!(path_rmse < 0.08, "known-motion trajectory RMSE {path_rmse}");
     assert!(
         heading_rmse < 0.08,
@@ -304,5 +304,94 @@ fn local_map_search_preserves_known_motion_trajectory_over_120_frames() -> Resul
         rotation_rmse.iter().all(|v| *v < 0.008),
         "known-motion delta RMSE {rotation_rmse:?}"
     );
+    Ok(())
+}
+
+#[test]
+fn resilient_atlas_survives_240_occluder_frames_and_reacquires_without_path_jump() -> Result {
+    let mut c = config(false);
+    if let Some(m) = &mut c.spherical_map {
+        m.resilient = true;
+        m.max_evaluations = 50;
+        m.max_bad_frames = 2;
+        // Exercise the lowest accepted global cap as well as long occlusion.
+        m.global_evaluations = 256;
+    }
+    let texture = known_template()?;
+    let delta = DVec3::new(0.004, -0.007, 0.003);
+    let mut tracker = Tracker::new(c.clone())?;
+    let mut last = None;
+    for i in 0..400 {
+        let row = tracker.process(render_template(
+            &c,
+            &texture,
+            DQuat::from_scaled_axis(delta * i as f64),
+            i as f64 * 10.0,
+        )?)?;
+        assert!(
+            row.accepted,
+            "clean frame {i}: {} {}",
+            row.status, row.error
+        );
+        last = Some(row);
+    }
+    let last = last.ok_or("no learned frame")?;
+    let atlas = tracker.sphere_template().ok_or("missing learned atlas")?;
+    for i in 400..640 {
+        let pixels = (0..c.width * c.height)
+            .map(|index| {
+                if i < 480 {
+                    0.5
+                } else if i < 560 {
+                    0.1 + 0.8 * (index % c.width) as f32 / c.width as f32
+                } else {
+                    let v = (index as u64 * 73 + i as u64 * 193).wrapping_mul(6364136223846793005);
+                    (v >> 56) as f32 / 255.0
+                }
+            })
+            .collect();
+        let row = tracker.process(GrayFrame::new(c.width, c.height, pixels, i as f64 * 10.0)?)?;
+        assert!(!row.accepted, "occluder frame {i} accepted: {}", row.error);
+        assert_eq!(row.delta_camera, [0.0; 3]);
+        assert_eq!(row.position, last.position);
+        assert_eq!(row.integrated, last.integrated);
+        assert_eq!(
+            tracker.sphere_template().as_ref(),
+            Some(&atlas),
+            "learned map changed during occlusion"
+        );
+    }
+    let mut recovered = None;
+    for j in 0..120 {
+        let expected = DQuat::from_scaled_axis(delta * (30 + j) as f64);
+        let row = tracker.process(render_template(
+            &c,
+            &texture,
+            expected,
+            (640 + j) as f64 * 10.0,
+        )?)?;
+        if row.accepted {
+            assert_eq!(row.status, "relocalized");
+            assert_eq!(row.delta_camera, [0.0; 3]);
+            assert_eq!(row.position, last.position);
+            assert_eq!(row.integrated, last.integrated);
+            let found = DQuat::from_scaled_axis(DVec3::from_array(row.absolute_camera));
+            let error = (found * expected.inverse()).to_scaled_axis().length();
+            assert!(error < 0.08, "absolute reacquisition error {error}");
+            recovered = Some(j);
+            break;
+        }
+        assert_eq!(tracker.sphere_template().as_ref(), Some(&atlas));
+    }
+    let j = recovered.ok_or("did not reacquire the learned ball within 120 frames")?;
+    let row = tracker.process(render_template(
+        &c,
+        &texture,
+        DQuat::from_scaled_axis(delta * (31 + j) as f64),
+        (641 + j) as f64 * 10.0,
+    )?)?;
+    assert!(row.accepted);
+    assert_eq!(row.status, "tracked");
+    assert!((DVec3::from_array(row.delta_camera) - delta).length() < 0.012);
     Ok(())
 }

@@ -614,3 +614,59 @@ fn live_output_actor_survives_parameter_edits_undo_and_video_rewind() -> Result 
     );
     Ok(())
 }
+
+#[test]
+fn resolution_commands_are_explicit_atomic_undoable_and_preserve_source_clock() -> Result {
+    let mut c = Controller::new();
+    let id = open(&mut c)?;
+    request(&mut c, "step", Some(id), json!({"frames":2}))?;
+    request(
+        &mut c,
+        "calibrate",
+        Some(id),
+        json!({"kind":"resolution_reference"}),
+    )?;
+    let reference = request(&mut c, "config", Some(id), json!({}))?;
+    assert!(reference["fields"]["rust_normalized_roi_ignr"].is_string());
+    let status = request(&mut c, "status", Some(id), json!({}))?;
+    let invalid = c.execute(Request {
+        id: json!("bad-resolution"),
+        command: "calibrate".into(),
+        session: Some(id),
+        args: json!({"kind":"resolution_apply","width":768,"height":400}),
+    });
+    assert!(!invalid.ok);
+    assert_eq!(request(&mut c, "config", Some(id), json!({}))?, reference);
+    assert_eq!(
+        request(&mut c, "status", Some(id), json!({}))?["last_row"],
+        status["last_row"]
+    );
+    request(
+        &mut c,
+        "calibrate",
+        Some(id),
+        json!({"kind":"resolution_apply","width":192,"height":144}),
+    )?;
+    let resized = request(&mut c, "config", Some(id), json!({}))?;
+    assert_eq!(resized["fields"]["roi_c"], reference["fields"]["roi_c"]);
+    assert_eq!(resized["fields"]["roi_r"], reference["fields"]["roi_r"]);
+    assert_ne!(
+        resized["fields"]["roi_ignr"],
+        reference["fields"]["roi_ignr"]
+    );
+    request(&mut c, "undo", Some(id), json!({}))?;
+    assert_eq!(
+        request(&mut c, "config", Some(id), json!({}))?["text"],
+        reference["text"]
+    );
+    let next = request(&mut c, "step", Some(id), json!({}))?;
+    assert!(
+        (next["status"]["last_row"]["timestamp_ms"]
+            .as_f64()
+            .ok_or("missing source clock")?
+            - 2000.0 / 30.0)
+            .abs()
+            < 1e-8
+    );
+    Ok(())
+}

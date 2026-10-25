@@ -57,7 +57,7 @@ pub struct Bridge {
     pending: VecDeque<Response>,
 }
 impl Bridge {
-    pub fn start() -> Result<Self> {
+    pub fn start(ctx: eframe::egui::Context) -> Result<Self> {
         let (input_tx, input) = mpsc::sync_channel(16);
         let (output, output_rx) = mpsc::sync_channel::<Response>(16);
         thread::Builder::new()
@@ -75,7 +75,11 @@ impl Bridge {
                             (Input::Error(message), terminal)
                         }
                     };
-                    if input_tx.send(event).is_err() || terminal {
+                    if input_tx.send(event).is_err() {
+                        break;
+                    }
+                    ctx.request_repaint();
+                    if terminal {
                         break;
                     }
                 }
@@ -308,6 +312,7 @@ fn status(s: &mut Session) -> Value {
     if let Some(worker) = &s.worker {
         s.snapshot = worker.latest();
     }
+    let view = json!({"settings":s.show_settings,"diagnostics":s.show_diagnostics,"overlays":s.show_overlays,"full_image":s.full_image,"calibration_step":match s.tool { crate::session::Tool::Rim => "ball", crate::session::Tool::Exclude => "exclude", crate::session::Tool::Square => "lab", _ => "view" },"edit_marks":s.edit_existing,"magnifier":s.magnifier});
     json!({"session":s.id,"source":s.source_edit,"config_path":s.path,"native_window":s.native_window,"window_rect":s.window_rect,"realtime":s.realtime,
         "frames":s.snapshot.frames,"revision":s.snapshot.revision,"requested_revision":s.revision,
         "paused":s.snapshot.paused,"ended":s.snapshot.ended,"recording":s.snapshot.recording,
@@ -317,7 +322,7 @@ fn status(s: &mut Session) -> Value {
         "advance_remaining":s.snapshot.advance_remaining,"recording_directory":s.snapshot.recording_directory,
         "record_options":s.snapshot.record_options,"camera":s.snapshot.camera,"outputs":s.snapshot.outputs,
         "processing_ms":s.snapshot.processing_ms,"tracking_ms":s.snapshot.tracking_ms,"tracking_samples":s.snapshot.tracking_samples,"actual_fps":s.snapshot.actual_fps,"source_fps":s.snapshot.source_fps,"headroom_percent":s.snapshot.headroom_percent,
-        "view":{"settings":s.show_settings,"diagnostics":s.show_diagnostics,"overlays":s.show_overlays,"full_image":s.full_image}})
+        "view":view,"source_label":s.snapshot.source_label,"resources":s.snapshot.resources})
 }
 fn send(s: &mut Session, command: Command) -> Result<Value> {
     s.worker
@@ -508,6 +513,21 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
             send(s, Command::SaveMap(path))
         }
         "view" => {
+            if let Some(step) = a.get("calibration_step").and_then(Value::as_str) {
+                s.tool = match step {
+                    "ball" => crate::session::Tool::Rim,
+                    "exclude" => crate::session::Tool::Exclude,
+                    "lab" => crate::session::Tool::Square,
+                    _ => crate::session::Tool::Inspect,
+                };
+                s.begin_calibration_step();
+            }
+            if let Some(value) = a.get("edit_marks").and_then(Value::as_bool) {
+                s.edit_existing = value;
+            }
+            if let Some(value) = a.get("magnifier").and_then(Value::as_bool) {
+                s.magnifier = value;
+            }
             if let Some(value) = a.get("settings").and_then(Value::as_bool) {
                 s.show_settings = value;
             }
@@ -597,6 +617,24 @@ fn calibrate(s: &Session, doc: &mut ConfigDocument, a: &Value) -> Result<()> {
         ..fictrac_core::Config::default()
     };
     match string(a, "kind")? {
+        "resolution_reference" | "resolution_apply" => {
+            let width = a
+                .get("width")
+                .and_then(Value::as_u64)
+                .and_then(|n| usize::try_from(n).ok())
+                .unwrap_or(image.width);
+            let height = a
+                .get("height")
+                .and_then(Value::as_u64)
+                .and_then(|n| usize::try_from(n).ok())
+                .unwrap_or(image.height);
+            *doc = if string(a, "kind")? == "resolution_reference" {
+                fictrac_io::capture_calibration_reference(doc, width, height)
+            } else {
+                fictrac_io::rescale_calibration_reference(doc, width, height)
+            }
+            .map_err(display)?;
+        }
         "rim" => {
             let p = points(a)?;
             let sphere = fictrac_core::calibration::fit_rim(&config, &p).map_err(display)?;
@@ -679,6 +717,14 @@ fn calibrate(s: &Session, doc: &mut ConfigDocument, a: &Value) -> Result<()> {
                 "calibration kind must be rim/exclude/remove_exclusion/forward/square".into(),
             );
         }
+    }
+    if !matches!(
+        string(a, "kind")?,
+        "resolution_reference" | "resolution_apply"
+    ) && doc.get("rust_calibration_size").is_some()
+    {
+        let [width, height]: [usize; 2] = doc.vector("rust_calibration_size").map_err(display)?;
+        *doc = fictrac_io::capture_calibration_reference(doc, width, height).map_err(display)?;
     }
     Ok(())
 }

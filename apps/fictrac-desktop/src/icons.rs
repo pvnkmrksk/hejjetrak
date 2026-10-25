@@ -7,6 +7,7 @@ pub enum Icon {
     Settings,
     Diagnostics,
     Refresh,
+    Crop,
 }
 pub fn button(ui: &mut egui::Ui, icon: Icon, active: bool, help: &str) -> egui::Response {
     let response = ui.add(
@@ -67,6 +68,21 @@ pub fn button(ui: &mut egui::Ui, icon: Icon, active: bool, help: &str) -> egui::
                 ui.painter()
                     .circle_filled(p(x, y), 3.0, ui.visuals().panel_fill);
                 ui.painter().circle_stroke(p(x, y), 3.0, stroke);
+            }
+        }
+        Icon::Crop => {
+            line(&[[3.0, 8.0], [3.0, 3.0], [8.0, 3.0]]);
+            line(&[[16.0, 3.0], [21.0, 3.0], [21.0, 8.0]]);
+            line(&[[21.0, 16.0], [21.0, 21.0], [16.0, 21.0]]);
+            line(&[[8.0, 21.0], [3.0, 21.0], [3.0, 16.0]]);
+            if active {
+                line(&[
+                    [8.0, 8.0],
+                    [16.0, 8.0],
+                    [16.0, 16.0],
+                    [8.0, 16.0],
+                    [8.0, 8.0],
+                ]);
             }
         }
         Icon::Diagnostics => {

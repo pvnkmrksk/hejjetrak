@@ -41,6 +41,7 @@ pub(crate) struct MapTracker {
     atlas_sites: Vec<Option<DVec3>>,
     active_sites: Vec<(DVec3, usize)>,
     prepared_roi: Option<Vec<u8>>,
+    prepared_edge: f64,
     solver: Bobyqa,
     local_stride: usize,
     settings: MapSettings,
@@ -50,6 +51,7 @@ pub(crate) struct MapTracker {
     ready: bool,
     clean_map: bool,
     template: Vec<u8>,
+    recovery: crate::resilience::Recovery,
     pub views: Option<DebugViews>,
 }
 pub(crate) struct Estimate {
@@ -100,6 +102,7 @@ impl MapTracker {
             atlas_sites,
             active_sites,
             prepared_roi: None,
+            prepared_edge: 0.0,
             solver,
             local_stride,
             settings,
@@ -109,6 +112,7 @@ impl MapTracker {
             ready: false,
             clean_map: true,
             template,
+            recovery: crate::resilience::Recovery::default(),
             views: None,
         })
     }
@@ -123,6 +127,7 @@ impl MapTracker {
         self.sampler.reset_history();
         self.prepared_roi = None;
         self.views = None;
+        self.recovery = crate::resilience::Recovery::default();
     }
     pub fn load_template(&mut self, template: SphereTemplate) -> Result<()> {
         template.validate()?;
@@ -141,6 +146,7 @@ impl MapTracker {
         self.sampler.reset_history();
         self.prepared_roi = None;
         self.views = None;
+        self.recovery = crate::resilience::Recovery::default();
         Ok(())
     }
     pub fn template(&self) -> SphereTemplate {
@@ -151,7 +157,17 @@ impl MapTracker {
         }
     }
     pub fn estimate(&mut self, frame: &GrayFrame) -> Estimate {
-        let roi = self.prepared_roi.insert(self.sampler.prepare(frame));
+        let roi = self.sampler.prepare(frame);
+        self.prepared_edge = if self.settings.resilient {
+            crate::resilience::edge_density(&roi, self.sampler.size)
+        } else {
+            0.0
+        };
+        let estimate = self.estimate_roi(&roi, self.prepared_edge);
+        self.prepared_roi = Some(roi);
+        estimate
+    }
+    fn estimate_roi(&mut self, roi: &[u8], edge: f64) -> Estimate {
         let basis = self.sampler.basis;
         let count = self.active_sites.len();
         let failure = |error| Estimate {
@@ -166,6 +182,14 @@ impl MapTracker {
         let white = roi.iter().filter(|v| **v == 255).count();
         if black < 8 || white < 8 {
             self.guess = DVec3::ZERO;
+            if self.settings.resilient && self.ready {
+                self.recovery.reject();
+            }
+            return failure(65025.0);
+        }
+        if self.settings.resilient && self.ready && !self.recovery.texture_ok(edge) {
+            self.guess = DVec3::ZERO;
+            self.recovery.reject();
             return failure(65025.0);
         }
         if !self.ready && (!self.settings.global_search || self.clean_map) {
@@ -189,6 +213,24 @@ impl MapTracker {
             local_stride: self.local_stride,
         };
         let orientation = self.orientation;
+        if self.settings.resilient && self.recovery.lost_frames > 0 {
+            let (pose, error) =
+                self.recovery
+                    .reacquire(&objective, orientation, self.bound, &self.settings);
+            self.guess = DVec3::ZERO;
+            return Estimate {
+                rotation: DVec3::ZERO,
+                absolute: pose.map(|p| basis.inverse() * p * basis),
+                error: if error.is_finite() { error } else { 1e12 },
+                accepted: pose.is_some(),
+                samples: count,
+                status: if pose.is_some() {
+                    "relocalized"
+                } else {
+                    "recovering"
+                },
+            };
+        }
         let mut x = self.guess.to_array();
         let lower = x.map(|v| v - self.bound);
         let upper = x.map(|v| v + self.bound);
@@ -217,7 +259,19 @@ impl MapTracker {
         } else {
             1e12
         };
-        let local_good = acceptable(error, self.settings.max_error);
+        let local_good = acceptable(
+            error,
+            if self.settings.resilient {
+                self.recovery.limit(&self.settings)
+            } else {
+                self.settings.max_error
+            },
+        );
+        if self.settings.resilient && !local_good {
+            self.recovery.reject();
+            self.guess = DVec3::ZERO;
+            return failure(if error.is_finite() { error } else { 1e12 });
+        }
         if self.settings.global_search && (!local_good || !self.ready) {
             let (absolute, global_error) = global_search(&objective, orientation, &self.settings);
             let accepted = acceptable(global_error, self.settings.max_error);
@@ -260,6 +314,10 @@ impl MapTracker {
             };
             self.ready = true;
             self.clean_map = false;
+            if self.settings.resilient && self.prepared_roi.is_some() {
+                self.recovery
+                    .observe(row.error, self.prepared_edge, self.orientation);
+            }
         }
         self.views = Some(if let Some(roi) = self.prepared_roi.take() {
             self.sampler.update_prepared(frame, Some(row), roi)
@@ -271,7 +329,7 @@ impl MapTracker {
 fn acceptable(error: f64, threshold: f64) -> bool {
     error.is_finite() && error < 1e11 && (threshold < 0.0 || error <= threshold)
 }
-struct AtlasObjective<'a> {
+pub(crate) struct AtlasObjective<'a> {
     sites: &'a [Option<DVec3>],
     active_sites: &'a [(DVec3, usize)],
     roi: &'a [u8],
@@ -282,7 +340,7 @@ struct AtlasObjective<'a> {
     local_stride: usize,
 }
 impl AtlasObjective<'_> {
-    fn checked_candidate(
+    pub(crate) fn checked_candidate(
         &self,
         seed: [f64; 3],
         candidate: [f64; 3],
@@ -302,11 +360,18 @@ impl AtlasObjective<'_> {
             (candidate, candidate_error)
         }
     }
-    fn cost(&self, rotation: DQuat, stride: usize) -> f64 {
+    pub(crate) fn cost(&self, rotation: DQuat, stride: usize) -> f64 {
         self.evaluate(rotation, stride, false)
     }
-    fn local_cost(&self, rotation: DQuat) -> f64 {
+    pub(crate) fn local_cost(&self, rotation: DQuat) -> f64 {
         self.evaluate(rotation, self.local_stride, true)
+    }
+    pub(crate) fn coarse_cost(&self, rotation: DQuat, target: usize) -> f64 {
+        self.evaluate(
+            rotation,
+            self.active_sites.len().div_ceil(target).max(1),
+            true,
+        )
     }
     fn evaluate(&self, rotation: DQuat, stride: usize, compact: bool) -> f64 {
         // One transform per candidate, rather than expanding quaternion-vector

@@ -13,17 +13,30 @@ pub fn request_permission() -> Result<()> {
     Ok(())
 }
 pub fn list_cameras() -> Result<Vec<CameraInfo>> {
-    nokhwa::query(ApiBackend::Auto)
-        .map(|list| {
-            list.iter()
-                .enumerate()
-                .map(|(i, c)| CameraInfo {
-                    id: i as u32,
-                    name: c.human_name(),
+    let devices = nokhwa::query(ApiBackend::Auto).map_err(|error| Error(error.to_string()))?;
+    #[cfg(target_os = "linux")]
+    {
+        crate::identity::indexed_camera_infos(
+            devices
+                .iter()
+                .map(|camera| (camera.index().as_string(), camera.human_name())),
+        )
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        devices
+            .iter()
+            .enumerate()
+            .map(|(ordinal, camera)| {
+                Ok(CameraInfo {
+                    id: u32::try_from(ordinal).map_err(|_| {
+                        Error("too many cameras to represent their native ordinal".into())
+                    })?,
+                    name: camera.human_name(),
                 })
-                .collect()
-        })
-        .map_err(|e| Error(e.to_string()))
+            })
+            .collect()
+    }
 }
 pub struct Camera {
     camera: NativeCamera,
@@ -31,6 +44,30 @@ pub struct Camera {
     count: u64,
 }
 impl Camera {
+    /// Identity reported by the opened backend, not an inferred enumeration path.
+    pub fn source_label(&self) -> String {
+        let info = self.camera.info();
+        #[cfg(target_os = "linux")]
+        if let Ok(devices) = nokhwa::query(ApiBackend::Video4Linux)
+            && let Some(device) = devices
+                .iter()
+                .find(|device| device.index() == self.camera.index())
+            && let Some(path) = device.description().strip_prefix("Video4Linux Device @ ")
+            && !path.is_empty()
+        {
+            return format!("{} ({path})", info.human_name());
+        }
+        #[cfg(target_os = "windows")]
+        if !info.misc().is_empty() {
+            return format!("{} ({})", info.human_name(), info.misc());
+        }
+        format!(
+            "{} ({:?} camera {})",
+            info.human_name(),
+            self.camera.backend(),
+            self.camera.index().as_string()
+        )
+    }
     pub fn open(id: u32, fps: f64) -> Result<Self> {
         if !fps.is_finite() || (fps > 0.0 && !(0.1..=1000.0).contains(&fps)) {
             return Err(Error(

@@ -105,10 +105,12 @@ pub fn request_schema() -> Value {
         object(json!({"kind":{"const":"remove_exclusion"}}),&["kind"]),
         object(json!({"kind":{"const":"forward"},"start":point(),"end":point()}),&["kind","start","end"]),
         object(json!({"kind":{"const":"square_cycle"}}),&["kind"]),
+        object(json!({"kind":{"const":"resolution_reference"},"width":{"type":"integer","minimum":2,"maximum":32000000},"height":{"type":"integer","minimum":2,"maximum":32000000}}),&["kind"]),
+        object(json!({"kind":{"const":"resolution_apply"},"width":{"type":"integer","minimum":2,"maximum":32000000},"height":{"type":"integer","minimum":2,"maximum":32000000}}),&["kind","width","height"]),
         object(json!({"kind":{"const":"square"},"plane":{"enum":["xy","yz","xz"]},"points":points(4,4)}),&["kind","plane","points"])
     ]});
     variants.push(descriptor("calibrate", calibration));
-    variants.push(descriptor("view",object(json!({"settings":{"type":"boolean"},"diagnostics":{"type":"boolean"},"overlays":{"type":"boolean"},"full_image":{"type":"boolean"}}),&[])));
+    variants.push(descriptor("view",object(json!({"settings":{"type":"boolean"},"diagnostics":{"type":"boolean"},"overlays":{"type":"boolean"},"full_image":{"type":"boolean"},"calibration_step":{"enum":["view","ball","exclude","lab"]},"edit_marks":{"type":"boolean"},"magnifier":{"type":"boolean"}}),&[])));
     variants.push(descriptor("camera_status", none()));
     variants.push(descriptor("camera_format",object(json!({"width":{"type":"integer","minimum":16,"maximum":8192},"height":{"type":"integer","minimum":16,"maximum":8192},"fps":{"type":["number","null"],"minimum":0.1,"maximum":1000}}),&["width","height"])));
     variants.push(descriptor("camera_set",json!({"oneOf":[object(json!({"control":{"const":"exposure_mode"},"mode":{"enum":["automatic","locked"]}}),&["control","mode"]),object(json!({"control":{"enum":["exposure","gain"]},"value":{"type":"number"}}),&["control","value"])]})));
@@ -129,13 +131,21 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
         "save_config" | "map_load" | "map_save" => &["path"],
         "record_start" => &["directory", "record_options"],
         "snapshot" | "export" => &["directory"],
-        "view" => &["settings", "diagnostics", "overlays", "full_image"],
+        "view" => &[
+            "settings",
+            "diagnostics",
+            "overlays",
+            "full_image",
+            "calibration_step",
+            "edit_marks",
+            "magnifier",
+        ],
         "camera_status" => &[],
         "camera_format" => &["width", "height", "fps"],
         "camera_set" => &["control", "mode", "value"],
         "step" | "run" => &["frames"],
         "rows" => &["offset", "limit"],
-        "calibrate" => &["kind", "points", "start", "end", "plane"],
+        "calibrate" => &["kind", "points", "start", "end", "plane", "width", "height"],
         _ => return Err(format!("unknown command {command}; use discover")),
     };
     if args.is_null() {
@@ -154,11 +164,37 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
         "diagnostics",
         "overlays",
         "full_image",
+        "edit_marks",
+        "magnifier",
     ] {
         if let Some(value) = object.get(key)
             && !value.is_boolean()
         {
             return Err(format!("args.{key} must be boolean"));
+        }
+    }
+    if command == "view"
+        && let Some(step) = object.get("calibration_step")
+        && !step
+            .as_str()
+            .is_some_and(|s| matches!(s, "view" | "ball" | "exclude" | "lab"))
+    {
+        return Err("args.calibration_step must be view/ball/exclude/lab".into());
+    }
+    if command == "calibrate" {
+        for key in ["width", "height"] {
+            if let Some(value) = object.get(key)
+                && value
+                    .as_u64()
+                    .is_none_or(|n| !(2..=32_000_000).contains(&n))
+            {
+                return Err(format!("args.{key} must be an integer in 2..32000000"));
+            }
+        }
+        if object.get("kind").and_then(Value::as_str) == Some("resolution_apply")
+            && (!object.contains_key("width") || !object.contains_key("height"))
+        {
+            return Err("resolution_apply requires args.width and args.height".into());
         }
     }
     for key in ["frames", "offset", "limit"] {

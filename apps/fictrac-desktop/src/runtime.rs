@@ -4,6 +4,7 @@ use fictrac_io::{
     ConfigDocument, OutputSinks, SourceSpec, VideoSource, load_config_text, write_dat,
 };
 use std::{
+    collections::VecDeque,
     fs::{self, File, OpenOptions},
     io::{BufWriter, Write},
     path::PathBuf,
@@ -52,6 +53,9 @@ pub struct ViewFrame {
 }
 #[derive(Clone, Default)]
 pub struct Snapshot {
+    /// Actual opened video path or native camera identifier; never editor text.
+    pub source_label: String,
+    pub resources: WorkerResources,
     pub image: Option<Arc<ViewFrame>>,
     pub row: Option<TrackRow>,
     pub path: Arc<Vec<[f64; 2]>>,
@@ -80,6 +84,15 @@ pub struct Snapshot {
     pub revision: u64,
     pub recording: bool,
     pub recording_directory: Option<PathBuf>,
+}
+#[derive(Clone, Default, serde::Serialize)]
+pub struct WorkerResources {
+    /// Source images materialized; overlay-only edits do not count as new pixels.
+    pub preview_updates: u64,
+    /// Blocking idle/EOF wait attempts, including notifications/spurious returns.
+    pub idle_waits: u64,
+    /// Blocking source-deadline wait attempts; numerical frames are never skipped.
+    pub pacing_waits: u64,
 }
 pub enum Command {
     Configure(ConfigDocument, u64),
@@ -161,7 +174,11 @@ impl Worker {
     pub fn send(&self, command: Command) -> Result<()> {
         self.tx
             .try_send(command)
-            .map_err(|e| format!("worker command not applied: {e}"))
+            .map_err(|e| format!("worker command not applied: {e}"))?;
+        if let Some(handle) = &self.handle {
+            handle.thread().unpark();
+        }
+        Ok(())
     }
     pub fn latest(&self) -> Snapshot {
         self.snapshot
@@ -174,6 +191,7 @@ impl Drop for Worker {
     fn drop(&mut self) {
         self.stop.store(true, Ordering::Release);
         if let Some(handle) = self.handle.take() {
+            handle.thread().unpark();
             let _ = handle.join();
         }
     }
@@ -245,6 +263,28 @@ struct Engine {
     tracker: Tracker,
     diagnostics: Diagnostics,
 }
+fn promote_preview(
+    snapshot: &mut Snapshot,
+    rgb: &mut Option<Vec<u8>>,
+    frame: Option<&GrayFrame>,
+    engine: Option<&Engine>,
+    fallback: &mut Option<DebugViews>,
+) {
+    if let Some(frame) = frame
+        && let Some(rgb) = rgb.take()
+    {
+        let debug = engine
+            .and_then(|engine| engine.tracker.debug_views().cloned())
+            .or_else(|| fallback.take());
+        snapshot.image = Some(Arc::new(ViewFrame {
+            width: frame.width(),
+            height: frame.height(),
+            rgb,
+            debug,
+        }));
+        snapshot.resources.preview_updates += 1;
+    }
+}
 fn engine(
     doc: &ConfigDocument,
     w: usize,
@@ -291,17 +331,31 @@ fn run(
     stop: &AtomicBool,
     config_path: Option<&std::path::Path>,
 ) -> Result<()> {
+    let source_label = match &source {
+        SourceSpec::Video(path) => path
+            .canonicalize()
+            .unwrap_or_else(|_| path.clone())
+            .display()
+            .to_string(),
+        SourceSpec::Camera(id) => format!("camera {id}"),
+    };
     let mut input = Input::open(source, &doc)?;
     let mut engine_state: Option<Engine> = None;
-    let mut snapshot = Snapshot::default();
+    let mut snapshot = Snapshot {
+        source_label,
+        ..Snapshot::default()
+    };
     match &mut input {
-        Input::Camera(camera) => match camera.capabilities() {
-            Ok(capabilities) => {
-                snapshot.source_fps = capabilities.current_format.fps.unwrap_or(0.0);
-                snapshot.camera = Some(capabilities);
+        Input::Camera(camera) => {
+            snapshot.source_label = camera.source_label();
+            match camera.capabilities() {
+                Ok(capabilities) => {
+                    snapshot.source_fps = capabilities.current_format.fps.unwrap_or(0.0);
+                    snapshot.camera = Some(capabilities);
+                }
+                Err(error) => snapshot.notice = format!("Camera controls unavailable: {error}"),
             }
-            Err(error) => snapshot.notice = format!("Camera controls unavailable: {error}"),
-        },
+        }
         Input::File(video) => {
             snapshot.source_fps = if doc.number("src_fps", -1.0) > 0.0 {
                 doc.number("src_fps", -1.0)
@@ -318,8 +372,8 @@ fn run(
     let mut ended = false;
     let mut needs_config = true;
     let mut path = vec![];
-    let mut contact_trace = vec![];
-    let mut pose_history = vec![];
+    let mut contact_trace = VecDeque::new();
+    let mut pose_history = VecDeque::new();
     let mut manual_record_options: Option<fictrac_control::RecordOptions> = None;
     let mut recorder: Option<Recorder> = if doc.boolean("save_raw") || doc.boolean("save_debug") {
         let recorder = Recorder::automatic(&doc)?;
@@ -342,8 +396,12 @@ fn run(
     let mut sinks = OutputSinks::from_config(&doc).map_err(|e| e.to_string())?;
     let mut previous_frame: Option<GrayFrame> = None;
     let mut previous_input: Option<GrayFrame> = None;
-    while !stop.load(Ordering::Acquire) {
-        for cmd in rx.try_iter() {
+    let mut previous_rgb: Option<Vec<u8>> = None;
+    let mut previous_debug: Option<DebugViews> = None;
+    let mut pending_command = None;
+    let mut pending_input = None;
+    'worker: while !stop.load(Ordering::Acquire) {
+        for cmd in pending_command.take().into_iter().chain(rx.try_iter()) {
             match cmd {
                 Command::Configure(next, revision) => {
                     if let Err(error) = sinks.reconfigure(&doc, &next) {
@@ -352,6 +410,14 @@ fn run(
                         continue;
                     }
                     snapshot.command_error = None;
+                    if doc.number("src_fps", -1.0) != next.number("src_fps", -1.0) {
+                        // A new rate starts pacing from the next emitted frame.
+                        // Keep source/emitted timestamps intact: only the wall
+                        // deadline anchor changes, avoiding stalls/catch-up.
+                        wall_origin = Instant::now();
+                        source_origin = None;
+                        last_completed = None;
+                    }
                     doc = next;
                     if let Input::File(video) = &input {
                         snapshot.source_fps = if doc.number("src_fps", -1.0) > 0.0 {
@@ -388,6 +454,8 @@ fn run(
                     step = true;
                     paused = true;
                     snapshot.paused = true;
+                    wall_origin = Instant::now();
+                    source_origin = None;
                 }
                 Command::Step => {
                     skip_gap = true;
@@ -399,6 +467,8 @@ fn run(
                     step = true;
                     paused = true;
                     snapshot.paused = true;
+                    wall_origin = Instant::now();
+                    source_origin = None;
                 }
                 Command::Reset => {
                     snapshot.tracking_ms = 0.0;
@@ -519,6 +589,15 @@ fn run(
                 }
             }
         }
+        if paused || needs_config {
+            promote_preview(
+                &mut snapshot,
+                &mut previous_rgb,
+                previous_frame.as_ref(),
+                engine_state.as_ref(),
+                &mut previous_debug,
+            );
+        }
         if needs_config && let Some(frame) = &previous_frame {
             let frame = previous_input.as_ref().unwrap_or(frame);
             let frame = if let Some(image) = &snapshot.image {
@@ -583,16 +662,26 @@ fn run(
                 snapshot.row = Some(row);
             }
         }
-        snapshot.outputs = Some(sinks.status());
         if (paused && !step) || ended {
+            snapshot.path = Arc::new(path.clone());
+            snapshot.contact_trace = Arc::new(contact_trace.iter().copied().collect());
+            snapshot.pose_history = Arc::new(pose_history.iter().copied().collect());
+            snapshot.outputs = Some(sinks.status());
+            snapshot.resources.idle_waits += 1;
             *shared
                 .lock()
                 .unwrap_or_else(std::sync::PoisonError::into_inner) = snapshot.clone();
-            thread::sleep(Duration::from_millis(8));
+            // Mutating commands and shutdown unpark immediately; the long idle
+            // timeout only refreshes asynchronous output health once a second.
+            thread::park_timeout(Duration::from_secs(1));
             continue;
         }
         let work_tick = Instant::now();
-        let frame = input.next()?;
+        let frame = if let Some(frame) = pending_input.take() {
+            Some(frame)
+        } else {
+            input.next()?
+        };
         let input_wait = if matches!(input, Input::Camera(_)) {
             work_tick.elapsed()
         } else {
@@ -606,10 +695,17 @@ fn run(
                 }
                 continue;
             }
+            promote_preview(
+                &mut snapshot,
+                &mut previous_rgb,
+                previous_frame.as_ref(),
+                engine_state.as_ref(),
+                &mut previous_debug,
+            );
             snapshot.outputs = Some(sinks.status());
             snapshot.path = Arc::new(path.clone());
-            snapshot.contact_trace = Arc::new(contact_trace.clone());
-            snapshot.pose_history = Arc::new(pose_history.clone());
+            snapshot.contact_trace = Arc::new(contact_trace.iter().copied().collect());
+            snapshot.pose_history = Arc::new(pose_history.iter().copied().collect());
             ended = true;
             snapshot.ended = true;
             snapshot.advance_remaining = 0;
@@ -630,32 +726,70 @@ fn run(
             snapshot.recording = false;
             continue;
         };
-        let frame = if matches!(input, Input::File(_)) {
-            let source_ts = frame.timestamp_ms();
-            let fps = doc.number("src_fps", -1.0);
-            let converted = if fps > 0.0 || retimed {
-                retimed = true;
-                let time = if let (Some(previous), Some(source_prev)) =
-                    (&previous_frame, last_source_time)
-                {
+        let raw_frame = frame.clone();
+        let source_time = frame.timestamp_ms();
+        let file_source = matches!(input, Input::File(_));
+        let override_fps = doc.number("src_fps", -1.0);
+        let frame = if file_source && (override_fps > 0.0 || retimed) {
+            let time =
+                if let (Some(previous), Some(source_prev)) = (&previous_frame, last_source_time) {
                     previous.timestamp_ms()
-                        + if fps > 0.0 {
-                            1000.0 / fps
+                        + if override_fps > 0.0 {
+                            1000.0 / override_fps
                         } else {
-                            source_ts - source_prev
+                            source_time - source_prev
                         }
                 } else {
                     0.0
                 };
-                frame.with_timestamp(time).map_err(|e| e.to_string())?
-            } else {
-                frame
-            };
-            last_source_time = Some(source_ts);
-            converted
+            frame.with_timestamp(time).map_err(|e| e.to_string())?
         } else {
             frame
         };
+        // Explicit paused advancement measures source frames immediately;
+        // emitted timestamps still come from the unchanged source/FPS clock.
+        if realtime && file_source && !step {
+            let pacing_tick = Instant::now();
+            if source_origin.is_none() {
+                playback_origin_frame = snapshot.frames;
+            }
+            let origin = *source_origin.get_or_insert(frame.timestamp_ms());
+            let due = if override_fps > 0.0 {
+                snapshot.frames.saturating_sub(playback_origin_frame) as f64 / override_fps
+            } else {
+                (frame.timestamp_ms() - origin) / 1000.0
+            };
+            let due = Duration::try_from_secs_f64(due)
+                .map_err(|_| "Invalid playback deadline; check source timestamps and src_fps")?;
+            let deadline = wall_origin
+                .checked_add(due)
+                .ok_or("Playback deadline exceeds the platform clock range")?;
+            while let Some(remaining) = deadline.checked_duration_since(Instant::now()) {
+                if stop.load(Ordering::Acquire) {
+                    break 'worker;
+                }
+                if let Ok(command) = rx.try_recv() {
+                    // Keep the unmodified decoded frame. Commands (including
+                    // pause/config/FPS edits) apply before its measurement; no
+                    // source clock, capture counter or numerical state advanced.
+                    pending_command = Some(command);
+                    pending_input = Some((raw_frame, rgb, sequence));
+                    continue 'worker;
+                }
+                // Check the queue BEFORE parking as decoder channel waits may
+                // have consumed a prior unpark token while this command waited.
+                snapshot.resources.pacing_waits += 1;
+                thread::park_timeout(remaining);
+            }
+            pace_wait = pacing_tick.elapsed();
+        }
+        if stop.load(Ordering::Acquire) {
+            break;
+        }
+        if file_source {
+            retimed |= override_fps > 0.0;
+            last_source_time = Some(source_time);
+        }
         let input_frame = frame.clone();
         let frame = tracking_frame(frame, &rgb, &doc)?;
         last_camera_frame = Instant::now();
@@ -675,23 +809,6 @@ fn run(
             }
         }
         last_timestamp = Some(frame.timestamp_ms());
-        if realtime && matches!(input, Input::File(_)) {
-            let pacing_tick = Instant::now();
-            if source_origin.is_none() {
-                playback_origin_frame = snapshot.frames;
-            }
-            let origin = *source_origin.get_or_insert(frame.timestamp_ms());
-            let override_fps = doc.number("src_fps", -1.0);
-            let due = if override_fps > 0.0 {
-                snapshot.frames.saturating_sub(playback_origin_frame) as f64 / override_fps
-            } else {
-                (frame.timestamp_ms() - origin) / 1000.0
-            };
-            while wall_origin.elapsed().as_secs_f64() < due && !stop.load(Ordering::Acquire) {
-                thread::sleep(Duration::from_millis(2));
-            }
-            pace_wait = pacing_tick.elapsed();
-        }
         let tick = Instant::now();
         if needs_config {
             snapshot.tracking_ms = 0.0;
@@ -742,11 +859,11 @@ fn run(
                 let rotation =
                     glam::DQuat::from_scaled_axis(glam::DVec3::from_array(row.absolute_camera));
                 let material = rotation.inverse() * (lab.inverse() * -glam::DVec3::Z);
-                contact_trace.push(material.to_array());
-                pose_history.push(row.absolute_camera);
+                contact_trace.push_back(material.to_array());
+                pose_history.push_back(row.absolute_camera);
                 if contact_trace.len() > 1000 {
-                    contact_trace.remove(0);
-                    pose_history.remove(0);
+                    contact_trace.pop_front();
+                    pose_history.pop_front();
                 }
             }
             path.push(row.position);
@@ -762,32 +879,59 @@ fn run(
                 snapshot.notice = format!("Tracking continues; {error}");
             }
         }
-        snapshot.outputs = Some(sinks.status());
-        let publish = last_publish.elapsed() > Duration::from_millis(30) || step;
-        let debug = engine_state.as_mut().map(|e| {
-            e.tracker
-                .debug_views()
-                .cloned()
-                .unwrap_or_else(|| e.diagnostics.update(&frame, row.as_ref()))
-        });
-        if let (Some(recorder), Some(debug), Some(engine), Some(row)) =
-            (&mut recorder, &debug, &engine_state, row.as_ref())
-            && output_error.is_none()
-            && let Err(error) =
-                recorder.write_media(&frame, &rgb, debug, &path, &engine.config, row)
-        {
-            output_error = Some(error);
+        let publish =
+            last_publish.elapsed() > Duration::from_millis(30) || step || snapshot.image.is_none();
+        let mut debug = None;
+        if let Some(engine) = &mut engine_state {
+            // Preserve pairwise diagnostic accumulation on every measured frame.
+            // Map mode already retains its numerical views; borrow them for
+            // recording and copy only the image actually published to the GUI.
+            let fallback = if engine.tracker.debug_views().is_none() {
+                Some(engine.diagnostics.update(&frame, row.as_ref()))
+            } else {
+                None
+            };
+            let views = engine.tracker.debug_views().or(fallback.as_ref());
+            if let (Some(recorder), Some(views), Some(row)) = (&mut recorder, views, row.as_ref())
+                && output_error.is_none()
+                && let Err(error) =
+                    recorder.write_media(&frame, &rgb, views, &path, &engine.config, row)
+            {
+                output_error = Some(error);
+            }
+            if publish {
+                debug = views.cloned();
+            } else {
+                previous_debug = fallback;
+            }
         }
-        snapshot.image = Some(Arc::new(ViewFrame {
-            width: frame.width(),
-            height: frame.height(),
-            rgb,
-            debug,
-        }));
+        if publish {
+            snapshot.image = Some(Arc::new(ViewFrame {
+                width: frame.width(),
+                height: frame.height(),
+                rgb,
+                debug,
+            }));
+            snapshot.resources.preview_updates += 1;
+            previous_rgb = None;
+            previous_debug = None;
+        } else {
+            // Exactly one unpublished RGB frame is retained, so paused edits
+            // use its original pixels without cloning every full-frame image.
+            previous_rgb = Some(rgb);
+        }
         if let Some(error) = output_error {
+            promote_preview(
+                &mut snapshot,
+                &mut previous_rgb,
+                Some(&frame),
+                engine_state.as_ref(),
+                &mut previous_debug,
+            );
+            snapshot.outputs = Some(sinks.status());
             snapshot.path = Arc::new(path.clone());
-            snapshot.contact_trace = Arc::new(contact_trace.clone());
-            snapshot.pose_history = Arc::new(pose_history.clone());
+            snapshot.contact_trace = Arc::new(contact_trace.iter().copied().collect());
+            snapshot.pose_history = Arc::new(pose_history.iter().copied().collect());
             snapshot.notice = format!(
                 "Recording failed after measured frame {}; partial files retained: {error}",
                 snapshot.frames
@@ -828,9 +972,10 @@ fn run(
             0.0
         };
         if publish {
+            snapshot.outputs = Some(sinks.status());
             snapshot.path = Arc::new(path.clone());
-            snapshot.contact_trace = Arc::new(contact_trace.clone());
-            snapshot.pose_history = Arc::new(pose_history.clone());
+            snapshot.contact_trace = Arc::new(contact_trace.iter().copied().collect());
+            snapshot.pose_history = Arc::new(pose_history.iter().copied().collect());
             *shared
                 .lock()
                 .unwrap_or_else(std::sync::PoisonError::into_inner) = snapshot.clone();
@@ -1286,6 +1431,259 @@ mod tests {
         worker.send(Command::Configure(doc, 10))?;
         let restored = wait_for(&worker, |s| s.revision == 10)?;
         assert!(restored.command_error.is_none());
+        Ok(())
+    }
+    #[test]
+    fn commands_interrupt_long_source_wait_without_losing_staged_pixels_or_clock() -> Result<()> {
+        let (source, mut doc) = fixture().map_err(|error| error.to_string())?;
+        doc.set("src_fps", "0.1")
+            .map_err(|error| error.to_string())?;
+        let worker = Worker::start(source.clone(), doc.clone(), true)?;
+        wait_for(&worker, |snapshot| snapshot.frames >= 1)?;
+        let command_tick = Instant::now();
+        worker.send(Command::Pause(true))?;
+        let paused = wait_for(&worker, |snapshot| snapshot.paused)?;
+        assert!(command_tick.elapsed() < Duration::from_secs(2));
+        assert_eq!(paused.frames, 1);
+        let image = paused.image.as_ref().ok_or("missing paused image")?;
+        thread::sleep(Duration::from_millis(150));
+        let still = worker.latest();
+        assert_eq!(still.frames, paused.frames);
+        assert!(still.resources.idle_waits <= paused.resources.idle_waits + 2);
+        assert!(Arc::ptr_eq(
+            image,
+            still.image.as_ref().ok_or("paused image disappeared")?
+        ));
+
+        doc.set("src_fps", "2").map_err(|error| error.to_string())?;
+        worker.send(Command::Configure(doc, 1))?;
+        wait_for(&worker, |snapshot| snapshot.revision == 1)?;
+        worker.send(Command::Step)?;
+        let stepped = wait_for(&worker, |snapshot| snapshot.frames == 2)?;
+        assert_eq!(
+            stepped
+                .row
+                .as_ref()
+                .ok_or("missing stepped row")?
+                .timestamp_ms,
+            500.0
+        );
+        let SourceSpec::Video(path) = source else {
+            return Err("video fixture required".into());
+        };
+        let mut video = VideoSource::open(&path).map_err(|error| error.to_string())?;
+        video.enable_color();
+        video.next_frame().map_err(|error| error.to_string())?;
+        video.next_frame().map_err(|error| error.to_string())?;
+        assert_eq!(
+            stepped.image.as_ref().ok_or("missing stepped image")?.rgb,
+            video.take_rgb().ok_or("missing expected second image")?
+        );
+        let drop_tick = Instant::now();
+        drop(worker);
+        assert!(drop_tick.elapsed() < Duration::from_secs(2));
+        Ok(())
+    }
+    #[test]
+    fn publication_throttle_retains_final_image_and_every_recorded_quality_row() -> Result<()> {
+        let (source, mut doc) = fixture().map_err(|error| error.to_string())?;
+        doc.set("src_fps", "0.1")
+            .map_err(|error| error.to_string())?;
+        let worker = Worker::start(source.clone(), doc, true)?;
+        wait_for(&worker, |snapshot| snapshot.frames >= 1)?;
+        worker.send(Command::Pause(true))?;
+        wait_for(&worker, |snapshot| snapshot.paused)?;
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|error| error.to_string())?
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!("hejjetrak-resource-rows-{stamp}"));
+        worker.send(Command::RecordOptions(
+            directory.clone(),
+            fictrac_control::RecordOptions {
+                raw: false,
+                debug: false,
+            },
+        ))?;
+        worker.send(Command::Realtime(false))?;
+        worker.send(Command::Pause(false))?;
+        let ended = wait_for(&worker, |snapshot| snapshot.ended)?;
+        assert_eq!(ended.frames, 300);
+        assert!(ended.resources.preview_updates > 0);
+        assert!(ended.resources.preview_updates <= ended.frames);
+        assert_eq!(ended.row.as_ref().ok_or("missing final row")?.frame, 299);
+        assert_eq!(
+            fs::read_to_string(directory.join("epoch-0000-all-frames.dat"))
+                .map_err(|error| error.to_string())?
+                .lines()
+                .count(),
+            299
+        );
+        assert_eq!(
+            fs::read_to_string(directory.join("epoch-0000-quality.csv"))
+                .map_err(|error| error.to_string())?
+                .lines()
+                .count(),
+            300
+        );
+        let SourceSpec::Video(path) = source else {
+            return Err("video fixture required".into());
+        };
+        let mut video = VideoSource::open(&path).map_err(|error| error.to_string())?;
+        video.enable_color();
+        let mut last_rgb = None;
+        while video
+            .next_frame()
+            .map_err(|error| error.to_string())?
+            .is_some()
+        {
+            last_rgb = video.take_rgb();
+        }
+        assert_eq!(
+            ended.image.as_ref().ok_or("missing EOF image")?.rgb,
+            last_rgb.ok_or("missing expected EOF image")?
+        );
+        drop(worker);
+        fs::remove_dir_all(directory).map_err(|error| error.to_string())?;
+        Ok(())
+    }
+    #[test]
+    fn repeated_manual_steps_ignore_playback_wait_and_preserve_source_clock() -> Result<()> {
+        let (source, mut doc) = fixture().map_err(|error| error.to_string())?;
+        doc.set("src_fps", "0.1")
+            .map_err(|error| error.to_string())?;
+        let worker = Worker::start(source, doc, true)?;
+        wait_for(&worker, |snapshot| snapshot.frames >= 1)?;
+        worker.send(Command::Pause(true))?;
+        wait_for(&worker, |snapshot| snapshot.paused)?;
+        for frames in 2..=3 {
+            let tick = Instant::now();
+            worker.send(Command::Step)?;
+            let snapshot = wait_for(&worker, |snapshot| snapshot.frames == frames)?;
+            assert!(tick.elapsed() < Duration::from_secs(2));
+            assert!(snapshot.paused);
+            assert_eq!(
+                snapshot
+                    .row
+                    .as_ref()
+                    .ok_or("missing manual-step row")?
+                    .timestamp_ms,
+                (frames - 1) as f64 * 10_000.0
+            );
+        }
+        Ok(())
+    }
+    #[test]
+    fn running_rate_changes_reanchor_without_stall_or_lost_recorded_rows() -> Result<()> {
+        // Small decoded video keeps debug-build work below a120FPS deadline;
+        // the real H264 sample remains covered by the other worker regressions.
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|error| error.to_string())?
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!("hejjetrak-rate-change-{stamp}"));
+        fs::create_dir(&directory).map_err(|error| error.to_string())?;
+        let input = directory.join("clock.y4m");
+        let mut bytes = b"YUV4MPEG2 W64 H64 F120:1 Ip Cmono\n".to_vec();
+        for _ in 0..400 {
+            bytes.extend_from_slice(b"FRAME\n");
+            bytes.extend(
+                (0..4096).map(|pixel| (((pixel % 64 / 2 + pixel / 64 / 2) % 2) * 255) as u8),
+            );
+        }
+        fs::write(&input, bytes).map_err(|error| error.to_string())?;
+        let mut doc = ConfigDocument::parse("src_fps:120\nvfov:90\nroi_c:{0,0,1}\nroi_r:0.5\nc2a_r:{0,0,0}\nq_factor:2\nopt_max_evals:16\nopt_do_global:n\nopt_max_err:-1\nrust_resilient:n\n".into()).map_err(|error| error.to_string())?;
+        // Validate actual source geometry before starting the worker. A16px
+        // image has too few visible sites for the shared diagnostic sampler.
+        engine(&doc, 64, 64, None)?;
+        let worker = Worker::start(SourceSpec::Video(input), doc.clone(), true)?;
+        wait_for(&worker, |snapshot| snapshot.frames >= 3)?;
+        worker.send(Command::Pause(true))?;
+        let before = wait_for(&worker, |snapshot| snapshot.paused)?;
+        let recording = directory.join("recording");
+        worker.send(Command::RecordOptions(
+            recording.clone(),
+            fictrac_control::RecordOptions {
+                raw: false,
+                debug: false,
+            },
+        ))?;
+        worker.send(Command::Pause(false))?;
+        let fast = wait_for(&worker, |snapshot| snapshot.frames >= before.frames + 60)?;
+        let fast_time = fast.row.as_ref().ok_or("missing120FPS row")?.timestamp_ms;
+        doc.set("src_fps", "30")
+            .map_err(|error| error.to_string())?;
+        let tick = Instant::now();
+        worker.send(Command::Configure(doc.clone(), 1))?;
+        let slow = wait_for(&worker, |snapshot| {
+            snapshot.revision == 1 && snapshot.frames > fast.frames
+        })?;
+        assert!(
+            tick.elapsed() < Duration::from_secs(1),
+            "120→30 must not wait on the old rate's origin"
+        );
+        assert!(slow.row.as_ref().ok_or("missing30FPS row")?.timestamp_ms > fast_time);
+        let slow = wait_for(&worker, |snapshot| snapshot.frames >= slow.frames + 30)?;
+        let slow_time = slow
+            .row
+            .as_ref()
+            .ok_or("missing later30FPS row")?
+            .timestamp_ms;
+        doc.set("src_fps", "120")
+            .map_err(|error| error.to_string())?;
+        let tick = Instant::now();
+        worker.send(Command::Configure(doc, 2))?;
+        let fast_again = wait_for(&worker, |snapshot| {
+            snapshot.revision == 2 && snapshot.frames > slow.frames
+        })?;
+        assert!(tick.elapsed() < Duration::from_secs(1));
+        assert!(
+            fast_again
+                .row
+                .as_ref()
+                .ok_or("missing resumed120FPS row")?
+                .timestamp_ms
+                > slow_time
+        );
+        worker.send(Command::Pause(true))?;
+        let after = wait_for(&worker, |snapshot| snapshot.paused)?;
+        worker.send(Command::StopRecord)?;
+        wait_for(&worker, |snapshot| !snapshot.recording)?;
+        drop(worker);
+        let mut all_rows = 0;
+        let mut quality_rows = 0;
+        for entry in fs::read_dir(&recording).map_err(|error| error.to_string())? {
+            let entry = entry.map_err(|error| error.to_string())?;
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
+            if name.ends_with("-all-frames.dat") {
+                let text = fs::read_to_string(entry.path()).map_err(|error| error.to_string())?;
+                let timestamps = text
+                    .lines()
+                    .map(|line| {
+                        line.split(',')
+                            .nth(21)
+                            .ok_or("missing timestamp")?
+                            .trim()
+                            .parse::<f64>()
+                            .map_err(|error| error.to_string())
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                assert!(timestamps.windows(2).all(|pair| pair[1] > pair[0]));
+                all_rows += timestamps.len();
+            } else if name.ends_with("-quality.csv") {
+                quality_rows += fs::read_to_string(entry.path())
+                    .map_err(|error| error.to_string())?
+                    .lines()
+                    .count()
+                    - 1;
+            }
+        }
+        // Each reconfiguration starts a separately logged epoch, including its
+        // initialization on the previous image without advancing source count.
+        assert_eq!(all_rows as u64, after.frames - before.frames + 2);
+        assert_eq!(quality_rows, all_rows);
+        fs::remove_dir_all(directory).map_err(|error| error.to_string())?;
         Ok(())
     }
 }

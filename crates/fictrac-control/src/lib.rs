@@ -495,6 +495,24 @@ impl Controller {
                             ConfigDocument::parse(string(a, "text")?.to_owned()).map_err(display)?
                     }
                     "calibrate" => match string(a, "kind")? {
+                        "resolution_reference" | "resolution_apply" => {
+                            let width = a
+                                .get("width")
+                                .and_then(Value::as_u64)
+                                .and_then(|n| usize::try_from(n).ok())
+                                .unwrap_or(s.config.width);
+                            let height = a
+                                .get("height")
+                                .and_then(Value::as_u64)
+                                .and_then(|n| usize::try_from(n).ok())
+                                .unwrap_or(s.config.height);
+                            doc = if string(a, "kind")? == "resolution_reference" {
+                                fictrac_io::capture_calibration_reference(&doc, width, height)
+                            } else {
+                                fictrac_io::rescale_calibration_reference(&doc, width, height)
+                            }
+                            .map_err(display)?;
+                        }
                         "square_cycle" => {
                             let (next, result) =
                                 cycle_square_document(&doc, s.config.width, s.config.height)?;
@@ -575,6 +593,18 @@ impl Controller {
                         ),
                     },
                     _ => {}
+                }
+                if r.command == "calibrate"
+                    && !matches!(
+                        string(a, "kind")?,
+                        "resolution_reference" | "resolution_apply"
+                    )
+                    && doc.get("rust_calibration_size").is_some()
+                {
+                    let [width, height]: [usize; 2] =
+                        doc.vector("rust_calibration_size").map_err(display)?;
+                    doc = fictrac_io::capture_calibration_reference(&doc, width, height)
+                        .map_err(display)?;
                 }
                 s.edit(doc)?;
                 let mut result = s.status(id);
@@ -898,7 +928,7 @@ pub fn schema() -> Value {
         {"name":"set","args":{"key":"legacy field name","value":"legacy value string","fields":"optional object of field:value strings for atomic batch"}},
         {"name":"replace_config","args":{"text":"complete legacy document"}},
         {"name":"source","args":{"input":"video file path"}},
-        {"name":"calibrate","args":{"kind":"rim|exclude|remove_exclusion|forward|square|square_cycle","points":"[[x,y],...] source pixels; square TL,TR,BR,BL","start":"[x,y] for forward","end":"[x,y] for forward","plane":"xy|yz|xz for square"}},
+        {"name":"calibrate","args":{"kind":"rim|exclude|remove_exclusion|forward|square|square_cycle|resolution_reference|resolution_apply","width":"reference/target width pixels for resolution operations","height":"reference/target height pixels for resolution operations","points":"[[x,y],...] source pixels; square TL,TR,BR,BL","start":"[x,y] for forward","end":"[x,y] for forward","plane":"xy|yz|xz for square"}},
         {"name":"undo","args":{}},{"name":"redo","args":{}},
         {"name":"save_config","args":{"path":"new output file"}},
         {"name":"start","args":{}},{"name":"pause","args":{}},

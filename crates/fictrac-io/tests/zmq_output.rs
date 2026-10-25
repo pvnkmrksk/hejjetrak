@@ -41,6 +41,10 @@ fn real_rust_subscriber_and_udp_receive_identical_full_rows() -> TestResult {
         udp.local_addr()?.port()
     ))?;
     let mut sinks = OutputSinks::from_config(&document)?;
+    assert_eq!(
+        sinks.status().udp_destination,
+        Some(udp.local_addr()?.to_string())
+    );
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()?;

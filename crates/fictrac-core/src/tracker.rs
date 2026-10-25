@@ -406,7 +406,9 @@ impl Tracker {
             .config
             .spherical_map
             .as_ref()
-            .is_some_and(|m| m.max_bad_frames >= 0 && self.bad_frames > m.max_bad_frames as u32);
+            .is_some_and(|m| {
+                !m.resilient && m.max_bad_frames >= 0 && self.bad_frames > m.max_bad_frames as u32
+            });
         if reset_due {
             self.reset_tracking();
         }

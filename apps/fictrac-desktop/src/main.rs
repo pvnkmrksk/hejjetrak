@@ -177,7 +177,7 @@ impl Desktop {
             first.send(runtime::Command::Pause(true));
         }
         let control = if args.control_stdio {
-            Some(control::Bridge::start()?)
+            Some(control::Bridge::start(cc.egui_ctx.clone())?)
         } else {
             None
         };
@@ -319,7 +319,7 @@ impl eframe::App for Desktop {
                         self.window_origin.1
                             + (index / self.tile_columns) as f32 * (self.window_size.1 + 32.0),
                     ])
-                    .with_min_inner_size([240.0, 180.0]),
+                    .with_min_inner_size([96.0, 96.0]),
                 |ctx, class| {
                     session.native_window = class != egui::ViewportClass::Embedded;
                     session.show(ctx);
@@ -475,7 +475,7 @@ fn run() -> Result<(), String> {
             .with_title("hejjetrak · VR1")
             .with_icon(app_icon()?)
             .with_inner_size([520.0, 480.0])
-            .with_min_inner_size([240.0, 180.0]),
+            .with_min_inner_size([96.0, 96.0]),
         renderer: eframe::Renderer::Wgpu,
         ..Default::default()
     };

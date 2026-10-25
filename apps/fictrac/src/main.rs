@@ -273,7 +273,7 @@ fn track(
         match row.status {
             "tracked" => summary.tracked += 1,
             "relocalized" => summary.relocalized += 1,
-            "rejected" => summary.rejected += 1,
+            "rejected" | "recovering" => summary.rejected += 1,
             "initializing" => summary.initializing += 1,
             _ => return Err("tracker returned an unknown quality status".into()),
         }

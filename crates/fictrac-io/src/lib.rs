@@ -1,10 +1,12 @@
 //! File adapters; the tracking engine depends on none of these codecs.
+mod calibration_reference;
 mod comparison;
 mod config;
 mod document;
 mod output;
 mod prefetch;
 mod video;
+pub use calibration_reference::{capture_calibration_reference, rescale_calibration_reference};
 pub use config::{LoadedConfig, load_config, load_config_text, load_source_hint};
 pub use output::{write_dat, write_path_svg};
 pub use prefetch::PrefetchedVideoSource;

@@ -131,6 +131,18 @@ pub struct Camera {
     dimensions: (usize, usize),
 }
 impl Camera {
+    pub fn source_label(&self) -> String {
+        // SAFETY: The retained device is live for this borrow. These read-only
+        // identity properties run on the same worker that owns the OS session;
+        // copied Rust strings retain no borrowed Objective-C storage.
+        unsafe {
+            format!(
+                "{} (AVFoundation: {})",
+                self.device.localizedName(),
+                self.device.uniqueID()
+            )
+        }
+    }
     pub fn open(id: u32, fps: f64) -> Result<Self> {
         Self::open_internal(id, fps, None)
     }

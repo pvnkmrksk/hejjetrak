@@ -262,6 +262,14 @@ pub fn parameter_description(key: &str) -> (&'static str, &'static str) {
             "Camera",
             "Exact native capture dimensions. Select only advertised formats; a format change reopens the camera and requires matching calibration.",
         ),
+        "rust_calibration_size" | "rust_calibration_vfov" | "rust_calibration_fisheye" => (
+            "Geometry",
+            "Explicit calibration reference dimensions, vertical field of view and projection. Same-aspect, same-FOV resizing scales only saved pixel marks; legacy angular geometry remains untouched.",
+        ),
+        key if key.starts_with("rust_normalized_") => (
+            "Geometry",
+            "Managed normalized calibration reference. Capture or adapt it through calibration controls; direct stale edits are rejected before resizing.",
+        ),
         "src_fps" => (
             "Input",
             "Positive frame rate overrides the source clock; nonpositive uses native metadata or capture timestamps. GUI playback is paced to the selected source clock.",
@@ -310,6 +318,10 @@ pub fn parameter_description(key: &str) -> (&'static str, &'static str) {
         "max_bad_frames" => (
             "Tracking",
             "Maximum consecutive failed fits before reset/relocalization. Negative disables automatic reset.",
+        ),
+        "rust_resilient" => (
+            "Tracking",
+            "Preserve the learned atlas through occlusion, reject unreliable frames, and confirm bounded automatic recovery. Enabled by default. n restores legacy permissive/error/reset behavior; max_bad_frames automatic clearing is suppressed while enabled.",
         ),
         "sphere_map_fn" => (
             "Tracking",

@@ -10,6 +10,7 @@ pub enum Tool {
     Square,
     Edit,
 }
+
 pub struct Session {
     pub source_base: Option<PathBuf>,
     pub running_source: String,
@@ -37,6 +38,8 @@ pub struct Session {
     pub paused: bool,
     pub realtime: bool,
     pub tool: Tool,
+    pub edit_existing: bool,
+    pub magnifier: bool,
     pub points: Vec<[f64; 2]>,
     pub square_slots: Option<[Option<[f64; 2]>; 4]>,
     pub window_rect: Option<[f32; 4]>,
@@ -47,6 +50,8 @@ pub struct Session {
     pub revision: u64,
     pub textures: Vec<egui::TextureHandle>,
     pub texture_frame: u64,
+    pub calibration_cache: std::cell::RefCell<Option<CalibrationCache>>,
+    pub texture_image: Option<std::sync::Arc<crate::runtime::ViewFrame>>,
     pub spawn_request: usize,
     pub closed: bool,
     pub native_window: bool,
@@ -88,6 +93,8 @@ impl Session {
             paused: false,
             realtime: true,
             tool: Tool::Inspect,
+            edit_existing: false,
+            magnifier: true,
             points: vec![],
             square_slots: None,
             window_rect: None,
@@ -98,6 +105,8 @@ impl Session {
             revision: 0,
             textures: vec![],
             texture_frame: u64::MAX,
+            calibration_cache: std::cell::RefCell::new(None),
+            texture_image: None,
             spawn_request: 0,
             closed: false,
             native_window: true,
@@ -145,11 +154,18 @@ impl Session {
                 return Err("Requested dimensions/rate are not advertised by this camera; refresh camera controls".into());
             }
         }
-        self.fields(&[
-            ("rust_camera_width", request.width.to_string()),
-            ("rust_camera_height", request.height.to_string()),
-            ("src_fps", request.fps.unwrap_or(-1.0).to_string()),
-        ])?;
+        let mut doc = self.document()?;
+        if doc.get("rust_calibration_size").is_some() {
+            doc = fictrac_io::rescale_calibration_reference(&doc, request.width, request.height)
+                .map_err(|e| e.to_string())?;
+        }
+        doc.set("rust_camera_width", &request.width.to_string())
+            .map_err(|e| e.to_string())?;
+        doc.set("rust_camera_height", &request.height.to_string())
+            .map_err(|e| e.to_string())?;
+        doc.set("src_fps", &request.fps.unwrap_or(-1.0).to_string())
+            .map_err(|e| e.to_string())?;
+        self.edit(doc.text().to_owned());
         self.start()
     }
     pub fn refresh_cameras(&mut self) {
@@ -175,6 +191,65 @@ impl Session {
             },
         ));
     }
+    pub fn window_title(&self) -> String {
+        let source = if self.snapshot.source_label.is_empty() {
+            self.source_edit.clone()
+        } else {
+            self.snapshot.source_label.clone()
+        };
+        let camera_name = if self.snapshot.source_label.is_empty() {
+            self.running_source
+                .parse::<u32>()
+                .ok()
+                .and_then(|id| self.cameras.iter().find(|camera| camera.id == id))
+                .map(|c| format!(" · {}", c.name))
+                .unwrap_or_default()
+        } else {
+            String::new()
+        };
+        // Show applied transport state. A rejected draft edit stays visible in
+        // the inspector, but must not relabel the old running output ports.
+        let ports = if let Some(outputs) = &self.snapshot.outputs {
+            let udp = outputs
+                .udp_destination
+                .as_deref()
+                .filter(|_| outputs.udp_enabled)
+                .and_then(|destination| destination.parse::<std::net::SocketAddr>().ok())
+                .map(|destination| destination.port().to_string())
+                .unwrap_or_else(|| "off".into());
+            let zmq = outputs
+                .zmq
+                .as_ref()
+                .map(|publisher| {
+                    let port = publisher.endpoint.rsplit(':').next().unwrap_or("?");
+                    if publisher.worker_alive && publisher.failures == 0 {
+                        port.to_owned()
+                    } else {
+                        format!("{port} failed")
+                    }
+                })
+                .unwrap_or_else(|| "off".into());
+            format!("UDP {udp} · ZMQ {zmq}")
+        } else {
+            self.document()
+                .map(|doc| {
+                    let port = |key| {
+                        doc.get(key)
+                            .filter(|value| !matches!(*value, "-1" | "0"))
+                            .unwrap_or("off")
+                    };
+                    format!("UDP {} · ZMQ {}", port("sock_port"), port("zmq_port"))
+                })
+                .unwrap_or_default()
+        };
+        format!(
+            "{} · {}{} · {} · hejjetrak",
+            self.display_name(),
+            source,
+            camera_name,
+            ports
+        )
+    }
     pub fn display_name(&self) -> String {
         self.document()
             .ok()
@@ -197,6 +272,20 @@ impl Session {
         for (key, value) in values {
             doc.set(key, value).map_err(|e| e.to_string())?;
         }
+        if doc.get("rust_calibration_size").is_some()
+            && values.iter().any(|(key, _)| {
+                matches!(
+                    *key,
+                    "roi_circ" | "roi_ignr" | "c2a_cnrs_xy" | "c2a_cnrs_yz" | "c2a_cnrs_xz"
+                )
+            })
+        {
+            let [width, height]: [usize; 2] = doc
+                .vector("rust_calibration_size")
+                .map_err(|e| e.to_string())?;
+            doc = fictrac_io::capture_calibration_reference(&doc, width, height)
+                .map_err(|e| e.to_string())?;
+        }
         self.edit(doc.text().to_owned());
         self.source_edit = doc.get("src_fn").unwrap_or("").to_owned();
         Ok(())
@@ -214,6 +303,7 @@ impl Session {
         self.snapshot = Snapshot::default();
         self.revision = 0;
         self.textures.clear();
+        self.texture_image = None;
         self.texture_frame = u64::MAX;
         self.running_source = doc.get("src_fn").unwrap_or("").into();
         self.running_fps = doc.number("src_fps", -1.0);
@@ -358,5 +448,62 @@ impl Session {
             let r = worker.send(command);
             self.report(r);
         }
+    }
+}
+
+pub(crate) struct CalibrationCache {
+    pub text: String,
+    pub width: usize,
+    pub height: usize,
+    pub config: Result<fictrac_core::Config, String>,
+    pub crop: Option<egui::Rect>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn title_uses_applied_ports_and_source_instead_of_rejected_draft()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let document = ConfigDocument::parse(
+            "rust_instance_name:VR7\nsrc_fn:/draft/input.mp4\nsock_port:2222\nzmq_port:9999\n"
+                .into(),
+        )?;
+        let mut session = Session::new(7, document, None);
+        session.snapshot.source_label = "/actual/input.mp4".into();
+        session.snapshot.outputs = Some(fictrac_io::OutputStatus {
+            udp_enabled: true,
+            udp_destination: Some("127.0.0.1:1111".into()),
+            serial_enabled: false,
+            zmq: Some(fictrac_io::ZmqOutputStatus {
+                endpoint: "tcp://127.0.0.1:9871".into(),
+                queue_capacity: 256,
+                queue_len: 0,
+                enqueued: 0,
+                published: 0,
+                dropped: 0,
+                failures: 0,
+                worker_alive: true,
+                last_error: None,
+            }),
+        });
+        let title = session.window_title();
+        assert!(title.contains("VR7"));
+        assert!(title.contains("/actual/input.mp4"));
+        assert!(title.contains("UDP 1111 · ZMQ 9871"));
+        assert!(!title.contains("2222") && !title.contains("9999"));
+        if let Some(publisher) = session
+            .snapshot
+            .outputs
+            .as_mut()
+            .and_then(|outputs| outputs.zmq.as_mut())
+        {
+            publisher.worker_alive = false;
+            publisher.failures = 1;
+        }
+        assert!(session.window_title().contains("ZMQ 9871 failed"));
+        session.snapshot.outputs = None;
+        assert!(session.window_title().contains("UDP 2222 · ZMQ 9999"));
+        Ok(())
     }
 }

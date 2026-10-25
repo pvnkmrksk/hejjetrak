@@ -132,6 +132,9 @@ impl Config {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct MapSettings {
+    /// Protect learned evidence and confirm bounded reacquisition after occlusion.
+    /// Disable explicitly for the original permissive/reset policy.
+    pub resilient: bool,
     /// Search the learned atlas after failed local fitting, and on reset/template load.
     pub global_search: bool,
     /// Reset after more than this many consecutive failures; -1 disables automatic reset.
@@ -149,6 +152,7 @@ pub struct MapSettings {
 impl Default for MapSettings {
     fn default() -> Self {
         Self {
+            resilient: true,
             global_search: false,
             max_bad_frames: -1,
             global_evaluations: 100_000,

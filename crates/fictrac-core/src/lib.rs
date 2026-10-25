@@ -4,6 +4,7 @@ mod config;
 mod diagnostics;
 mod frame;
 mod geometry;
+mod resilience;
 mod spherical;
 pub mod synthetic;
 mod tracker;
