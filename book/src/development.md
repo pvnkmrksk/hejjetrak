@@ -34,3 +34,9 @@ python3 -m http.server 8000 --directory /tmp/hejjetrak-site
 ```
 
 Install the mdBook version specified by the Pages workflow first, or pass its executable using `--mdbook PATH`. The build has no network dependency once that tool is present. GitHub Pages publishing uses the separate website workflow and requires repository **Settings → Pages → Source: GitHub Actions**. See [website maintenance](https://github.com/pvnkmrksk/hejjetrak/blob/main/docs/website.md) for release/download and screenshot checks.
+
+## Release packaging
+
+`scripts/package.py` keeps existing platform archive names. Linux also emits `hejjetrak-linux-amd64.deb`, with the workspace version in its control metadata. Run `python3 scripts/test_package.py` for root-free archive, ownership, payload and symlink checks. No generated maintainer scripts or system writes occur during assembly. The Linux release job installs build-time `dpkg-dev` and resolves linked minimum library versions with `dpkg-shlibdeps`; missing metadata is fatal. Runtime-loaded winit/wgpu/udev libraries are declared explicitly. Both Linux desktop backends and graphics loaders are dependencies; the actual working driver remains the user's distribution responsibility.
+
+CI independently inspects/extracts the `.deb` with `dpkg-deb`, validates the desktop entry, executes the extracted CLI schema operation and simulates dependency resolution before upload. This verifies packaging and CLI startup, not physical Linux camera or graphical desktop behavior. `/usr/bin/hejjetrak` and `hejjetrak-cli` link to the binaries adjacent to their resources under `/usr/lib/hejjetrak`. The desktop entry and scalable/PNG icons use freedesktop locations. Releases attach the `.deb` alongside the portable archive; source tags remain immutable.

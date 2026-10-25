@@ -12,17 +12,27 @@ The regular view keeps experiment monitoring separate from configuration. It sho
 - **Settings** opens a separate native inspector. Calibration, exact config text, numerical options and output destinations live there.
 - **Diagnostics** reveals the traditional six-panel view. Full-source view and calibration guides are separate display selections; they do not change tracking.
 
-Hover icon controls for their action and the status strip for timing/quality details. As the preview shrinks, controls progressively reduce to Reset and Record, then Reset alone at the smallest 96×96 preview. The **Full image** source-context button switches between a full image and the cropped ball without changing aspect ratio or numerical geometry. Native title bars identify the VR name, actual applied source, available camera name and active UDP/ZMQ ports (not an unapplied draft); window size and location can be controlled from the command line for tiled rigs.
+Hover the bundled Lucide icons for their actions. Small windows hide secondary
+controls; narrower than 160 pixels or shorter than 120, the preview hides its
+entire toolbar/status instead of shrinking fonts. Right-click the image for
+Reset, recording, Settings or Calibrate again. **Full image** switches context
+without changing aspect ratio or numerical geometry.
+
+Compact titles show VR name, applied ZMQ port and `Camera 0`/video basename.
+Larger windows add UDP and the full actual source identity; unapplied drafts do
+not relabel running outputs. Closing any individual window leaves the remaining
+sessions running. Explicit Quit closes the application. See [several rigs](rigs.md)
+for placement and output-isolation details.
 
 ![Actual tiny native sample preview](images/tiny-preview.png)
 
-A tiny sample preview keeps its essential control visible; expanding the window restores the additional toolbar controls.
+This actual v0.1.3 capture shows the image-only tiny preview. Controls remain available through its context menu.
 
 ## Diagnostic views
 
 ![Computed diagnostic panels](images/diagnostics.png)
 
-The mosaic shows the input, thresholded sphere ROI, warped difference, instantaneous map, accumulated confidence map and flat path. These are derived from the actual tracker state. They are diagnostic measurements, not an independent physical-ground-truth check. Rejected/recovering frames keep their error/quality decision; a frozen displayed path does not mean measured zero velocity.
+This diagnostic capture is from v0.1.2; the numerical panel layout is retained. The mosaic shows the input, thresholded sphere ROI, warped difference, instantaneous map, accumulated confidence map and flat path. These are derived from the actual tracker state. They are diagnostic measurements, not an independent physical-ground-truth check. Rejected/recovering frames keep their error/quality decision; a frozen displayed path does not mean measured zero velocity.
 
 ## Timing readouts
 

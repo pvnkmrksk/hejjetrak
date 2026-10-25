@@ -6,19 +6,26 @@ The landing page resolves GitHub's latest published release at download time and
 
 ## Published vs source behavior
 
-The manual follows **v0.1.2 source** on main. The download dialog reads the actual latest published release; a source change is included in a binary only after its release has been built and uploaded. Consult the selected release tag's README and notes when reproducing a build. A dynamically selected latest archive always follows the published release, not an arbitrary CI artifact.
+The latest published checkpoint is **[v0.1.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.2)**, with four native archives. The manual follows **v0.1.3 development** on main; its five planned platform assets include the additional Linux `.deb` and remain pending release validation. The download dialog reads the actual latest published release; a source change is included in a binary only after its release has been built and uploaded. Consult the selected release tag's README and notes when reproducing a build. A dynamically selected latest archive always follows the published release, not an arbitrary CI artifact.
 
-Each platform archive contains the native desktop executable, CLI companion, sample/config resources, documentation, upstream license and dependency notices. Mac archives contain an app bundle. Linux uses a tar archive to preserve executable bits; Mac/Windows use ZIP. These are portable distributions, not signed store installers.
+Each platform archive contains the native desktop executable, CLI companion, sample/config resources, documentation, upstream license and dependency notices. Mac archives contain an app bundle. Linux retains its portable tar archive and newer releases can additionally offer an amd64 Debian/Ubuntu `.deb` with an app-menu icon and explicit system-library dependencies. Mac/Windows use ZIP. Existing archive names stay stable; the download page never invents a `.deb` URL for a release without that asset. No package is a signed store installer.
 
 ## Release integrity and opening
 
-macOS packages are ad hoc signed, not Developer ID signed or notarized; Windows executables are unsigned. See the per-platform [first-launch instructions](install.md). Ordinary extraction and use require no administrator access. GitHub Actions packages native Windows x64, Linux x64 and Mac Apple Silicon/Intel builds. Native CI tests and a synthetic CLI run do not establish camera-hardware or GUI visual coverage on every OS.
+macOS packages are ad hoc signed, not Developer ID signed or notarized; Windows executables are unsigned. See the per-platform [first-launch instructions](install.md). Portable extraction and ordinary use require no administrator access. Installing/removing the optional Linux system package can require package-manager authentication. GitHub Actions packages native Windows x64, Linux x64 and Mac Apple Silicon/Intel builds. Native CI tests and a synthetic CLI run do not establish camera-hardware or GUI visual coverage on every OS.
 
 ## History
 
 - **v0.1.0:** first native Rust proof of concept, legacy config/data, CLI/agent surfaces and sample/known-motion regressions.
 - **v0.1.1:** compact native previews, separate config inspector, camera capabilities/format controls, simultaneous localhost ZMQ and UDP, tiled instances and packaging repairs. The Windows archive was rebuilt from the unchanged source tag with static CRT linkage.
-- **v0.1.2 source:** bounded decode/fit overlap, immutable shared frames, Rust decoder fixes and accelerated local candidate search; command-interruptible waits and coalesced previews; guided calibration/magnifier and explicit resolution references; protected atlas recovery after unreliable frames. See measured [pipeline](performance.md), [tracking](tracking-performance.md), validation and the repository commit history. The download dialog identifies whether a published v0.1.2 binary is available.
+- **v0.1.2:** bounded decode/fit overlap, immutable shared frames, Rust decoder fixes and accelerated local candidate search; command-interruptible waits and coalesced previews; guided calibration/magnifier and explicit resolution references; protected atlas recovery after unreliable frames. See measured [pipeline](performance.md), [tracking](tracking-performance.md), validation and the repository commit history. All four native release jobs passed, and the official Mac archive passed signature, sample and native visual smoke checks.
+
+- **v0.1.3 development:** read-only Keep/Edit/Redraw calibration review, a larger
+  precision loupe, image-only tiny previews, concise applied-source titles,
+  independent per-window close, bundled Lucide icons and stronger recovery
+  learning safeguards. Linux retains the portable archive and adds an optional
+  Debian/Ubuntu package when built/uploaded. Final test counts, native visuals,
+  CI and release evidence are pending.
 
 ## Building and publishing
 

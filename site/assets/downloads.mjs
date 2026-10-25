@@ -2,10 +2,11 @@
 export const RELEASES = 'https://github.com/pvnkmrksk/hejjetrak/releases/latest';
 export const RELEASE_API = 'https://api.github.com/repos/pvnkmrksk/hejjetrak/releases/latest';
 export const PLATFORMS = Object.freeze({
-  'mac-arm': {label: 'macOS · Apple Silicon', file: 'hejjetrak-macos-arm64.zip', instructions: 'mac'},
-  'mac-intel': {label: 'macOS · Intel', file: 'hejjetrak-macos-x86_64.zip', instructions: 'mac'},
+  'mac-arm': {label: 'Mac · Apple Silicon (M-series)', file: 'hejjetrak-macos-arm64.zip', instructions: 'mac'},
+  'mac-intel': {label: 'Mac Intel', file: 'hejjetrak-macos-x86_64.zip', instructions: 'mac'},
   windows: {label: 'Windows · x64', file: 'hejjetrak-windows-amd64.zip', instructions: 'windows'},
-  linux: {label: 'Linux · x86_64', file: 'hejjetrak-linux-x86_64.tar.gz', instructions: 'linux'},
+  linux: {label: 'Linux · portable x86_64 archive', file: 'hejjetrak-linux-x86_64.tar.gz', instructions: 'linux'},
+  'linux-deb': {label: 'Debian / Ubuntu · amd64 installer', file: 'hejjetrak-linux-amd64.deb', instructions: 'linux-deb'},
 });
 
 export function detectPlatform({platform = '', userAgent = '', architecture = '', mobile = false, maxTouchPoints = 0} = {}) {
@@ -20,7 +21,7 @@ export function detectPlatform({platform = '', userAgent = '', architecture = ''
   // Explicit ARM hints from any exposed source must not select an x64 archive.
   const armHint = /\b(?:arm(?:64(?:ec)?|v\d+[a-z]*)?|aarch64)\b/i.test(`${architecture} ${text}`);
   if (/Win/i.test(text)) return armHint ? null : 'windows';
-  if (/Linux/i.test(text)) return armHint ? null : 'linux';
+  if (/Linux/i.test(text)) return armHint ? null : 'linux-choice';
   return null;
 }
 
@@ -56,6 +57,7 @@ export function initializeDownloads(doc = document) {
   const title = doc.getElementById('download-title');
   const description = doc.getElementById('download-description');
   const choice = doc.getElementById('chip-choice');
+  const packageChoice = doc.getElementById('package-choice');
   const details = doc.getElementById('download-details');
   const link = doc.getElementById('asset-download');
   const meta = doc.getElementById('asset-meta');
@@ -68,8 +70,9 @@ export function initializeDownloads(doc = document) {
   function show() { if (!dialog.open) dialog.showModal(); }
   function clear() {
     choice.hidden = true;
+    packageChoice.hidden = true;
     details.hidden = true;
-    for (const kind of ['mac', 'windows', 'linux']) doc.getElementById(`instructions-${kind}`).hidden = true;
+    for (const kind of ['mac', 'windows', 'linux', 'linux-deb']) doc.getElementById(`instructions-${kind}`).hidden = true;
     digest.hidden = true;
     link.href = RELEASES;
   }
@@ -98,6 +101,12 @@ export function initializeDownloads(doc = document) {
       choice.hidden = false;
       return;
     }
+    if (platform === 'linux-choice') {
+      title.textContent = 'Choose your Linux download';
+      description.textContent = 'Debian/Ubuntu: install with your package manager for an app-menu entry and dependency handling. Other distributions or no system installation: choose the portable archive.';
+      packageChoice.hidden = false;
+      return;
+    }
     const spec = PLATFORMS[platform];
     if (!spec) {
       title.textContent = 'Choose your computer';
@@ -122,7 +131,7 @@ export function initializeDownloads(doc = document) {
       meta.textContent = `${value.tag_name} · ${asset.name}${Number.isFinite(asset.size) ? ` · ${(asset.size / 1_000_000).toFixed(1)} MB` : ''}`;
       const hash = digestText(asset);
       if (hash) { digest.textContent = hash; digest.hidden = false; }
-      description.textContent = 'Your archive download has been requested. If the browser does not start it, use the button below. Read these first-launch steps while it downloads.';
+      description.textContent = 'Your download has been requested. If the browser does not start it, use the button below. Read these first-launch steps while it downloads.';
       details.hidden = false;
       status.textContent = `Selected ${spec.label}, ${value.tag_name}.`;
       // GitHub serves the asset as an attachment; no pop-up or guessed URL is used.

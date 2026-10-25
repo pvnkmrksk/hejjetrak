@@ -15,6 +15,8 @@ These are examples for their original physical setup, not calibration for arbitr
 
 A new instance selects the next existing numbered VR/BR config. After those are exhausted, a copy increments its numeric camera ID, enabled output ports and instance name. A video path remains a video path. Disabled outputs remain disabled. Unsaved copies have no inherited save path, preventing accidental overwrite of the parent config.
 
+Closing one native tracking window, including the first one opened, leaves the other sessions running. Each remaining window retains its source, clock, outputs and recording. Explicit application shutdown/quit closes all sessions; normal per-window close still observes unsaved-state and recording finalization rules.
+
 ## A compact tiled grid
 
 ```sh

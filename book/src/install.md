@@ -1,15 +1,18 @@
 # Download and install
 
-[**Download the latest release**](../#download) or [choose an archive on GitHub](https://github.com/pvnkmrksk/hejjetrak/releases/latest). The download page reads the latest published release and offers every available platform explicitly.
+[**Download the latest release**](../#download) or [choose a package on GitHub](https://github.com/pvnkmrksk/hejjetrak/releases/latest). The download page reads the latest published release and offers every available platform explicitly.
 
-You need the platform archive, **not** GitHub's “Source code” ZIP. There is no package manager or compiler step for ordinary use.
+Published **v0.1.2** supplies four portable archives. The additional Debian/Ubuntu `.deb` belongs to **v0.1.3 development** and is offered only when an asset is actually present in the selected published release.
+
+Choose a platform download, **not** GitHub's “Source code” ZIP. No compiler or Rust installation is needed. Portable archives need no system installation; the optional Debian/Ubuntu installer uses your package manager.
 
 | Computer | Archive | Launch |
 |---|---|---|
 | Mac with Apple Silicon (M-series) | `hejjetrak-macos-arm64.zip` | `hejjetrak.app` |
 | Mac with Intel processor | `hejjetrak-macos-x86_64.zip` | `hejjetrak.app` |
 | Windows x64 | `hejjetrak-windows-amd64.zip` | `hejjetrak.exe` |
-| Linux x86_64 desktop | `hejjetrak-linux-x86_64.tar.gz` | `hejjetrak` |
+| Debian / Ubuntu amd64 | `hejjetrak-linux-amd64.deb` when present | App menu → hejjetrak |
+| Linux x86_64 portable | `hejjetrak-linux-x86_64.tar.gz` | `hejjetrak` |
 
 Keep the extracted folder together: it contains example videos, configuration and notices. On Mac, those resources live inside the app bundle. The companion command-line executable is `hejjetrak-cli` (`hejjetrak-cli.exe` on Windows), inside `hejjetrak.app/Contents/MacOS` on Mac. The GUI needs no terminal command.
 
@@ -36,6 +39,22 @@ Microsoft explains that [SmartScreen checks downloads and app reputation](https:
 **Smart App Control is a different Windows protection.** It can block unsigned code without offering an individual-app exception. If that is the block shown, keep protection enabled and contact the maintainer/administrator about an approved signed build; this guide does not instruct you to turn it off. See [Microsoft's Smart App Control FAQ](https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions).
 
 ## Linux
+
+### Debian / Ubuntu installer
+
+Choose **Debian / Ubuntu · .deb** on the download page when that asset exists in the selected release. Open the downloaded package in your distribution's graphical package installer. It can request administrator authentication to install system files and declared dependencies. Then launch **hejjetrak** from the app menu; the CLI is available as `hejjetrak-cli` on PATH.
+
+Alternatively, from the download directory:
+
+```sh
+sudo apt install ./hejjetrak-linux-amd64.deb
+```
+
+That command installs the package; never run the tracking app with `sudo`. Use the portable archive below if you want no system installation. The package installs resources under `/usr/lib/hejjetrak`; copy rig/example configs into your own writable experiment folder before editing/saving them. Your recordings/configs stay separate from managed application files. Remove the installed application through the package manager (`sudo apt remove hejjetrak`); preserve your experiment files independently.
+
+The installer declares actual linked ABI requirements detected from the release binaries plus the desktop, graphics-loader and camera libraries loaded at runtime. It recommends a desktop portal for the file chooser. Graphics drivers, a running graphical session and device permissions still belong to your distribution. Builds use the release's Ubuntu runner: an older Debian/Ubuntu may not satisfy its C-library versions. Do not bypass dependency checks; the portable archive uses the same binary ABI and is not a fix for an older system.
+
+### Portable archive
 
 Extract the tar archive with your archive manager, then run `hejjetrak`. A graphical desktop with a working Vulkan/OpenGL-capable graphics driver is needed for the native GUI. Standard desktop and camera system libraries are not bundled; distributions differ. The Linux archive is built on a GitHub-hosted Ubuntu runner; compatibility with an older distribution's C library/graphics stack is not established.
 

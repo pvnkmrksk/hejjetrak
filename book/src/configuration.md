@@ -42,7 +42,7 @@ Pixel geometry is not silently normalized on import. The explicit `resolution_re
 | `thr_ratio` | Adaptive foreground/background threshold balance |
 | `thr_win_pc` | Adaptive threshold neighborhood fraction of ROI width |
 | `opt_max_evals` | Bounded optimizer evaluation budget, including complete final checks |
-| `opt_bound` | Local rotation search half-range, radians |
+| `opt_bound` | Map optimizer per-axis half-window around its prediction, radians; this is not the pairwise rotation-vector norm cap |
 | `opt_tol` | Local fit termination scale |
 | `opt_max_err` | Maximum accepted fit error when enabled; map-mode scale differs from pairwise mode |
 | `opt_global_evals` | Explicit budget for the legacy global covering/multistart path |
@@ -52,7 +52,7 @@ Pixel geometry is not silently normalized on import. The explicit `resolution_re
 | `sphere_map_fn` | Imported equal-area confidence map |
 | `rust_engine` | `map` default for legacy text, or explicit `pairwise` alternative |
 
-With `rust_resilient : y`, unreliable observations are rejected even when `opt_max_err` is unset/negative, and automatic `max_bad_frames` clearing is suppressed so a temporary obstruction cannot erase the learned atlas. Reacquisition uses a bounded accepted-view bank, is throttled and capped to `min(opt_global_evals, 768)` objective evaluations per call, and needs two matching observations. `recovering` remains unaccepted while seeking or confirming a match. See [occlusion recovery](recovery.md). A recovered absolute pose produces `relocalized` with zero relative motion across the missing interval. The policy is an intentional behavior extension; use `rust_resilient : n` for the older permissive/reset behavior. It cannot recover motion hidden by an obstruction or guarantee recovery from every scene.
+With `rust_resilient : y`, unreliable observations are rejected even when `opt_max_err` is unset/negative, and automatic `max_bad_frames` clearing is suppressed so a temporary obstruction cannot erase the learned atlas. Reacquisition uses a bounded accepted-view bank, is throttled and capped to `min(opt_global_evals, 768)` objective evaluations per call, and requires confirmed observations (normally two images; a consistent new-speed epoch uses the four-image path). `recovering` remains unaccepted while seeking or confirming a match. See [occlusion recovery](recovery.md). A recovered absolute pose produces `relocalized` with zero relative motion across the missing interval. The policy is an intentional behavior extension; use `rust_resilient : n` for the older permissive/reset behavior. v0.1.3 development also checks robust recent accepted-motion rates and delays atlas teaching after recovery; a low image score alone does not imply acceptance. No new config fields are required, and the legacy opt-out stays `rust_resilient : n`. It cannot recover hidden motion or guarantee recovery from every scene.
 
 The accelerated local search proposes candidates on a deterministic site subset and verifies the selected candidate/predictor against all valid sites. The reported complete score controls quality acceptance. Optimizer differences mean trajectories need not be byte-identical to upstream. Do not transfer an error threshold between engines without understanding their [error scales](output.md).
 
