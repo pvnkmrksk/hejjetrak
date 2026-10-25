@@ -140,6 +140,16 @@ pub fn from_bgra(
     bytes: &[u8],
     timestamp_ms: f64,
 ) -> Result<CameraFrame> {
+    if !(2..=8192).contains(&width) || !(2..=8192).contains(&height) {
+        return Err(Error(
+            "capture dimensions must be 2..8192 pixels per axis".into(),
+        ));
+    }
+    if !timestamp_ms.is_finite() || timestamp_ms < 0.0 {
+        return Err(Error(
+            "capture timestamp must be finite and nonnegative".into(),
+        ));
+    }
     let size = width
         .checked_mul(height)
         .filter(|n| *n <= 8_000_000)
@@ -197,6 +207,13 @@ mod tests {
         assert!((f.gray.pixels()[0] - 0.299).abs() < 1e-5);
         assert!(from_bgra(2, 2, 3, &[0; 24], 0.0).is_err());
         assert!(from_bgra(usize::MAX, 2, 8, &[], 0.0).is_err());
+        // Reject dimensions before entering the row loop: zero width used to
+        // allow an arbitrarily large height through the total-pixel check.
+        assert!(from_bgra(0, usize::MAX, 0, &[], 0.0).is_err());
+        assert!(from_bgra(8193, 2, 8193 * 4, &vec![0; 8193 * 8], 0.0).is_err());
+        for timestamp in [f64::NAN, f64::INFINITY, -1.] {
+            assert!(from_bgra(2, 2, 8, &[0; 16], timestamp).is_err());
+        }
         Ok(())
     }
     #[test]

@@ -17,11 +17,17 @@ A new instance selects the next existing numbered VR/BR config. After those are 
 
 Closing one native tracking window, including the first one opened, leaves the other sessions running. Each remaining window retains its source, clock, outputs and recording. Explicit application shutdown/quit closes all sessions; normal per-window close still observes unsaved-state and recording finalization rules.
 
+## Manage rigs from the app
+
+In current source, open **More → Rig manager** to see every running session. Each row opens that rig's **Settings** or its read-only **Full config** text. Review source IDs, calibration and output ports here before an experiment. Save changes through the inspector for that rig.
+
+**Start all** resumes paused sessions, replays finished files and retries sources that failed to open. A session being calibrated stays paused until its calibration is finished. **Open four rigs** creates the next saved VR/BR sessions; **Arrange in a grid** tiles the open windows. Published v0.1.3 uses the per-window controls and CLI grid launch below.
+
 ## A compact tiled grid
 
 ```sh
-./hejjetrak --windows 16 --grid 4x4
-./hejjetrak --config VR1.txt --window-size 360x260 --window-position=0,24
+./hejjetrac --windows 16 --grid 4x4
+./hejjetrac --config VR1.txt --window-size 360x260 --window-position=0,24
 ```
 
 Size and position use logical pixels. Without a size override, grid placement derives cells from the monitor. New windows otherwise place themselves beside existing ones. The supported native session count is bounded at sixteen.

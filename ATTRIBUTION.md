@@ -1,17 +1,21 @@
 # Attribution
 
+HejjéTrac was created by [Pavan Kumar Kaushik](https://github.com/pvnkmrksk). It is a modern Rust reworking of FicTrac, with upstream algorithms, conventions, examples and documentation openly credited below.
+
 | Material | Source and authors | License / use |
 |---|---|---|
 | FicTrac behavior, calibration/output conventions, reference documentation | [pvnkmrksk/fictrac](https://github.com/pvnkmrksk/fictrac), commit `10fc4472af1fc9062b9bf5a92738e835b98cc3ec`; originally R. J. D. Moore, Saul Thurrowgood and collaborators | CC BY-NC-SA 3.0; reference for this Rust rebuild; no C++ files included |
-| `examples/sample.mp4` | Same upstream, `sample/sample.mp4`; byte-identical to the user's supplied `/Users/pavan/Downloads/sample.mp4` | Distributed under upstream repository license; retained as regression fixture |
+| `examples/sample.mp4` | Same upstream, `sample/sample.mp4`; byte-identical to the supplied sample fixture | Distributed under upstream repository license; retained as regression fixture |
 | `examples/upstream-config.txt` | Same upstream, `sample/config.txt` | CC BY-NC-SA 3.0, unchanged |
 | `examples/rigs/BR1..BR4/config.txt` | Same upstream, `VR_array/VR1..VR4/config.txt`, copied under BR directory names | CC BY-NC-SA 3.0; contents unchanged |
 | `examples/benchmark/config.txt`, `upstream.dat`, `upstream.log` | User-supplied FicTrac 2.1.2 sample run on 2026-10-24 | Retained verbatim as local regression evidence; upstream project attribution applies |
 | `examples/sample.json` | Calibration derived from upstream's sample settings, fitted by this Rust engine | CC BY-NC-SA 3.0 |
-| `book/src/upstream-parameters.md`, `book/src/upstream-coordinates.md` | Same upstream commit, `doc/params.md` and `doc/coordinate_frames.md`; R. J. D. Moore, Saul Thurrowgood and collaborators | CC BY-NC-SA 3.0; reproduced with source/context notice and updated link targets; upstream-hosted coordinate illustration retains its original attribution |
-| `book/src/hardware.md` setup guidance | Upstream README hardware requirements and `doc/requirements.md` | CC BY-NC-SA 3.0; adapted in new wording and separated from this rebuild's actual platform/measurement evidence |
-| Native sample screenshots in `docs/images/` | Actual hejjetrak views of the attributed upstream `sample/sample.mp4` | Original application captures derived from the upstream fixture; no private live-camera imagery or generated mockups used as scientific evidence |
-| New Rust implementation, tests and documentation | Created for this project, 2026-10-24 | CC BY-NC-SA 3.0, preserving upstream terms and attribution for this first pass |
+| `book/src/upstream-parameters.md`, `book/src/upstream-coordinates.md`, `book/src/upstream-setup.md`, `book/src/upstream-data.md` | Same upstream commit, `doc/params.md`, `doc/coordinate_frames.md`, `doc/requirements.md` and `doc/data_header.txt`; R. J. D. Moore, Saul Thurrowgood and collaborators | CC BY-NC-SA 3.0; reproduced with source/context notice and updated link targets (the data header is verbatim); coordinate illustrations are preserved unchanged under `docs/images/upstream/` with source URLs and SHA-256 hashes in that directory's README |
+| `book/src/hardware.md` setup guidance | Upstream README hardware requirements and `doc/requirements.md`; additional primary references linked in the chapter | CC BY-NC-SA 3.0; adapted in new wording, with added practical FOV/illumination guidance |
+| `docs/images/upstream/coordinate-frames.png`, `lab-axes.png` | Original GitHub assets linked from upstream `doc/coordinate_frames.md`; R. J. D. Moore and FicTrac contributors | CC BY-NC-SA 3.0; unchanged copies, original links and hashes in [asset provenance](docs/images/upstream/README.md); coordinate figure is the upstream correction of the world axis in Moore et al. Fig. 1 |
+| `docs/images/vfov-measurement.svg` | Original HejjéTrac rectilinear-camera geometry diagram | CC BY-NC-SA 3.0 |
+| Native sample screenshots in `docs/images/` | Actual HejjéTrac views of the attributed upstream `sample/sample.mp4` | Original application captures derived from the upstream fixture; no private live-camera imagery or generated mockups used as scientific evidence |
+| Rust implementation, tests, original artwork and documentation | Pavan Kumar Kaushik and HejjéTrac contributors, 2026 | CC BY-NC-SA 3.0, preserving upstream terms and attribution |
 | Website/manual organization reference | [pvnkmrksk/rekkefly](https://github.com/pvnkmrksk/rekkefly), separate static landing page and chapter-based manual | Design reference only; no site implementation, artwork, measurements or fonts copied |
 | Architecture inspiration | [PhotoCraft architecture](https://github.com/storytold/photocraft/blob/main/docs/architecture.md) and [contributor guide](https://github.com/storytold/photocraft/blob/main/AGENTS.md), storytold/PhotoCraft contributors | Design reference only; no source or assets copied |
 

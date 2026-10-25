@@ -1,27 +1,37 @@
 # Summary
 
-[hejjetrak](introduction.md)
+[HejjéTrac](introduction.md)
 
-# Start here
+# Getting started
+
 - [Download and install](install.md)
-- [Your first session](quick-start.md)
 - [Experimental setup](hardware.md)
-
-# User manual
-- [The tracking window](desktop.md)
+- [Your first session](quick-start.md)
 - [Step-by-step calibration](calibration.md)
+
+# Coordinates, parameters and data
+
+- [FicTrac coordinate frames](upstream-coordinates.md)
+- [FicTrac complete parameter table](upstream-parameters.md)
+- [FicTrac 25-column data fields](upstream-data.md)
+- [Current configuration and extensions](configuration.md)
+- [Current output and transports](output.md)
+- [FicTrac original setup and algorithm guide](upstream-setup.md)
+
+# Using the application
+
+- [The tracking window](desktop.md)
 - [Camera capabilities](camera-controls.md)
 - [Video and offline tracking](video.md)
 - [Recording and files](recording.md)
 - [Several rigs](rigs.md)
 - [Occlusion recovery](recovery.md)
-- [Configuration reference](configuration.md)
-- [Measurement and transport reference](output.md)
 - [CLI reference](cli.md)
 - [AI agents and MCP](agent-control.md)
 - [Troubleshooting](troubleshooting.md)
 
 # Scientific and implementation reference
+
 - [Tracking-stage latency](tracking-performance.md)
 - [Pipeline performance](performance.md)
 - [Resource use and scheduling](resources.md)
@@ -30,11 +40,8 @@
 - [Architecture](architecture.md)
 - [Native UI design](ui-design.md)
 
-# Upstream reference
-- [FicTrac parameters (attributed)](upstream-parameters.md)
-- [FicTrac coordinate frames (attributed)](upstream-coordinates.md)
-
 # Project
+
 - [Release guide](releases.md)
 - [Building and contributing](development.md)
 - [Citation and license](citing.md)

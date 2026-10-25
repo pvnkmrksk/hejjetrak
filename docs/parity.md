@@ -1,4 +1,4 @@
-# Behavioral parity assessment — hejjetrak v0.1.3
+# Behavioral parity assessment — HejjéTrac v0.1.3
 
 Published [v0.1.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.3)
 passed all four [native release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40180700262),
@@ -7,6 +7,8 @@ on Windows, and 1,353 decoder tests on each platform. The official Apple Silicon
 archive passed strict signature/version checks, the complete sample comparison
 and native preview/recording inspection. Native hover/loupe pointer verification
 remains incomplete; physical camera and GUI coverage limits below still apply.
+
+Current source also includes live calibration previews, a multi-rig manager, system/light/dark appearance and stricter invalid-input checks. The [polish validation](validation.md#final-polish--2026-10-25) records native Mac interaction checks and the unchanged numerical comparison gates.
 
 Current source additionally uses the [accelerated local search](tracking-performance.md).
 It changes candidate generation while retaining complete error/quality scoring,

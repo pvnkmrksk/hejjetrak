@@ -1,4 +1,106 @@
-# hejjetrak validation evidence
+# HejjéTrac validation evidence
+
+## v0.1.4 local validation — 2026-10-25
+
+On Apple M2 Pro / macOS 27.0.1 arm64 / Rust 1.99.1 (LLVM 23.1.1),
+formatting, locked strict all-target Clippy and the complete locked workspace
+suite pass **188 tests across 26 suites**, zero failures. Four package tests and
+the download controller checks pass, including close-event races, new/legacy
+asset selection, launch instructions and automatic-download defaults. Numerical
+reference tolerances and decoder-oracle constants remain unchanged.
+
+Actual native pointer checks verified Calibrate again starts rim redraw,
+Diagnostics shows the full source and all saved geometry, and Full configuration
+opens the separate editor. Two rim marks remain unconnected; the third shows a
+circle immediately, a fourth refines it, and right-click removes a mark. Continue
+advances to exclusions; Keep saved advances to lab orientation. Guidance stays
+visible after the first click and the source image remains stationary. The
+[calibration screenshot](images/calibration.png) shows the rebuilt native UI.
+The magnifier's circle-only rendering is covered by render regressions; a native
+hover-only magnifier check remains incomplete.
+
+The release **120-frame** synthetic fixture retains component RMS
+**0.000304049695 rad** against the **0.003 rad** gate. The supplied **300-frame**
+video processes 299 tracked frames plus one initializing frame, with zero
+rejections. Path RMS is **0.0255938418 sphere rad**, heading RMS **0.0136514303
+rad**, and each rotation component passes the original **0.020 rad** gate.
+Serial descriptive runs report 0.76094 seconds inside the sample CLI pipeline
+and 0.76768 seconds external process wall time. These include source opening,
+decoding, tracking, output and finalization; they are fixture checks on this
+machine. [Inputs, hashes, toolchain, exact timings and results](benchmarks/polish-v014-20261025.json)
+retain the evidence.
+
+Browser checks at **1280 px** and **390 px** verify the landing page's muted
+looping autoplay (readyState 4), no horizontal overflow, the light manual and
+persistent reciprocal Website/GitHub links. The README download link carries
+`?download=1`; controller tests verify one automatic attachment selection and
+consumption of that intent. Unknown Mac hardware uses the clearly stated Apple
+Silicon default, with Intel and other platforms visible. Publication and the
+new official package are verified separately below when available. This local
+pass does not establish Windows/Linux GUI appearance or physical-camera capacity.
+
+## Final polish — 2026-10-25
+
+On the Apple M2 Pro / macOS 27.0.1 arm64 / Rust 1.99.1 (LLVM 23.1.1),
+`cargo fmt --all -- --check`, locked strict all-target Clippy and the complete
+locked workspace suite pass **184 tests across 26 suites**, with zero failures.
+Two package-format tests, download platform/controller regressions and **1,379
+internal website references across 34 HTML pages** also pass. No numerical
+reference tolerance or decoder-oracle constant was changed.
+
+The audit fixes invalid square marks outside the source image, uppercase legacy
+`Y` flag interpretation, a backward-half-line sphere intersection at extreme
+field of view, camera dimensions/timestamps before conversion, and bounded
+comparison-row reads before allocation. Regression coverage includes an
+independent visible-ray projection check and a real-video invalid-calibration
+edit that preserves config, source position and the next numeric row.
+
+The release **120-frame** known-motion demo passes component RMS
+**0.000304049695 rad** against the unchanged **0.003 rad** gate. The supplied
+**384×288, 300-frame** sample processes every frame: 299 tracked, one initializing,
+zero rejected. Reference path RMS is **0.0255938418 sphere rad**, heading RMS
+**0.0136514303 rad**; each rotation component remains below **0.020 rad**.
+The unchanged sample SHA-256 is
+`afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad`.
+
+Cases ran serially with recording and wire outputs disabled. One descriptive
+sample validation run reports **0.75128 seconds / 399.32 frames/s** inside the CLI
+pipeline, including source opening, decoding, tracking, data/quality output and
+finalization. External process wall time was **0.75685 seconds**. The synthetic
+pipeline reports **0.20600 seconds**, while its whole command, including fixture
+generation and accuracy verification, took **0.54101 seconds**. These are single
+fixture checks, not a new performance comparison. The release profile uses thin
+LTO and one codegen unit, without a target-CPU override. [Complete numerical
+results, hashes, toolchain and timing boundaries](benchmarks/polish-20261025.json)
+retain the evidence.
+
+Native Mac pointer checks placed two rim marks with no fitted outline, then
+confirmed the live outline on the third mark and refinement on the fourth.
+Continue advanced to saved Exclusions. The final plain Continue label was
+visually checked. Invalid drafts and cancellation from both running and paused
+sources are covered by regressions. Light mode, the separate inspector, About
+creator/attribution, full config disclosure and Start all were visually checked.
+Open four rigs created four actual sample-video windows with distinct 2×2 grid
+positions; the initially paused source retained frame 120 while the other three
+processed all 300 frames with identical endpoints. After the focus correction, reopening the manager from VR4 brought it forward; Start all then completed all four sample sessions at the same endpoint. This checks video sessions,
+not four physical cameras or sustained multi-camera capacity. Separate native
+magnifier hover behavior was not completed in this pass; its layout/source
+coordinate regressions remain in the suite.
+
+Actual native sample playback supplies the README GIF, website MP4 and preview.
+The website was inspected at **1280×900** and **390×844**, with no horizontal
+overflow. Playback reached readyState 4 with no media error, and the download
+chooser selected the published Mac asset, release version, size and SHA-256.
+This does not re-test Gatekeeper or SmartScreen. Native Windows/Linux runtime,
+camera and visual checks were not performed during this local pass.
+
+The local Mac archive is ad hoc signed and its extracted signature and CLI
+version are checked. It includes dependency notices and CITATION.cff. Publishing
+and notarization remain separate release steps. The local toolchain emitted a
+nonfatal missing-libLLVM warning while attempting its optional debug stripping;
+the optimized binaries build and run. The existing `block` dependency also emits
+a future-compiler compatibility notice; these environment/dependency warnings
+were not suppressed.
 
 ## v0.1.3 release validation — 2026-10-25
 

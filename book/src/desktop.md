@@ -10,7 +10,8 @@ The regular view keeps experiment monitoring separate from configuration. It sho
 - **Record** starts or stops a take immediately. The adjacent selection chooses data only, raw source, processed diagnostics or both videos. Configured `save_raw` and `save_debug` still apply when recording starts from config.
 - **Source** opens the camera list and video selection. Drag-and-drop selects a video without a shell command.
 - **Settings** opens a separate native inspector. Calibration, exact config text, numerical options and output destinations live there.
-- **Diagnostics** reveals the traditional six-panel view. Full-source view and calibration guides are separate display selections; they do not change tracking.
+- **More** in current source opens the rig manager, with per-rig config views, **Start all** and grid arrangement. **More → Appearance** offers System, Light and Dark themes; **About HejjéTrac** gives author and license details.
+- **Diagnostics** shows the complete input with the saved calibration, followed by the traditional numerical panels. **Redraw ball**, **Redraw exclusions** and **Redraw lab** replace a single layer. **Full configuration…** opens the exact current config text.
 
 Hover the bundled Lucide icons for their actions. Small windows hide secondary
 controls; narrower than 160 pixels or shorter than 120, the preview hides its

@@ -25,6 +25,9 @@ pub struct Session {
     pub error: String,
     pub source_edit: String,
     pub show_settings: bool,
+    pub show_config_text: bool,
+    pub show_about: bool,
+    pub show_rigs: bool,
     pub show_diagnostics: bool,
     pub show_overlays: bool,
     pub cameras: Vec<fictrac_camera::CameraInfo>,
@@ -41,6 +44,7 @@ pub struct Session {
     pub edit_existing: bool,
     pub calibration_review: bool,
     pub calibration_redraw: bool,
+    pub calibration_previous_paused: Option<bool>,
     pub magnifier: bool,
     pub points: Vec<[f64; 2]>,
     pub square_slots: Option<[Option<[f64; 2]>; 4]>,
@@ -83,6 +87,9 @@ impl Session {
             error: String::new(),
             source_edit,
             show_settings: false,
+            show_config_text: false,
+            show_about: false,
+            show_rigs: false,
             show_diagnostics: false,
             show_overlays: false,
             cameras: fictrac_camera::list_cameras().unwrap_or_default(),
@@ -99,6 +106,7 @@ impl Session {
             edit_existing: false,
             calibration_review: true,
             calibration_redraw: false,
+            calibration_previous_paused: None,
             magnifier: true,
             points: vec![],
             square_slots: None,
@@ -253,12 +261,12 @@ impl Session {
         };
         if width >= 900.0 {
             format!(
-                "{} · ZMQ {zmq} · {short_source} · UDP {udp} · hejjetrak · {source}",
+                "{} · ZMQ {zmq} · {short_source} · UDP {udp} · HejjéTrac · {source}",
                 self.display_name()
             )
         } else if width >= 650.0 {
             format!(
-                "{} · ZMQ {zmq} · {short_source} · UDP {udp} · hejjetrak",
+                "{} · ZMQ {zmq} · {short_source} · UDP {udp} · HejjéTrac",
                 self.display_name()
             )
         } else {

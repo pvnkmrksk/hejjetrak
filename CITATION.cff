@@ -1,0 +1,47 @@
+cff-version: 1.2.0
+message: >-
+  If you use HejjéTrac in research, cite the release or commit you used and
+  the original FicTrac method listed in references. Use a version-specific
+  Zenodo DOI when one is available for your release.
+type: software
+title: "HejjéTrac: native spherical-motion tracking"
+abstract: >-
+  A native Rust reworking of FicTrac for tracking patterned spherical
+  treadmills and reconstructing fictive animal paths. Includes a desktop
+  application, guided calibration, independent rig sessions, recording,
+  live outputs, a command-line interface and local agent protocols.
+authors:
+  - family-names: Kaushik
+    given-names: Pavan Kumar
+repository-code: "https://github.com/pvnkmrksk/hejjetrak"
+url: "https://pvnkmrksk.github.io/hejjetrak/"
+license: CC-BY-NC-SA-3.0
+keywords:
+  - hejjetrac
+  - spherical treadmill
+  - motion tracking
+  - FicTrac
+  - animal behavior
+  - Rust
+references:
+  - type: article
+    title: "FicTrac: a visual method for tracking spherical motion and generating fictive animal paths"
+    authors:
+      - family-names: Moore
+        given-names: R. J. D.
+      - family-names: Taylor
+        given-names: G. J.
+      - family-names: Paulk
+        given-names: A. C.
+      - family-names: Pearson
+        given-names: T.
+      - family-names: van Swinderen
+        given-names: B.
+      - family-names: Srinivasan
+        given-names: M. V.
+    journal: Journal of Neuroscience Methods
+    volume: 225
+    start: 106
+    end: 119
+    year: 2014
+    doi: "10.1016/j.jneumeth.2014.01.010"

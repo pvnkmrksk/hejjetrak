@@ -1,24 +1,24 @@
-# hejjetrak-cli(1)
+# hejjetrac-cli(1)
 
 ## Name
 
-`hejjetrak-cli` — headless spherical-motion tracking, calibration and local machine control.
+`hejjetrac-cli` — headless spherical-motion tracking, calibration and local machine control.
 
-Release packages use `hejjetrak-cli`; Cargo's compatibility binary is named `fictrac`. The desktop executable is `hejjetrak` (Cargo: `fictrac-desktop`).
+Release packages use `hejjetrac-cli` (with the earlier `hejjetrak-cli` name retained as an alias); Cargo's compatibility binary is named `fictrac`. The desktop executable is `hejjetrac` (Cargo: `fictrac-desktop`).
 
 ## Synopsis
 
 ```text
-hejjetrak-cli track --config FILE --input VIDEO --output DIRECTORY [--max-frames N]
-hejjetrak-cli CONFIG.txt [--max-frames N] [--output DIRECTORY]
-hejjetrak-cli inspect VIDEO [--decode] [--preview FILE.pgm]
-hejjetrak-cli compare --reference FILE.dat --candidate FILE.dat [--report FILE.json]
-hejjetrak-cli config --config FILE [--set KEY=VALUE ...] [--output NEW_FILE]
-hejjetrak-cli calibrate --width N --height N --vfov DEGREES --points JSON --output FILE
-hejjetrak-cli demo --output NEW_DIRECTORY [--frames N]
-hejjetrak-cli schema
-hejjetrak-cli agent
-hejjetrak-cli mcp
+hejjetrac-cli track --config FILE --input VIDEO --output DIRECTORY [--max-frames N]
+hejjetrac-cli CONFIG.txt [--max-frames N] [--output DIRECTORY]
+hejjetrac-cli inspect VIDEO [--decode] [--preview FILE.pgm]
+hejjetrac-cli compare --reference FILE.dat --candidate FILE.dat [--report FILE.json]
+hejjetrac-cli config --config FILE [--set KEY=VALUE ...] [--output NEW_FILE]
+hejjetrac-cli calibrate --width N --height N --vfov DEGREES --points JSON --output FILE
+hejjetrac-cli demo --output NEW_DIRECTORY [--frames N]
+hejjetrac-cli schema
+hejjetrac-cli agent
+hejjetrac-cli mcp
 ```
 
 Use `--help` or a command's `--help` for the current generated options. Source builds use `cargo run -p fictrac --release --locked -- COMMAND ...`.
@@ -39,7 +39,7 @@ A positional legacy config maps to `track`, selecting its source and, when `--ou
 
 ## Machine interfaces
 
-`schema` prints typed operation discovery and JSON Schema. `agent` serves one JSON request/response per line on stdin/stdout. `mcp` exposes the same controller through local MCP stdio JSON-RPC. Diagnostic logs stay out of protocol stdout. There is no cloud service or model API requirement. Native displayed sessions use `hejjetrak --control-stdio`; queued responses require status polling. See [agent control](agent-control.md).
+`schema` prints typed operation discovery and JSON Schema. `agent` serves one JSON request/response per line on stdin/stdout. `mcp` exposes the same controller through local MCP stdio JSON-RPC. Diagnostic logs stay out of protocol stdout. There is no cloud service or model API requirement. Native displayed sessions use `hejjetrac --control-stdio`; queued responses require status polling. See [agent control](agent-control.md).
 
 ## Exit status and errors
 
@@ -48,8 +48,8 @@ Successful commands return zero. Invalid arguments, malformed media/config, unsa
 ## Examples
 
 ```sh
-./hejjetrak-cli track --config examples/benchmark/config.txt --input examples/sample.mp4 --output runs/check-001
-./hejjetrak-cli compare --reference examples/benchmark/upstream.dat --candidate runs/check-001/tracking.dat
-./hejjetrak-cli schema
-./hejjetrak-cli agent < examples/agents/sample-session.jsonl
+./hejjetrac-cli track --config examples/benchmark/config.txt --input examples/sample.mp4 --output runs/check-001
+./hejjetrac-cli compare --reference examples/benchmark/upstream.dat --candidate runs/check-001/tracking.dat
+./hejjetrac-cli schema
+./hejjetrac-cli agent < examples/agents/sample-session.jsonl
 ```

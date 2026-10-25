@@ -9,6 +9,38 @@ use fictrac_core::Config;
 use fictrac_io::{load_config_text, parameter_description};
 use glam::{DQuat, DVec3};
 const YELLOW: Color32 = Color32::from_rgb(230, 235, 35);
+const ACCENT: Color32 = Color32::from_rgb(64, 205, 184);
+
+pub(crate) fn configure_appearance(ctx: &egui::Context) {
+    ctx.set_theme(egui::ThemePreference::System);
+    ctx.all_styles_mut(|style| {
+        style.spacing.button_padding = egui::vec2(10.0, 6.0);
+        style.visuals.selection.bg_fill = if style.visuals.dark_mode {
+            Color32::from_rgb(22, 104, 98)
+        } else {
+            Color32::from_rgb(182, 233, 225)
+        };
+        style.visuals.hyperlink_color = if style.visuals.dark_mode {
+            ACCENT
+        } else {
+            Color32::from_rgb(0, 109, 107)
+        };
+        style.visuals.warn_fg_color = if style.visuals.dark_mode {
+            Color32::from_rgb(238, 180, 80)
+        } else {
+            Color32::from_rgb(145, 85, 12)
+        };
+        style.visuals.error_fg_color = if style.visuals.dark_mode {
+            Color32::from_rgb(245, 110, 120)
+        } else {
+            Color32::from_rgb(185, 35, 55)
+        };
+        if style.visuals.dark_mode {
+            style.visuals.panel_fill = Color32::from_rgb(22, 29, 39);
+            style.visuals.window_fill = Color32::from_rgb(26, 34, 45);
+        }
+    });
+}
 #[derive(Clone, Copy)]
 struct PreviewChrome {
     toolbar: bool,
@@ -112,9 +144,9 @@ impl Session {
                 };
             }
             if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Escape)) {
-                self.tool = Tool::Inspect;
-                self.points.clear();
-                self.square_slots = None;
+                if self.tool != Tool::Inspect {
+                    self.cancel_calibration();
+                }
                 self.show_settings = false;
             }
         }
@@ -155,6 +187,13 @@ impl Session {
                 self.status_bar(ui);
             });
         }
+        if self.tool != Tool::Inspect {
+            egui::TopBottomPanel::top(egui::Id::new(("calibration-guide", self.id)))
+                .show(ctx, |ui| self.calibration_banner(ui));
+        } else if self.show_diagnostics {
+            egui::TopBottomPanel::top(egui::Id::new(("diagnostic-calibration", self.id)))
+                .show(ctx, |ui| self.diagnostic_calibration_controls(ui));
+        }
         self.refresh_textures(ctx);
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE.fill(Color32::from_rgb(12, 15, 19)))
@@ -180,7 +219,7 @@ impl Session {
                 .map(|(_, inner)| inner)
                 .unwrap_or(egui::vec2(440.0, 640.0));
             let mut builder = egui::ViewportBuilder::default()
-                .with_title(format!("hejjetrak · {} configuration", self.display_name()))
+                .with_title(format!("HejjéTrac · {} configuration", self.display_name()))
                 .with_inner_size(inner)
                 .with_min_inner_size([340.0_f32.min(inner.x), 360.0_f32.min(inner.y)]);
             if let Some((reserved, _)) = layout {
@@ -216,6 +255,26 @@ impl Session {
             if close {
                 self.show_settings = false;
             }
+        }
+        if self.show_about {
+            egui::Modal::new(egui::Id::new(("about", self.id))).show(ctx, |ui| {
+                ui.set_max_width(390.0);
+                ui.heading("HejjéTrac");
+                ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
+                ui.add_space(8.0);
+                ui.label("Spherical motion tracking for the modern lab.");
+                ui.label("Created by Pavan Kumar Kaushik.");
+                ui.hyperlink_to("GitHub · source and releases", "https://github.com/pvnkmrksk/hejjetrak");
+                ui.hyperlink_to("User guide", "https://pvnkmrksk.github.io/hejjetrak/manual/");
+                ui.separator();
+                ui.label("Inspired by FicTrac, developed by R. J. D. Moore and collaborators. Rebuilt in Rust with native windows, guided calibration and multiple independent rigs.");
+                ui.hyperlink_to("FicTrac · Moore et al. (2014)", "https://doi.org/10.1016/j.jneumeth.2014.01.010");
+                ui.small("FicTrac-derived work: CC BY-NC-SA 3.0. Bundled Lucide icons: ISC / Feather MIT. Full notices are included with the application.");
+                ui.add_space(8.0);
+                if ui.button("Done").clicked() {
+                    self.show_about = false;
+                }
+            });
         }
         ctx.request_repaint_after(std::time::Duration::from_millis(
             if self.snapshot.paused || self.snapshot.ended || self.worker.is_none() {
@@ -324,11 +383,13 @@ impl Session {
         let quality = self.snapshot.row.as_ref().is_some_and(|r| r.accepted);
         let overloaded = self.snapshot.headroom_percent < 0.0;
         let color = if self.snapshot.ended {
-            Color32::GRAY
+            ui.visuals().weak_text_color()
         } else if !quality {
-            Color32::from_rgb(238, 180, 80)
+            ui.visuals().warn_fg_color
         } else if overloaded {
-            Color32::LIGHT_RED
+            ui.visuals().error_fg_color
+        } else if !ui.visuals().dark_mode {
+            Color32::from_rgb(0, 115, 88)
         } else {
             Color32::from_rgb(96, 210, 158)
         };
@@ -392,14 +453,14 @@ impl Session {
                 ));
             }
             if !self.error.is_empty() {
-                ui.colored_label(Color32::LIGHT_RED, "!")
+                ui.colored_label(ui.visuals().error_fg_color, "!")
                     .on_hover_text(&self.error);
             }
             if !self.fallback_notice.is_empty() {
                 ui.label("i").on_hover_text(&self.fallback_notice);
             }
             if self.snapshot.recording {
-                ui.colored_label(Color32::LIGHT_RED, "REC").on_hover_text(
+                ui.colored_label(ui.visuals().error_fg_color, "REC").on_hover_text(
                     self.snapshot
                         .recording_directory
                         .as_ref()
@@ -426,6 +487,20 @@ impl Session {
         }
         if ui.button("Open four windows").clicked() {
             self.spawn_request = 3;
+            ui.close();
+        }
+        if ui
+            .button("Rig manager…")
+            .on_hover_text(
+                "See each session and its config, resume them together or open four rig windows.",
+            )
+            .clicked()
+        {
+            self.show_rigs = true;
+            ui.ctx().send_viewport_cmd_to(
+                egui::ViewportId::from_hash_of("rig-manager"),
+                egui::ViewportCommand::Focus,
+            );
             ui.close();
         }
         ui.checkbox(&mut self.full_image, "Full source image")
@@ -461,14 +536,113 @@ impl Session {
             };
             ui.close();
         }
+        ui.separator();
+        ui.menu_button("Appearance", |ui| {
+            egui::widgets::global_theme_preference_buttons(ui);
+        });
+        if ui.button("About HejjéTrac").clicked() {
+            self.show_about = true;
+            ui.close();
+        }
+    }
+
+    fn calibration_banner(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal_wrapped(|ui| {
+            ui.colored_label(ui.visuals().hyperlink_color, match self.tool {
+                Tool::Rim => "1 / 3 · Ball outline",
+                Tool::Exclude => "2 / 3 · Exclusions",
+                Tool::Square => "3 / 3 · Lab orientation",
+                _ => "Calibration",
+            });
+            let progress = self.calibration_progress();
+            let ready = self.calibration_review || (self.edit_existing && progress.is_ok()) || (
+                self.points.len() >= if self.tool == Tool::Square { 4 } else { 3 }
+                && progress.is_ok()
+            );
+            let label = if self.tool == Tool::Square { "Finish & resume" } else { "Continue" };
+            if ui.add_enabled(ready, egui::Button::new(label)).on_hover_text("Use the current valid fit and go to the next step. Save configuration afterward to keep it for future launches.").clicked() {
+                let result = self.advance_calibration_step();
+                self.report(result);
+            }
+            if ui.small_button("Settings").clicked() {
+                self.show_settings = true;
+            }
+            if ui.small_button("Cancel").on_hover_text("Discard this draft and restore the previous playback state.").clicked() {
+                self.cancel_calibration();
+            }
+        });
+        match self.calibration_progress() {
+            Ok(progress) => {
+                ui.small(progress);
+            }
+            Err(error) => {
+                ui.colored_label(ui.visuals().warn_fg_color, error);
+            }
+        }
+        if !self.calibration_review && !self.edit_existing {
+            ui.label(match self.tool {
+                Tool::Rim => "Click at least 3 well-separated places on the ball edge. The circle appears automatically; add more marks to refine it.",
+                Tool::Exclude => "Click around the animal, holder or reflection to ignore. Use 3 or more corners for each region.",
+                Tool::Square => "Mark a square on the lab plane in order: top left, top right, bottom right, bottom left. Check the coloured axes after the fourth click.",
+                _ => "",
+            });
+            ui.horizontal_wrapped(|ui| {
+                ui.small("Left-click to add · right-click a mark to remove · Esc to cancel");
+                if ui.small_button("Start this layer over").clicked() {
+                    self.points.clear();
+                    self.square_slots = None;
+                }
+                if ui
+                    .small_button(if self.tool == Tool::Square {
+                        "Keep saved & finish"
+                    } else {
+                        "Keep saved & continue"
+                    })
+                    .on_hover_text("Discard this layer's draft and keep its saved calibration.")
+                    .clicked()
+                {
+                    let result = self.choose_calibration_action("keep");
+                    self.report(result);
+                }
+            });
+        }
+    }
+    fn diagnostic_calibration_controls(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal_wrapped(|ui| {
+            ui.label("Saved calibration");
+            for (label, tool) in [
+                ("Redraw ball", Tool::Rim),
+                ("Redraw exclusions", Tool::Exclude),
+                ("Redraw lab", Tool::Square),
+            ] {
+                if ui.button(label).on_hover_text("Pause the source and replace just this layer. The saved setup stays intact until Continue.").clicked() {
+                    self.redraw_calibration(tool);
+                }
+            }
+            if ui.button("Full configuration…").clicked() {
+                self.show_config_text = true;
+                self.show_settings = true;
+            }
+        });
     }
     fn calibration_settings(&mut self, ui: &mut egui::Ui) {
         ui.heading("Calibration");
+        self.camera_geometry_help(ui);
         if self.tool == Tool::Inspect {
-            ui.label("Review the saved setup one step at a time. Keep what is correct, edit a mark, or redraw just that step.");
-            if ui.button("Calibrate again…").on_hover_text("Pause this source and begin with the saved ball outline. No configuration changes until an edit is applied.").clicked() {
-                self.tool = Tool::Rim; self.begin_calibration_step();
+            ui.label("Redraw the ball outline, excluded regions and lab orientation in the preview. Keep any saved layer that is already correct.");
+            if ui.button("Calibrate again…").on_hover_text("Pause this source and immediately place new ball-edge marks. Continue applies each valid layer.").clicked() {
+                self.redraw_calibration(Tool::Rim);
             }
+            ui.horizontal_wrapped(|ui| {
+                for (label, tool) in [
+                    ("Redraw exclusions", Tool::Exclude),
+                    ("Redraw lab", Tool::Square),
+                ] {
+                    if ui.button(label).clicked() {
+                        self.redraw_calibration(tool);
+                    }
+                }
+            });
             ui.checkbox(&mut self.show_overlays, "Inspect all saved outlines")
                 .on_hover_text(
                     "Show the current rim, exclusions and lab axes without editing them.",
@@ -483,7 +657,7 @@ impl Session {
                         "Apply or cancel the current draft before changing calibration steps"
                             .into();
                 } else {
-                    self.begin_calibration_step();
+                    self.redraw_calibration(self.tool);
                 }
             }
             ui.separator();
@@ -513,24 +687,40 @@ impl Session {
             } else {
                 if self.edit_existing {
                     ui.label("Drag a saved mark to move it. Right-click a mark to remove it. Invalid edits leave the saved geometry intact.");
-                    if ui.button("Continue with these edits").clicked() {
+                    if ui
+                        .add_enabled(
+                            self.calibration_progress().is_ok(),
+                            egui::Button::new("Continue with these edits"),
+                        )
+                        .clicked()
+                    {
                         let result = self.advance_calibration_step();
                         self.report(result);
                     }
                 } else {
                     ui.label(match self.tool {
                         Tool::Rim => {
-                            "Click at least three well-separated points on the ball boundary."
+                            "Click around the visible ball edge. The outline fits automatically from the third mark; add more marks to refine it."
                         }
                         Tool::Exclude => {
-                            "Click around the region to ignore. Enter closes this polygon."
+                            "Click around a region to ignore. Its closed boundary appears from the third mark. Continue uses the region."
                         }
-                        Tool::Square => "Click square corners in order: TL → TR → BR → BL.",
+                        Tool::Square => "Click square corners in order: top left, top right, bottom right, bottom left. The lab axes appear after the fourth mark.",
                         _ => "Choose a calibration step.",
                     });
                     ui.small(if self.calibration_redraw { "Replacement draft: saved marks are hidden here and remain in the config until you apply a valid replacement." } else { "New region: existing exclusions remain unchanged." });
+                    match self.calibration_progress() {
+                        Ok(progress) => {
+                            ui.colored_label(ui.visuals().hyperlink_color, progress);
+                        }
+                        Err(error) => {
+                            ui.colored_label(ui.visuals().warn_fg_color, error);
+                        }
+                    }
                     ui.horizontal_wrapped(|ui| {
-                        if ui.add_enabled(!self.points.is_empty(), egui::Button::new("Apply draft")).on_hover_text("Validate and replace only this step in one undoable edit.").clicked() { let result = self.finish_points(); self.report(result); }
+                        let valid = !self.points.is_empty() && self.calibration_draft_document().is_ok();
+                        if ui.add_enabled(valid, egui::Button::new(if self.tool == Tool::Square { "Finish & resume" } else { "Continue" })).on_hover_text("Use the automatic fit and continue. This step becomes one undoable edit.").clicked() { let result = self.advance_calibration_step(); self.report(result); }
+                        if self.tool == Tool::Exclude && ui.add_enabled(valid, egui::Button::new("Add this region")).on_hover_text("Use this polygon and immediately draw another region.").clicked() { let result = self.finish_points().and_then(|_| self.choose_calibration_action("add")); self.report(result); }
                         if ui.button("Clear draft points").clicked() { self.points.clear(); self.square_slots = None; }
                         if self.tool == Tool::Exclude && self.calibration_redraw && self.points.is_empty() && ui.button("Use no exclusions").on_hover_text("Remove all exclusion polygons as one undoable edit; keep the ball and lab calibration.").clicked() {
                             let result = self.commit_polygons(&[]).and_then(|_| self.apply()); if result.is_ok() { self.calibration_redraw = false; self.calibration_review = true; } self.report(result);
@@ -538,7 +728,7 @@ impl Session {
                     });
                 }
                 if ui
-                    .button("Back to saved review / cancel draft")
+                    .button("Review saved layer / discard draft")
                     .on_hover_text(
                         "Discard uncommitted draft points. Applied edits remain available in Undo.",
                     )
@@ -578,6 +768,51 @@ impl Session {
                         let result = fictrac_io::rescale_calibration_reference(&doc, image.width, image.height).map_err(|e| e.to_string()).map(|next| self.edit(next.text().to_owned())); self.report(result);
                     }
                 }
+            }
+        });
+    }
+
+    fn camera_geometry_help(&mut self, ui: &mut egui::Ui) {
+        let Ok(doc) = self.document() else {
+            return;
+        };
+        let raw_vfov = doc.get("vfov").unwrap_or("45");
+        let vfov = raw_vfov.parse::<f64>().ok();
+        let projection = if doc.boolean("fisheye") {
+            "equidistant fisheye"
+        } else {
+            "pinhole"
+        };
+        ui.small(format!(
+            "Camera: {} vertical field of view · {projection}",
+            vfov.filter(|angle| angle.is_finite())
+                .map(|angle| format!("{angle:.2}°"))
+                .unwrap_or_else(|| "invalid".into())
+        ));
+        if !vfov.is_some_and(|angle| angle.is_finite() && (1.0..170.0).contains(&angle)) {
+            ui.colored_label(
+                ui.visuals().warn_fg_color,
+                "Set a vertical field of view between 1° and 170° before fitting marks.",
+            );
+        }
+        ui.collapsing("Check field of view before calibrating", |ui| {
+            ui.label("Use the vertical lens angle, not a diagonal or horizontal specification. Measure it with the final lens, focus, camera resolution and crop before mounting the rig.");
+            ui.small("For a pinhole lens, view a flat ruler straight on: vfov = 2 × atan(visible height ÷ (2 × lens-to-ruler distance)). Use the same units for both lengths. A fisheye lens needs its calibrated projection model.");
+            ui.small("A wrong field of view can still produce a neat-looking outline while giving incorrect sphere geometry. Changing optical zoom or sensor crop requires calibration again.");
+            let mut angle = raw_vfov.to_owned();
+            ui.horizontal(|ui| {
+                ui.label("Vertical field of view (degrees)");
+                if ui.add(egui::TextEdit::singleline(&mut angle).desired_width(80.0)).changed() {
+                    let result = self.fields(&[("vfov", angle)]);
+                    self.report(result);
+                }
+            });
+            if let Some(reference) = doc.get("rust_calibration_size")
+                && let Some(image) = &self.snapshot.image
+                && let Ok([width, height]) = doc.vector::<[usize; 2]>("rust_calibration_size")
+                && (width != image.width || height != image.height)
+            {
+                ui.colored_label(ui.visuals().warn_fg_color, format!("Saved reference {reference} differs from this {} × {} source. Review the resolution reference below.", image.width, image.height));
             }
         });
     }
@@ -654,7 +889,7 @@ impl Session {
                 }
             });
         if !self.camera_error.is_empty() {
-            ui.colored_label(Color32::LIGHT_RED, &self.camera_error);
+            ui.colored_label(ui.visuals().error_fg_color, &self.camera_error);
         }
         ui.separator();
         if ui
@@ -734,7 +969,7 @@ impl Session {
         });
         if self.disk_conflict {
             ui.colored_label(
-                Color32::YELLOW,
+                ui.visuals().warn_fg_color,
                 "File changed on disk; save conflict preserved.",
             );
             if ui.button("Reload disk version").clicked()
@@ -745,6 +980,15 @@ impl Session {
                     self.report(result);
                 };
             }
+        }
+        if self.show_config_text {
+            if ui.button("← Settings").clicked() {
+                self.show_config_text = false;
+            }
+            ui.heading("Full configuration");
+            ui.small("Current configuration text. Save keeps changes for the next launch; Apply uses them in this session.");
+            self.config_text(ui);
+            return;
         }
         egui::CollapsingHeader::new("Source & camera").show(ui, |ui| {
             self.source_controls(ui);
@@ -818,7 +1062,7 @@ impl Session {
                 }
             }
             Err(error) => {
-                ui.colored_label(Color32::LIGHT_RED, error);
+                ui.colored_label(ui.visuals().error_fg_color, error);
             }
         }
         egui::CollapsingHeader::new("Exact config text").show(ui, |ui| {
@@ -844,7 +1088,7 @@ impl Session {
             }
         });
         if !self.error.is_empty() {
-            ui.colored_label(Color32::LIGHT_RED, &self.error);
+            ui.colored_label(ui.visuals().error_fg_color, &self.error);
         }
     }
     fn cycle_square(&mut self) -> Result<(), String> {
@@ -1002,7 +1246,7 @@ value}
     }
     fn image_uv(&self) -> Rect {
         let full = Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0));
-        if self.full_image {
+        if self.full_image || self.show_diagnostics {
             return full;
         }
         let Some(image) = &self.snapshot.image else {
@@ -1395,20 +1639,24 @@ value}
                     ui.close();
                 }
                 if ui.button("Calibrate again…").clicked() {
-                    self.show_settings = true;
-                    self.tool = Tool::Rim;
-                    self.begin_calibration_step();
+                    self.redraw_calibration(Tool::Rim);
                     ui.close();
                 }
             });
         }
+        if self.tool != Tool::Inspect && !self.calibration_review {
+            response.clone().on_hover_text("Left-click to add a mark. Right-click the nearest mark to remove it. Esc cancels this draft.");
+        }
         let painter = ui.painter_at(rect);
+        let show_guides = self.show_overlays || self.show_diagnostics;
         let saved_visible = !self.calibration_redraw;
+        let draft_config = self.calibration_preview_config().ok().flatten();
+        let geometry_visible = saved_visible || draft_config.is_some();
         let mut rim = vec![];
         let mut polygons = vec![];
         let mut square = vec![];
         let mut square_plane = "xy".to_owned();
-        if (self.show_overlays || self.tool != Tool::Inspect)
+        if (show_guides || self.tool != Tool::Inspect)
             && let Ok(doc) = self.document()
         {
             let key = doc.get("c2a_src").unwrap_or("c2a_cnrs_xy");
@@ -1426,10 +1674,8 @@ value}
                     .collect::<Vec<_>>();
             }
         }
-        if (self.show_overlays
-            || self.tool != Tool::Inspect
-            || !self.snapshot.contact_trace.is_empty())
-            && let Ok(config) = self.core_config()
+        if (show_guides || self.tool != Tool::Inspect || !self.snapshot.contact_trace.is_empty())
+            && let Ok(config) = draft_config.map(Ok).unwrap_or_else(|| self.core_config())
         {
             let centre = DVec3::from_array(config.sphere.centre);
             let f = h * 0.5 / (config.vfov_deg.to_radians() * 0.5).tan();
@@ -1445,8 +1691,7 @@ value}
             let geometry = fictrac_core::Geometry::new(config.clone()).ok();
             let outline: Vec<_> = (0..=100)
                 .filter(|_| {
-                    saved_visible
-                        && (self.show_overlays || matches!(self.tool, Tool::Rim | Tool::Edit))
+                    geometry_visible && (show_guides || matches!(self.tool, Tool::Rim | Tool::Edit))
                 })
                 .filter_map(|i| {
                     let a = i as f64 * std::f64::consts::TAU / 100.0;
@@ -1457,8 +1702,7 @@ value}
                         .map(to_screen)
                 })
                 .collect();
-            if saved_visible && (self.show_overlays || matches!(self.tool, Tool::Rim | Tool::Edit))
-            {
+            if geometry_visible && (show_guides || matches!(self.tool, Tool::Rim | Tool::Edit)) {
                 painter.add(egui::Shape::line(
                     outline,
                     Stroke::new(1.3_f32, Color32::LIGHT_GREEN),
@@ -1491,9 +1735,7 @@ value}
                     last = pixel;
                 }
             }
-            if saved_visible
-                && (self.show_overlays || matches!(self.tool, Tool::Square | Tool::Edit))
-            {
+            if geometry_visible && (show_guides || matches!(self.tool, Tool::Square | Tool::Edit)) {
                 for (axis, color, label) in [
                     (DVec3::X, Color32::RED, "X forward"),
                     (DVec3::Y, Color32::GREEN, "Y right"),
@@ -1514,8 +1756,7 @@ value}
                 }
             }
         }
-        if saved_visible && (self.show_overlays || matches!(self.tool, Tool::Exclude | Tool::Edit))
-        {
+        if saved_visible && (show_guides || matches!(self.tool, Tool::Exclude | Tool::Edit)) {
             for polygon in &polygons {
                 let mut pts: Vec<_> = polygon.iter().map(|p| to_screen(*p)).collect();
                 if let Some(first) = pts.first().copied() {
@@ -1543,7 +1784,7 @@ value}
             }
         }
         if saved_visible
-            && (self.show_overlays || self.tool == Tool::Square || self.tool == Tool::Edit)
+            && (show_guides || self.tool == Tool::Square || self.tool == Tool::Edit)
             && !(self.tool == Tool::Square && self.square_slots.is_some())
             && let Ok(doc) = self.document()
         {
@@ -1599,11 +1840,12 @@ value}
                         .line_segment([to_screen(a), to_screen(b)], Stroke::new(2.0_f32, YELLOW));
                 }
             }
-        } else if preview.len() > 1 {
-            painter.add(egui::Shape::line(
-                preview.clone(),
-                Stroke::new(2.0_f32, YELLOW),
-            ));
+        } else if matches!(self.tool, Tool::Exclude | Tool::Square) && preview.len() > 1 {
+            let mut boundary = preview.clone();
+            if self.tool == Tool::Exclude && boundary.len() >= 3 {
+                boundary.push(boundary[0]);
+            }
+            painter.add(egui::Shape::line(boundary, Stroke::new(2.0_f32, YELLOW)));
         }
         for p in preview {
             painter.circle_filled(p, 4.0, YELLOW);
@@ -1723,7 +1965,7 @@ value}
                         self.edit_existing = false;
                         self.calibration_review = false;
                         self.calibration_redraw = true;
-                        self.status="Draft rim: add points, then Fit; saved calibration retained until valid".into();
+                        self.status="Add a third rim point for the live fit; saved calibration remains intact until Continue".into();
                     }
                 } else if let Some(p) = polygons.get_mut(poly - 1) {
                     p.remove(index);
@@ -1850,20 +2092,12 @@ value}
                     }
                     self.points.push(to_source(pos));
                 }
-                if self.tool == Tool::Square && self.points.len() == 4 {
-                    {
-                        let result = self.finish_points();
-                        self.report(result);
-                    };
-                }
             }
-            if response.double_clicked()
-                || ui.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Enter))
+            if !ui.ctx().wants_keyboard_input()
+                && ui.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Enter))
             {
-                {
-                    let result = self.finish_points();
-                    self.report(result);
-                };
+                let result = self.advance_calibration_step();
+                self.report(result);
             }
         }
     }
@@ -1977,7 +2211,7 @@ value}
                             .line_segment([to_lens(a), to_lens(b)], Stroke::new(2.0_f32, YELLOW));
                     }
                 }
-            } else if self.points.len() > 1 {
+            } else if matches!(self.tool, Tool::Exclude | Tool::Square) && self.points.len() > 1 {
                 clipped.add(egui::Shape::line(
                     self.points.iter().map(|p| to_lens(*p)).collect(),
                     Stroke::new(2.0_f32, YELLOW),
@@ -2082,6 +2316,7 @@ value}
     }
     pub(crate) fn commit_polygons(&mut self, polygons: &[Vec<[f64; 2]>]) -> Result<(), String> {
         let document = fictrac_control::replace_exclusions_document(&self.document()?, polygons)?;
+        let document = self.validated_calibration_document(document)?;
         self.edit(document.text().to_owned());
         Ok(())
     }
@@ -2094,13 +2329,7 @@ value}
         let document = self
             .calibration_draft_document()?
             .ok_or("Place draft points before applying calibration")?;
-        self.edit(document.text().to_owned());
-        self.points.clear();
-        self.square_slots = None;
-        self.calibration_review = true;
-        self.calibration_redraw = false;
-        self.edit_existing = false;
-        self.apply()
+        self.commit_calibration_document(document)
     }
 }
 
@@ -2146,7 +2375,7 @@ mod tests {
         .map_err(|e| e.to_string())?;
         let mut session = Session::new(1, doc, None);
         // These legacy pointer-unit helpers explicitly exercise point placing.
-        // The actual wizard starts in read-only review and is tested below.
+        // Read-only review remains an explicit secondary action, tested below.
         session.calibration_review = false;
         session.snapshot.image = Some(Arc::new(ViewFrame {
             width: 384,
@@ -2221,14 +2450,6 @@ mod tests {
         session.choose_calibration_action("keep")?;
         session.choose_calibration_action("redraw")?;
         session.choose_calibration_action("keep")?;
-        assert!(
-            session
-                .document()?
-                .vector::<Vec<Vec<f64>>>("roi_ignr")
-                .map_err(|e| e.to_string())?
-                .is_empty()
-        );
-        assert!(session.history.undo());
         assert_eq!(session.history.text, original);
         Ok(())
     }
@@ -2321,6 +2542,269 @@ mod tests {
             }],
         );
     }
+    fn calibration_controls_frame(
+        ctx: &egui::Context,
+        session: &mut Session,
+        events: Vec<egui::Event>,
+        diagnostics: bool,
+    ) -> egui::FullOutput {
+        ctx.run(
+            egui::RawInput {
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(800.0, 900.0))),
+                events,
+                ..Default::default()
+            },
+            |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    if diagnostics {
+                        session.diagnostic_calibration_controls(ui);
+                    } else {
+                        session.calibration_settings(ui);
+                    }
+                });
+            },
+        )
+    }
+    fn click_calibration_control(
+        ctx: &egui::Context,
+        session: &mut Session,
+        label: &str,
+        diagnostics: bool,
+    ) -> Result<(), String> {
+        let output = calibration_controls_frame(ctx, session, vec![], diagnostics);
+        let position = output
+            .shapes
+            .iter()
+            .find_map(|shape| match &shape.shape {
+                egui::Shape::Text(text) if text.galley.text() == label => {
+                    Some(text.pos + text.galley.size() * 0.5)
+                }
+                _ => None,
+            })
+            .ok_or_else(|| format!("Button {label} was not rendered"))?;
+        for pressed in [true, false] {
+            calibration_controls_frame(
+                ctx,
+                session,
+                vec![
+                    egui::Event::PointerMoved(position),
+                    egui::Event::PointerButton {
+                        pos: position,
+                        button: egui::PointerButton::Primary,
+                        pressed,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ],
+                diagnostics,
+            );
+        }
+        Ok(())
+    }
+    fn has_path_colour(shape: &egui::Shape, colour: Color32) -> bool {
+        match shape {
+            egui::Shape::Vec(shapes) => shapes.iter().any(|shape| has_path_colour(shape, colour)),
+            egui::Shape::Path(path) => {
+                matches!(path.stroke.color, egui::epaint::ColorMode::Solid(c) if c == colour)
+            }
+            egui::Shape::LineSegment { stroke, .. } => stroke.color == colour,
+            _ => false,
+        }
+    }
+    #[test]
+    fn first_calibration_mark_keeps_the_source_image_stationary() -> Result<(), String> {
+        let mut session = session()?;
+        session.redraw_calibration(Tool::Rim);
+        let ctx = egui::Context::default();
+        let frame = |session: &mut Session, events| {
+            let mut image_rect = Rect::NOTHING;
+            let _ = ctx.run(
+                egui::RawInput {
+                    screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(640.0, 480.0))),
+                    events,
+                    ..Default::default()
+                },
+                |ctx| {
+                    egui::TopBottomPanel::top("calibration-guide-test")
+                        .show(ctx, |ui| session.calibration_banner(ui));
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        let uv = Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0));
+                        image_rect = fit_image(ui.available_rect_before_wrap(), 384, 288, uv);
+                        session.interact_source(ui, image_rect, uv);
+                    });
+                },
+            );
+            image_rect
+        };
+        let before = frame(&mut session, vec![]);
+        let position = before.min + before.size() * egui::vec2(100.0 / 384.0, 120.0 / 288.0);
+        for pressed in [true, false] {
+            frame(
+                &mut session,
+                vec![
+                    egui::Event::PointerMoved(position),
+                    egui::Event::PointerButton {
+                        pos: position,
+                        button: egui::PointerButton::Primary,
+                        pressed,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ],
+            );
+        }
+        assert_eq!(session.points.len(), 1);
+        assert_eq!(frame(&mut session, vec![]), before);
+        Ok(())
+    }
+    #[test]
+    fn calibrate_again_click_enters_redraw_immediately_and_right_click_removes_draft()
+    -> Result<(), String> {
+        let mut session = session()?;
+        let original = session.history.text.clone();
+        let ctx = egui::Context::default();
+        click_calibration_control(&ctx, &mut session, "Calibrate again…", false)?;
+        assert!(session.tool == Tool::Rim);
+        assert!(!session.calibration_review);
+        assert!(session.calibration_redraw);
+        assert!(session.paused);
+        assert!(session.calibration_lines().is_empty());
+        let guidance = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| session.calibration_banner(ui));
+        });
+        assert!(guidance.shapes.iter().any(|shape| matches!(&shape.shape,
+            egui::Shape::Text(text) if text.galley.text().contains("Click at least 3 well-separated")
+        )));
+        pointer_frame(&ctx, &mut session, vec![]);
+        for point in [[100.0, 120.0], [150.0, 70.0], [200.0, 120.0]] {
+            click(&ctx, &mut session, point, egui::PointerButton::Primary);
+        }
+        assert!(session.calibration_preview_config()?.is_some());
+        click(
+            &ctx,
+            &mut session,
+            [150.0, 71.0],
+            egui::PointerButton::Secondary,
+        );
+        assert_eq!(session.points, vec![[100.0, 120.0], [200.0, 120.0]]);
+        assert!(session.calibration_preview_config()?.is_none());
+        assert!(session.calibration_lines().is_empty());
+        assert_eq!(session.history.text, original);
+        session.cancel_calibration();
+        assert!(!session.paused);
+        assert_eq!(session.history.text, original);
+        Ok(())
+    }
+    #[test]
+    fn rim_marks_never_render_connected_lines_in_preview_or_magnifier() -> Result<(), String> {
+        let mut session = session()?;
+        session.redraw_calibration(Tool::Rim);
+        let ctx = egui::Context::default();
+        pointer_frame(&ctx, &mut session, vec![]);
+        for (index, point) in [
+            [100.0, 120.0],
+            [150.0, 70.0],
+            [200.0, 120.0],
+            [150.0, 180.0],
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            click(&ctx, &mut session, point, egui::PointerButton::Primary);
+            let output = ctx.run(
+                egui::RawInput {
+                    screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(900.0, 700.0))),
+                    ..Default::default()
+                },
+                |ctx| {
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        session.refresh_textures(ctx);
+                        session.interact_source(
+                            ui,
+                            Rect::from_min_size(Pos2::new(20.0, 20.0), Vec2::new(384.0, 288.0)),
+                            Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)),
+                        );
+                        session.draw_magnifier(
+                            ui,
+                            Rect::from_min_size(Pos2::ZERO, Vec2::new(900.0, 700.0)),
+                            Pos2::new(30.0, 30.0),
+                            ([150.0, 120.0], 1.0),
+                            &[],
+                        );
+                    });
+                },
+            );
+            assert!(
+                output
+                    .shapes
+                    .iter()
+                    .all(|s| !has_path_colour(&s.shape, YELLOW))
+            );
+            assert_eq!(
+                output
+                    .shapes
+                    .iter()
+                    .any(|s| has_path_colour(&s.shape, Color32::LIGHT_GREEN)),
+                index >= 2,
+                "a fitted outline must appear from the third click",
+            );
+        }
+        Ok(())
+    }
+    #[test]
+    fn diagnostics_show_saved_geometry_and_each_redraw_action_is_ready_for_clicks()
+    -> Result<(), String> {
+        let ctx = egui::Context::default();
+        for (label, tool) in [
+            ("Redraw ball", Tool::Rim),
+            ("Redraw exclusions", Tool::Exclude),
+            ("Redraw lab", Tool::Square),
+        ] {
+            let mut session = session()?;
+            session.show_diagnostics = true;
+            session.show_overlays = false;
+            assert_eq!(
+                session.image_uv(),
+                Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0))
+            );
+            let output = ctx.run(egui::RawInput::default(), |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    session.interact_source(
+                        ui,
+                        Rect::from_min_size(Pos2::ZERO, Vec2::new(384.0, 288.0)),
+                        session.image_uv(),
+                    );
+                });
+            });
+            for colour in [
+                Color32::LIGHT_GREEN,
+                Color32::LIGHT_RED,
+                Color32::from_rgb(220, 160, 255),
+            ] {
+                assert!(
+                    output
+                        .shapes
+                        .iter()
+                        .any(|s| has_path_colour(&s.shape, colour))
+                );
+            }
+            for label in ["X forward", "Y right", "Z down"] {
+                assert!(output.shapes.iter().any(|shape| matches!(&shape.shape,
+                    egui::Shape::Text(text) if text.galley.text() == label
+                )));
+            }
+            let original = session.history.text.clone();
+            click_calibration_control(&ctx, &mut session, label, true)?;
+            assert!(session.tool == tool);
+            assert!(session.calibration_redraw);
+            assert!(!session.calibration_review);
+            assert!(session.paused);
+            assert_eq!(session.history.text, original);
+        }
+        let mut session = session()?;
+        click_calibration_control(&ctx, &mut session, "Full configuration…", true)?;
+        assert!(session.show_settings);
+        assert!(session.show_config_text);
+        Ok(())
+    }
     #[test]
     fn real_pointer_actions_select_only_active_geometry_and_delete_nearest() -> Result<(), String> {
         let mut session = session()?;
@@ -2403,12 +2887,179 @@ mod tests {
             [191.0, 171.0],
             egui::PointerButton::Primary,
         );
+        assert_eq!(session.points.len(), 4);
+        assert!(session.calibration_preview_config()?.is_some());
+        session.finish_points()?;
         let after: Vec<f64> = session
             .document()?
             .vector("c2a_cnrs_xy")
             .map_err(|e| e.to_string())?;
         assert_eq!(before, after);
         assert!(session.square_slots.is_none());
+        assert!(session.points.is_empty());
+        Ok(())
+    }
+    #[test]
+    fn rim_fits_live_from_three_clicks_and_keeps_drafts_atomic() -> Result<(), String> {
+        let mut session = session()?;
+        let original = session.history.text.clone();
+        session.tool = Tool::Rim;
+        session.begin_calibration_step();
+        session.choose_calibration_action("redraw")?;
+        let ctx = egui::Context::default();
+        pointer_frame(&ctx, &mut session, vec![]);
+        for point in [[100.0, 120.0], [150.0, 70.0]] {
+            click(&ctx, &mut session, point, egui::PointerButton::Primary);
+        }
+        assert!(session.calibration_preview_config()?.is_none());
+        assert!(session.calibration_lines().is_empty());
+        click(
+            &ctx,
+            &mut session,
+            [200.0, 120.0],
+            egui::PointerButton::Primary,
+        );
+        let first_fit = session
+            .calibration_preview_config()?
+            .ok_or("third click has no fit")?;
+        assert_eq!(session.calibration_lines().len(), 1);
+        assert_eq!(session.history.text, original);
+        click(
+            &ctx,
+            &mut session,
+            [150.0, 180.0],
+            egui::PointerButton::Primary,
+        );
+        let refined = session
+            .calibration_preview_config()?
+            .ok_or("fourth click has no fit")?;
+        assert_ne!(
+            first_fit.sphere.angular_radius,
+            refined.sphere.angular_radius
+        );
+        assert_eq!(session.history.text, original);
+        session.advance_calibration_step()?;
+        assert!(session.tool == Tool::Exclude);
+        assert_ne!(session.history.text, original);
+        assert!(session.history.undo());
+        assert_eq!(session.history.text, original);
+        Ok(())
+    }
+    #[test]
+    fn invalid_or_incomplete_live_fit_never_shows_a_stale_replacement() -> Result<(), String> {
+        let mut session = session()?;
+        let original = session.history.text.clone();
+        session.tool = Tool::Rim;
+        session.begin_calibration_step();
+        session.choose_calibration_action("redraw")?;
+        session.points = vec![[100.0, 120.0], [150.0, 70.0], [200.0, 120.0]];
+        assert!(session.calibration_preview_config()?.is_some());
+        session.points = vec![[100.0, 120.0], [100.0, 120.0], [100.0, 120.0]];
+        assert!(session.calibration_preview_config().is_err());
+        assert!(session.calibration_lines().is_empty());
+        assert!(session.advance_calibration_step().is_err());
+        assert_eq!(session.history.text, original);
+        session.points.pop();
+        assert!(session.calibration_preview_config()?.is_none());
+        assert!(session.calibration_lines().is_empty());
+        session.cancel_calibration();
+        assert!(session.tool == Tool::Inspect);
+        assert!(!session.paused);
+        assert!(session.points.is_empty());
+        assert_eq!(session.history.text, original);
+        Ok(())
+    }
+    #[test]
+    fn cancelling_calibration_restores_playback_from_wizard_entry_across_steps()
+    -> Result<(), String> {
+        for initially_paused in [false, true] {
+            let mut session = session()?;
+            let original = session.history.text.clone();
+            session.paused = initially_paused;
+            session.tool = Tool::Rim;
+            session.begin_calibration_step();
+            assert!(session.paused);
+            session.choose_calibration_action("keep")?;
+            assert!(session.tool == Tool::Exclude);
+            session.choose_calibration_action("redraw")?;
+            session.points = vec![[10.0, 10.0], [20.0, 10.0]];
+            session.cancel_calibration();
+            assert_eq!(session.paused, initially_paused);
+            assert!(session.tool == Tool::Inspect);
+            assert!(session.points.is_empty());
+            assert!(session.calibration_previous_paused.is_none());
+            assert_eq!(session.history.text, original);
+        }
+        Ok(())
+    }
+    #[test]
+    fn invalid_complete_config_keeps_live_calibration_drafts_and_step_intact() -> Result<(), String>
+    {
+        for (tool, points) in [
+            (
+                Tool::Rim,
+                vec![[100.0, 120.0], [150.0, 70.0], [200.0, 120.0]],
+            ),
+            (
+                Tool::Exclude,
+                vec![[10.0, 10.0], [25.0, 10.0], [20.0, 30.0]],
+            ),
+            (
+                Tool::Square,
+                vec![[100.0, 80.0], [180.0, 80.0], [180.0, 160.0], [100.0, 160.0]],
+            ),
+        ] {
+            for (key, value) in [
+                ("q_factor", "0"),
+                ("vfov", "not-an-angle"),
+                ("vfov", "NaN"),
+                ("src_fps", "NaN"),
+            ] {
+                let mut session = session()?;
+                session.fields(&[(key, value.into())])?;
+                let invalid_text = session.history.text.clone();
+                let revision = session.revision;
+                session.tool = tool;
+                session.begin_calibration_step();
+                session.choose_calibration_action("redraw")?;
+                session.points = points.clone();
+                assert!(session.calibration_draft_document().is_err());
+                assert!(session.calibration_progress().is_err());
+                assert!(session.finish_points().is_err());
+                assert!(session.advance_calibration_step().is_err());
+                assert_eq!(session.history.text, invalid_text);
+                assert_eq!(session.revision, revision);
+                assert_eq!(session.points, points);
+                assert!(session.tool == tool);
+                assert!(session.calibration_redraw);
+                assert!(session.paused);
+            }
+        }
+        Ok(())
+    }
+    #[test]
+    fn square_live_pose_is_visible_before_the_single_continue_commit() -> Result<(), String> {
+        let mut session = session()?;
+        let original = session.history.text.clone();
+        session.tool = Tool::Square;
+        session.begin_calibration_step();
+        session.choose_calibration_action("redraw")?;
+        let corners: Vec<f64> = session
+            .document()?
+            .vector("c2a_cnrs_xy")
+            .map_err(|e| e.to_string())?;
+        let ctx = egui::Context::default();
+        pointer_frame(&ctx, &mut session, vec![]);
+        for point in corners.as_chunks::<2>().0 {
+            click(&ctx, &mut session, *point, egui::PointerButton::Primary);
+        }
+        assert_eq!(session.points.len(), 4);
+        assert!(session.calibration_preview_config()?.is_some());
+        assert_eq!(session.calibration_lines()[0].len(), 5);
+        assert_eq!(session.history.text, original);
+        session.advance_calibration_step()?;
+        assert!(session.tool == Tool::Inspect);
+        assert!(!session.paused);
         assert!(session.points.is_empty());
         Ok(())
     }

@@ -1,13 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
-<rect width="240" height="240" rx="54" fill="#111b29"/>
-<circle cx="119" cy="119" r="83" fill="#e8f0eb"/>
-<polygon points="66,58 88,44 102,57 98,80 75,88 60,76" fill="#162434"/>
-<polygon points="119,40 144,45 158,65 140,79 117,67" fill="#162434"/>
-<polygon points="173,75 191,94 188,120 168,126 155,105" fill="#162434"/>
-<polygon points="92,103 115,88 138,106 133,130 107,140 87,125" fill="#162434"/>
-<polygon points="49,105 67,112 72,139 57,151 43,128" fill="#162434"/>
-<polygon points="68,160 92,149 107,171 97,194 76,188" fill="#162434"/>
-<polygon points="136,152 159,143 177,158 166,181 146,193 127,178" fill="#162434"/>
-<path d="M42 190 C75 213 111 190 125 162 S157 117 192 131" fill="none" stroke="#47d8bd" stroke-width="7" stroke-linecap="round"/>
-<circle cx="192" cy="131" r="7" fill="#47d8bd"/>
+  <defs><linearGradient id="base" x2=".8" y2="1"><stop stop-color="#1d3542"/><stop offset="1" stop-color="#10242e"/></linearGradient><clipPath id="ball"><circle cx="118" cy="113" r="79"/></clipPath></defs>
+  <rect width="240" height="240" rx="54" fill="url(#base)"/>
+  <circle cx="118" cy="113" r="79" fill="#edf2e8"/>
+  <g fill="#18313b" clip-path="url(#ball)">
+    <path d="M64 45c13-5 29-7 34 1 5 7-4 12-2 20 2 12-10 19-22 17-12-1-10-12-17-15-11-5-3-17 7-23Z"/>
+    <path d="M126 35c12-5 32 2 34 12 1 9-11 8-11 16-1 13-11 16-20 12-8-4-5-12-13-16-12-5-2-19 10-24Z"/>
+    <path d="M180 71c12-7 22 10 25 25 1 11-4 20-16 18-12-1-10-10-18-13-11-4-2-21 9-30Z"/>
+    <path d="M109 91c14-7 29-1 30 10 2 9-10 12-8 22 3 13-17 17-28 10-8-5-4-14-11-20-7-8 4-17 17-22Z"/>
+    <path d="M40 99c10-6 24-1 24 9-1 8 11 12 7 23-4 12-22 12-29 3-7-8-12-28-2-35Z"/>
+    <path d="M72 151c12-9 26-6 28 5 2 10 13 10 10 21-3 11-18 19-29 12-11-7-20-27-9-38Z"/>
+    <path d="M146 143c9-9 25-5 25 5 1 8 12 9 11 18-3 14-26 24-36 16-11-8-12-28 0-39Z"/>
+  </g>
+  <path d="M43 189c23 18 47 14 65-2 18-17 19-41 42-51 14-6 29-5 45 1" fill="none" stroke="#142b35" stroke-width="14" stroke-linecap="round"/>
+  <path d="M43 189c23 18 47 14 65-2 18-17 19-41 42-51 14-6 29-5 45 1" fill="none" stroke="#65dfbd" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="195" cy="137" r="6" fill="#65dfbd"/>
 </svg>

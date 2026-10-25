@@ -1,5 +1,7 @@
 """Build-time archive assembly; never used by the Rust application."""
 import gzip
+import argparse
+import hashlib
 import json
 import os
 import re
@@ -23,11 +25,11 @@ LINUX_RUNTIME_DEPENDS = (
 )
 DESKTOP_ENTRY = """[Desktop Entry]
 Type=Application
-Name=hejjetrak
+Name=HejjéTrac
 GenericName=Spherical motion tracker
 Comment=Native spherical-motion tracking and FicTrac-compatible measurements
-Exec=hejjetrak
-TryExec=hejjetrak
+Exec=hejjetrac
+TryExec=hejjetrac
 Icon=hejjetrak
 Terminal=false
 Categories=Science;Education;
@@ -36,13 +38,61 @@ StartupNotify=false
 """
 
 
-def workspace_version(manifest):
+def workspace_version(manifest, *, debian=False):
     text = manifest.read_text()
     match = re.search(r'(?ms)^\[workspace\.package\]\s*\n(.*?)(?=^\[|\Z)', text)
     version = re.search(r'(?m)^version\s*=\s*"([^"\n]+)"', match.group(1)) if match else None
     if not version or not re.fullmatch(r'[0-9][0-9A-Za-z.+~-]*', version.group(1)):
         raise ValueError('Cannot determine a Debian-compatible workspace version')
-    return version.group(1).replace('-', '~')
+    return version.group(1).replace('-', '~') if debian else version.group(1)
+
+
+def verify_release_tag(manifest, tag):
+    version = workspace_version(manifest)
+    if tag != 'v' + version:
+        raise ValueError(f'Release {tag!r} does not match source version v{version}; '
+                         'check out the matching source before publishing binaries')
+
+
+def verify_binary_version(binary, version):
+    result = subprocess.run([str(binary.resolve()), '--version'], check=True,
+                            text=True, capture_output=True)
+    actual = result.stdout.strip()
+    if not actual or actual.split()[-1] != version:
+        raise ValueError(f'{binary} reports {actual!r}, expected version {version}; '
+                         'run cargo build --workspace --release --locked before packaging')
+
+
+def install_binaries(root, destination, suffix, system, version):
+    manifest = []
+    for source, target in [('fictrac-desktop', 'hejjetrac'), ('fictrac', 'hejjetrac-cli')]:
+        compiled = root / 'target/release' / (source + suffix)
+        verify_binary_version(compiled, version)
+        installed = destination / (target + suffix)
+        shutil.copy2(compiled, installed)
+        legacy = destination / (target.replace('hejjetrac', 'hejjetrak') + suffix)
+        if system == 'Windows':
+            shutil.copy2(installed, legacy)
+        else:
+            legacy.symlink_to(installed.name)
+        manifest.append({'name': installed.name,
+                         'compiled_sha256': hashlib.sha256(compiled.read_bytes()).hexdigest()})
+    return manifest
+
+
+def write_zip_tree(stage, archive):
+    # Preserve Unix command aliases instead of duplicating executable payloads.
+    with zipfile.ZipFile(archive, 'x', compression=zipfile.ZIP_DEFLATED,
+                         strict_timestamps=False) as output:
+        for path in sorted(stage.rglob('*')):
+            relative = str(path.relative_to(stage.parent))
+            if path.is_symlink():
+                entry = zipfile.ZipInfo(relative)
+                entry.create_system = 3
+                entry.external_attr = 0o120777 << 16
+                output.writestr(entry, os.readlink(path))
+            else:
+                output.write(path, relative)
 
 
 def linux_dependencies(stage):
@@ -56,8 +106,8 @@ def linux_dependencies(stage):
             'Maintainer: hejjetrak maintainers <noreply@github.com>\n\n'
             'Package: hejjetrak\nArchitecture: amd64\nDescription: Native spherical motion tracker\n')
         result = subprocess.run(['dpkg-shlibdeps', '-O',
-                                 '-e' + str((stage / 'hejjetrak').resolve()),
-                                 '-e' + str((stage / 'hejjetrak-cli').resolve())],
+                                 '-e' + str((stage / 'hejjetrac').resolve()),
+                                 '-e' + str((stage / 'hejjetrac-cli').resolve())],
                                 cwd=directory, check=True, text=True, capture_output=True)
     lines = [line.split('=', 1)[1] for line in result.stdout.splitlines()
              if line.startswith('shlibs:Depends=')]
@@ -121,8 +171,8 @@ def build_deb(stage, destination, version, dependencies, assets):
         data = temporary / 'data'
         payload = data / 'usr/lib/hejjetrak'
         payload.parent.mkdir(parents=True)
-        shutil.copytree(stage, payload)
-        for name in ('hejjetrak', 'hejjetrak-cli'):
+        shutil.copytree(stage, payload, symlinks=True)
+        for name in ('hejjetrac', 'hejjetrac-cli', 'hejjetrak', 'hejjetrak-cli'):
             (payload / name).chmod(0o755)
             link = data / 'usr/bin' / name
             link.parent.mkdir(parents=True, exist_ok=True)
@@ -146,7 +196,7 @@ def build_deb(stage, destination, version, dependencies, assets):
         (control / 'control').write_text(
             f'Package: hejjetrak\nVersion: {version}\nArchitecture: amd64\n'
             'Section: science\nPriority: optional\n'
-            'Maintainer: hejjetrak maintainers <noreply@github.com>\n'
+            'Maintainer: Pavan Kumar Kaushik <noreply@github.com>\n'
             f'Installed-Size: {(installed_size + 1023) // 1024}\nDepends: {dependencies}\n'
             'Recommends: xdg-desktop-portal, xdg-desktop-portal-gtk | xdg-desktop-portal-kde\n'
             'Homepage: https://github.com/pvnkmrksk/hejjetrak\n'
@@ -166,35 +216,44 @@ def build_deb(stage, destination, version, dependencies, assets):
 
 def main():
     root = Path(__file__).resolve().parent.parent
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--check-release-tag', help='Check source/tag identity without packaging')
+    arguments = parser.parse_args()
+    if arguments.check_release_tag:
+        verify_release_tag(root / 'Cargo.toml', arguments.check_release_tag)
+        print(f'Source version matches {arguments.check_release_tag}')
+        return
+    version = workspace_version(root / 'Cargo.toml')
     system = platform.system()
     arch = platform.machine().lower()
     label = {'Darwin': 'macos', 'Windows': 'windows', 'Linux': 'linux'}[system]
-    name = f'hejjetrak-{label}-{arch}'
+    name = f'hejjetrac-{label}-{arch}'
     stage = root / 'dist' / name
     stage.mkdir(parents=True, exist_ok=False)
     suffix = '.exe' if system == 'Windows' else ''
     if system == 'Darwin':
-        app = stage / 'hejjetrak.app' / 'Contents'
+        app = stage / 'hejjetrac.app' / 'Contents'
         binary = app / 'MacOS'
         resource = app / 'Resources'
         binary.mkdir(parents=True)
         resource.mkdir()
         info = plistlib.loads((root / 'apps/fictrac-desktop/Info.plist').read_bytes())
-        info['CFBundleExecutable'] = 'hejjetrak'
+        if any(info.get(key) != version for key in ('CFBundleVersion', 'CFBundleShortVersionString')):
+            raise ValueError('Info.plist version does not match Cargo.toml; update both before packaging')
+        info['CFBundleExecutable'] = 'hejjetrac'
         if (root / 'assets/hejjetrak.icns').is_file():
             info['CFBundleIconFile'] = 'hejjetrak.icns'
             shutil.copy2(root / 'assets/hejjetrak.icns', resource / 'hejjetrak.icns')
         (app / 'Info.plist').write_bytes(plistlib.dumps(info))
     else:
         binary = resource = stage
-    for source, target in [('fictrac-desktop', 'hejjetrak'), ('fictrac', 'hejjetrak-cli')]:
-        shutil.copy2(root / 'target/release' / (source + suffix), binary / (target + suffix))
+    binaries = install_binaries(root, binary, suffix, system, version)
     for directory in ['examples', 'docs']:
         shutil.copytree(root / directory, resource / directory)
     for pattern in ['VR*.txt']:
         for config in root.glob(pattern):
             shutil.copy2(config, resource / config.name)
-    for filename in ['README.md', 'LICENSE', 'ATTRIBUTION.md', 'THIRD_PARTY.md']:
+    for filename in ['README.md', 'LICENSE', 'ATTRIBUTION.md', 'THIRD_PARTY.md', 'CITATION.cff']:
         shutil.copy2(root / filename, resource / filename)
     licenses = resource / 'DependencyLicenses'
     licenses.mkdir()
@@ -222,23 +281,28 @@ def main():
                 names.append(str(relative))
         manifest.append({'package': package.name, 'notice_files': names})
     (licenses / 'manifest.json').write_text(json.dumps(manifest, indent=2))
+    (resource / 'BUILD.json').write_text(json.dumps({
+        'name': 'HejjéTrac', 'version': version, 'platform': label,
+        'architecture': arch, 'source_commit': os.environ.get('PACKAGE_SOURCE_COMMIT'),
+        'source_url': 'https://github.com/pvnkmrksk/hejjetrak',
+        'binary_hash_boundary': 'compiled binaries before application signing',
+        'binaries': binaries,
+    }, indent=2, ensure_ascii=False) + '\n')
     if system == 'Darwin':
-        subprocess.run(['codesign', '--force', '--deep', '--sign', '-', str(stage / 'hejjetrak.app')], check=True)
-        subprocess.run(['codesign', '--verify', '--deep', '--strict', str(stage / 'hejjetrak.app')], check=True)
+        subprocess.run(['codesign', '--force', '--deep', '--sign', '-', str(stage / 'hejjetrac.app')], check=True)
+        subprocess.run(['codesign', '--verify', '--deep', '--strict', str(stage / 'hejjetrac.app')], check=True)
     if system in ('Darwin', 'Windows'):
         archive = root / 'dist' / (name + '.zip')
         # Cargo registry source archives use reproducible pre-1980 mtimes. Keep their
         # notice content intact while clamping only ZIP's unrepresentable metadata.
-        with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED, strict_timestamps=False) as output:
-            for path in sorted(stage.rglob('*')):
-                output.write(path, path.relative_to(stage.parent))
+        write_zip_tree(stage, archive)
     else:
         archive = shutil.make_archive(str(root / 'dist' / name), 'gztar', root_dir=stage.parent, base_dir=stage.name)
     print(archive)
     if system == 'Linux':
-        version = workspace_version(root / 'Cargo.toml')
+        version = workspace_version(root / 'Cargo.toml', debian=True)
         dependencies = linux_dependencies(stage)
-        print(build_deb(stage, root / 'dist' / 'hejjetrak-linux-amd64.deb', version, dependencies, root / 'assets'))
+        print(build_deb(stage, root / 'dist' / 'hejjetrac-linux-amd64.deb', version, dependencies, root / 'assets'))
 
 
 if __name__ == "__main__":

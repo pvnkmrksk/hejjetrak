@@ -28,6 +28,28 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.source_ref || github.ref }}
+      - name: Verify release tag matches the packaged source
+        if: startsWith(github.ref, 'refs/tags/') || inputs.release_tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+        shell: bash
+        run: |
+          python - "$EXPECTED_RELEASE_TAG" <<'PY'
+          import pathlib, sys, tomllib
+          version = tomllib.loads(pathlib.Path('Cargo.toml').read_text())['workspace']['package']['version']
+          if sys.argv[1] != 'v' + version:
+              sys.exit(f'Release {sys.argv[1]} does not match source version v{version}')
+          PY
+          tag_commit=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${EXPECTED_RELEASE_TAG}" --jq .sha)
+          source_commit=$(git rev-parse HEAD)
+          if [ "$tag_commit" != "$source_commit" ]; then
+            echo '::error::The checked-out source is not the release tag commit. Rebuild the matching tag rather than attaching different source to a release.'
+            exit 1
+          fi
+      - name: Record packaged source revision
+        shell: bash
+        run: echo "PACKAGE_SOURCE_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -71,17 +93,17 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           python3 scripts/test_package.py
-          dpkg-deb --info dist/hejjetrak-linux-amd64.deb
-          dpkg-deb --contents dist/hejjetrak-linux-amd64.deb
-          dpkg-deb --extract dist/hejjetrak-linux-amd64.deb /tmp/hejjetrak-deb-check
+          dpkg-deb --info dist/hejjetrac-linux-amd64.deb
+          dpkg-deb --contents dist/hejjetrac-linux-amd64.deb
+          dpkg-deb --extract dist/hejjetrac-linux-amd64.deb /tmp/hejjetrak-deb-check
           desktop-file-validate /tmp/hejjetrak-deb-check/usr/share/applications/hejjetrak.desktop
-          /tmp/hejjetrak-deb-check/usr/bin/hejjetrak-cli schema > /tmp/hejjetrak-deb-schema.json
+          /tmp/hejjetrak-deb-check/usr/bin/hejjetrac-cli schema > /tmp/hejjetrak-deb-schema.json
           test -s /tmp/hejjetrak-deb-schema.json
           test -f /tmp/hejjetrak-deb-check/usr/lib/hejjetrak/examples/sample.mp4
-          apt-get --simulate install ./dist/hejjetrak-linux-amd64.deb
+          apt-get --simulate install ./dist/hejjetrac-linux-amd64.deb
       - uses: actions/upload-artifact@v4
         with:
-          name: hejjetrak-${{ runner.os }}-${{ runner.arch }}
+          name: hejjetrac-${{ runner.os }}-${{ runner.arch }}
           path: |
             dist/*.zip
             dist/*.tar.gz

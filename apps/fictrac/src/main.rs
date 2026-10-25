@@ -16,9 +16,9 @@ type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
 #[derive(Parser)]
 #[command(
-    name = "hejjetrak-cli",
+    name = "hejjetrac-cli",
     version,
-    about = "hejjetrak: native Rust tracking, FicTrac compatibility and agent control"
+    about = "HejjéTrac: native Rust tracking, FicTrac compatibility and agent control"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -631,7 +631,7 @@ fn main() -> std::process::ExitCode {
     match run() {
         Ok(()) => std::process::ExitCode::SUCCESS,
         Err(e) => {
-            eprintln!("fictrac: {e}");
+            eprintln!("hejjetrac-cli: {e}");
             std::process::ExitCode::FAILURE
         }
     }

@@ -142,6 +142,37 @@ fn complete_video_agent_transcript_matches_declared_reference_gates() -> Result 
     Ok(())
 }
 #[test]
+fn outside_square_edit_keeps_config_source_and_numeric_results() -> Result {
+    let mut controller = Controller::new();
+    let edited = open(&mut controller)?;
+    let reference = open(&mut controller)?;
+    for id in [edited, reference] {
+        request(&mut controller, "step", Some(id), json!({"frames":2}))?;
+    }
+    let before = request(&mut controller, "config", Some(edited), json!({}))?;
+    let status = request(&mut controller, "status", Some(edited), json!({}))?;
+    let invalid = controller.execute(Request {
+        id: json!("outside-square"),
+        command: "calibrate".into(),
+        session: Some(edited),
+        args: json!({"kind":"square","plane":"xy","points":[[-1.,171.],[128.,272.],[20.,212.],[99.,132.]]}),
+    });
+    assert!(!invalid.ok);
+    assert_eq!(
+        request(&mut controller, "config", Some(edited), json!({}))?,
+        before
+    );
+    assert_eq!(
+        request(&mut controller, "status", Some(edited), json!({}))?,
+        status
+    );
+    let after = request(&mut controller, "step", Some(edited), json!({}))?;
+    let expected = request(&mut controller, "step", Some(reference), json!({}))?;
+    assert_eq!(after["status"]["total_frames"], 3);
+    assert_eq!(after["status"]["last_row"], expected["status"]["last_row"]);
+    Ok(())
+}
+#[test]
 fn four_independent_sessions_edit_transactionally_and_calibrate() -> Result {
     let mut c = Controller::new();
     let first = open(&mut c)?;

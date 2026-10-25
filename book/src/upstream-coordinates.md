@@ -1,12 +1,14 @@
 # FicTrac upstream coordinate frames
 
-Reproduced from [FicTrac `doc/coordinate_frames.md`](https://github.com/pvnkmrksk/fictrac/blob/10fc4472af1fc9062b9bf5a92738e835b98cc3ec/doc/coordinate_frames.md), by R. J. D. Moore, Saul Thurrowgood and collaborators, under **CC BY-NC-SA 3.0**. The original material below is unchanged except for link targets. It describes upstream defaults and implementation; hejjetrak-specific behavior, supported hardware and limits are documented in [configuration](configuration.md), [outputs](output.md) and [parity](parity.md).
+Reproduced from [FicTrac `doc/coordinate_frames.md`](https://github.com/pvnkmrksk/fictrac/blob/10fc4472af1fc9062b9bf5a92738e835b98cc3ec/doc/coordinate_frames.md), by R. J. D. Moore, Saul Thurrowgood and collaborators, under **CC BY-NC-SA 3.0**. The original material below is unchanged except for link targets and image descriptions. It describes upstream defaults and implementation; HejjéTrac-specific behavior, supported hardware and limits are documented in [configuration](configuration.md), [outputs](output.md) and [parity](parity.md).
+
+The figures are preserved locally, unchanged, with [asset provenance and checksums](https://github.com/pvnkmrksk/hejjetrak/blob/main/docs/images/upstream/README.md). For the exact recentered legacy camera-delta convention used by HejjéTrac exports, see [output semantics](output.md); the physical frame diagram below is the upstream reference.
 
 ---
 
 This document explains the various coordinate frames used by the FicTrac system. The coordinate frames are illustrated in the figure below.
 
-![01-treadmill_diagram-label-fixed](https://github.com/rjdmoore/fictrac/assets/3844483/aa9e08ea-dec9-44bf-9c18-01df0d823ad0)
+![FicTrac camera, animal and world coordinate frames](images/upstream/coordinate-frames.png)
 
 Note that this illustration is nearly identical to Fig. 1 from [Moore et al, 2014](https://doi.org/10.1016/j.jneumeth.2014.01.010), except here we have flipped the orientation of the "world" axis Wxyz on which the fictive path is drawn, because it was potentially misleading in the original version.
 
@@ -55,6 +57,6 @@ To correctly plot the fictive path (cols 15-16) on a cartesian plane, simply swi
 ### Interpreting the configImg
 The configured animal/lab axes are displayed in the config image (cropped example below). It is important to check that these axes appear correct w.r.t. the position/orientation of the animal. If the axes do not look correct, then you must re-run the configuration program.
 
-![image](https://github.com/rjdmoore/fictrac/assets/3844483/a5deb4cd-7a36-4010-a60f-8817eae1df39)
+![FicTrac configuration example with lab axes and their into/out-of-page markers](images/upstream/lab-axes.png)
 
 To help with disambiguating the orientation of the axes, they are drawn with "into the page" / "out of the page" notation - i.e. a circle with a dot to denote "out of the page" and a circle with a cross to denote "into the page" (a fun mnemonic is that x marks the spot to dig into the page). In the above sample config image, the directions of the X and Y axes are fairly unambiguous but there are two configurations for the Z axis that appear the same in 2D: a left-handed axes with Z coming out of the page towards the viewer, and a right-handed axes with Z going into the page and aligned with the animal's down axis. All axes should be right-handed axes, and additionally we know that Z should be aligned with animal down, but the circle/cross notation just helps to confirm that the axes have the correct orientation.

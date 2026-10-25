@@ -1,135 +1,97 @@
-# hejjetrak
+# HejjéTrac
 
-[![Download hejjetrak](docs/images/download.svg)](https://pvnkmrksk.github.io/hejjetrak/#download)
+**Native tracking for spherical treadmills.**
 
-**[Quick start](https://pvnkmrksk.github.io/hejjetrak/manual/quick-start.html) · [Full manual](https://pvnkmrksk.github.io/hejjetrak/manual/) · [GitHub releases](https://github.com/pvnkmrksk/hejjetrak/releases/latest)**
+**HejjéTrac** (`hejjetrac`) is a modern Rust reworking of [FicTrac](https://github.com/rjdmoore/fictrac), with a compact desktop app, guided calibration and independent sessions for several rigs. Track a patterned ball, inspect its motion and record the data from the same window.
 
-Native Rust spherical-motion tracking, rebuilt from [FicTrac](https://github.com/pvnkmrksk/fictrac). One numerical engine serves a compact desktop app, command line, JSONL agents and MCP stdio. Video decoding and recording are Rust; capture uses native OS APIs. No OpenCV, FFmpeg executable, webview, Python runtime or administrator access is needed to run it.
+**[Download now](https://pvnkmrksk.github.io/hejjetrak/?download=1)** · [User manual](https://pvnkmrksk.github.io/hejjetrak/manual/) · [Website](https://pvnkmrksk.github.io/hejjetrak/) · [GitHub](https://github.com/pvnkmrksk/hejjetrak)
 
-![Compact native ball preview](docs/images/preview.png)
+![HejjéTrac tracking the supplied FicTrac sample](docs/images/tracking-demo.gif)
 
-*Actual v0.1.3 native preview on the supplied sample, playing at source speed.*
+*The native app processing the supplied FicTrac sample. [Watch the video](docs/images/tracking-demo.mp4).*
 
-The **[Download page](https://pvnkmrksk.github.io/hejjetrak/#download)** selects a published archive for your OS and shows first-launch instructions. Direct [GitHub platform archives](https://github.com/pvnkmrksk/hejjetrak/releases/latest) are also available: macOS Apple Silicon (M-series), macOS Intel, Windows x64 and Linux x64 portable. v0.1.3 also includes an optional Debian/Ubuntu `.deb`; see the installation guide for its system-library requirements. Extract the archive and launch **hejjetrak**; the Mac archive contains **hejjetrak.app**. The command-line executable is **hejjetrak-cli**. Cargo package/binary names remain `fictrac` and `fictrac-desktop` for existing scripts. macOS archives are ad hoc signed, not notarized; Windows executables are unsigned. [Per-app opening instructions](https://pvnkmrksk.github.io/hejjetrak/manual/install.html) explain the usual OS prompts without disabling global security. **You do not need Rust, a compiler or a package manager to run the downloads.**
+Created by **[Pavan Kumar Kaushik](https://github.com/pvnkmrksk)**. The name combines **ಹೆಜ್ಜೆ** (*hejjé*, roughly **HEY-jay**), Kannada for a footstep, footprint or path, with **Trac**, following FicTrac’s spelling: **HEY-jay-track**. [Word origin](https://alar.ink/dictionary/kannada/english/%E0%B2%B9%E0%B3%86%E0%B2%9C%E0%B3%8D%E0%B2%9C%E0%B3%86).
 
-The latest published release is **[v0.1.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.3)**, with all four native platform builds verified and five downloadable assets. Linux and both Macs pass 173 workspace tests; Windows passes 170 platform-applicable tests. All four pass 1,353 decoder tests. The official Apple Silicon archive also passed signature, version, full-sample and native preview/recording checks; native hover/loupe interaction remains incompletely verified.
+## Open and start
 
-**Scientific boundary:** this is a rebuild with measured compatibility, not bit-identical or unrestricted parity. Rust BOBYQA/global search differs from upstream NLopt. The supplied 300-frame video is checked against the supplied original `.dat`, and synthetic known-motion sequences check rotation accuracy. Native Mac camera acquisition/recording is tested; tracking a physical ball on the live camera and Windows/Linux camera hardware remain unverified. See [parity](docs/parity.md), [validation](docs/validation.md) and [output semantics](docs/output.md).
+Download the package for your computer, extract it and open **HejjéTrac**. The app tries the first available camera and falls back to the bundled sample when a camera cannot open or deliver frames. Your own camera needs its own [calibration](https://pvnkmrksk.github.io/hejjetrak/manual/calibration.html).
 
-## Desktop
+| Platform | First launch |
+|---|---|
+| macOS · Apple Silicon or Intel | Open `hejjetrac.app`. If blocked as an unidentified developer, attempt to open it, then use **System Settings → Privacy & Security → Open Anyway**. [Apple's instructions](https://support.apple.com/en-us/102445). |
+| Windows · x64 | Extract the ZIP and open `hejjetrac.exe`. If SmartScreen offers it, use **More info → Run anyway** for the downloaded release. [Windows details](https://pvnkmrksk.github.io/hejjetrak/manual/install.html#windows). |
+| Linux · x86_64 | Install the Debian/Ubuntu `.deb`, or extract the portable archive and launch `hejjetrac`. Current binaries require **glibc 2.39+**. [Distribution requirements](https://pvnkmrksk.github.io/hejjetrak/manual/install.html#linux). |
 
-The normal view is a uniformly scaled crop around the ball, measured contact trajectory and a small path inset. Images keep their original pixel aspect ratio in preview and diagnostics. Small previews hide secondary controls. When narrower than 160 or shorter than 120 logical pixels the preview hides toolbar/status chrome; use its context menu for controls. Fonts retain their normal size. Hover controls and the status strip for explanations.
+Current downloads are ad hoc signed on Mac and unsigned on Windows. Use the project's release files; managed computers may require administrator approval for a first-launch exception. [Installation and permissions](https://pvnkmrksk.github.io/hejjetrak/manual/install.html) covers the exact prompts. No Rust installation or compiler is needed. Older releases use `hejjetrak` filenames; existing commands remain available as aliases.
 
-- **Source** already lists cameras; click one to connect. Refresh rescans devices. Open or drop a video to play it at source speed. Ordinary startup tries the first enumerated camera; an opening/no-frame failure falls back to the bundled sample. An explicitly selected configuration is honored. Automatic fallback uses a temporary sample calibration and retains the instance's output ports; it never rewrites the rig file.
-- **Occlusion recovery** protects the learned atlas, pose and path when a frame is unreliable. Default `rust_resilient : y` suppresses destructive automatic bad-frame resets and uses bounded/throttled confirmed reacquisition. v0.1.3 additionally checks recent accepted-motion consistency and defers atlas teaching after recovery; genuine acceleration has a stronger four-image confirmation path. Missing motion stays explicitly missing; recovery is not guaranteed for arbitrary scenes. `rust_resilient : n` restores legacy permissive/reset behavior.
-- **Reset** clears the pose/map/path while retaining source time and integrated displacement. Rejected intervals remain explicitly unmeasured. **Record** starts/stops immediately; its chevron selects raw video, processed diagnostics, both or data only. Every take also retains accepted `.dat`, all-frame numeric data and quality CSV. Configured `save_raw`/`save_debug` still start recording automatically. Default recordings go under your Movies/Videos `hejjetrak` folder; choose another folder in the inspector.
-- **Settings** opens a separate native inspector, leaving the preview unobstructed. Groups cover source/camera, graphical calibration, geometry, tracking/quality, outputs and exact config text. The document preserves unknown fields, comments, spacing and line endings. Config fields, graphical edits and text share undo/redo. Save is explicit; external conflicts are preserved. If a bundled config is read-only, use Save As for a writable copy rather than administrator access.
-- **Calibration** starts read-only saved review: **Ball → Exclusions → Lab**.
-  Keep a correct step without rewriting it, Edit saved marks, or Redraw only that
-  step in a reversible draft. Exclusions can append a region or explicitly clear
-  all masks. A **240-pixel precision loupe** magnifies the current view fourfold,
-  with saved geometry/mark labels and an exact source-coordinate crosshair.
-  The square keeps TL/TR/BR/BL order; **F** tries the alternate pose refit.
-  Optional resolution-reference metadata adapts pixel marks only for compatible
-  aspect/FOV/projection; old files are not silently reinterpreted.
-  [Calibration guide](https://pvnkmrksk.github.io/hejjetrak/manual/calibration.html).
-- **Diagnostics** reveals the six traditional FicTrac panels. Calibration outlines/axes and the full image are separate view toggles, hidden by default. The status strip shows delivered FPS and mean tracking milliseconds; its tooltip separates engine time from the full worker pipeline, source budget, capture skips and output ports. Lost tracking is shown explicitly. Pauses are excluded from the running-drop count.
-- Camera settings expose advertised native resolutions/rates with readback and supported exposure/gain controls. Unsupported controls explain why they are unavailable. The tested built-in Mac camera does not expose writable exposure controls through its public AVFoundation interface. [Camera details](docs/camera-controls.md).
+## Built for the experiment
 
-Bundled Lucide icons have tooltips and retain their license notices. Compact titles prioritize VR, applied ZMQ port and camera index/video filename; larger windows add UDP and full identity. Closing one window, including the first, leaves the others running.
+- **A focused tracking window.** Ball preview, path, delivered FPS and tracking time stay visible. Settings open in a separate inspector.
+- **Guided calibration.** The ball outline fits live from three rim marks. Redraw exclusions and lab axes in turn, with a precision magnifier, right-click correction and the original FicTrac coordinate conventions.
+- **Independent rigs.** Each window has its own source, calibration, recording and outputs. Tile up to sixteen windows.
+- **Complete recording.** Save data, source video and diagnostic video. Every take retains all-frame numeric data, quality decisions and its configuration.
+- **Live output.** Use UDP, serial or localhost ZeroMQ for downstream experiments. The CLI, JSONL and MCP interfaces call the same numerical engine as the desktop.
+- **A Rust application.** Native windows and camera APIs, Rust video codecs and a shared engine. No OpenCV, FFmpeg executable, Python runtime or webview is required.
 
-`VR1.txt`–`VR4.txt` retain the original BR calibrations and camera IDs. They enable localhost UDP **1111–1114** and ZeroMQ PUB **9871–9874** simultaneously. New windows follow the next existing VR/BR config; after those, copies increment numeric camera ID, enabled ports and instance name. Video paths remain video paths. These rig calibrations must match your actual camera and resolution before their motion is interpreted scientifically.
+![The native tracking window](docs/images/preview.png)
 
-For a tiled rig, use the downloaded application:
+[First session](https://pvnkmrksk.github.io/hejjetrak/manual/quick-start.html) · [Hardware and lighting](https://pvnkmrksk.github.io/hejjetrak/manual/hardware.html) · [Calibration](https://pvnkmrksk.github.io/hejjetrak/manual/calibration.html)
+
+## Coordinates and configuration
+
+The manual retains FicTrac’s original [coordinate guide](book/src/upstream-coordinates.md), [complete parameter table](book/src/upstream-parameters.md), [hardware and algorithm notes](book/src/upstream-setup.md) and [25-column data reference](book/src/upstream-data.md), with their source and license. [Current configuration](book/src/configuration.md) and [output semantics](docs/output.md) describe the Rust application’s additions.
+
+![FicTrac camera, animal and world coordinate frames](docs/images/upstream/coordinate-frames.png)
+
+*Original FicTrac illustration by R. J. D. Moore and contributors, CC BY-NC-SA 3.0. [Source and unchanged image](docs/images/upstream/README.md).*
+
+## Several rigs, one launch
+
+The desktop accepts a grid directly:
 
 ```sh
-hejjetrak --windows 16 --grid 4x4
-hejjetrak --config VR1.txt --window-size 480x360 --window-position=0,24
+hejjetrac --windows 4 --grid 2x2
+hejjetrac --windows 16 --grid 4x4
+hejjetrac --config VR1.txt --window-size 480x360
 ```
 
-<details>
-<summary>Building from source (developers)</summary>
+Keep a saved config for each physical rig, with distinct output ports. Bundled `VR1.txt`–`VR4.txt` are examples from the original setup; review camera IDs and calibration before collecting data. Actual camera capacity depends on capture bandwidth, recording and your computer. [Multi-rig setup](https://pvnkmrksk.github.io/hejjetrak/manual/rigs.html).
+
+For recorded video:
+
+```sh
+hejjetrac-cli track --config examples/benchmark/config.txt --input examples/sample.mp4 --output runs/benchmark
+```
+
+The companion CLI is in the extracted folder; on macOS it is inside `hejjetrac.app/Contents/MacOS`. [CLI reference](https://pvnkmrksk.github.io/hejjetrak/manual/cli.html) · [Agent control](docs/agent-control.md).
+
+## Tracking and validation
+
+HejjéTrac preserves FicTrac's legacy config text and data conventions, and checks the full supplied video against the supplied FicTrac output. Known-motion synthetic sequences cover rotation accuracy. The Rust optimizer and recovery policy differ from upstream; [compatibility](docs/parity.md), [validation](docs/validation.md) and [output semantics](docs/output.md) document those details and platform coverage. Rejected frames remain in the all-frame data; motion during a missing interval is left unmeasured.
+
+Native release CI runs on Windows, Linux, Apple Silicon and Intel Mac. Camera and GUI hardware checks are documented per platform. [Tracking performance](docs/tracking-performance.md) and [resource use](docs/resources.md) contain the fixture, hardware and timing boundaries for the published benchmarks.
+
+## Build and contribute
 
 Install [Rust](https://rustup.rs/) 1.95 or later, then:
 
 ```sh
 cargo run --release --locked
-cargo run --release --locked -- --config examples/upstream-config.txt
-```
-
-See the [build/contributor manual](https://pvnkmrksk.github.io/hejjetrak/manual/development.html). Ordinary users can use the downloads above.
-
-</details>
-
-`--window-size` and `--window-position` use logical pixels. Without a size override, `--grid` derives cell sizes from the monitor; new windows otherwise place themselves beside existing ones. Sixteen native windows are supported; sustained sixteen-camera throughput depends on source, recording mode and hardware. Windows source builds require the usual Visual Studio linker, and Linux source builds need desktop/camera development headers. Windows x64 builds select Rust's static CRT linkage to avoid a separately installed Visual C++ redistributable. Prebuilt executables need no Rust installation.
-
-See the [step-by-step manual](https://pvnkmrksk.github.io/hejjetrak/manual/), [UI design and command mapping](docs/ui-design.md) and [agent control](docs/agent-control.md). The first public POC is v0.1.0; v0.1.1 introduced the compact interface, camera controls, ZMQ and ZIP timestamp repair. Published v0.1.2 adds lighter scheduling/publication, guided calibration, opt-in resolution-aware marks and protected atlas recovery. v0.1.3 simplifies saved-calibration review, enlarges the loupe, keeps other sessions running when a window closes, tightens atlas-learning safeguards and adds the optional Linux system package. Local checks and all four native release jobs pass. Earlier v0.2/v0.3 validation names were internal prototype labels.
-
-In the final v0.1.3 cases on a 12-core M2 Pro, one 120 Hz grayscale replay uses **3.19% of total CPU capacity** and **160 MiB RSS**. Sixteen 120 Hz replay sessions with UDP/ZMQ use **22.65% total CPU** and **291 MiB combined RSS**. The actual 30 FPS room-camera case measured **2.72% total CPU** in v0.1.2; it has not been remeasured for v0.1.3. The sixteen-session case is video replay, not sixteen physical cameras; these CPU measurements are not energy measurements. See [resource use and scheduling](docs/resources.md) for before/after cases and unresolved idle variability, and [occlusion recovery](docs/recovery.md) for atlas protection and missing-motion semantics.
-
-## CLI and the upstream benchmark
-
-[Tracking-stage latency](docs/tracking-performance.md) measures the numerical
-engine separately: **1.639 → 0.503 ms/frame** on the predecoded sample, and
-**3.045 → 1.398 ms** in sampled Mac camera timings. Sample trajectory RMS
-against the supplied FicTrac output improves from 0.0448 to 0.0256 sphere radians;
-all original gates remain unchanged. These are fixture- and machine-specific
-measurements, with complete scoring retained for quality decisions.
-
-The [performance reassessment](docs/performance.md) measures the redesigned
-pipeline against released v0.1.1 and a same-machine C++ reference. The sample
-improves from 209 to 397 fps with identical Rust output; full C++ throughput
-parity remains open.
-
-```sh
-hejjetrak-cli track --config examples/benchmark/config.txt --input examples/sample.mp4 --output runs/benchmark
-hejjetrak-cli compare --reference examples/benchmark/upstream.dat --candidate runs/benchmark/tracking.dat --report runs/benchmark/comparison.json
-```
-
-These commands use the packaged executables; invoke them from their extracted location or add that location to PATH. On Mac the CLI is inside `hejjetrak.app/Contents/MacOS` and examples are in `Contents/Resources`; see [platform installation](https://pvnkmrksk.github.io/hejjetrak/manual/install.html). Source builds use Cargo's `fictrac`/`fictrac-desktop` compatibility names.
-
-`compare` requires matching frame counts and aligned video timestamps, then checks rotation-component, path and wrapped-heading errors. Default limits are 0.020 rad/component, 0.075 sphere rad path RMSE and 0.025 rad heading RMSE. Failure returns a nonzero exit status. The reference is another implementation's output, not measured physical ground truth. The benchmark files are preserved as supplied under `examples/benchmark/`.
-
-Run the same system through an AI agent or other machine client:
-
-```sh
-hejjetrak-cli schema
-hejjetrak-cli agent < examples/agents/sample-session.jsonl
-hejjetrak-cli mcp
-hejjetrak --control-stdio
-```
-
-The JSON Schema describes every action. Commands cover config/history, all graphical calibration equivalents, sources, stepping/running/reset, multiple sessions, templates, snapshots, recording, export and shutdown. MCP uses stdin/stdout and needs no model key or network server. The native GUI bridge marks queued work explicitly; poll status for completion. [Protocol and examples](docs/agent-control.md).
-
-Other CLI operations:
-
-```sh
-hejjetrak-cli demo --output runs/demo --frames 120
-hejjetrak-cli inspect examples/sample.mp4 --decode
-hejjetrak-cli track --config examples/sample.json --output runs/sample
-```
-
-`demo` generates known-motion video and checks its recovered rotations. `inspect --preview first.pgm` saves decoded luma. `calibrate --help` describes headless rim fitting. CLI output directories must be new; completed runs contain `tracking.dat`, `quality.csv`, `summary.json` and `path.svg`. See [the output contract](docs/output.md) before interpreting error scores, timestamps or rejected frames. Legacy `.txt` defaults to map tracking; the alternative photometric estimator is selected with `rust_engine : pairwise`. JSON is a strict CLI format; the desktop edits legacy FicTrac text.
-
-## Structure and checks
-
-```text
-fictrac-core       geometry, threshold/map and pairwise estimators, SO(3), path, debug views
-fictrac-io         lossless legacy configs, JSON, Rust codecs, .dat, comparison, SVG
-fictrac-camera     native OS capture, bounded latest-frame handoff
-fictrac-control    shared deterministic commands, JSONL, MCP and recording orchestration
-fictrac            headless CLI and known-motion demo
-fictrac-desktop    native egui/wgpu windows, graphical calibration, workers, recording
-```
-
-```sh
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
 ```
 
-The engine has no UI, filesystem, network or codec dependencies. [Architecture](docs/architecture.md) explains the boundaries, informed by PhotoCraft's engine-first approach. GitHub Actions has executed native Windows, Linux and both Mac architecture builds, tests and the synthetic CLI demo. Camera hardware and GUI visual checks remain scoped to the tested Mac. [Validation](docs/validation.md) distinguishes local results, cross-compilation and unverified hardware.
+Cargo retains the compatibility names `fictrac` and `fictrac-desktop`. The workspace separates `fictrac-core`, I/O, native capture, shared control, CLI and desktop; the engine has no UI, filesystem, network or codec dependencies. [Architecture](docs/architecture.md) · [Contributor guide](AGENTS.md) · [Build instructions](https://pvnkmrksk.github.io/hejjetrak/manual/development.html).
 
-## Attribution
+## Citation and license
 
-FicTrac was developed by R. J. D. Moore and collaborators. Research users should cite [Moore et al. (2014)](https://doi.org/10.1016/j.jneumeth.2014.01.010). This rebuild preserves upstream's **CC BY-NC-SA 3.0** terms. See [ATTRIBUTION.md](ATTRIBUTION.md), [LICENSE](LICENSE) and [THIRD_PARTY.md](THIRD_PARTY.md).
+If you use HejjéTrac in research, cite the version you used and the original FicTrac method:
+
+> Pavan Kumar Kaushik. *HejjéTrac: native spherical-motion tracking.* [Software repository](https://github.com/pvnkmrksk/hejjetrak).
+>
+> R. J. D. Moore et al. (2014). *FicTrac: a visual method for tracking spherical motion and generating fictive animal paths.* Journal of Neuroscience Methods 225, 106–119. [doi:10.1016/j.jneumeth.2014.01.010](https://doi.org/10.1016/j.jneumeth.2014.01.010).
+
+[CITATION.cff](CITATION.cff) supplies machine-readable citation metadata. [Archiving instructions](https://pvnkmrksk.github.io/hejjetrak/manual/citing.html) describe connecting a release to Zenodo.
+
+FicTrac was developed by R. J. D. Moore, Saul Thurrowgood and collaborators. This project preserves its **CC BY-NC-SA 3.0** license and openly credits its algorithms, examples, illustrations and documentation. [Attribution](ATTRIBUTION.md) · [License](LICENSE) · [Dependency notices](THIRD_PARTY.md).

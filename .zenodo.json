@@ -1,0 +1,37 @@
+{
+  "title": "HejjéTrac: native spherical-motion tracking",
+  "upload_type": "software",
+  "description": "<p>A native Rust reworking of FicTrac for tracking patterned spherical treadmills and reconstructing fictive animal paths. Includes a desktop application, guided calibration, independent rig sessions, recording, live outputs, a command-line interface and local agent protocols.</p><p>Created by Pavan Kumar Kaushik. Inspired by FicTrac, developed by R. J. D. Moore, Saul Thurrowgood and collaborators. This project preserves upstream CC BY-NC-SA 3.0 terms. Research users should also cite Moore et al. (2014), DOI: 10.1016/j.jneumeth.2014.01.010.</p>",
+  "creators": [
+    {
+      "name": "Kaushik, Pavan Kumar"
+    }
+  ],
+  "license": "cc-by-nc-sa-3.0",
+  "access_right": "open",
+  "keywords": [
+    "hejjetrac",
+    "spherical treadmill",
+    "motion tracking",
+    "FicTrac",
+    "animal behavior",
+    "Rust"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/pvnkmrksk/hejjetrak",
+      "scheme": "url",
+      "relation": "isSupplementTo"
+    },
+    {
+      "identifier": "https://github.com/rjdmoore/fictrac",
+      "scheme": "url",
+      "relation": "isDerivedFrom"
+    },
+    {
+      "identifier": "10.1016/j.jneumeth.2014.01.010",
+      "scheme": "doi",
+      "relation": "references"
+    }
+  ]
+}

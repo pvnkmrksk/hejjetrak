@@ -50,10 +50,10 @@ Output paths must be new. Requests are bounded to 1 MB, rows to one million per 
 Register the release executable as a local MCP server:
 
 ```json
-{"mcpServers":{"fictrac":{"command":"/absolute/path/to/hejjetrak-cli","args":["mcp"]}}}
+{"mcpServers":{"fictrac":{"command":"/absolute/path/to/hejjetrac-cli","args":["mcp"]}}}
 ```
 
-Use the packaged CLI executable's absolute path (`hejjetrak-cli.exe` on Windows; `hejjetrak.app/Contents/MacOS/hejjetrak-cli` on Mac). Cargo source builds retain the `fictrac` compatibility name. The adapter implements the [MCP initialization lifecycle](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle), `ping`, `tools/list` and `tools/call` for protocol `2025-06-18`. Its `fictrac_execute` tool advertises the concrete request schema and calls the same controller as JSONL. Results include both text JSON and `structuredContent`; command failures set `isError`. Notifications receive no response. Closing stdin shuts down cleanly. The shared `close` arguments include optional `discard=true`; this explicitly permits discarding unsaved native GUI edits. Headless sessions are disposable in-memory state and close directly. No HTTP listener, cloud connection or credential is created.
+Use the packaged CLI executable's absolute path (`hejjetrac-cli.exe` on Windows; `hejjetrac.app/Contents/MacOS/hejjetrac-cli` on Mac). Cargo source builds retain the `fictrac` compatibility name. The adapter implements the [MCP initialization lifecycle](https://modelcontextprotocol.io/specification/2025-06-18/basic/lifecycle), `ping`, `tools/list` and `tools/call` for protocol `2025-06-18`. Its `fictrac_execute` tool advertises the concrete request schema and calls the same controller as JSONL. Results include both text JSON and `structuredContent`; command failures set `isError`. Notifications receive no response. Closing stdin shuts down cleanly. The shared `close` arguments include optional `discard=true`; this explicitly permits discarding unsaved native GUI edits. Headless sessions are disposable in-memory state and close directly. No HTTP listener, cloud connection or credential is created.
 
 ## Conventional CLI compatibility
 

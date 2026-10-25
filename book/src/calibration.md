@@ -1,72 +1,60 @@
 # Step-by-step calibration
 
-Calibrate only after the camera, lens, resolution, field of view and ball mounting are fixed. The legacy values and coordinate conventions follow FicTrac; the graphical frontend calls the same shared operations as command-line agents.
+Fix the camera, lens, resolution and ball mounting first. Calibration then follows **Ball → Exclusions → Lab**, with one layer active at a time. The image banner explains the current task and the marks still needed. The app and CLI use the same Rust fitting operations.
 
-## One task at a time
+The workflow below is included in v0.1.4 and newer. Earlier packages use the previous review/fit controls.
 
-Choose **Calibrate again…** to review the saved setup in order: **Ball →
-Exclusions → Lab**. Each step starts read-only with a summary of its existing
-marks. Only its geometry is highlighted. You can keep a working calibration
-without drawing over it or rewriting its fields.
+## Begin or redo calibration
 
-- **Keep & continue / Keep & finish** preserves the step exactly and advances.
-- **Edit saved marks** enables dragging/right-click deletion for this step. When
-  only fitted angular geometry/rotation was saved and no clicked points exist,
-  use Keep or Redraw; there are no historical click points to edit.
-- **Redraw this step** starts an isolated replacement draft and hides only this
-  step's old geometry. A valid applied replacement is one undoable edit; other
-  steps remain literally unchanged. Cancel returns to saved review. Applied
-  edits can be reversed with Undo.
+Choose **Calibrate again…** from the preview context menu or Settings. The app pauses and immediately opens a clear ball-outline draft. There is no extra Fit action or saved-point editing step.
 
-A tiny preview temporarily expands to a 640×480 calibration canvas; finishing
-returns to its previous preview size. This changes only the window, not source
-resolution, projection or calibration coordinates.
+- Left-click to place a mark. **Right-click a mark to remove it**, then click its replacement.
+- **Start this layer over** clears the active draft so you can redraw it.
+- **Continue** accepts a valid draft as one undoable edit and opens the next layer. **Finish & resume** completes the Lab step. Enter also continues when the image has focus.
+- **Keep saved & continue** or **Keep saved & finish** skips the current layer, discards its draft and preserves the saved values.
+- **Cancel** or Escape discards the current draft and returns to the running or paused state from before calibration. Previously accepted layers remain in memory and can be undone.
 
-Exclusions also offer **Add another region**, which appends instead of replacing
-the saved masks, and **Use no exclusions**, an explicit clear operation. A failed
-rim, polygon or square fit preserves the saved configuration.
+Incomplete or invalid drafts cannot replace a saved calibration. Saving to disk is explicit. A tiny preview expands to a useful calibration canvas, then returns to its previous size. This changes only the window size.
 
-The **Precision magnifier** provides a 240-pixel nearest-pixel view at 4× the
-current preview scale. It shows the fitted outline/active polygon, numbered
-marks or TL/TR/BR/BL corner labels and the source-coordinate crosshair. When
-screen space permits it uses a mouse-transparent native window outside the
-preview; otherwise it appears as an inset away from the cursor. This is a
-placement aid, not a source-image resize applied to tracking. Full-image/cropped
-view switches retain the source aspect ratio.
+## 1. Ball outline
 
-![Actual native saved-calibration preview](images/calibration.png)
+Set `vfov` to the vertical field of view of the **whole delivered image**, in degrees. It is not the ball diameter or the lens’s diagonal FOV. The [hardware guide](hardware.md#measure-field-of-view-before-mounting) explains a bench measurement. Select the supported equidistant `fisheye` model only for a matching lens; ordinary rectilinear lenses use the pinhole model.
 
-This v0.1.3 native capture shows the full source and saved ball outline in read-only review. The separate inspector was visually checked and its Keep & continue button exercised. Automated source-coordinate tests cover point placement, deletion and magnifier layout; the native hover/loupe pointer check remains incomplete because desktop automation lost its window binding.
+Click **at least three well-separated points on the ball silhouette**. The green fitted outline appears automatically after the third valid point and updates with every further mark. Rim points are never joined by straight segments. Two points cannot define a unique circle; place the third away from their line. Add points around the visible rim rather than clustering them together.
 
-## 1. Source and projection
+Check the outline between the marks. Avoid the animal, supports and shadows. If a mark is wrong, right-click it and place it again. Choose **Continue** when the outline follows the ball. This commits `roi_circ`, `roi_c` and `roi_r` together, using the selected camera projection and FOV.
 
-Select the actual native resolution and frame rate, and verify the delivered dimensions. Set `vfov` to the vertical field of view in degrees. Select `fisheye` only for the supported equidistant lens model; ordinary rectilinear lenses use the pinhole model. A guessed field of view changes the angular geometry and can bias motion even when the rim appears reasonable.
+The **Precision magnifier** gives a 240-pixel view at 4× the current preview scale, with the fitted outline, numbered marks and source-coordinate crosshair. It appears in a mouse-transparent native window where space permits, or as an inset away from the cursor. Full-image/cropped view changes retain the source aspect ratio and numerical coordinates.
 
-## 2. Ball rim
+![Native live rim fit after three marks](images/calibration.png)
 
-Pause on a sharp frame. In Ball review, choose **Redraw this step**, then click at least three well-spaced points on the visible ball silhouette. The active tool adds only rim points. Fit the rim to update `roi_circ`, `roi_c` and `roi_r` together. The fit is in camera ray space, rather than an arbitrary screen-space circle.
+## 2. Exclusions
 
-In Edit saved marks, drag a point to correct it or right-click nearby to remove it. Review mode itself does not change marks. Avoid points on the animal, ball support or a shadow mistaken for the silhouette. Inspect the full outline after fitting, including portions between the clicked points.
+The next step opens an empty exclusion draft. Click around the animal, tether or stationary hardware. Straight edges are appropriate here: exclusions are polygons. A closed preview appears after the third point. Right-click a wrong point to remove it.
 
-## 3. Exclusions
+Choose **Add this region** to accept one polygon and draw another. **Continue** accepts the current valid region and opens the Lab step. In Settings, **Use no exclusions** explicitly clears the masks. Use **Keep saved & continue** to retain the existing masks instead of redrawing them.
 
-In Exclusions review, choose **Add another region** to retain existing masks, or **Redraw this step** for a replacement. Place a polygon around an obstruction and finish/apply it. Use **Use no exclusions** when no masks are needed. Right-click deletes the nearest relevant point. Excluded source pixels do not contribute to the numerical fit. The tool changes only its selected geometry; it does not add rim or lab-square points incidentally.
+Preserve enough patterned sphere to identify its orientation. An overly large mask leaves too little information for tracking. Exclusions describe fixed obstructions; they do not recover motion during a temporary occlusion.
 
-Mask the animal and stationary hardware while preserving enough patterned sphere for a distinctive fit. An overly large mask can make the optimizer underconstrained. Exclusions are a static setup aid; they do not reconstruct a temporary hand occlusion.
+## 3. Lab axes
 
-## 4. Lab square and forward direction
+Choose the plane of a square physically aligned with the animal: **XY**, **YZ** or **XZ**. Place its four corners in the displayed order **top-left → top-right → bottom-right → bottom-left** for the selected reference view. The [agent reference](agent-control.md) gives the exact plane-specific 3D correspondence.
 
-In Lab review, Keep the existing setup, Edit its saved corners, or Redraw a square physically aligned with the chosen animal plane: **XY**, **YZ** or **XZ**. Enter the four corners in the shown order **top-left → top-right → bottom-right → bottom-left** for the selected reference view. The exact plane-specific 3D correspondence is listed in [agent calibration](agent-control.md). All four corners stay visible for inspection. Replacing a corner keeps its original slot; swapping corner order changes the correspondence.
+The fitted lab axes appear automatically after the fourth corner. Right-click a misplaced corner and click its replacement; it retains its original slot. Inspect the axis directions, then choose **Finish & resume** to update `c2a_r`/`c2a_t`. **Keep saved & finish** preserves the existing lab setup.
 
-The square fit computes `c2a_r`/`c2a_t`. Press **F** for the reflected-seed alternate-pose refit when the current planar branch is inappropriate. A valid distinct branch is not always available; a failed alternate fit leaves the prior configuration intact. The implementation uses a bounded deterministic Rust fit and is not identical to upstream NLopt.
+![FicTrac camera, animal and world coordinate frames](images/upstream/coordinate-frames.png)
 
-Verify the forward/side axes with known physical ball motion. Do not infer correctness from the sign of an arbitrary walking trajectory.
+*Original FicTrac illustration by R. J. D. Moore and contributors, CC BY-NC-SA 3.0. [Coordinate guide](upstream-coordinates.md) · [Source and unchanged-image checksums](https://github.com/pvnkmrksk/hejjetrak/blob/main/docs/images/upstream/README.md).*
 
-## 5. Review, save and resume
+Before collecting data, rotate the ball in known forward, sideways and turning directions and confirm the result. A smooth-looking path alone does not establish the axis orientation.
 
-Check the complete source view with guides enabled. Review the thresholded ROI and map for useful contrast. Save explicitly to the rig's own config, then resume. Preview crop/full-view switches affect only display; numerical calibration remains in source geometry.
+## Review or redraw one layer
 
-Saved `roi_c`/`roi_r` take precedence over historical rim-click coordinates. Saved `c2a_r` similarly takes precedence over square clicks. Editing only the raw old points does not implicitly refit those saved values: use the corresponding calibration operation.
+**Diagnostics** shows the complete input image with the saved ball outline, exclusion masks, square and axes. Use **Redraw ball**, **Redraw exclusions** or **Redraw lab** to replace just that layer. **Full configuration…** opens the complete config text in the inspector.
+
+For occasional point adjustments, Settings also offers **Review saved layer** and **Edit saved marks**. This secondary editor supports dragging and right-click deletion. If a file contains only fitted angular geometry or rotation, there are no historical points to edit; use Redraw instead. In the saved Lab editor, **F** tries the reflected-seed alternate pose. A distinct valid branch is not always available; failure preserves the prior configuration.
+
+Check the thresholded ROI and map for useful contrast, then save the config for that physical rig. Saved `roi_c`/`roi_r` and `c2a_r` take precedence over old click fields. Editing only old points as raw text does not implicitly refit the saved geometry: use the corresponding calibration tool.
 
 ## Resolution and framing changes
 
@@ -110,4 +98,4 @@ The same resolution operations are available headlessly:
 {"id":6,"command":"calibrate","session":1,"args":{"kind":"resolution_apply","width":1280,"height":960}}
 ```
 
-Reference capture can optionally specify width/height; otherwise it uses the current source. Discover the precise current schema with `hejjetrak-cli schema` before constructing requests; the [agent chapter](agent-control.md) documents the operations and transactional failure behavior. Source coordinates are independent of preview zoom and window size.
+Reference capture can optionally specify width/height; otherwise it uses the current source. Discover the precise current schema with `hejjetrac-cli schema` before constructing requests; the [agent chapter](agent-control.md) documents the operations and transactional failure behavior. Source coordinates are independent of preview zoom and window size.

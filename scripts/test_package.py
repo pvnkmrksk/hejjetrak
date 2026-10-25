@@ -6,6 +6,8 @@ import subprocess
 import tarfile
 import tempfile
 import unittest
+from unittest import mock
+import zipfile
 
 SPEC = importlib.util.spec_from_file_location('hejjetrak_package', Path(__file__).with_name('package.py'))
 PACKAGE = importlib.util.module_from_spec(SPEC)
@@ -40,18 +42,20 @@ class DebianPackageTests(unittest.TestCase):
             directory = Path(directory)
             stage = directory / 'stage'
             stage.mkdir()
-            for name in ('hejjetrak', 'hejjetrak-cli', 'LICENSE'):
+            for name in ('hejjetrac', 'hejjetrac-cli', 'LICENSE'):
                 (stage / name).write_text('test fixture ' + name)
+            for name in ('hejjetrak', 'hejjetrak-cli'):
+                (stage / name).symlink_to(name.replace('hejjetrak', 'hejjetrac'))
             (stage / 'examples').mkdir()
             (stage / 'examples/sample.mp4').write_bytes(b'video fixture')
             assets = Path(__file__).resolve().parent.parent / 'assets'
-            output = PACKAGE.build_deb(stage, directory / 'test.deb', '0.1.3', 'libc6 (>= 2.39), libudev1', assets)
+            output = PACKAGE.build_deb(stage, directory / 'test.deb', '0.1.4', 'libc6 (>= 2.39), libudev1', assets)
             archive = members(output)
             self.assertEqual(list(archive), ['debian-binary', 'control.tar.gz', 'data.tar.gz'])
             self.assertEqual(archive['debian-binary'], b'2.0\n')
             with tarfile.open(fileobj=io.BytesIO(archive['control.tar.gz'])) as control:
                 text = control.extractfile('control').read().decode()
-                for line in ('Package: hejjetrak', 'Version: 0.1.3', 'Architecture: amd64',
+                for line in ('Package: hejjetrak', 'Version: 0.1.4', 'Architecture: amd64',
                              'Depends: libc6 (>= 2.39), libudev1'):
                     self.assertIn(line + '\n', text)
             with tarfile.open(fileobj=io.BytesIO(archive['data.tar.gz'])) as data:
@@ -59,30 +63,69 @@ class DebianPackageTests(unittest.TestCase):
                     self.assertEqual((entry.uid, entry.gid), (0, 0))
                     self.assertFalse(Path(entry.name).is_absolute())
                     self.assertNotIn('..', Path(entry.name).parts)
-                self.assertEqual(data.getmember('usr/lib/hejjetrak/hejjetrak').mode, 0o755)
+                self.assertEqual(data.getmember('usr/lib/hejjetrak/hejjetrac').mode, 0o755)
+                self.assertEqual(data.getmember('usr/lib/hejjetrak/hejjetrak').linkname, 'hejjetrac')
                 self.assertEqual(data.getmember('usr/bin/hejjetrak-cli').linkname, '../lib/hejjetrak/hejjetrak-cli')
                 self.assertEqual(data.extractfile('usr/lib/hejjetrak/examples/sample.mp4').read(), b'video fixture')
-                self.assertIn(b'Exec=hejjetrak\n', data.extractfile('usr/share/applications/hejjetrak.desktop').read())
+                self.assertIn(b'Exec=hejjetrac\n', data.extractfile('usr/share/applications/hejjetrak.desktop').read())
                 self.assertTrue(data.getmember('usr/share/icons/hicolor/scalable/apps/hejjetrak.svg').isfile())
                 self.assertTrue(data.getmember('usr/share/doc/hejjetrak/copyright').isfile())
                 # Explicit extraction verifies real symlink targets without installing.
                 extracted = directory / 'extracted'
                 for entry in data.getmembers():
                     if entry.issym():
-                        self.assertTrue(entry.linkname.startswith('../lib/hejjetrak/'))
+                        self.assertTrue(entry.linkname.startswith('../lib/hejjetrak/')
+                                        or entry.linkname in ('hejjetrac', 'hejjetrac-cli'))
                 data.extractall(extracted)
-                self.assertEqual((extracted / 'usr/bin/hejjetrak-cli').read_text(), 'test fixture hejjetrak-cli')
+                for name in ('hejjetrac-cli', 'hejjetrak-cli'):
+                    self.assertEqual((extracted / 'usr/bin' / name).read_text(), 'test fixture hejjetrac-cli')
             # A different ar implementation must understand the actual package too.
             listing = subprocess.check_output(['ar', 't', str(output)], text=True)
             self.assertIn('control.tar.gz', listing)
             with self.assertRaises(FileExistsError):
-                PACKAGE.build_deb(stage, output, '0.1.3', 'libc6', assets)
+                PACKAGE.build_deb(stage, output, '0.1.4', 'libc6', assets)
 
     def test_workspace_version_is_read_from_workspace_package_only(self):
         with tempfile.TemporaryDirectory() as directory:
             manifest = Path(directory) / 'Cargo.toml'
             manifest.write_text('[package]\nversion="9.9.9"\n[workspace.package]\nversion = "0.1.3-rc1"\n[dependencies]\n')
-            self.assertEqual(PACKAGE.workspace_version(manifest), '0.1.3~rc1')
+            self.assertEqual(PACKAGE.workspace_version(manifest), '0.1.3-rc1')
+            self.assertEqual(PACKAGE.workspace_version(manifest, debian=True), '0.1.3~rc1')
+
+
+class ReleaseIdentityTests(unittest.TestCase):
+    def test_old_binary_and_mismatched_release_tag_fail_before_copy(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'target/release').mkdir(parents=True)
+            (root / 'target/release/fictrac-desktop').write_bytes(b'old executable')
+            destination = root / 'package'
+            destination.mkdir()
+            old_version = subprocess.CompletedProcess([], 0, stdout='hejjetrak 0.1.3\n')
+            with mock.patch.object(PACKAGE.subprocess, 'run', return_value=old_version):
+                with self.assertRaisesRegex(ValueError, 'expected version 0.1.4'):
+                    PACKAGE.install_binaries(root, destination, '', 'Darwin', '0.1.4')
+            self.assertEqual(list(destination.iterdir()), [])
+            manifest = root / 'Cargo.toml'
+            manifest.write_text('[workspace.package]\nversion = "0.1.4"\n')
+            PACKAGE.verify_release_tag(manifest, 'v0.1.4')
+            with self.assertRaisesRegex(ValueError, 'does not match source version'):
+                PACKAGE.verify_release_tag(manifest, 'v0.1.3')
+
+    def test_zip_retains_small_unix_compatibility_aliases(self):
+        with tempfile.TemporaryDirectory() as directory:
+            directory = Path(directory)
+            stage = directory / 'hejjetrac-macos-arm64'
+            stage.mkdir()
+            (stage / 'hejjetrac').write_bytes(b'executable payload')
+            (stage / 'hejjetrak').symlink_to('hejjetrac')
+            archive = directory / 'package.zip'
+            PACKAGE.write_zip_tree(stage, archive)
+            with zipfile.ZipFile(archive) as packaged:
+                alias = packaged.getinfo(stage.name + '/hejjetrak')
+                self.assertEqual(alias.external_attr >> 16, 0o120777)
+                self.assertEqual(packaged.read(alias), b'hejjetrac')
+                self.assertEqual(packaged.read(stage.name + '/hejjetrac'), b'executable payload')
 
 
 if __name__ == '__main__':

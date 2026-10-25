@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="420" viewBox="0 0 960 420" role="img" aria-labelledby="title desc">
+  <title id="title">Measure vertical field of view before mounting</title>
+  <desc id="desc">Side view of a rectilinear camera centred on a flat target. A visible target height H at perpendicular distance D gives vertical field of view equal to two times arctangent of H divided by two D.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 8 4 0 8Z" fill="#62726e"/></marker>
+  </defs>
+  <rect width="960" height="420" rx="20" fill="#f5f7f4"/>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" fill="#233831">
+    <text x="40" y="47" font-size="23" font-weight="600">Measure the image, with the final lens and camera mode.</text>
+    <path d="M220 207 704 92 704 322Z" fill="#dcebe1"/>
+    <path d="M220 207 704 92M220 207 704 322" fill="none" stroke="#278564" stroke-width="3"/>
+    <path d="M220 207H704" fill="none" stroke="#8fa29a" stroke-width="2" stroke-dasharray="7 6"/>
+    <rect x="105" y="177" width="80" height="60" rx="10" fill="#233831"/>
+    <path d="M185 189 220 179V235L185 225Z" fill="#526b60"/>
+    <circle cx="220" cy="207" r="5" fill="#d88a45"/>
+    <path d="M320 183A104 104 0 0 1 320 231" fill="none" stroke="#d88a45" stroke-width="3"/>
+    <text x="336" y="215" font-size="20" font-weight="600">vfov</text>
+    <path d="M704 92V322" fill="none" stroke="#233831" stroke-width="7"/>
+    <path d="M747 95V319" fill="none" stroke="#62726e" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+    <text x="769" y="201" font-size="18" font-weight="600">H</text>
+    <text x="769" y="226" font-size="14">visible height</text>
+    <path d="M224 350H700" fill="none" stroke="#62726e" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+    <text x="425" y="378" font-size="17">D · distance</text>
+    <text x="102" y="270" font-size="15">Camera</text>
+    <text x="642" y="73" font-size="15">Flat target</text>
+    <text x="40" y="399" font-size="14" fill="#526b60">Rectilinear lens · target perpendicular to optical axis · H and D in the same units</text>
+    <text x="340" y="109" font-size="19" font-weight="600">vfov = 2 × atan(H / 2D)</text>
+    <text x="340" y="135" font-size="15" fill="#526b60">Convert the result from radians to degrees.</text>
+  </g>
+</svg>

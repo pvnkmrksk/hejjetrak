@@ -1,14 +1,20 @@
 # Releases and downloads
 
-[**Download the latest published release**](../#download) · [All releases and notes](https://github.com/pvnkmrksk/hejjetrak/releases)
+[**Download the latest published release**](../?download=1) · [All releases and notes](https://github.com/pvnkmrksk/hejjetrak/releases)
 
 The landing page resolves GitHub's latest published release at download time and shows the platform archive, release tag and available SHA-256 digest. Manual OS/chip choices remain available; browser architecture detection is not treated as infallible. If the release API is unavailable or an archive has not uploaded yet, use the visible GitHub release link rather than a guessed download.
 
-## Published vs source behavior
+## Calibration redraw and naming update
 
-The latest published checkpoint is **[v0.1.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.3)**, with five assets: Mac Apple Silicon and Intel ZIPs, Windows x64 ZIP, Linux x64 portable tar archive and Linux amd64 `.deb`. All four [native release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40180700262) passed: Linux and both Macs ran 173 workspace tests, Windows ran 170 platform-applicable tests, and all four ran 1,353 decoder tests. The official Apple Silicon archive passed strict signature/version checks, the complete sample comparison with unchanged reference gates, and native preview/recording inspection. Native hover/loupe pointer testing remains incomplete. The download dialog reads the actual latest published release; a source change is included in a binary only after its release has been built and uploaded. Consult the selected release tag's README and notes when reproducing a build. A dynamically selected latest archive always follows the published release, not an arbitrary CI artifact.
+v0.1.4 introduces the **HejjéTrac** display name and `hejjetrac` commands. Calibration opens directly into a fresh ball-outline draft, fits the outline automatically from the third point, and never joins rim marks with straight lines. Diagnostics includes the complete saved calibration, direct layer redraw and full config access. The website starts its silent demo automatically and the README download link opens the platform download page directly.
 
-Each platform archive contains the native desktop executable, CLI companion, sample/config resources, documentation, upstream license and dependency notices. Mac archives contain an app bundle. Linux retains its portable tar archive and v0.1.3 additionally offers an amd64 Debian/Ubuntu `.deb` with an app-menu icon and explicit system-library dependencies. Mac/Windows use ZIP. Existing archive names stay stable; the download page never invents a `.deb` URL for a release without that asset. No package is a signed store installer.
+The download page reads published GitHub release assets. Source changes become available to ordinary downloads when that version’s build and upload finish.
+
+## Earlier published checkpoint
+
+The preceding checkpoint **[v0.1.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.3)** has five assets: Mac Apple Silicon and Intel ZIPs, Windows x64 ZIP, Linux x64 portable tar archive and Linux amd64 `.deb`. All four [native release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40180700262) passed: Linux and both Macs ran 173 workspace tests, Windows ran 170 platform-applicable tests, and all four ran 1,353 decoder tests. The official Apple Silicon archive passed strict signature/version checks, the complete sample comparison with unchanged reference gates, and native preview/recording inspection. Native hover/loupe pointer testing remains incomplete. The download dialog reads the actual latest published release; a source change is included in a binary only after its release has been built and uploaded. Consult the selected release tag's README and notes when reproducing a build. A dynamically selected latest archive always follows the published release, not an arbitrary CI artifact.
+
+Each platform archive contains the native desktop executable, CLI companion, sample/config resources, documentation, upstream license and dependency notices. Mac archives contain an app bundle. Linux retains its portable tar archive and v0.1.3 additionally offers an amd64 Debian/Ubuntu `.deb` with an app-menu icon and explicit system-library dependencies. Mac/Windows use ZIP. Current packages use `hejjetrac` archive and executable names, with `hejjetrak` command aliases for existing scripts; the download page never invents a `.deb` URL for a release without that asset. No package is a signed store installer.
 
 ## Release integrity and opening
 

@@ -1,4 +1,4 @@
-First public checkpoint of hejjetrak, a native Rust rebuild of FicTrac.
+First public checkpoint of HejjéTrac, a native Rust rebuild of FicTrac.
 
 - Shared numerical engine, native GUI, CLI, JSONL agent and MCP interfaces.
 - Pure Rust video decoding/encoding; no OpenCV, FFmpeg executable, webview or Python runtime.

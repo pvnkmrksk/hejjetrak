@@ -1,21 +1,45 @@
 # Citation, sources and license
 
-## FicTrac
+HejjéTrac was created by **[Pavan Kumar Kaushik](https://github.com/pvnkmrksk)**. It is a modern Rust reworking of FicTrac's spherical-motion tracking, with native desktop, calibration and multi-rig workflows.
 
-FicTrac was developed by R. J. D. Moore, Saul Thurrowgood and collaborators. hejjetrak is a Rust rebuild informed by its behavior, geometry, output and documentation. Research users should cite:
+The name combines **ಹೆಜ್ಜೆ** (*hejjé*, roughly **HEY-jay**), Kannada for a footstep, footprint or path, with **Trac**, following FicTrac’s spelling: **HEY-jay-track**. [Kannada word reference](https://alar.ink/dictionary/kannada/english/%E0%B2%B9%E0%B3%86%E0%B2%9C%E0%B3%8D%E0%B2%9C%E0%B3%86).
+
+## Cite HejjéTrac
+
+Cite the exact release or commit used in your experiment, along with the original FicTrac paper:
+
+> Pavan Kumar Kaushik. *HejjéTrac: native spherical-motion tracking.* Computer software. https://github.com/pvnkmrksk/hejjetrak. Version or commit used: include your identifier here.
+
+GitHub's **Cite this repository** action uses the repository's [CITATION.cff](https://github.com/pvnkmrksk/hejjetrak/blob/main/CITATION.cff) to export APA or BibTeX. Add the version or commit you actually used. If that release has a Zenodo archive, use its version-specific DOI.
+
+A DOI has not been added to this repository's metadata. The files prepare citation and archiving; they do not register or publish an archive.
+
+## Archive a release on Zenodo
+
+For the repository owner:
+
+1. Sign in to Zenodo and link your GitHub account.
+2. Open Zenodo's **GitHub** page, choose **Sync now**, then enable `pvnkmrksk/hejjetrak`.
+3. Review [.zenodo.json](https://github.com/pvnkmrksk/hejjetrak/blob/main/.zenodo.json) before the next release. It contains the author, description, license and upstream references. Version and publication date are left to the release import.
+4. Publish a versioned GitHub release. Zenodo archives new releases after the repository is connected; check the resulting record and its files.
+5. Add the assigned DOI to `CITATION.cff`, this page and the release notes. Keep a version-specific DOI in experiment records; the concept DOI identifies the software across versions.
+
+Zenodo uses `.zenodo.json` in preference to `CITATION.cff` when both exist, so keep their author, title, license and description aligned. The archive JSON uses Zenodo's [license identifier `cc-by-nc-sa-3.0`](https://zenodo.org/api/vocabularies/licenses/cc-by-nc-sa-3.0); the CFF file uses the equivalent SPDX spelling `CC-BY-NC-SA-3.0`. [Enable a repository](https://help.zenodo.org/docs/github/enable-repository/) · [Zenodo metadata guide](https://help.zenodo.org/docs/github/describe-software/zenodo-json/) · [GitHub citation guide](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-citation-files).
+
+## Cite the original method
+
+FicTrac was developed by R. J. D. Moore, Saul Thurrowgood and collaborators. Please also cite:
 
 > RJD Moore, GJ Taylor, AC Paulk, T Pearson, B van Swinderen, MV Srinivasan (2014). *FicTrac: a visual method for tracking spherical motion and generating fictive animal paths.* Journal of Neuroscience Methods 225, 106–119. [doi:10.1016/j.jneumeth.2014.01.010](https://doi.org/10.1016/j.jneumeth.2014.01.010).
 
-Upstream source/reference: [pvnkmrksk/fictrac](https://github.com/pvnkmrksk/fictrac), assessed at commit `10fc4472af1fc9062b9bf5a92738e835b98cc3ec`.
+Upstream reference: [rjdmoore/fictrac](https://github.com/rjdmoore/fictrac), with this rebuild assessed against the [pvnkmrksk fork](https://github.com/pvnkmrksk/fictrac) at commit `10fc4472af1fc9062b9bf5a92738e835b98cc3ec`.
 
-The upstream parameter and coordinate chapters in this manual are reproduced, with source attribution and a hejjetrak context note, from `doc/params.md` and `doc/coordinate_frames.md` at that revision. Their terminology and implementation-specific notes describe upstream. The linked coordinate illustration remains hosted by upstream and credited there; it is not represented as new project artwork. The hardware chapter adapts upstream setup recommendations. Sample screenshots show tracking of the attributed upstream `sample/sample.mp4` fixture.
+The original-reference chapters reproduce `doc/params.md`, `doc/coordinate_frames.md`, `doc/requirements.md` and `doc/data_header.txt` at that revision, with attribution and application context. Their original implementation notes describe FicTrac. Coordinate illustrations are retained locally and unchanged; [asset provenance](https://github.com/pvnkmrksk/hejjetrak/blob/main/docs/images/upstream/README.md) records their source URLs and hashes. The hardware chapter adapts upstream recommendations and links its additional references. Sample demonstrations and screenshots use the attributed upstream video.
 
 ## License
 
-This rebuild and its documentation retain **Creative Commons Attribution–NonCommercial–ShareAlike 3.0** terms. See [LICENSE](https://github.com/pvnkmrksk/hejjetrak/blob/main/LICENSE), [full attribution](https://github.com/pvnkmrksk/hejjetrak/blob/main/ATTRIBUTION.md) and [third-party notices](https://github.com/pvnkmrksk/hejjetrak/blob/main/THIRD_PARTY.md). Dependencies retain their own permissive licenses and notices in binary archives. Non-commercial/share-alike terms matter when redistributing or adapting the project; do not present it as an MIT-licensed application.
+This project and its documentation retain **Creative Commons Attribution–NonCommercial–ShareAlike 3.0** terms. See the [license](https://github.com/pvnkmrksk/hejjetrak/blob/main/LICENSE), [attribution](https://github.com/pvnkmrksk/hejjetrak/blob/main/ATTRIBUTION.md) and [dependency notices](https://github.com/pvnkmrksk/hejjetrak/blob/main/THIRD_PARTY.md). Dependencies retain their own permissive licenses and their notices are included in release archives.
 
-## Other design references
+## Design references
 
-[Rekkefly](https://github.com/pvnkmrksk/rekkefly) informed the separation of a static download landing page and searchable chapter manual. No Rekkefly code, images, scientific data or fonts were copied. [PhotoCraft](https://github.com/storytold/photocraft) informed the engine-first boundary shared by the desktop and agents. These are architectural/documentation references, not evidence of tracking accuracy.
-
-Native screenshots and path graphics in this manual come from this application. No generated image is used as measurement evidence.
+[Rekkefly](https://github.com/pvnkmrksk/rekkefly) informed the separate landing page and searchable manual. [PhotoCraft](https://github.com/storytold/photocraft) informed the shared engine boundary. No implementation, imagery, data or fonts were copied from those projects.

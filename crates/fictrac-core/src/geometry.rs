@@ -55,7 +55,7 @@ impl Geometry {
         let ray = self.ray(x, y);
         let dot = ray.dot(self.centre);
         let disc = dot * dot + self.radius * self.radius - 1.0;
-        if disc <= 0.0 {
+        if dot <= 0.0 || disc <= 0.0 {
             return None;
         }
         let t = dot - disc.sqrt();

@@ -12,7 +12,7 @@ use session::Session;
 use std::{path::PathBuf, time::Instant};
 #[derive(Parser)]
 #[command(
-    name = "hejjetrak",
+    name = "hejjetrac",
     version,
     about = "Native spherical motion tracking, compatible with FicTrac"
 )]
@@ -144,7 +144,7 @@ struct Desktop {
 }
 impl Desktop {
     fn new(cc: &eframe::CreationContext<'_>, args: Args) -> Result<Self, String> {
-        cc.egui_ctx.set_visuals(egui::Visuals::dark());
+        ui::configure_appearance(&cc.egui_ctx);
         let path = args.config.clone().map(Ok).unwrap_or_else(|| {
             if args.control_stdio {
                 resource("examples/upstream-config.txt")
@@ -308,6 +308,153 @@ impl Desktop {
             Err(e) => self.sessions[index].error = e,
         }
     }
+
+    fn rig_manager(&mut self, ctx: &egui::Context) {
+        if !self
+            .sessions
+            .iter()
+            .any(|session| session.show_rigs && !session.closed)
+        {
+            return;
+        }
+        let mut close = false;
+        let mut start_all = false;
+        let mut open_four = false;
+        let mut tile = false;
+        ctx.show_viewport_immediate(
+            egui::ViewportId::from_hash_of("rig-manager"),
+            egui::ViewportBuilder::default()
+                .with_title("HejjéTrac · Rig manager")
+                .with_inner_size([580.0, 540.0])
+                .with_min_inner_size([400.0, 300.0]),
+            |ctx, _| {
+                close = ctx.input(|i| i.viewport().close_requested());
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    ui.heading("Your rigs");
+                    ui.label("Each window has its own source, calibration and outputs.");
+                    ui.horizontal_wrapped(|ui| {
+                        start_all = ui.button("Start all").on_hover_text("Resume paused sessions, replay finished videos and retry stopped sources. Finish active calibration first.").clicked();
+                        open_four = ui.button("Open four rigs").on_hover_text("Open missing windows using the next saved VR/BR configuration, up to four active rigs.").clicked();
+                        tile = ui.button("Arrange in a grid").clicked();
+                    });
+                    ui.separator();
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        for session in self.sessions.iter_mut().filter(|session| !session.closed) {
+                            ui.group(|ui| {
+                                ui.horizontal(|ui| {
+                                    ui.strong(session.display_name());
+                                    ui.label(if session.tool != session::Tool::Inspect { "Calibrating" } else if session.snapshot.ended { "Finished" } else if session.paused { "Paused" } else { "Running" });
+                                    if ui.button("Settings…").clicked() {
+                                        session.show_settings = true;
+                                        ui.ctx().send_viewport_cmd_to(
+                                            egui::ViewportId::from_hash_of(("settings", session.id)),
+                                            egui::ViewportCommand::Focus,
+                                        );
+                                    }
+                                });
+                                ui.small(session.path.as_ref().map(|path| path.display().to_string()).unwrap_or_else(|| "Unsaved configuration · use Save As to keep this rig".into()));
+                                ui.small(format!("{} · {:.1} fps · {:.2} ms tracking", session.running_source, session.snapshot.actual_fps, session.snapshot.tracking_ms));
+                                if !session.fallback_notice.is_empty() {
+                                    ui.small(&session.fallback_notice);
+                                }
+                                ui.collapsing("Full config", |ui| {
+                                    let mut text = session.history.text.clone();
+                                    ui.add(egui::TextEdit::multiline(&mut text).code_editor().desired_rows(10).desired_width(f32::INFINITY).interactive(false));
+                                    ui.small("Edit and save this configuration from its Settings window.");
+                                });
+                                if !session.error.is_empty() {
+                                    ui.colored_label(ui.visuals().error_fg_color, &session.error);
+                                }
+                            });
+                        }
+                        ui.add_space(8.0);
+                        ui.small("Launch a saved grid from Terminal:");
+                        ui.code("hejjetrac --config VR1.txt --windows 4 --grid 2x2");
+                    });
+                });
+            },
+        );
+        if close {
+            for session in &mut self.sessions {
+                session.show_rigs = false;
+            }
+        }
+        if start_all {
+            for session in self.sessions.iter_mut().filter(|session| !session.closed) {
+                if session.tool != session::Tool::Inspect {
+                    session.error =
+                        "Finish or cancel this rig's calibration before Start all".into();
+                } else if session.worker.is_none() || session.snapshot.ended {
+                    let result = session.start();
+                    session.report(result);
+                } else {
+                    session.paused = false;
+                    session.send(runtime::Command::Pause(false));
+                }
+            }
+        }
+        if open_four {
+            let missing = 4usize.saturating_sub(
+                self.sessions
+                    .iter()
+                    .filter(|session| !session.closed)
+                    .count(),
+            );
+            if let Some(mut index) = self.sessions.iter().rposition(|session| !session.closed) {
+                for _ in 0..missing {
+                    self.spawn_from(index);
+                    index = self.sessions.len() - 1;
+                }
+            }
+            tile = true;
+        }
+        if tile {
+            let count = self
+                .sessions
+                .iter()
+                .filter(|session| !session.closed)
+                .count();
+            let columns = (count as f32).sqrt().ceil().max(1.0) as usize;
+            let rows = count.div_ceil(columns);
+            let monitor = ctx
+                .input(|i| i.viewport().monitor_size)
+                .unwrap_or(egui::vec2(1440.0, 900.0));
+            self.tile_columns = columns;
+            self.window_size = Pair(
+                (monitor.x / columns as f32 - 8.0).max(96.0),
+                ((monitor.y - 50.0) / rows as f32 - 32.0).max(96.0),
+            );
+            self.window_origin = Pair(4.0, 32.0);
+            for (cell, (index, session)) in self
+                .sessions
+                .iter()
+                .enumerate()
+                .filter(|(_, session)| !session.closed)
+                .enumerate()
+            {
+                let id = if index == 0 {
+                    egui::ViewportId::ROOT
+                } else {
+                    egui::ViewportId::from_hash_of(("fictrac", session.id))
+                };
+                ctx.send_viewport_cmd_to(
+                    id,
+                    egui::ViewportCommand::InnerSize(egui::vec2(
+                        self.window_size.0,
+                        self.window_size.1,
+                    )),
+                );
+                ctx.send_viewport_cmd_to(
+                    id,
+                    egui::ViewportCommand::OuterPosition(egui::pos2(
+                        self.window_origin.0 + (cell % columns) as f32 * (self.window_size.0 + 8.0),
+                        self.window_origin.1
+                            + (cell / columns) as f32 * (self.window_size.1 + 32.0),
+                    )),
+                );
+            }
+        }
+    }
 }
 impl eframe::App for Desktop {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
@@ -318,7 +465,8 @@ impl eframe::App for Desktop {
         if !self.sessions[0].closed {
             self.sessions[0].show(ctx);
         }
-        for (index, session) in self.sessions.iter_mut().enumerate().skip(1) {
+        let mut cell = usize::from(!self.sessions[0].closed);
+        for session in self.sessions.iter_mut().skip(1) {
             if session.closed {
                 continue;
             }
@@ -326,13 +474,13 @@ impl eframe::App for Desktop {
             ctx.show_viewport_immediate(
                 id,
                 egui::ViewportBuilder::default()
-                    .with_title(format!("hejjetrak · {}", session.display_name()))
+                    .with_title(format!("HejjéTrac · {}", session.display_name()))
                     .with_inner_size([self.window_size.0, self.window_size.1])
                     .with_position([
                         self.window_origin.0
-                            + (index % self.tile_columns) as f32 * (self.window_size.0 + 8.0),
+                            + (cell % self.tile_columns) as f32 * (self.window_size.0 + 8.0),
                         self.window_origin.1
-                            + (index / self.tile_columns) as f32 * (self.window_size.1 + 32.0),
+                            + (cell / self.tile_columns) as f32 * (self.window_size.1 + 32.0),
                     ])
                     .with_min_inner_size([96.0, 96.0]),
                 |ctx, class| {
@@ -340,6 +488,7 @@ impl eframe::App for Desktop {
                     session.show(ctx);
                 },
             );
+            cell += 1;
         }
         let requests: Vec<_> = self
             .sessions
@@ -362,6 +511,7 @@ impl eframe::App for Desktop {
                 i = self.sessions.len() - 1;
             }
         }
+        self.rig_manager(ctx);
         if self.sessions.iter().all(|s| s.closed) {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
             return;
@@ -503,7 +653,7 @@ fn run() -> Result<(), String> {
     }
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("hejjetrak · VR1")
+            .with_title("HejjéTrac · VR1")
             .with_icon(app_icon()?)
             .with_inner_size([520.0, 480.0])
             .with_min_inner_size([96.0, 96.0]),
@@ -511,7 +661,7 @@ fn run() -> Result<(), String> {
         ..Default::default()
     };
     eframe::run_native(
-        "hejjetrak",
+        "HejjéTrac",
         options,
         Box::new(move |cc| {
             Desktop::new(cc, args)
@@ -525,7 +675,7 @@ fn main() -> std::process::ExitCode {
     match run() {
         Ok(()) => std::process::ExitCode::SUCCESS,
         Err(e) => {
-            eprintln!("hejjetrak: {e}");
+            eprintln!("hejjetrac: {e}");
             std::process::ExitCode::FAILURE
         }
     }
@@ -538,11 +688,11 @@ mod arguments_tests {
     #[test]
     fn tiny_preview_size_is_available_through_the_public_cli()
     -> Result<(), Box<dyn std::error::Error>> {
-        let args = Args::try_parse_from(["hejjetrak", "--window-size", "96x96"])?;
+        let args = Args::try_parse_from(["hejjetrac", "--window-size", "96x96"])?;
         let size = args.window_size.ok_or("missing preview size")?;
         assert_eq!((size.0, size.1), (96.0, 96.0));
         for value in ["95x96", "96x95", "NaNx96", "96xinf", "8193x96"] {
-            assert!(Args::try_parse_from(["hejjetrak", "--window-size", value]).is_err());
+            assert!(Args::try_parse_from(["hejjetrac", "--window-size", value]).is_err());
         }
         Ok(())
     }

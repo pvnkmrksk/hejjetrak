@@ -6,3 +6,26 @@
 .content table { display: block; max-width: 100%; overflow: auto; font-size: .94em; }
 .content th, .content td { padding: .6em .8em; }
 .content pre { border-radius: 6px; }
+.content h2, .content h3 { letter-spacing: -.02em; }
+.light { --links: #126b5e; --sidebar-bg: #edf2ed; --sidebar-active: #126b5e; }
+.navy { --links: #8cdbbf; --sidebar-active: #8cdbbf; }
+.content blockquote { border-radius: 0 6px 6px 0; }
+/* Project navigation is static HTML and remains available without JavaScript. */
+#mdbook-menu-bar { position: sticky; top: 0 !important; }
+#mdbook-menu-bar .menu-title { min-width: 0; }
+#mdbook-menu-bar .right-buttons { display: flex; align-items: center; margin: 0 10px; }
+.project-navigation { display: flex; align-items: center; gap: 4px; margin-inline-start: 8px; }
+.project-navigation a {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px;
+  color: var(--links); font-size: 1.4rem; font-weight: 600; white-space: nowrap;
+}
+.project-navigation a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.project-navigation a:focus-visible { outline: 2px solid var(--links); outline-offset: -4px; border-radius: 4px; }
+@media (max-width: 600px) {
+  #mdbook-menu-bar .menu-title { display: none; }
+  #mdbook-menu-bar .right-buttons { margin-inline-start: auto; margin-inline-end: 6px; }
+  .project-navigation { gap: 0; margin-inline-start: 2px; }
+  .project-navigation a { padding-inline: 8px; }
+}
+@media print { .project-navigation { display: none; } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }

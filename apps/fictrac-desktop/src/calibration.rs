@@ -123,8 +123,95 @@ pub(crate) fn magnifier_inset(
 }
 
 impl Session {
+    pub(crate) fn validated_calibration_document(
+        &self,
+        document: ConfigDocument,
+    ) -> Result<ConfigDocument, String> {
+        let image = self
+            .snapshot
+            .image
+            .as_ref()
+            .ok_or("Wait for a source image before placing calibration marks")?;
+        fictrac_io::load_config_text(document.text(), image.width, image.height)
+            .map_err(|e| e.to_string())?;
+        Ok(document)
+    }
+
+    /// Derive the in-progress view through the same document operation used on
+    /// Continue. Incomplete marks never replace the saved configuration.
+    pub(crate) fn calibration_preview_config(&self) -> Result<Option<Config>, String> {
+        if self.calibration_review
+            || !matches!(self.tool, Tool::Rim | Tool::Square)
+            || self.points.len() < if self.tool == Tool::Rim { 3 } else { 4 }
+        {
+            return Ok(None);
+        }
+        let Some(document) = self.calibration_draft_document()? else {
+            return Ok(None);
+        };
+        let image = self
+            .snapshot
+            .image
+            .as_ref()
+            .ok_or("Wait for a source image before placing calibration marks")?;
+        fictrac_io::load_config_text(document.text(), image.width, image.height)
+            .map(|loaded| Some(loaded.config))
+            .map_err(|e| e.to_string())
+    }
+
+    pub(crate) fn calibration_progress(&self) -> Result<String, String> {
+        if self.calibration_review {
+            return Ok("Review the saved marks, or choose Redraw in Settings.".into());
+        }
+        if self.edit_existing {
+            self.validated_calibration_document(self.document()?)?;
+            return Ok("Drag to adjust · right-click to remove · continue when ready".into());
+        }
+        let count = self.points.len();
+        match self.tool {
+            Tool::Rim if count < 3 => Ok(format!(
+                "{count} of 3 rim marks · spread them around the visible ball edge"
+            )),
+            Tool::Rim => self
+                .calibration_preview_config()
+                .map(|_| format!("Live fit · {count} rim marks · add more to refine the outline")),
+            Tool::Square if count < 4 => Ok(format!(
+                "Next corner: {} · clockwise around the square",
+                ["top left", "top right", "bottom right", "bottom left"][count]
+            )),
+            Tool::Square => self
+                .calibration_preview_config()
+                .map(|_| "Live orientation · check the coloured lab axes".into()),
+            Tool::Exclude if count < 3 => Ok(format!(
+                "{count} of 3 region marks · outline a holder, animal or reflection to ignore"
+            )),
+            Tool::Exclude => self
+                .calibration_draft_document()
+                .map(|_| format!("{count}-point region · add marks to refine its boundary")),
+            _ => Ok(String::new()),
+        }
+    }
+
+    pub(crate) fn cancel_calibration(&mut self) {
+        self.points.clear();
+        self.square_slots = None;
+        self.pending_drag = None;
+        self.calibration_review = true;
+        self.calibration_redraw = false;
+        self.edit_existing = false;
+        self.tool = Tool::Inspect;
+        self.full_image = false;
+        self.show_overlays = false;
+        self.paused = self
+            .calibration_previous_paused
+            .take()
+            .unwrap_or(self.paused);
+        self.send(Command::Pause(self.paused));
+    }
+
     pub(crate) fn calibration_lines(&self) -> Vec<Vec<[f64; 2]>> {
-        if self.calibration_redraw {
+        let preview = self.calibration_preview_config().ok().flatten();
+        if self.calibration_redraw && preview.is_none() && self.tool != Tool::Exclude {
             return vec![];
         }
         let close = |mut points: Vec<[f64; 2]>| {
@@ -135,7 +222,7 @@ impl Session {
         };
         match self.tool {
             Tool::Rim => {
-                let Ok(config) = self.core_config() else {
+                let Ok(config) = preview.map(Ok).unwrap_or_else(|| self.core_config()) else {
                     return vec![];
                 };
                 let Ok(geometry) = fictrac_core::Geometry::new(config.clone()) else {
@@ -161,6 +248,8 @@ impl Session {
                         .collect(),
                 ]
             }
+            Tool::Exclude if !self.points.is_empty() => vec![close(self.points.clone())],
+            Tool::Exclude if self.calibration_redraw => vec![],
             Tool::Exclude => self
                 .document()
                 .ok()
@@ -169,6 +258,7 @@ impl Session {
                 .into_iter()
                 .map(|v| close(v.as_chunks::<2>().0.to_vec()))
                 .collect(),
+            Tool::Square if preview.is_some() => vec![close(self.points.clone())],
             Tool::Square => self
                 .document()
                 .ok()
@@ -189,7 +279,9 @@ impl Session {
         self.calibration_review = true;
         self.calibration_redraw = false;
         if self.tool != Tool::Inspect {
+            self.calibration_previous_paused.get_or_insert(self.paused);
             self.full_image = true;
+            self.show_diagnostics = false;
             self.show_overlays = false;
             self.paused = true;
             self.send(Command::Pause(true));
@@ -202,6 +294,16 @@ impl Session {
             {
                 self.plane = plane.into();
             }
+        }
+    }
+    /// The primary graphical action is replacement, ready for the first click.
+    /// Saved-mark review/edit stays available as a secondary action.
+    pub(crate) fn redraw_calibration(&mut self, tool: Tool) {
+        self.tool = tool;
+        self.begin_calibration_step();
+        if matches!(tool, Tool::Rim | Tool::Exclude | Tool::Square) {
+            self.calibration_review = false;
+            self.calibration_redraw = true;
         }
     }
     pub(crate) fn saved_mark_count(&self) -> usize {
@@ -244,6 +346,14 @@ impl Session {
     pub(crate) fn choose_calibration_action(&mut self, action: &str) -> Result<(), String> {
         self.validate_calibration_action(self.tool, action)?;
         if action == "keep" {
+            // Keep always means the saved layer, including an empty redraw.
+            // A draft must use Continue/Add this region to replace that layer.
+            self.points.clear();
+            self.square_slots = None;
+            self.pending_drag = None;
+            self.calibration_review = true;
+            self.calibration_redraw = false;
+            self.edit_existing = false;
             return self.advance_calibration_step();
         }
         if self.tool == Tool::Inspect {
@@ -275,9 +385,6 @@ impl Session {
         action: &str,
     ) -> Result<(), String> {
         if action == "keep" {
-            if tool == self.tool {
-                self.calibration_draft_document()?;
-            }
             return Ok(());
         }
         if tool == Tool::Inspect {
@@ -363,7 +470,8 @@ impl Session {
                 if !points.is_empty() {
                     polygons.push(points.to_vec());
                 }
-                return fictrac_control::replace_exclusions_document(&doc, &polygons);
+                let document = fictrac_control::replace_exclusions_document(&doc, &polygons)?;
+                return self.validated_calibration_document(document);
             }
             _ => return Err("Select Ball, Exclusions or Lab before applying calibration".into()),
         }
@@ -374,7 +482,7 @@ impl Session {
             doc = fictrac_io::capture_calibration_reference(&doc, width, height)
                 .map_err(|e| e.to_string())?;
         }
-        Ok(doc)
+        self.validated_calibration_document(doc)
     }
     pub(crate) fn calibration_draft_document(&self) -> Result<Option<ConfigDocument>, String> {
         let mut points = self.points.clone();
@@ -395,14 +503,31 @@ impl Session {
     }
     fn apply_calibration_draft(&mut self) -> Result<(), String> {
         if let Some(document) = self.calibration_draft_document()? {
-            self.edit(document.text().to_owned());
-            self.points.clear();
-            self.square_slots = None;
-            self.calibration_review = true;
-            self.calibration_redraw = false;
-            self.edit_existing = false;
-            self.apply()?;
+            self.commit_calibration_document(document)?;
+        } else if self.edit_existing {
+            self.validated_calibration_document(self.document()?)?;
         }
+        Ok(())
+    }
+    pub(crate) fn commit_calibration_document(
+        &mut self,
+        document: ConfigDocument,
+    ) -> Result<(), String> {
+        let history = self.history.clone();
+        let changed = self.changed;
+        let revision = self.revision;
+        self.edit(document.text().to_owned());
+        if let Err(error) = self.apply() {
+            self.history = history;
+            self.changed = changed;
+            self.revision = revision;
+            return Err(error);
+        }
+        self.points.clear();
+        self.square_slots = None;
+        self.calibration_review = true;
+        self.calibration_redraw = false;
+        self.edit_existing = false;
         Ok(())
     }
     pub(crate) fn advance_calibration_step(&mut self) -> Result<(), String> {
@@ -415,7 +540,7 @@ impl Session {
         if self.tool == Tool::Inspect {
             return self.complete_calibration();
         }
-        self.begin_calibration_step();
+        self.redraw_calibration(self.tool);
         Ok(())
     }
     pub(crate) fn complete_calibration(&mut self) -> Result<(), String> {
@@ -426,6 +551,7 @@ impl Session {
         self.calibration_review = true;
         self.calibration_redraw = false;
         self.edit_existing = false;
+        self.calibration_previous_paused = None;
         self.show_overlays = false;
         self.full_image = false;
         self.paused = false;

@@ -1,0 +1,317 @@
+{
+  "platform": "macOS-27.0.1-arm64-arm-64bit",
+  "machine": "arm64",
+  "toolchain": "rustc 1.99.1 (58cf8f9c3 2026-10-13)\nbinary: rustc\ncommit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67\ncommit-date: 2026-10-13\nhost: aarch64-apple-darwin\nrelease: 1.99.1\nLLVM version: 23.1.1\n",
+  "build": {
+    "profile": "release",
+    "lto": "thin",
+    "codegen_units": 1,
+    "target_cpu_override": false
+  },
+  "cli_sha256": "89f4f81612ec9eed19a9da1bebdc8f123813c1983f43e79e2a52885dabe6b2b6",
+  "desktop_sha256": "196f5bf2e5bf2efcfeb46016743af6da86db741cba6560da139362f9b5a74902",
+  "cases": [
+    {
+      "name": "synthetic",
+      "args": [
+        "demo",
+        "--output",
+        "/Users/pavan/Documents/ChatGPT/Fictrac/runs/polish-qa/release-v014-final/demo",
+        "--frames",
+        "120"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.3220585420494899,
+      "timing_boundary": "subprocess start through successful exit, including open/decode, tracking, output and finalization"
+    },
+    {
+      "name": "sample",
+      "args": [
+        "track",
+        "--config",
+        "examples/benchmark/config.txt",
+        "--input",
+        "examples/sample.mp4",
+        "--output",
+        "/Users/pavan/Documents/ChatGPT/Fictrac/runs/polish-qa/release-v014-final/sample"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.7676787910750136,
+      "timing_boundary": "subprocess start through successful exit, including open/decode, tracking, output and finalization"
+    },
+    {
+      "name": "comparison",
+      "args": [
+        "compare",
+        "--reference",
+        "examples/benchmark/upstream.dat",
+        "--candidate",
+        "/Users/pavan/Documents/ChatGPT/Fictrac/runs/polish-qa/release-v014-final/sample/tracking.dat",
+        "--report",
+        "/Users/pavan/Documents/ChatGPT/Fictrac/runs/polish-qa/release-v014-final/comparison.json"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.005612000008113682,
+      "timing_boundary": "subprocess start through successful exit, including open/decode, tracking, output and finalization"
+    }
+  ],
+  "sample_input": {
+    "file": "examples/sample.mp4",
+    "sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+    "width": 384,
+    "height": 288,
+    "frames": 300
+  },
+  "synthetic_summary": {
+    "version": "0.1.4",
+    "input": "/Users/pavan/Documents/ChatGPT/Fictrac/runs/polish-qa/release-v014-final/demo/sphere.y4m",
+    "video": {
+      "width": 160,
+      "height": 160,
+      "fps": 60.0,
+      "codec": "y4m/mono",
+      "duration_ms": null
+    },
+    "effective_config": {
+      "spherical_map": null,
+      "width": 160,
+      "height": 160,
+      "vfov_deg": 45.0,
+      "fisheye": false,
+      "sphere": {
+        "centre": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "angular_radius": 0.29
+      },
+      "camera_to_lab": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "legacy_roi_coordinates": false,
+      "ignore_polygons": [],
+      "max_rotation": 0.35,
+      "max_error": 0.16,
+      "sample_stride": 2,
+      "iterations": 20,
+      "source": "sphere.y4m"
+    },
+    "frames": 120,
+    "tracked": 119,
+    "relocalized": 0,
+    "rejected": 0,
+    "initializing": 1,
+    "mean_error": 0.016496092142655572,
+    "max_error": 0.017650473980493932,
+    "wall_seconds": 0.219043417,
+    "end_to_end_fps": 547.8365962488615,
+    "tracking_fps": 624.7150453424949,
+    "input_duration_ms": 1983.3333333333333,
+    "final_position": [
+      -1.185437068437707,
+      -0.39796415863396967
+    ],
+    "final_heading": 5.7576452643299385,
+    "estimator": "perspective pairwise robust photometric SO(3)",
+    "error_metric": "normalized luma RMSE (0..1)",
+    "warnings": []
+  },
+  "sample_summary": {
+    "version": "0.1.4",
+    "input": "/Users/pavan/Documents/ChatGPT/Fictrac/examples/sample.mp4",
+    "video": {
+      "width": 384,
+      "height": 288,
+      "fps": null,
+      "codec": "h264 (pure Rust)",
+      "duration_ms": 10000.0
+    },
+    "effective_config": {
+      "spherical_map": {
+        "resilient": true,
+        "global_search": false,
+        "max_bad_frames": -1,
+        "global_evaluations": 100000,
+        "channel": null,
+        "quality": 6,
+        "threshold_ratio": 1.25,
+        "threshold_window": 0.25,
+        "max_evaluations": 50,
+        "tolerance": 0.001,
+        "max_error": -1.0
+      },
+      "width": 384,
+      "height": 288,
+      "vfov_deg": 45.0,
+      "fisheye": false,
+      "sphere": {
+        "centre": [
+          -0.22938965658632982,
+          0.0999680947095317,
+          0.9681873607372448
+        ],
+        "angular_radius": 0.12481674439688986
+      },
+      "camera_to_lab": [
+        0.722445,
+        -0.131314,
+        -0.460878
+      ],
+      "legacy_roi_coordinates": true,
+      "ignore_polygons": [
+        [
+          [
+            96.0,
+            156.0
+          ],
+          [
+            113.0,
+            147.0
+          ],
+          [
+            106.0,
+            128.0
+          ],
+          [
+            82.0,
+            130.0
+          ],
+          [
+            81.0,
+            150.0
+          ]
+        ],
+        [
+          [
+            71.0,
+            213.0
+          ],
+          [
+            90.0,
+            219.0
+          ],
+          [
+            114.0,
+            218.0
+          ],
+          [
+            135.0,
+            211.0
+          ],
+          [
+            154.0,
+            196.0
+          ],
+          [
+            150.0,
+            217.0
+          ],
+          [
+            121.0,
+            228.0
+          ],
+          [
+            99.0,
+            234.0
+          ],
+          [
+            75.0,
+            225.0
+          ]
+        ]
+      ],
+      "max_rotation": 0.35,
+      "max_error": 0.16,
+      "sample_stride": 2,
+      "iterations": 20,
+      "source": "sample.mp4"
+    },
+    "frames": 300,
+    "tracked": 299,
+    "relocalized": 0,
+    "rejected": 0,
+    "initializing": 1,
+    "mean_error": 6621.574210432903,
+    "max_error": 8531.321104876995,
+    "wall_seconds": 0.760940041,
+    "end_to_end_fps": 394.249196829951,
+    "tracking_fps": 2053.1437507844307,
+    "input_duration_ms": 9966.666666666666,
+    "final_position": [
+      3.641684896510073,
+      -2.6467681123615514
+    ],
+    "final_heading": 6.175048949743612,
+    "estimator": "accumulated spherical map / pure Rust BOBYQA",
+    "error_metric": "mean squared binary intensity (0..65025)",
+    "warnings": []
+  },
+  "comparison": {
+    "comparison": {
+      "candidate_final_position": [
+        3.64168489651,
+        -2.646768112362
+      ],
+      "endpoint_error_sphere_rad": 0.041252009416150356,
+      "frames": 300,
+      "heading_rmse_rad": 0.013651430288528159,
+      "path_point_rmse_sphere_rad": 0.025593841799898084,
+      "reference_final_position": [
+        3.674266189723,
+        -2.6214661833162
+      ],
+      "rotation_component_rmse_rad": [
+        0.009475898823054007,
+        0.010924711781146961,
+        0.01781987973491448
+      ],
+      "timestamp_max_error_ms": 3.456079866737127e-11
+    },
+    "limits": {
+      "heading_rmse_rad": 0.025,
+      "path_rmse_sphere_rad": 0.075,
+      "rotation_component_rmse_rad": 0.02
+    },
+    "passed": true
+  },
+  "version": "0.1.4",
+  "synthetic_oracle": {
+    "expected_delta": [
+      0.006,
+      -0.009,
+      0.004
+    ],
+    "passed": true,
+    "rotation_component_rmse_rad": 0.0003040496948914138,
+    "tolerance_rad": 0.003
+  },
+  "checks": {
+    "fmt": true,
+    "strict_clippy": true,
+    "workspace_tests": 188,
+    "workspace_suites": 26,
+    "package_tests": 4,
+    "download_controller_tests": true,
+    "native_visual_platform": "macOS arm64",
+    "native_checks": [
+      "Actual Calibrate again button starts empty redraw",
+      "Saved full-source calibration visible in Diagnostics",
+      "Full configuration opens inspector",
+      "Two rim marks have no line",
+      "Third mark immediately fits circle",
+      "Fourth mark refines circle",
+      "Right click removes nearest mark",
+      "Continue advances to exclusion redraw",
+      "Keep saved exclusions advances to lab",
+      "First mark keeps instructions and image stationary"
+    ],
+    "browser_checks": [
+      "1280px landing page autoplay muted, readyState 4",
+      "390px landing and light manual have no horizontal overflow",
+      "Persistent manual Website and GitHub navigation"
+    ]
+  }
+}

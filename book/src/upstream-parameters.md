@@ -1,6 +1,6 @@
 # FicTrac upstream parameter reference
 
-Reproduced from [FicTrac `doc/params.md`](https://github.com/pvnkmrksk/fictrac/blob/10fc4472af1fc9062b9bf5a92738e835b98cc3ec/doc/params.md), by R. J. D. Moore, Saul Thurrowgood and collaborators, under **CC BY-NC-SA 3.0**. The original material below is unchanged except for link targets. It describes upstream defaults and implementation; hejjetrak-specific behavior, supported hardware and limits are documented in [configuration](configuration.md), [outputs](output.md) and [parity](parity.md).
+Reproduced from [FicTrac `doc/params.md`](https://github.com/pvnkmrksk/fictrac/blob/10fc4472af1fc9062b9bf5a92738e835b98cc3ec/doc/params.md), by R. J. D. Moore, Saul Thurrowgood and collaborators, under **CC BY-NC-SA 3.0**. The original material below is unchanged except for link targets. It describes upstream defaults and implementation; HejjéTrac-specific behavior, supported hardware and limits are documented in [configuration](configuration.md), [outputs](output.md) and [parity](parity.md).
 
 ---
 

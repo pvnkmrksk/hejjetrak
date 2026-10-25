@@ -1,5 +1,7 @@
 # Your first session
 
+[Website](https://pvnkmrksk.github.io/hejjetrak/) · [GitHub](https://github.com/pvnkmrksk/hejjetrak) · [Full parameter table](upstream-parameters.md)
+
 ## 1. Open the application
 
 Extract and launch the [platform download](install.md). Normal startup enumerates cameras and tries the first available camera. If opening fails or no frame arrives, it falls back to the bundled sample. An explicitly selected config keeps its requested source authoritative.
@@ -14,9 +16,17 @@ The bundled video is `examples/sample.mp4`, a 384×288, 300-frame, 30 fps upstre
 
 ## 3. Calibrate your ball
 
-Open the configuration inspector and use [graphical calibration](calibration.md). Set the correct vertical field of view and lens model, mark the ball rim, mask the animal/supports and set the lab axes using a square. Save the config explicitly. Check that the fitted outline and axes match the source.
+Choose **Calibrate again…** from the preview context menu or Settings to start [graphical calibration](calibration.md) immediately. Set the correct vertical field of view and lens model, mark three or more points around the ball rim, mask the animal/supports and set the lab axes using a square. The fitted ball outline appears as soon as the third valid point is placed. Save the config explicitly. Check that the fitted outline and axes match the source.
 
 A plausible-looking path is not a calibration test. Incorrect field of view or lab orientation can produce a smooth but scientifically incorrect trajectory.
+
+### Check the coordinate frames
+
+![FicTrac camera, animal and world coordinate frames](images/upstream/coordinate-frames.png)
+
+*Original FicTrac illustration by R. J. D. Moore and contributors, CC BY-NC-SA 3.0. [Full coordinate guide](upstream-coordinates.md) · [Source and unchanged-image checksums](https://github.com/pvnkmrksk/hejjetrak/blob/main/docs/images/upstream/README.md).*
+
+Use the diagram when aligning the lab square and checking forward, sideways and turning motion. The [original parameter table](upstream-parameters.md) explains every FicTrac field; [current configuration](configuration.md) covers HejjéTrac additions. The [25-column reference](upstream-data.md) and [output chapter](output.md) explain the recorded values.
 
 ## 4. Watch quality and timing
 

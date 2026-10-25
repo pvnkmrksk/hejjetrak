@@ -1,0 +1,347 @@
+{
+  "platform": "macOS-27.0.1-arm64-arm-64bit",
+  "machine": "arm64",
+  "toolchain": "rustc 1.99.1 (58cf8f9c3 2026-10-13)\nbinary: rustc\ncommit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67\ncommit-date: 2026-10-13\nhost: aarch64-apple-darwin\nrelease: 1.99.1\nLLVM version: 23.1.1\n",
+  "build": {
+    "profile": "release",
+    "lto": "thin",
+    "codegen_units": 1,
+    "target_cpu_override": false
+  },
+  "cli_sha256": "2552e4a76bfa1d0001fdd7a26c6c2c3171e9e8e5af39bcdecf9385d7bd021ed2",
+  "desktop_sha256": "a043c73afa1e895eddc604d8dec73db2524ce8d448952c20bd59dea85185a497",
+  "sample_input": {
+    "file": "examples/sample.mp4",
+    "sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+    "width": 384,
+    "height": 288,
+    "frames": 300
+  },
+  "serial_execution": true,
+  "cases": [
+    {
+      "name": "synthetic",
+      "wall_seconds": 0.5410130000673234
+    },
+    {
+      "name": "sample",
+      "wall_seconds": 0.7568531250581145
+    },
+    {
+      "name": "comparison",
+      "wall_seconds": 0.005586749990470707
+    }
+  ],
+  "external_timing_boundary": "subprocess start through successful exit, including open/decode, tracking, output and finalization; one descriptive validation run per fixture",
+  "synthetic_summary": {
+    "version": "0.1.3",
+    "input": "/Users/pavan/Documents/ChatGPT/Fictrac/runs/polish-qa/release/demo/sphere.y4m",
+    "video": {
+      "width": 160,
+      "height": 160,
+      "fps": 60.0,
+      "codec": "y4m/mono",
+      "duration_ms": null
+    },
+    "effective_config": {
+      "spherical_map": null,
+      "width": 160,
+      "height": 160,
+      "vfov_deg": 45.0,
+      "fisheye": false,
+      "sphere": {
+        "centre": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "angular_radius": 0.29
+      },
+      "camera_to_lab": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "legacy_roi_coordinates": false,
+      "ignore_polygons": [],
+      "max_rotation": 0.35,
+      "max_error": 0.16,
+      "sample_stride": 2,
+      "iterations": 20,
+      "source": "sphere.y4m"
+    },
+    "frames": 120,
+    "tracked": 119,
+    "relocalized": 0,
+    "rejected": 0,
+    "initializing": 1,
+    "mean_error": 0.016496092142655572,
+    "max_error": 0.017650473980493932,
+    "wall_seconds": 0.205998709,
+    "end_to_end_fps": 582.5279225414952,
+    "tracking_fps": 633.8668463805947,
+    "input_duration_ms": 1983.3333333333333,
+    "final_position": [
+      -1.185437068437707,
+      -0.39796415863396967
+    ],
+    "final_heading": 5.7576452643299385,
+    "estimator": "perspective pairwise robust photometric SO(3)",
+    "error_metric": "normalized luma RMSE (0..1)",
+    "warnings": []
+  },
+  "synthetic_accuracy": {
+    "expected_delta": [
+      0.006,
+      -0.009,
+      0.004
+    ],
+    "passed": true,
+    "rotation_component_rmse_rad": 0.0003040496948914138,
+    "tolerance_rad": 0.003
+  },
+  "sample_summary": {
+    "version": "0.1.3",
+    "input": "/Users/pavan/Documents/ChatGPT/Fictrac/examples/sample.mp4",
+    "video": {
+      "width": 384,
+      "height": 288,
+      "fps": null,
+      "codec": "h264 (pure Rust)",
+      "duration_ms": 10000.0
+    },
+    "effective_config": {
+      "spherical_map": {
+        "resilient": true,
+        "global_search": false,
+        "max_bad_frames": -1,
+        "global_evaluations": 100000,
+        "channel": null,
+        "quality": 6,
+        "threshold_ratio": 1.25,
+        "threshold_window": 0.25,
+        "max_evaluations": 50,
+        "tolerance": 0.001,
+        "max_error": -1.0
+      },
+      "width": 384,
+      "height": 288,
+      "vfov_deg": 45.0,
+      "fisheye": false,
+      "sphere": {
+        "centre": [
+          -0.22938965658632982,
+          0.0999680947095317,
+          0.9681873607372448
+        ],
+        "angular_radius": 0.12481674439688986
+      },
+      "camera_to_lab": [
+        0.722445,
+        -0.131314,
+        -0.460878
+      ],
+      "legacy_roi_coordinates": true,
+      "ignore_polygons": [
+        [
+          [
+            96.0,
+            156.0
+          ],
+          [
+            113.0,
+            147.0
+          ],
+          [
+            106.0,
+            128.0
+          ],
+          [
+            82.0,
+            130.0
+          ],
+          [
+            81.0,
+            150.0
+          ]
+        ],
+        [
+          [
+            71.0,
+            213.0
+          ],
+          [
+            90.0,
+            219.0
+          ],
+          [
+            114.0,
+            218.0
+          ],
+          [
+            135.0,
+            211.0
+          ],
+          [
+            154.0,
+            196.0
+          ],
+          [
+            150.0,
+            217.0
+          ],
+          [
+            121.0,
+            228.0
+          ],
+          [
+            99.0,
+            234.0
+          ],
+          [
+            75.0,
+            225.0
+          ]
+        ]
+      ],
+      "max_rotation": 0.35,
+      "max_error": 0.16,
+      "sample_stride": 2,
+      "iterations": 20,
+      "source": "sample.mp4"
+    },
+    "frames": 300,
+    "tracked": 299,
+    "relocalized": 0,
+    "rejected": 0,
+    "initializing": 1,
+    "mean_error": 6621.574210432903,
+    "max_error": 8531.321104876995,
+    "wall_seconds": 0.751280208,
+    "end_to_end_fps": 399.31838587713736,
+    "tracking_fps": 2036.2448045722867,
+    "input_duration_ms": 9966.666666666666,
+    "final_position": [
+      3.641684896510073,
+      -2.6467681123615514
+    ],
+    "final_heading": 6.175048949743612,
+    "estimator": "accumulated spherical map / pure Rust BOBYQA",
+    "error_metric": "mean squared binary intensity (0..65025)",
+    "warnings": []
+  },
+  "comparison": {
+    "comparison": {
+      "candidate_final_position": [
+        3.64168489651,
+        -2.646768112362
+      ],
+      "endpoint_error_sphere_rad": 0.041252009416150356,
+      "frames": 300,
+      "heading_rmse_rad": 0.013651430288528159,
+      "path_point_rmse_sphere_rad": 0.025593841799898084,
+      "reference_final_position": [
+        3.674266189723,
+        -2.6214661833162
+      ],
+      "rotation_component_rmse_rad": [
+        0.009475898823054007,
+        0.010924711781146961,
+        0.01781987973491448
+      ],
+      "timestamp_max_error_ms": 3.456079866737127e-11
+    },
+    "limits": {
+      "heading_rmse_rad": 0.025,
+      "path_rmse_sphere_rad": 0.075,
+      "rotation_component_rmse_rad": 0.02
+    },
+    "passed": true
+  },
+  "checks": {
+    "workspace_tests": 184,
+    "fmt": true,
+    "clippy_all_targets_deny_warnings": true,
+    "package_tests": 2,
+    "site_internal_references": 1379
+  },
+  "native_gui": {
+    "platform": "macOS arm64",
+    "live_rim_three_marks": true,
+    "refines_fourth_mark": true,
+    "continue_next_step": true,
+    "plain_continue_label": true,
+    "light_mode": true,
+    "about_attribution": true,
+    "rig_manager_reopen_focus": true,
+    "start_all_four_video_sessions": true,
+    "sessions": [
+      {
+        "id": 1,
+        "frames": 300,
+        "ended": true,
+        "error": "",
+        "window_rect": [
+          4.0,
+          33.0,
+          748.0,
+          466.0
+        ],
+        "position": [
+          3.641684896510073,
+          -2.6467681123615514
+        ]
+      },
+      {
+        "id": 2,
+        "frames": 300,
+        "ended": true,
+        "error": "",
+        "window_rect": [
+          760.0,
+          33.0,
+          748.0,
+          466.0
+        ],
+        "position": [
+          3.641684896510073,
+          -2.6467681123615514
+        ]
+      },
+      {
+        "id": 3,
+        "frames": 300,
+        "ended": true,
+        "error": "",
+        "window_rect": [
+          4.0,
+          498.0,
+          748.0,
+          466.0
+        ],
+        "position": [
+          3.641684896510073,
+          -2.6467681123615514
+        ]
+      },
+      {
+        "id": 4,
+        "frames": 300,
+        "ended": true,
+        "error": "",
+        "window_rect": [
+          760.0,
+          498.0,
+          748.0,
+          466.0
+        ],
+        "position": [
+          3.641684896510073,
+          -2.6467681123615514
+        ]
+      }
+    ],
+    "physical_camera_case": false,
+    "magnifier_hover_completed": false
+  }
+}

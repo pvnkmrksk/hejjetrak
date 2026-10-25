@@ -1,5 +1,7 @@
 # Configuration reference
 
+[Original FicTrac parameter table](upstream-parameters.md) · [Coordinate frames](upstream-coordinates.md) · [Original data fields](upstream-data.md)
+
 The native editor and legacy CLI use FicTrac-style plain text. A field is written `key : value`; comments, unknown keys, whitespace and line endings survive unrelated edits. Raw text is canonical and never executable. The GUI, field commands and graphical edits share validation and undo/redo.
 
 ```text
@@ -80,9 +82,9 @@ Ports and external handles reconfigure transactionally. Unchanged healthy publis
 ## Editing and persistence
 
 ```sh
-./hejjetrak-cli config --config VR1.txt --set thr_ratio=1.25 --output revised.txt
+./hejjetrac-cli config --config VR1.txt --set thr_ratio=1.25 --output revised.txt
 ```
 
 With no output path, `config` prints the edited document. Graphical calibration updates coupled values atomically. Numerical edits start a new tracking epoch on the current source image; unchanged input keeps its decoder position and clock continuity. A failed edit leaves state unchanged. Explicit Save writes the chosen file; external conflicts remain visible.
 
-The [attributed upstream parameter table](upstream-parameters.md) is preserved as historical reference. Its defaults and implementation notes describe upstream, so use this chapter and the discovered current schema for hejjetrak-specific behavior. Strict JSON is supported by the CLI for modern configurations; the desktop canonical editor uses legacy text.
+The [attributed upstream parameter table](upstream-parameters.md) is preserved as historical reference. Its defaults and implementation notes describe upstream, so use this chapter and the discovered current schema for HejjéTrac-specific behavior. Strict JSON is supported by the CLI for modern configurations; the desktop canonical editor uses legacy text.

@@ -1,7 +1,7 @@
 //! Sequence-aligned comparison with a FicTrac reference; clocks/error scores are kept separate.
 use crate::{Error, Result};
 use serde::Serialize;
-use std::io::BufRead;
+use std::io::{BufRead, Read};
 #[derive(Debug, Serialize)]
 pub struct Comparison {
     pub frames: usize,
@@ -23,15 +23,26 @@ impl Comparison {
                 .all(|v| *v <= rotation_limit)
     }
 }
-fn rows(input: impl BufRead) -> Result<Vec<[f64; 25]>> {
+fn rows(mut input: impl BufRead) -> Result<Vec<[f64; 25]>> {
     let mut rows = vec![];
-    for line in input.lines().take(1_000_001) {
+    loop {
+        // Bound the read itself: checking a String after lines() has returned
+        // would already have allocated an arbitrarily long malformed row.
+        let mut line = String::new();
+        if input.by_ref().take(8195).read_line(&mut line)? == 0 {
+            break;
+        }
         if rows.len() >= 1_000_000 {
             return Err(Error::Config(
                 "comparison is limited to one million frames".into(),
             ));
         }
-        let line = line?;
+        if line.ends_with('\n') {
+            line.pop();
+            if line.ends_with('\r') {
+                line.pop();
+            }
+        }
         if line.len() > 8192 {
             return Err(Error::Config("data row exceeds 8192 bytes".into()));
         }
@@ -111,4 +122,31 @@ pub fn compare_dat(reference: impl BufRead, candidate: impl BufRead) -> Result<C
         candidate_final_position: [c[14], c[15]],
         timestamp_max_error_ms: timestamp_max,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn oversized_row_stops_reading_at_the_bound() {
+        let mut input = std::io::Cursor::new(vec![b'0'; 16_384]);
+        let result = rows(&mut input);
+        assert!(matches!(result, Err(Error::Config(message)) if message.contains("8192")));
+        assert_eq!(input.position(), 8195);
+    }
+
+    #[test]
+    fn bounded_rows_keep_crlf_and_final_unterminated_row() -> Result<()> {
+        let first = std::iter::repeat_n("0", 25).collect::<Vec<_>>().join(",");
+        let second = format!(
+            "1,{}",
+            std::iter::repeat_n("0", 24).collect::<Vec<_>>().join(",")
+        );
+        let input = format!("{first}\r\n{second}");
+        let comparison = compare_dat(std::io::Cursor::new(&input), std::io::Cursor::new(&input))?;
+        assert_eq!(comparison.frames, 2);
+        assert!(comparison.passes(0., 0., 0.));
+        Ok(())
+    }
 }

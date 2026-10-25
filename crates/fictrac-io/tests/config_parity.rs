@@ -6,6 +6,25 @@ fn fixture() -> std::result::Result<ConfigDocument, Box<dyn std::error::Error>> 
     )?)
 }
 #[test]
+fn document_booleans_agree_with_legacy_projection_and_reference_metadata() -> Result {
+    for value in ["y", "Y", "1", "true", "n", "N", "0", "false"] {
+        let mut doc = fixture()?;
+        doc.set("fisheye", value)?;
+        let loaded = load_config_text(doc.text(), 384, 288)?;
+        assert_eq!(doc.boolean("fisheye"), loaded.config.fisheye, "{value}");
+        let reference = fictrac_io::capture_calibration_reference(&doc, 384, 288)?;
+        assert_eq!(
+            reference.boolean("rust_calibration_fisheye"),
+            loaded.config.fisheye,
+            "{value}"
+        );
+        let mut changed = reference;
+        changed.set("fisheye", if loaded.config.fisheye { "n" } else { "y" })?;
+        assert!(fictrac_io::rescale_calibration_reference(&changed, 768, 576).is_err());
+    }
+    Ok(())
+}
+#[test]
 fn runtime_and_recovery_parameters_are_applied_or_recognized() -> Result {
     let mut doc = fixture()?;
     for (key, value) in [

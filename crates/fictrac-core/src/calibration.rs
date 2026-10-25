@@ -140,6 +140,17 @@ pub fn lab_from_square(
             "invalid square camera dimensions or field of view".into(),
         ));
     }
+    if points.iter().any(|p| {
+        p.iter().any(|v| !v.is_finite())
+            || p[0] < 0.
+            || p[1] < 0.
+            || p[0] >= width as f64
+            || p[1] >= height as f64
+    }) {
+        return Err(crate::Error::Config(
+            "Square corners must be finite and inside the source image; check the source resolution and select TL, TR, BR, BL".into(),
+        ));
+    }
     square(width, height, vfov, fisheye, plane, points).map_err(crate::Error::Config)
 }
 /// Change the forward direction while preserving the calibrated down vector.
@@ -421,6 +432,20 @@ fn solve_pose(h: [[f64; 6]; 6], b: [f64; 6]) -> Option<[f64; 6]> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn square_rejects_outside_corners_and_crossed_order() {
+        let square = [[80., 80.], [240., 80.], [240., 240.], [80., 240.]];
+        for fisheye in [false, true] {
+            let mut outside = square;
+            outside[0][0] = -1.;
+            assert!(lab_from_square(320, 320, 45., fisheye, "xy", &outside).is_err());
+            outside[0][0] = 320.;
+            assert!(lab_from_square(320, 320, 45., fisheye, "xy", &outside).is_err());
+            let mut crossed = square;
+            crossed.swap(2, 3);
+            assert!(lab_from_square(320, 320, 45., fisheye, "xy", &crossed).is_err());
+        }
+    }
     #[test]
     fn all_square_planes_and_camera_models_recover_pose_and_unit_scale() -> crate::Result<()> {
         let rotation = DQuat::from_scaled_axis(DVec3::new(0.31, -0.42, 0.18));

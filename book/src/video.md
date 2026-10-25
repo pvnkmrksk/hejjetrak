@@ -13,15 +13,15 @@ All application decoding is Rust. File decoding and tracking overlap through a o
 From the extracted distribution folder:
 
 ```sh
-./hejjetrak-cli track --config examples/benchmark/config.txt --input examples/sample.mp4 --output runs/sample-001
-./hejjetrak-cli compare --reference examples/benchmark/upstream.dat --candidate runs/sample-001/tracking.dat --report runs/sample-001/comparison.json
+./hejjetrac-cli track --config examples/benchmark/config.txt --input examples/sample.mp4 --output runs/sample-001
+./hejjetrac-cli compare --reference examples/benchmark/upstream.dat --candidate runs/sample-001/tracking.dat --report runs/sample-001/comparison.json
 ```
 
-On Windows, use `hejjetrak-cli.exe`. On Mac, the command-line tool and resources are under the app's `Contents/MacOS` and `Contents/Resources` directories; use absolute paths, or run this from the chosen app bundle (replace the initial path):
+On Windows, use `hejjetrac-cli.exe`. On Mac, the command-line tool and resources are under the app's `Contents/MacOS` and `Contents/Resources` directories; use absolute paths, or run this from the chosen app bundle (replace the initial path):
 
 ```sh
-cd /path/to/hejjetrak.app/Contents/Resources
-../MacOS/hejjetrak-cli track --config examples/benchmark/config.txt --input examples/sample.mp4 --output /tmp/hejjetrak-sample-001
+cd /path/to/hejjetrac.app/Contents/Resources
+../MacOS/hejjetrac-cli track --config examples/benchmark/config.txt --input examples/sample.mp4 --output /tmp/hejjetrac-sample-001
 ```
 
 Use a new output path for each run.
@@ -35,8 +35,8 @@ Recorded PTS are preserved. Missing or nonmonotonic timestamps are errors. An ex
 Inspection is available without tracking:
 
 ```sh
-./hejjetrak-cli inspect examples/sample.mp4 --decode
-./hejjetrak-cli inspect examples/sample.mp4 --preview first.pgm
+./hejjetrac-cli inspect examples/sample.mp4 --decode
+./hejjetrac-cli inspect examples/sample.mp4 --preview first.pgm
 ```
 
 Read [output semantics](output.md) before deriving velocities from timestamps, especially across rejected intervals.

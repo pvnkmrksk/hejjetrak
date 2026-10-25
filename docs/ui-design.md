@@ -10,6 +10,13 @@ Reset, recording, Settings and Calibrate again. The status strip appears from
 
 The hierarchy follows [Apple toolbar guidance](https://developer.apple.com/design/human-interface-guidelines/toolbars) and [Microsoft command-bar guidance](https://learn.microsoft.com/en-ca/windows/apps/design/controls/command-bar): prioritize frequent commands, group related actions, move less frequent controls into secondary surfaces, and explain compact controls with tooltips. Toolbar artwork is bundled from Lucide, with pinned source SVGs, embedded rendered assets and ISC/Feather MIT notices. No icon network request, custom icon font or render-tool runtime is required. See [third-party notices](https://github.com/pvnkmrksk/hejjetrak/blob/main/THIRD_PARTY.md). The application icon retains its editable SVG source.
 
+Appearance follows the operating system by default. **More → Appearance** also
+offers Light and Dark. The preview keeps a dark surround in either theme, with
+teal selection accents in the controls. **About hejjetrak** identifies creator
+Pavan Kumar Kaushik, links the repository and manual, and credits FicTrac and
+the bundled icon artwork. These are native egui viewports and controls; they do
+not introduce an AppKit/WinUI menu-bar implementation.
+
 ```mermaid
 flowchart LR
   P[Compact ball preview + measured trajectory] --> R[Reset / instant record]
@@ -49,16 +56,58 @@ neutral rather than competing with the video.
 
 ## Guided calibration and precision aids
 
-**Calibrate again…** starts saved Ball review, then Exclusions, then Lab.
-Review is read-only until **Edit saved marks** or **Redraw this step** is chosen.
-**Keep & continue / Keep & finish** advances without rewriting fields. Edit
-allows drag/delete only for active saved marks; redraw isolates a replacement
-and leaves the previous config intact until a valid apply. Cancel discards only
-uncommitted drafts. Exclusions can append a region or explicitly clear all masks.
+**Calibrate again…** immediately pauses the source and starts an empty Ball
+outline, ready for the first click. **Continue** applies the valid layer and
+opens the next empty layer: Exclusions, then Lab. **Keep saved & continue /
+Keep saved & finish** discards that layer's draft and preserves its saved fields.
+**Start this layer over** clears just the draft. **Cancel / Escape** restores
+playback from wizard entry and discards only uncommitted drafts. Exclusions can
+append another region or explicitly clear all masks. Saved review and
+**Edit saved marks** remain secondary inspector actions for precise adjustments.
+Right-click removes the nearest active mark; inactive layers cannot be edited.
 The numerical replacements use shared calibration commands and one undoable
 config transaction, rather than a second GUI-only geometry algorithm. A tiny
 preview temporarily expands to 640×480 for calibration and restores its prior
 size on completion; source pixels and numerical coordinates do not change.
+
+Ball fitting is live from the third well-separated mark. Each additional mark
+updates the shared-core angular outline immediately. Rim marks are never joined
+with straight segments, in either the preview or precision magnifier. Two marks
+remain an incomplete draft because they do not uniquely define a circle. Lab fitting
+shows its axes after the fourth ordered square corner; exclusions show a closed
+boundary from the third vertex. **Continue** uses the current valid draft and
+advances, while **Finish & resume** completes Lab. **Add this region** retains
+the Exclusions step for another polygon. There is no separate Fit action.
+Incomplete or invalid replacement geometry does not display a stale successful
+fit or change the saved configuration. Escape cancels the current draft and
+restores the playback state from wizard entry. The focused preview banner shows the current step, next mark
+and live-fit status while only that step's geometry is highlighted. Before the
+first mark, prominent inline instructions explain the target, minimum marks and
+corner order. The banner and pointer tooltip explain left-click, right-click and
+Escape without a blocking repeated dialog.
+
+Diagnostics always shows the complete input image with the saved ball outline,
+exclusions, lab square and axes, independently of the optional preview overlays.
+**Redraw ball / Redraw exclusions / Redraw lab** enters the chosen layer directly.
+**Full configuration…** opens the exact current text in the separate inspector.
+
+Field-of-view guidance explains the vertical angle, lens projection and the
+pinhole ruler measurement before marks are placed. It also flags invalid angles
+and a source size that differs from saved resolution-reference metadata. A neat
+outline alone does not establish that the lens field of view is correct.
+
+## Multiple rigs
+
+**More → Rig manager…** lists each active session, its configuration path,
+source, FPS and tracking cost. **Full config** exposes the exact current text;
+**Settings…** opens that rig's inspector for editing and saving. **Start all**
+resumes paused rigs, replays finished files and retries stopped sources. A rig
+with calibration open remains paused with an actionable message so its draft
+is retained. **Open four rigs** opens missing sessions through the existing
+VR/BR successor rules, then arranges the active previews in a grid. **Arrange
+in a grid** also handles closed sessions without reserving an empty cell for
+the hidden application event host. The terminal equivalent is
+`hejjetrak --config VR1.txt --windows 4 --grid 2x2`.
 
 The **Precision magnifier** is a 240-pixel nearest-pixel lens at four times the
 current view scale, including crop/high-DPI scale. It shows fitted geometry,

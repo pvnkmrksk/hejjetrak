@@ -39,7 +39,7 @@ impl ConfigDocument {
     }
     pub fn boolean(&self, key: &str) -> bool {
         self.get(key)
-            .is_some_and(|v| matches!(v, "y" | "true" | "1"))
+            .is_some_and(|v| matches!(v, "y" | "Y" | "true" | "1"))
     }
     pub fn vector<T: serde::de::DeserializeOwned>(&self, key: &str) -> Result<T> {
         let value = self

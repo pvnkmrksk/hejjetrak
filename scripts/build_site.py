@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 from html.parser import HTMLParser
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
@@ -19,6 +20,33 @@ REPORTS = (
     "parity.md", "performance.md", "tracking-performance.md", "ui-design.md",
     "validation.md", "resources.md", "recovery.md",
 )
+REPOSITORY = "https://github.com/pvnkmrksk/hejjetrak"
+
+
+def add_manual_navigation(manual: Path):
+    """Keep project links visible in the generated toolbar, including without JS."""
+    repository_link = re.compile(
+        r'<a href="' + re.escape(REPOSITORY)
+        + r'" title="Git repository" aria-label="Git repository">.*?</a>',
+        re.DOTALL,
+    )
+    for page in manual.rglob("*.html"):
+        # This is the no-JS sidebar iframe, not a standalone manual chapter.
+        if page.name == "toc.html":
+            continue
+        source = page.read_text()
+        if source.count('<div class="right-buttons">') != 1:
+            raise SystemExit(f"mdBook toolbar not found in {page.name}; check the pinned template.")
+        website = "../" * len(page.relative_to(manual).parts)
+        navigation = (
+            '<nav class="project-navigation" aria-label="Project">'
+            f'<a href="{website}">Website</a>'
+            f'<a href="{REPOSITORY}">GitHub</a></nav>'
+        )
+        source, replacements = repository_link.subn(navigation, source)
+        if replacements != 1:
+            raise SystemExit(f"mdBook repository link not found in {page.name}; check the pinned template.")
+        page.write_text(source)
 
 
 class Links(HTMLParser):
@@ -103,6 +131,7 @@ def build(output: Path, mdbook: str, url: str):
         for report in ("validation-v0.1.md", "validation-v0.2.md"):
             shutil.copy2(ROOT / "docs" / report, stage / "src" / report)
         subprocess.run([mdbook, "build", str(stage), "--dest-dir", str(output / "manual")], check=True)
+    add_manual_navigation(output / "manual")
     check_links(output, urlsplit(url).path)
     print(f"Static site: {output}")
 
