@@ -8,6 +8,20 @@ assert.equal(detectPlatform({platform:'Win32'}),'windows');
 assert.equal(detectPlatform({platform:'Linux x86_64'}),'linux');
 assert.equal(detectPlatform({platform:'Linux aarch64'}),null);
 assert.equal(detectPlatform({platform:'Windows',architecture:'arm'}),null);
+// ARM can appear only in a platform/UA string when client hints are unavailable.
+assert.equal(detectPlatform({platform:'Win32',userAgent:'Mozilla/5.0 (Windows NT 10.0; ARM64)'}),null);
+assert.equal(detectPlatform({platform:'Windows ARM64'}),null);
+assert.equal(detectPlatform({platform:'Windows',architecture:'aarch64'}),null);
+assert.equal(detectPlatform({platform:'Windows',architecture:'ARM64EC'}),null);
+assert.equal(detectPlatform({platform:'Win32',architecture:'x86',userAgent:'Windows NT 10.0; ARM64'}),null);
+assert.equal(detectPlatform({platform:'Linux arm64'}),null);
+assert.equal(detectPlatform({platform:'Linux armv7l'}),null);
+assert.equal(detectPlatform({platform:'Linux',userAgent:'Mozilla/5.0 (X11; Linux aarch64)'}),null);
+assert.equal(detectPlatform({platform:'Linux',architecture:'ARM64'}),null);
+assert.equal(detectPlatform({platform:'Win32',userAgent:'Windows NT 10.0; Win64; x64'}),'windows');
+assert.equal(detectPlatform({platform:'Linux',userAgent:'Mozilla/5.0 (X11; Linux x86_64)'}),'linux');
+assert.equal(detectPlatform({platform:'MacIntel',userAgent:'Mac OS X; ARM64'}),'mac-choice');
+
 assert.equal(detectPlatform({platform:'MacIntel',maxTouchPoints:5}),null);
 assert.equal(detectPlatform({platform:'Android',mobile:true}),null);
 assert.equal(detectPlatform({}),null);

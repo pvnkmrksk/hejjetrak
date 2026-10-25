@@ -17,8 +17,10 @@ export function detectPlatform({platform = '', userAgent = '', architecture = ''
     if (/^(x86|x86_64|amd64)$/i.test(architecture)) return 'mac-intel';
     return 'mac-choice';
   }
-  if (/Win/i.test(text)) return /^arm/i.test(architecture) ? null : 'windows';
-  if (/Linux/i.test(text)) return /^arm|aarch64/i.test(architecture) || /aarch64|armv\d/i.test(text) ? null : 'linux';
+  // Explicit ARM hints from any exposed source must not select an x64 archive.
+  const armHint = /\b(?:arm(?:64(?:ec)?|v\d+[a-z]*)?|aarch64)\b/i.test(`${architecture} ${text}`);
+  if (/Win/i.test(text)) return armHint ? null : 'windows';
+  if (/Linux/i.test(text)) return armHint ? null : 'linux';
   return null;
 }
 
