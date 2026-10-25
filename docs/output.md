@@ -94,3 +94,9 @@ while True:
     columns = message.removeprefix("FT, ").strip().split(",")
     assert len(columns) == 25
 ```
+
+## MATREX VR connection
+
+[MATREX VR](https://github.com/pvnkmrksk/matrexVR) is the companion Unity experiment renderer. Its [input guide](https://pvnkmrksk.github.io/matrexVR/manual/input-contracts.html) maps native FT columns 15/16/17 (forward, east and heading in radians) to its walking rig and explains sphere-radius conversion. The native decoder/transport path belongs to current source after its immutable 0.3 release; use the contract for the exact renderer build rather than treating the old JSON adapter and an FT row as the same payload.
+
+A successful connection does not turn rejected/missing motion into a measurement. Keep the all-frame/quality evidence described above. [Daari Deepa](https://github.com/pvnkmrksk/trajectory-dashboard) supplies downstream trajectory analysis; [MATREX recording and replay](https://pvnkmrksk.github.io/matrexVR/manual/recording-pipeline.html) explains its saved experiment bundle.

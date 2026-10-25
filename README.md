@@ -37,6 +37,12 @@ Current downloads are ad hoc signed on Mac and unsigned on Windows. Use the proj
 
 [First session](https://pvnkmrksk.github.io/hejjetrak/manual/quick-start.html) · [Hardware and lighting](https://pvnkmrksk.github.io/hejjetrak/manual/hardware.html) · [Calibration](https://pvnkmrksk.github.io/hejjetrak/manual/calibration.html)
 
+## Companion experiments and analysis
+
+[MATREX VR](https://github.com/pvnkmrksk/matrexVR) supplies configurable Unity visual environments for animal experiments, with a [complete manual](https://pvnkmrksk.github.io/matrexVR/manual/) covering rigs, display mapping, tracking units, recording and replay. Match its exact release/source input contract to HejjéTrac's native FT output or the appropriate adapter; native FT decoding and modern transport updates are current-source additions after MATREX VR 0.3, not a change to that archived binary. [Connection guide](https://pvnkmrksk.github.io/matrexVR/manual/input-contracts.html).
+
+[Daari Deepa](https://github.com/pvnkmrksk/trajectory-dashboard) provides browser-based trajectory analysis. [Rekkefly](https://github.com/pvnkmrksk/rekkefly) is the companion flight/wing tracker. These are separate tools with their own releases and output contracts.
+
 ## Coordinates and configuration
 
 The manual retains FicTrac’s original [coordinate guide](book/src/upstream-coordinates.md), [complete parameter table](book/src/upstream-parameters.md), [hardware and algorithm notes](book/src/upstream-setup.md) and [25-column data reference](book/src/upstream-data.md), with their source and license. [Current configuration](book/src/configuration.md) and [output semantics](docs/output.md) describe the Rust application’s additions.
