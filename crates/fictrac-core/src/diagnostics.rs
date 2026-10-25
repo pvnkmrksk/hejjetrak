@@ -93,6 +93,20 @@ impl Diagnostics {
         let mut blur = grey.clone();
         for y in 0..n {
             for x in 0..n {
+                if x > 0 && x + 1 < n && y > 0 && y + 1 < n {
+                    blur[y * n + x] = median9([
+                        grey[(y - 1) * n + x - 1],
+                        grey[(y - 1) * n + x],
+                        grey[(y - 1) * n + x + 1],
+                        grey[y * n + x - 1],
+                        grey[y * n + x],
+                        grey[y * n + x + 1],
+                        grey[(y + 1) * n + x - 1],
+                        grey[(y + 1) * n + x],
+                        grey[(y + 1) * n + x + 1],
+                    ]);
+                    continue;
+                }
                 let mut values = [0u8; 9];
                 let mut k = 0;
                 for yy in y.saturating_sub(1)..=(y + 1).min(n - 1) {
@@ -106,45 +120,52 @@ impl Diagnostics {
             }
         }
         let rad = self.window / 2;
-        let mut hmin = vec![255; n * n];
-        let mut hmax = vec![0; n * n];
+        let mut horizontal = vec![Extrema::EMPTY; n * n];
+        let mut prefix = vec![Extrema::EMPTY; n + 2 * rad];
+        let mut suffix = prefix.clone();
         for y in 0..n {
-            for x in 0..n {
-                for xx in x.saturating_sub(rad)..=(x + rad).min(n - 1) {
-                    let i = y * n + xx;
+            extrema_windows(
+                n,
+                rad,
+                &mut prefix,
+                &mut suffix,
+                |x| {
+                    let i = y * n + x;
                     if self.points[i].is_none() {
-                        continue;
+                        Extrema::EMPTY
+                    } else {
+                        Extrema {
+                            min: blur[i],
+                            max: if blur[i] < 255 { blur[i] } else { 0 },
+                        }
                     }
-                    let v = blur[i];
-                    hmin[y * n + x] = hmin[y * n + x].min(v);
-                    if v < 255 {
-                        hmax[y * n + x] = hmax[y * n + x].max(v);
-                    }
-                }
-            }
+                },
+                |x, value| horizontal[y * n + x] = value,
+            );
         }
         let mut roi = vec![128; n * n];
-        for y in 0..n {
-            for x in 0..n {
-                let i = y * n + x;
-                if self.points[i].is_none() {
-                    continue;
-                }
-                let mut min = 255;
-                let mut max = 0;
-                for yy in y.saturating_sub(rad)..=(y + rad).min(n - 1) {
-                    min = min.min(hmin[yy * n + x]);
-                    max = max.max(hmax[yy * n + x]);
-                }
-                let value = if self.ratio * (f64::from(grey[i]) - f64::from(min))
-                    <= f64::from(max) - f64::from(grey[i])
-                {
-                    0
-                } else {
-                    255
-                };
-                roi[i] = value;
-            }
+        for x in 0..n {
+            extrema_windows(
+                n,
+                rad,
+                &mut prefix,
+                &mut suffix,
+                |y| horizontal[y * n + x],
+                |y, bounds| {
+                    let i = y * n + x;
+                    if self.points[i].is_none() {
+                        return;
+                    }
+                    let value = if self.ratio * (f64::from(grey[i]) - f64::from(bounds.min))
+                        <= f64::from(bounds.max) - f64::from(grey[i])
+                    {
+                        0
+                    } else {
+                        255
+                    };
+                    roi[i] = value;
+                },
+            );
         }
         roi
     }
@@ -248,6 +269,141 @@ impl Diagnostics {
             roi_size: n,
             map_width: mw,
             map_height: mh,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Extrema {
+    min: u8,
+    max: u8,
+}
+impl Extrema {
+    const EMPTY: Self = Self { min: 255, max: 0 };
+    fn join(self, other: Self) -> Self {
+        Self {
+            min: self.min.min(other.min),
+            max: self.max.max(other.max),
+        }
+    }
+}
+/// Prefix/suffix blocks give each clipped window in constant work, independent
+/// of its radius. Padding with the identity preserves masked-border semantics.
+fn extrema_windows(
+    n: usize,
+    rad: usize,
+    prefix: &mut [Extrema],
+    suffix: &mut [Extrema],
+    value: impl Fn(usize) -> Extrema,
+    mut emit: impl FnMut(usize, Extrema),
+) {
+    let extent = n + 2 * rad;
+    let window = 2 * rad + 1;
+    let sample = |i: usize| {
+        if i >= rad && i - rad < n {
+            value(i - rad)
+        } else {
+            Extrema::EMPTY
+        }
+    };
+    for i in 0..extent {
+        prefix[i] = if i % window == 0 {
+            sample(i)
+        } else {
+            prefix[i - 1].join(sample(i))
+        };
+    }
+    for i in (0..extent).rev() {
+        suffix[i] = if i + 1 == extent || (i + 1) % window == 0 {
+            sample(i)
+        } else {
+            suffix[i + 1].join(sample(i))
+        };
+    }
+    for i in 0..n {
+        emit(i, suffix[i].join(prefix[i + 2 * rad]));
+    }
+}
+/// Median selection network: only the fifth order statistic is needed.
+/// The 512 binary inputs exhaust its threshold cases (zero-one principle).
+fn median9(mut p: [u8; 9]) -> u8 {
+    for (a, b) in [
+        (1, 2),
+        (4, 5),
+        (7, 8),
+        (0, 1),
+        (3, 4),
+        (6, 7),
+        (1, 2),
+        (4, 5),
+        (7, 8),
+        (0, 3),
+        (5, 8),
+        (4, 7),
+        (3, 6),
+        (1, 4),
+        (2, 5),
+        (4, 7),
+        (4, 2),
+        (6, 4),
+        (4, 2),
+    ] {
+        let lo = p[a].min(p[b]);
+        let hi = p[a].max(p[b]);
+        p[a] = lo;
+        p[b] = hi;
+    }
+    p[4]
+}
+
+#[cfg(test)]
+mod filter_tests {
+    use super::*;
+    #[test]
+    fn median_network_exhausts_binary_threshold_cases() {
+        for bits in 0..512 {
+            let values = std::array::from_fn(|i| if bits & (1 << i) != 0 { 255 } else { 0 });
+            let mut sorted = values;
+            sorted.sort_unstable();
+            assert_eq!(median9(values), sorted[4]);
+        }
+    }
+    #[test]
+    fn blocked_extrema_match_scalar_windows_with_masks_and_saturation() {
+        for n in [1, 2, 3, 15, 60, 300] {
+            let values: Vec<_> = (0..n)
+                .map(|i| {
+                    if i % 7 == 0 {
+                        Extrema::EMPTY
+                    } else {
+                        let v = (i * 73 % 256) as u8;
+                        Extrema {
+                            min: v,
+                            max: if v < 255 { v } else { 0 },
+                        }
+                    }
+                })
+                .collect();
+            for rad in [0, 1, n / 2, n] {
+                let mut prefix = vec![Extrema::EMPTY; n + 2 * rad];
+                let mut suffix = prefix.clone();
+                let mut result = vec![Extrema::EMPTY; n];
+                extrema_windows(
+                    n,
+                    rad,
+                    &mut prefix,
+                    &mut suffix,
+                    |i| values[i],
+                    |i, v| result[i] = v,
+                );
+                for (i, v) in result.iter().enumerate() {
+                    let expected = values[i.saturating_sub(rad)..=(i + rad).min(n - 1)]
+                        .iter()
+                        .copied()
+                        .fold(Extrema::EMPTY, Extrema::join);
+                    assert_eq!(*v, expected, "n={n} radius={rad} at {i}");
+                }
+            }
         }
     }
 }

@@ -1,5 +1,15 @@
 # Output contract
 
+The accelerated local search samples a deterministic subset of valid ROI sites
+(at most about 1024 for ordinary budgets). The selected candidate and prediction
+are then scored on **all valid sites**; the lower complete score drives the
+reported map MSE and `opt_max_err` decision. These checks are reserved within
+`opt_max_evals`. Small ROIs/budgets retain complete local search. Global recovery
+keeps its existing coarse search and complete final scoring.
+ROI resolution, map evidence, coordinate conventions and missing-motion rules
+are unchanged. Trajectories can differ from the earlier full-site optimizer;
+accuracy is assessed with the unchanged trajectory/rotation reference gates.
+
 `tracking.dat` has comma-separated accepted rows in legacy mode, matching upstream rejection omission; modern JSON mode retains every row. `all-frames.dat` and `quality.csv` always preserve every processed frame and decision. Data files have no header. Floating-point values use twelve decimal places; frame/sequence fields are integers.
 
 | Columns (1-based) | Meaning |

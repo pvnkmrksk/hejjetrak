@@ -254,3 +254,55 @@ fn modern_rows_keep_processed_frame_intervals_after_rejections() -> Result {
     assert_eq!(recovered.delta_ms, 10.0);
     Ok(())
 }
+
+#[test]
+fn local_map_search_preserves_known_motion_trajectory_over_120_frames() -> Result {
+    let mut c = config(false);
+    if let Some(map) = &mut c.spherical_map {
+        map.max_evaluations = 50;
+    }
+    let template = known_template()?;
+    let delta = DVec3::new(0.004, -0.007, 0.003);
+    let mut tracker = Tracker::new(c.clone())?;
+    let mut expected_position = [0.0, 0.0];
+    let mut path_squared = 0.0;
+    let mut heading_squared = 0.0;
+    let mut rotation_squared = DVec3::ZERO;
+    for frame in 0..120 {
+        let pose = DQuat::from_scaled_axis(delta * frame as f64);
+        let row = tracker.process(render_template(&c, &template, pose, frame as f64 * 10.0)?)?;
+        assert!(row.accepted, "frame={frame}, score={}", row.error);
+        if frame == 0 {
+            continue;
+        }
+        let prior_heading = -delta.z * (frame - 1) as f64;
+        for substep in 0..4 {
+            let angle = prior_heading - delta.z * (substep as f64 + 0.5) / 4.0;
+            let (s, cos) = angle.sin_cos();
+            expected_position[0] += (cos * delta.y + s * delta.x) / 4.0;
+            expected_position[1] += (s * delta.y - cos * delta.x) / 4.0;
+        }
+        path_squared += (row.position[0] - expected_position[0]).powi(2)
+            + (row.position[1] - expected_position[1]).powi(2);
+        let angle = row.heading + delta.z * frame as f64;
+        heading_squared += angle.sin().atan2(angle.cos()).powi(2);
+        let error = DVec3::from_array(row.delta_camera) - delta;
+        rotation_squared += error * error;
+    }
+    let path_rmse = (path_squared / 119.0).sqrt();
+    let heading_rmse = (heading_squared / 119.0).sqrt();
+    let rotation_rmse = (rotation_squared / 119.0).to_array().map(f64::sqrt);
+    eprintln!(
+        "known map motion path={path_rmse}, heading={heading_rmse}, rotation={rotation_rmse:?}"
+    );
+    assert!(path_rmse < 0.08, "known-motion trajectory RMSE {path_rmse}");
+    assert!(
+        heading_rmse < 0.08,
+        "known-motion heading RMSE {heading_rmse}"
+    );
+    assert!(
+        rotation_rmse.iter().all(|v| *v < 0.008),
+        "known-motion delta RMSE {rotation_rmse:?}"
+    );
+    Ok(())
+}

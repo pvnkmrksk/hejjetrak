@@ -3,6 +3,7 @@ use crate::{Config, DebugViews, Diagnostics, Error, GrayFrame, MapSettings, Resu
 use bobyqa::{Bobyqa, Config as SolverConfig};
 use glam::{DMat3, DQuat, DVec3};
 use std::f64::consts::{PI, TAU};
+use std::sync::OnceLock;
 
 /// Equal-area atlas in FicTrac ROI/material axes. Value 128 denotes unseen surface.
 #[derive(Clone, Debug, PartialEq)]
@@ -41,6 +42,7 @@ pub(crate) struct MapTracker {
     active_sites: Vec<(DVec3, usize)>,
     prepared_roi: Option<Vec<u8>>,
     solver: Bobyqa,
+    local_stride: usize,
     settings: MapSettings,
     bound: f64,
     orientation: DQuat,
@@ -68,9 +70,18 @@ impl MapTracker {
             settings.threshold_window,
         )?;
         let mut solver_config = SolverConfig::new(3);
+        let count = sampler.points.iter().flatten().count();
+        // Search a spatially distributed subset, then score both the candidate
+        // and predictor on every site. Reserve those two evaluations in the
+        // original budget. Small ROIs/budgets retain the complete objective.
+        let local_stride = if settings.max_evaluations >= 16 {
+            count.div_ceil(1024).max(1)
+        } else {
+            1
+        };
         solver_config.rho_begin = config.max_rotation * 0.5;
         solver_config.rho_end = settings.tolerance;
-        solver_config.max_fun = settings.max_evaluations;
+        solver_config.max_fun = settings.max_evaluations - if local_stride > 1 { 2 } else { 0 };
         let solver =
             Bobyqa::new(3, solver_config).map_err(|e| Error::Config(format!("BOBYQA: {e}")))?;
         let template = sampler.map.clone();
@@ -82,7 +93,7 @@ impl MapTracker {
         let active_sites = atlas_sites
             .iter()
             .enumerate()
-            .filter_map(|(index, point)| point.map(|p| (p, index)))
+            .filter_map(|(index, point)| point.map(|p| (p.normalize(), index)))
             .collect();
         Ok(Self {
             sampler,
@@ -90,6 +101,7 @@ impl MapTracker {
             active_sites,
             prepared_roi: None,
             solver,
+            local_stride,
             settings,
             bound: config.max_rotation,
             orientation: DQuat::IDENTITY,
@@ -174,25 +186,34 @@ impl MapTracker {
             width: self.sampler.map_width,
             height: self.sampler.map_height,
             count,
+            local_stride: self.local_stride,
         };
         let orientation = self.orientation;
         let mut x = self.guess.to_array();
         let lower = x.map(|v| v - self.bound);
         let upper = x.map(|v| v + self.bound);
         let error = if self.ready {
-            self.solver
+            let seed = x;
+            let error = self
+                .solver
                 .minimize(
                     |x| {
-                        objective.cost(
+                        objective.local_cost(
                             DQuat::from_scaled_axis(DVec3::new(x[0], x[1], x[2])) * orientation,
-                            1,
                         )
                     },
                     &mut x,
                     &lower,
                     &upper,
                 )
-                .f
+                .f;
+            if objective.local_stride > 1 {
+                let (checked, error) = objective.checked_candidate(seed, x, orientation);
+                x = checked;
+                error
+            } else {
+                error
+            }
         } else {
             1e12
         };
@@ -258,18 +279,46 @@ struct AtlasObjective<'a> {
     width: usize,
     height: usize,
     count: usize,
+    local_stride: usize,
 }
 impl AtlasObjective<'_> {
+    fn checked_candidate(
+        &self,
+        seed: [f64; 3],
+        candidate: [f64; 3],
+        orientation: DQuat,
+    ) -> ([f64; 3], f64) {
+        let candidate_error = self.cost(
+            DQuat::from_scaled_axis(DVec3::from_array(candidate)) * orientation,
+            1,
+        );
+        let seed_error = self.cost(
+            DQuat::from_scaled_axis(DVec3::from_array(seed)) * orientation,
+            1,
+        );
+        if seed_error < candidate_error {
+            (seed, seed_error)
+        } else {
+            (candidate, candidate_error)
+        }
+    }
     fn cost(&self, rotation: DQuat, stride: usize) -> f64 {
+        self.evaluate(rotation, stride, false)
+    }
+    fn local_cost(&self, rotation: DQuat) -> f64 {
+        self.evaluate(rotation, self.local_stride, true)
+    }
+    fn evaluate(&self, rotation: DQuat, stride: usize, compact: bool) -> f64 {
         // One transform per candidate, rather than expanding quaternion-vector
         // products for every ROI site. Dense sites retain original pixel order.
         let inverse = DMat3::from_quat(rotation.inverse());
+        let projection = AtlasProjection::new(self.width, self.height);
         let mut squared = 0.0;
         let mut count = 0;
         let mut good = 0;
         let mut observe = |p, i| {
             count += 1;
-            let value = self.map[map_index(inverse * p, self.width, self.height)];
+            let value = self.map[projection.index(inverse * p)];
             if value == 128 {
                 return;
             }
@@ -277,8 +326,8 @@ impl AtlasObjective<'_> {
             squared += d * d;
             good += 1;
         };
-        if stride == 1 {
-            for &(point, index) in self.active_sites {
+        if stride == 1 || compact {
+            for &(point, index) in self.active_sites.iter().step_by(stride) {
                 observe(point, index);
             }
         } else {
@@ -286,7 +335,7 @@ impl AtlasObjective<'_> {
             // holes; compacting before stepping would change its candidates.
             for i in (0..self.sites.len()).step_by(stride) {
                 if let Some(point) = self.sites[i] {
-                    observe(point, i);
+                    observe(point.normalize(), i);
                 }
             }
         }
@@ -369,4 +418,108 @@ pub(crate) fn map_index(p: DVec3, width: usize, height: usize) -> usize {
     let x = (((-lon - PI) / TAU).rem_euclid(1.0) * width as f64).floor() as usize;
     let y = ((p.y + 1.0) * 0.5 * height as f64).floor() as usize;
     y.min(height - 1) * width + x.min(width - 1)
+}
+
+/// Unit-sphere projection with bounded atan interpolation. The interpolation
+/// error on [0,1] is at most max|atan''|/(8*1024²) < 7.8e-8 radians.
+/// Recompute precisely when that error could change the discrete map cell.
+/// Points are normalized once at calibration; rotations preserve their norm.
+struct AtlasProjection {
+    width: usize,
+    height: usize,
+    atan: &'static [f64; 1025],
+}
+impl AtlasProjection {
+    fn new(width: usize, height: usize) -> Self {
+        static ATAN: OnceLock<[f64; 1025]> = OnceLock::new();
+        Self {
+            width,
+            height,
+            atan: ATAN.get_or_init(|| std::array::from_fn(|i| (i as f64 / 1024.0).atan())),
+        }
+    }
+    #[inline]
+    fn index(&self, p: DVec3) -> usize {
+        let ax = p.x.abs();
+        let az = p.z.abs();
+        let major = ax.max(az);
+        if major == 0.0 {
+            return map_index(p, self.width, self.height);
+        }
+        let scaled = ax.min(az) / major * 1024.0;
+        let i = (scaled as usize).min(1023);
+        let mut lon = self.atan[i] + (scaled - i as f64) * (self.atan[i + 1] - self.atan[i]);
+        if ax > az {
+            lon = PI * 0.5 - lon;
+        }
+        if p.z < 0.0 {
+            lon = PI - lon;
+        }
+        if p.x < 0.0 {
+            lon = -lon;
+        }
+        let x = (PI - lon) * (self.width as f64 / TAU);
+        let y = (p.y + 1.0) * (self.height as f64 * 0.5);
+        // 1e-7 bounds interpolation plus roundoff. Latitude needs only a small
+        // roundoff guard because immutable sites were normalized beforehand.
+        if (x - x.round()).abs() <= self.width as f64 / TAU * 1e-7 + 1e-9
+            || (y - y.round()).abs() <= 1e-9
+        {
+            return map_index(p, self.width, self.height);
+        }
+        (y as usize).min(self.height - 1) * self.width + (x as usize).min(self.width - 1)
+    }
+}
+
+#[cfg(test)]
+mod projection_tests {
+    use super::*;
+    #[test]
+    fn sampled_blind_spot_cannot_hide_error_from_final_quality_decision() {
+        let point = DVec3::new(0.17, 0.28, 0.95).normalize();
+        let sites = vec![Some(point); 2048];
+        let active_sites: Vec<_> = (0..sites.len()).map(|i| (point, i)).collect();
+        let roi: Vec<_> = (0..sites.len())
+            .map(|i| if i % 3 == 0 { 0 } else { 255 })
+            .collect();
+        let map = vec![0; 180 * 90];
+        let objective = AtlasObjective {
+            sites: &sites,
+            active_sites: &active_sites,
+            roi: &roi,
+            map: &map,
+            width: 180,
+            height: 90,
+            count: sites.len(),
+            local_stride: 3,
+        };
+        assert_eq!(objective.local_cost(DQuat::IDENTITY), 0.0);
+        let (_, error) = objective.checked_candidate([0.0; 3], [0.0; 3], DQuat::IDENTITY);
+        let expected =
+            roi.iter().filter(|v| **v == 255).count() as f64 * 65025.0 / roi.len() as f64;
+        assert_eq!(error, expected);
+        assert!(!acceptable(error, 12000.0));
+    }
+    #[test]
+    fn interpolated_projection_matches_precise_bins_including_boundaries() {
+        for width in [30, 180, 900] {
+            let height = width / 2;
+            let projection = AtlasProjection::new(width, height);
+            for lat in 0..=100 {
+                let y = -1.0 + 2.0 * lat as f64 / 100.0;
+                let radius = (1.0 - y * y).max(0.0).sqrt();
+                for cell in 0..width {
+                    for offset in [-1e-8, 0.0, 1e-8, 0.37, 0.99999] {
+                        let lon = PI - (cell as f64 + offset) * TAU / width as f64;
+                        let point = DVec3::new(lon.sin() * radius, y, lon.cos() * radius);
+                        assert_eq!(
+                            projection.index(point),
+                            map_index(point, width, height),
+                            "width={width} lat={lat} cell={cell} offset={offset}"
+                        );
+                    }
+                }
+            }
+        }
+    }
 }
