@@ -1184,17 +1184,51 @@ mod tests {
         Ok((SourceSpec::Video(root.join("examples/sample.mp4")), doc))
     }
     fn wait_for(worker: &Worker, test: impl Fn(&Snapshot) -> bool) -> Result<Snapshot> {
+        wait_for_timeout(worker, Duration::from_secs(15), test)
+    }
+    fn wait_for_timeout(
+        worker: &Worker,
+        timeout: Duration,
+        test: impl Fn(&Snapshot) -> bool,
+    ) -> Result<Snapshot> {
         let start = Instant::now();
+        let initial_frames = worker.latest().frames;
+        let mut previous_frames = initial_frames;
+        let mut last_frame_progress = start;
         loop {
             let snapshot = worker.latest();
+            if snapshot.frames != previous_frames {
+                previous_frames = snapshot.frames;
+                last_frame_progress = Instant::now();
+            }
             if test(&snapshot) {
                 return Ok(snapshot);
             }
             if snapshot.ended && !snapshot.notice.contains("complete") {
                 return Err(snapshot.notice);
             }
-            if start.elapsed() > Duration::from_secs(15) {
-                return Err(format!("worker timed out: {}", snapshot.notice));
+            if start.elapsed() > timeout {
+                return Err(format!(
+                    "worker timed out after {:?}: frames={} (advanced {}), last frame progress {:?} ago, paused={}, ended={}, revision={}, advance_remaining={}, recording={}, row={:?}, preview_updates={}, idle_waits={}, pacing_waits={}, command_error={:?}, notice={}",
+                    start.elapsed(),
+                    snapshot.frames,
+                    snapshot.frames.saturating_sub(initial_frames),
+                    last_frame_progress.elapsed(),
+                    snapshot.paused,
+                    snapshot.ended,
+                    snapshot.revision,
+                    snapshot.advance_remaining,
+                    snapshot.recording,
+                    snapshot
+                        .row
+                        .as_ref()
+                        .map(|row| (row.frame, row.timestamp_ms)),
+                    snapshot.resources.preview_updates,
+                    snapshot.resources.idle_waits,
+                    snapshot.resources.pacing_waits,
+                    snapshot.command_error,
+                    snapshot.notice,
+                ));
             }
             thread::sleep(Duration::from_millis(10));
         }
@@ -1507,7 +1541,11 @@ mod tests {
         ))?;
         worker.send(Command::Realtime(false))?;
         worker.send(Command::Pause(false))?;
-        let ended = wait_for(&worker, |snapshot| snapshot.ended)?;
+        // This verifies complete persisted evidence and EOF pixels, not decode
+        // throughput. Shared CI runners execute other real-video tests alongside
+        // this debug-build 300-frame decode; allow that work sixty seconds while
+        // keeping the separate command/deadline responsiveness assertions strict.
+        let ended = wait_for_timeout(&worker, Duration::from_secs(60), |snapshot| snapshot.ended)?;
         assert_eq!(ended.frames, 300);
         assert!(ended.resources.preview_updates > 0);
         assert!(ended.resources.preview_updates <= ended.frames);

@@ -9,6 +9,11 @@ excluded. Source-paced rows are never skipped by this helper. A short input that
 ends during an active case fails instead of silently measuring EOF idle time.
 Quality fields are sampled last-row states, not all per-frame decisions; use
 separate recorded all-frame/quality evidence for complete acceptance counts.
+Outputs are disabled unless --outputs enables UDP and ZMQ on separate localhost
+ports per session. That case includes formatting/queue/send costs; without a
+subscriber or UDP receiver it supplies no independent delivery evidence.
+pid.txt identifies this tool's launched desktop for separate diagnostic profiles;
+profiling during a measurement invalidates its CPU result as benchmark evidence.
 
 The bundled 300-frame video supports a 20-second measurement at --fps10, after
 three seconds warmup. For 100/120/240 FPS provide a sufficiently long input
@@ -94,6 +99,8 @@ def main():
                         help='literal config override, e.g. rust_resilient=n; no source files modified')
     parser.add_argument('--camera', type=int, default=0)
     parser.add_argument('--display', choices=('y', 'n'), default='y', help='exercise visible preview by default')
+    parser.add_argument('--outputs', action='store_true',
+                        help='enable localhost UDP1111+session index and ZMQ9871+session index; no subscriber receipt claim')
     parser.add_argument('--fps', type=float, default=10.0)
     parser.add_argument('--seconds', type=float, default=20.0)
     parser.add_argument('--warmup', type=float, default=3.0)
@@ -118,7 +125,9 @@ def main():
         text = field(text, key.strip(), value)
     for key, value in [('src_fn', str(args.camera) if args.mode == 'camera' else str(source)),
                        ('src_fps', '-1' if args.mode == 'camera' else str(args.fps)),
-                       ('sock_port', '-1'), ('zmq_port', '-1'), ('com_port', ''),
+                       ('sock_host', '127.0.0.1'), ('zmq_host', '127.0.0.1'),
+                       ('sock_port', '1111' if args.outputs else '-1'),
+                       ('zmq_port', '9871' if args.outputs else '-1'), ('com_port', ''),
                        ('save_raw', 'n'), ('save_debug', 'n'), ('do_display', args.display), ('rust_instance_name', 'VR1')]:
         text = field(text, key, value)
     config = output / 'resource.txt'
@@ -133,6 +142,7 @@ def main():
         command.extend(['--window-size', args.window_size])
     process = subprocess.Popen(command, cwd=root, stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=error_file, text=True, bufsize=1)
+    (output / 'pid.txt').write_text(str(process.pid) + '\n')
     responses = queue.Queue(maxsize=16)
     def read_responses():
         for line in process.stdout:
@@ -216,6 +226,7 @@ def main():
             raise RuntimeError(f'active source did not advance: {deltas}')
         result = {'binary': str(binary), 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
                   'mode': args.mode, 'sessions': args.sessions, 'window_size': args.window_size, 'display': args.display,
+                  'outputs_enabled': args.outputs,
                   'input': str(source) if args.mode != 'camera' else f'camera:{args.camera}',
                   'input_sha256': hashlib.sha256(source.read_bytes()).hexdigest() if args.mode != 'camera' else None,
                   'config_source': str(config_source), 'field_overrides': args.field, 'requested_source_fps': args.fps if args.mode != 'camera' else None,

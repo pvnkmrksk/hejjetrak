@@ -106,8 +106,8 @@ fn parse_pair(value: &str, separator: char) -> Result<Pair, String> {
 }
 fn parse_size(value: &str) -> Result<Pair, String> {
     let pair = parse_pair(value, 'x')?;
-    if !(240.0..=8192.0).contains(&pair.0) || !(180.0..=8192.0).contains(&pair.1) {
-        return Err("Window size must be 240x180 through 8192x8192".into());
+    if !(96.0..=8192.0).contains(&pair.0) || !(96.0..=8192.0).contains(&pair.1) {
+        return Err("Window size must be 96x96 through 8192x8192".into());
     }
     Ok(pair)
 }
@@ -191,8 +191,8 @@ impl Desktop {
         let window_size = args.window_size.unwrap_or_else(|| {
             if args.grid.is_some() {
                 Pair(
-                    (monitor.x / grid.0 - 8.0).max(240.0),
-                    ((monitor.y - 50.0) / grid.1 - 32.0).max(180.0),
+                    (monitor.x / grid.0 - 8.0).max(96.0),
+                    ((monitor.y - 50.0) / grid.1 - 32.0).max(96.0),
                 )
             } else {
                 Pair(520.0, 480.0)
@@ -497,5 +497,22 @@ fn main() -> std::process::ExitCode {
             eprintln!("hejjetrak: {e}");
             std::process::ExitCode::FAILURE
         }
+    }
+}
+
+#[cfg(test)]
+mod arguments_tests {
+    use super::*;
+
+    #[test]
+    fn tiny_preview_size_is_available_through_the_public_cli()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let args = Args::try_parse_from(["hejjetrak", "--window-size", "96x96"])?;
+        let size = args.window_size.ok_or("missing preview size")?;
+        assert_eq!((size.0, size.1), (96.0, 96.0));
+        for value in ["95x96", "96x95", "NaNx96", "96xinf", "8193x96"] {
+            assert!(Args::try_parse_from(["hejjetrak", "--window-size", value]).is_err());
+        }
+        Ok(())
     }
 }
