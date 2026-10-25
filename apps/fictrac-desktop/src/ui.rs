@@ -282,9 +282,9 @@ impl Session {
             Color32::from_rgb(96, 210, 158)
         };
         let text = format!(
-            "{:.1} fps · {:.2} ms{}",
+            "{:.1} fps · {:.2} ms track{}",
             self.snapshot.actual_fps,
-            self.snapshot.processing_ms,
+            self.snapshot.tracking_ms,
             if self.snapshot.dropped_running > 0 {
                 format!(" · drop {}", self.snapshot.dropped_running)
             } else {
@@ -292,9 +292,10 @@ impl Session {
             }
         );
         let detail = format!(
-            "{} frames\nFit: {:.2} ms\nDecode + tracking + diagnostics + recording + dispatch: {:.2} ms (excludes camera wait and playback pacing)\nSource: {:.2} fps · headroom {:.0}%\nCapture frames skipped: {} (includes intentional pauses)\n{}\nUDP {} · ZMQ {}\n{}\n{}",
+            "{} frames\nTracking mean: {:.3} ms ({} measured frames; ROI + fitting + integration + numerical maps)\nWorker: {:.2} ms (conversion + tracking + diagnostics + recording + dispatch; excludes camera wait and playback pacing)\nSource: {:.2} fps · worker headroom {:.0}%\nCapture frames skipped: {} (includes intentional pauses)\n{}\nUDP {} · ZMQ {}\n{}\n{}",
             self.snapshot.frames,
-            1000.0 / self.snapshot.processing_fps.max(1e-9),
+            self.snapshot.tracking_ms,
+            self.snapshot.tracking_samples,
             self.snapshot.processing_ms,
             self.snapshot.source_fps,
             self.snapshot.headroom_percent,

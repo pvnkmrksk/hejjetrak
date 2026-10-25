@@ -25,6 +25,15 @@ For each new frame, pure Rust PRIMA BOBYQA minimizes mean squared binary-map err
 
 The explicit pairwise alternative (`rust_engine : pairwise`) uses a three-level luminance pyramid, bilinear warps, Huber residuals, finite-difference Jacobian and bounded Gauss–Newton/line search. It retains its own synthetic and reference regression tests; its error scale differs from map fitting.
 
+Local map search now evaluates a deterministic subset for candidate generation,
+then checks the candidate and predictor on every valid site. Verification is
+reserved within `opt_max_evals`; small ROIs/budgets keep complete search. Atlas
+projection caches unit sites and uses bounded atan interpolation with precise
+cell-boundary fallback. Threshold extrema use linear prefix/suffix passes.
+[Tracking-stage measurements](tracking-performance.md) record latency and the
+resulting trajectory tradeoff; global recovery and quality scoring retain their
+complete final evaluation.
+
 Both estimates feed the same quaternion and path integrator. Camera physical coordinates are right/down/forward. Upstream's legacy exported “camera” deltas actually use a recentered ROI basis; the importer preserves that convention, then applies the stored `c2a_r` exactly as upstream does. Modern JSON can select physical axes. Lab forward/side motion are `(delta_lab.y, -delta_lab.x)` and heading changes by `-delta_lab.z`. Legacy path integration uses upstream’s four midpoint substeps; modern JSON uses an analytic constant-velocity arc. Position is in sphere radians.
 
 ## Calibration and file state

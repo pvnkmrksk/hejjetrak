@@ -65,6 +65,10 @@ pub struct Snapshot {
     pub advance_remaining: usize,
     pub processing_fps: f64,
     pub processing_ms: f64,
+    /// Arithmetic mean of Tracker::process only, excluding capture/conversion,
+    /// engine construction, output, recording and preview publication.
+    pub tracking_ms: f64,
+    pub tracking_samples: u64,
     pub actual_fps: f64,
     pub source_fps: f64,
     pub headroom_percent: f64,
@@ -397,6 +401,8 @@ fn run(
                     snapshot.paused = true;
                 }
                 Command::Reset => {
+                    snapshot.tracking_ms = 0.0;
+                    snapshot.tracking_samples = 0;
                     if let Some(engine) = &mut engine_state {
                         engine.tracker.reset_tracking();
                     }
@@ -688,6 +694,8 @@ fn run(
         }
         let tick = Instant::now();
         if needs_config {
+            snapshot.tracking_ms = 0.0;
+            snapshot.tracking_samples = 0;
             match engine(&doc, frame.width(), frame.height(), config_path) {
                 Ok((e, _)) => {
                     snapshot.notice = if e.config.spherical_map.is_some() {
@@ -704,6 +712,7 @@ fn run(
             }
             needs_config = false;
         }
+        let tracking_tick = Instant::now();
         let row = if let Some(e) = &mut engine_state {
             Some(
                 e.tracker
@@ -713,6 +722,12 @@ fn run(
         } else {
             None
         };
+        let tracking_ms = tracking_tick.elapsed().as_secs_f64() * 1000.0;
+        if row.is_some() {
+            snapshot.tracking_samples += 1;
+            snapshot.tracking_ms +=
+                (tracking_ms - snapshot.tracking_ms) / snapshot.tracking_samples as f64;
+        }
         snapshot.processing_fps = 1.0 / tick.elapsed().as_secs_f64().max(1e-9);
         snapshot.frames += 1;
         snapshot.row = row.clone();

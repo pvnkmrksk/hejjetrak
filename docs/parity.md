@@ -1,5 +1,11 @@
 # Behavioral parity assessment — hejjetrak v0.1.1
 
+Current source additionally uses the [accelerated local search](tracking-performance.md).
+It changes candidate generation while retaining complete error/quality scoring,
+coordinates, maps and the original reference gates. Its sample path RMS improves
+to 0.025594 sphere radians; component RMS remains within 0.020 rad each.
+Unrestricted numerical identity is not claimed.
+
 Assessed against pvnkmrksk/fictrac commit `10fc4472af1fc9062b9bf5a92738e835b98cc3ec` and the supplied FicTrac 2.1.2 sample output. This version closes the previously missing operational features for the supported recorded-video workflow. **It does not establish unrestricted or numerical identity.**
 
 | Capability | Implementation / evidence |

@@ -16,7 +16,7 @@ The normal view is a uniformly scaled crop around the ball, measured contact tra
 - **Reset** clears the pose/map/path while retaining source time and integrated displacement. Rejected intervals remain explicitly unmeasured. **Record** starts/stops immediately; its chevron selects raw video, processed diagnostics, both or data only. Every take also retains accepted `.dat`, all-frame numeric data and quality CSV. Configured `save_raw`/`save_debug` still start recording automatically. Default recordings go under your Movies/Videos `hejjetrak` folder; choose another folder in the inspector.
 - **Settings** opens a separate native inspector, leaving the preview unobstructed. Groups cover source/camera, graphical calibration, geometry, tracking/quality, outputs and exact config text. The document preserves unknown fields, comments, spacing and line endings. Config fields, graphical edits and text share undo/redo. Save is explicit; external conflicts are preserved.
 - **Calibration** pauses the source. Ball rim and exclusion tools add points only to the selected geometry; right-click deletes the nearest point, and Move points drags saved geometry. Fit the rim with three or more points; finish an exclusion with Enter. Lab square uses TL → TR → BR → BL in XY/YZ/XZ. Its corners stay visible; replacing a corner preserves its position in the legacy order. **F** performs a reflected-seed alternate pose refit; a distinct valid branch is not guaranteed and failure leaves the file intact. The shared forward-vector command remains available to existing agents.
-- **Diagnostics** reveals the six traditional FicTrac panels. Calibration outlines/axes and the full image are separate view toggles, hidden by default. The status strip shows delivered FPS and processing milliseconds; its tooltip distinguishes fit time, the full worker pipeline, source budget, capture skips and output ports. Lost tracking is shown explicitly. Pauses are excluded from the running-drop count.
+- **Diagnostics** reveals the six traditional FicTrac panels. Calibration outlines/axes and the full image are separate view toggles, hidden by default. The status strip shows delivered FPS and mean tracking milliseconds; its tooltip separates engine time from the full worker pipeline, source budget, capture skips and output ports. Lost tracking is shown explicitly. Pauses are excluded from the running-drop count.
 - Camera settings expose advertised native resolutions/rates with readback and supported exposure/gain controls. Unsupported controls explain why they are unavailable. The tested built-in Mac camera does not expose writable exposure controls through its public AVFoundation interface. [Camera details](docs/camera-controls.md).
 
 `VR1.txt`–`VR4.txt` retain the original BR calibrations and camera IDs. They enable localhost UDP **1111–1114** and ZeroMQ PUB **9871–9874** simultaneously. New windows follow the next existing VR/BR config; after those, copies increment numeric camera ID, enabled ports and instance name. Video paths remain video paths. These rig calibrations must match your actual camera and resolution before their motion is interpreted scientifically.
@@ -35,6 +35,13 @@ cargo run --release --locked -- --config VR1.txt --window-size 480x360 --window-
 See [the UI design and command mapping](docs/ui-design.md) and [agent control](docs/agent-control.md). The first public POC is v0.1.0; v0.1.1 contains the compact interface, camera controls, ZMQ and ZIP timestamp repair. Earlier v0.2/v0.3 validation names were internal prototype labels.
 
 ## CLI and the upstream benchmark
+
+[Tracking-stage latency](docs/tracking-performance.md) measures the numerical
+engine separately: **1.639 → 0.503 ms/frame** on the predecoded sample, and
+**3.045 → 1.398 ms** in sampled Mac camera timings. Sample trajectory RMS
+against the supplied FicTrac output improves from 0.0448 to 0.0256 sphere radians;
+all original gates remain unchanged. These are fixture- and machine-specific
+measurements, with complete scoring retained for quality decisions.
 
 The [performance reassessment](docs/performance.md) measures the redesigned
 pipeline against released v0.1.1 and a same-machine C++ reference. The sample

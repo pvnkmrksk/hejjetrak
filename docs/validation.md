@@ -1,5 +1,51 @@
 # hejjetrak validation evidence
 
+## Tracking-stage refinement — 2026-10-25
+
+Same local Mac/toolchain as below. Required formatting, strict locked all-target
+Clippy and full locked workspace tests pass: **141 tests**, zero failures.
+New checks cover precise/interpolated map-cell agreement, median threshold
+cases, scalar-versus-linear extrema, full-resolution quality despite a sampled
+blind spot, and a 120-frame known-motion trajectory. No existing tolerances or
+decoder oracle constants changed.
+
+The isolated predecoded-frame benchmark ran serially after builds/tests: three
+alternating pairs, one warmup and five repetitions each. Mean tracking time is
+**1.639 → 0.503 ms**, median P95 **1.900 → 0.581 ms**. It includes preparation,
+fit, integration, atlas update and numerical maps; it excludes source decoding,
+conversion, pacing, output, recording and UI. All 300 frames are processed,
+299 tracked, zero rejected. Trajectory RMS against the original reference is
+**0.025594 sphere rad** (previously 0.044807); heading RMS 0.013651 rad and all
+rotation components remain under 0.020 rad. Endpoint error is 0.041252 sphere rad.
+The full release CLI run independently repeats the same numeric results and
+passes `compare` with its unchanged gates. Optimizer output intentionally need
+not match previous bytes. [Full timing/accuracy record](tracking-performance.md).
+
+The new 120-frame map test uses delta `[0.004,-0.007,0.003]` with a 50-evaluation
+budget. Its path RMS is 0.009876 sphere rad, heading RMS 0.004819 rad and component
+RMS `[0.003219,0.003285,0.005803]` rad. The release 120-frame pairwise synthetic
+demo also retains component RMS 0.000304049695 rad against its original 0.003 gate.
+
+Native camera measurements sample 100 distinct published frame timings after
+20 warmup frames at actual 640×480/30: **3.045 → 1.398 ms mean**, with P95
+4.969 → 2.183 ms. All sampled rows are tracked; running capture drops are zero.
+These room-scene runs are not identical replay and do not establish physical
+ball accuracy. The optimized app's arithmetic tracking mean was 1.237 ms over
+all measured frames in that session. The UI now labels this mean separately
+from full worker cost, and agent status exposes its sample count.
+
+A **126-command native GUI run** verified four OS windows, full 300-frame sample,
+new timing fields, config/history/clock preservation, map import/relocalization,
+five raw/debug recording frames and decoding. The rendered diagnostic window
+was visually inspected with the new `ms track` label. Local private evidence is
+under ignored `runs/native-agent-tracking-stage-final/`; camera/paired reports
+are retained in temporary task directories, with sanitized aggregate evidence
+committed under `docs/benchmarks/tracking-20261025.json`.
+
+This refinement's published cross-platform CI must be assessed separately from
+the prior release evidence below. It does not claim 100-microsecond fitting or
+sixteen-camera throughput.
+
 ## Performance refinement — 2026-10-25 (source after v0.1.1)
 
 Local Apple M2 Pro / macOS 27.0.1 arm64, Rust 1.99.1, release thin LTO,

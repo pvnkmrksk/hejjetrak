@@ -1,5 +1,13 @@
 # Local agent and command-line control
 
+Native `status` separates `tracking_ms` (arithmetic mean of the shared numerical
+engine) and `tracking_samples` from `processing_ms` (smoothed worker cost).
+Tracking time excludes capture, conversion, engine construction, recording and
+preview publication; it includes ROI preparation and numerical maps. The mean
+restarts after configuration or tracking reset. `processing_fps` remains the
+instantaneous call rate for existing clients, including initial engine setup;
+neither value is source FPS. See [tracking-stage measurements](tracking-performance.md).
+
 `fictrac` is a complete headless frontend to the shared Rust engine. External AI agents can operate it through JSONL or MCP stdio; neither requires a model API key, a network service, Python or a GUI. The desktop also has its own asynchronous stdio bridge; its playback scheduling differs from deterministic recorded-video commands. Numerical fitting and calibration use the same core functions.
 
 The design follows [PhotoCraft's engine-first architecture](https://github.com/storytold/photocraft/blob/main/docs/architecture.md): native user interfaces and machine interfaces call reusable operations. This is an agent control surface, not a claim that a language model has measured scientific accuracy. The full supplied video is processed by the transcript regression and checked against the existing reference gates.

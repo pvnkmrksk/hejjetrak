@@ -1,5 +1,8 @@
 # Performance reassessment — 2026-10-25
 
+This is the earlier decode/pipeline assessment. For numerical per-frame latency
+and the current local fitting algorithm, see [tracking-stage performance](tracking-performance.md).
+
 Rust alone does not make a serial, copying pipeline fast. Release profiling
 identified architectural and codec costs. The changes preserve mathematical
 settings, coordinate conventions and quality gates:
@@ -87,8 +90,11 @@ cargo run -p fictrac-io --example profile_video --release --locked -- examples/s
 cargo test --manifest-path vendor/oxideav-h264/Cargo.toml --lib --locked
 ```
 
-The script alternates order, discards warmup, checks every frame, runs unchanged
-reference gates and rejects changed all-frame bytes. The profiler driver times
+The original script alternated order, discarded warmup, checked every frame,
+ran unchanged reference gates and rejected changed all-frame bytes at checkpoint
+`0d00cdb`. The current script makes byte identity optional with
+`--require-identical`; algorithm changes use the unchanged reference gates.
+The profiler driver times
 synchronous decode/conversion alone and black-boxes actual pixel buffers.
 Sampling runs are diagnostic evidence, never unsampled timing substitutes.
 Raw measurements: [comparison record](benchmarks/foundation-20261025.json).

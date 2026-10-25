@@ -1,0 +1,1080 @@
+{
+  "platform": "Apple M2 Pro, macOS 27.0.1 arm64",
+  "toolchain": "Rust 1.99.1; release thin LTO, codegen-units=1; line tables enabled in both drivers",
+  "input": "examples/sample.mp4",
+  "sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+  "source_frames": 300,
+  "median_mean_us": {
+    "before": 1638.8295719063542,
+    "after": 503.47253511705685
+  },
+  "runs": [
+    {
+      "binary": "before",
+      "pair": 0,
+      "report": {
+        "boundary": "Tracker::process only, including ROI, fitting, integration, map and numerical debug views; predecoded/preconverted immutable frames; no I/O, capture, pacing, UI or recording; initialization excluded",
+        "config": {
+          "camera_to_lab": [
+            0.722445,
+            -0.131314,
+            -0.460878
+          ],
+          "fisheye": false,
+          "height": 288,
+          "ignore_polygons": [
+            [
+              [
+                96.0,
+                156.0
+              ],
+              [
+                113.0,
+                147.0
+              ],
+              [
+                106.0,
+                128.0
+              ],
+              [
+                82.0,
+                130.0
+              ],
+              [
+                81.0,
+                150.0
+              ]
+            ],
+            [
+              [
+                71.0,
+                213.0
+              ],
+              [
+                90.0,
+                219.0
+              ],
+              [
+                114.0,
+                218.0
+              ],
+              [
+                135.0,
+                211.0
+              ],
+              [
+                154.0,
+                196.0
+              ],
+              [
+                150.0,
+                217.0
+              ],
+              [
+                121.0,
+                228.0
+              ],
+              [
+                99.0,
+                234.0
+              ],
+              [
+                75.0,
+                225.0
+              ]
+            ]
+          ],
+          "iterations": 20,
+          "legacy_roi_coordinates": true,
+          "max_error": 0.16,
+          "max_rotation": 0.35,
+          "sample_stride": 2,
+          "source": "sample.mp4",
+          "sphere": {
+            "angular_radius": 0.12481674439688986,
+            "centre": [
+              -0.22938965658632982,
+              0.0999680947095317,
+              0.9681873607372448
+            ]
+          },
+          "spherical_map": {
+            "channel": null,
+            "global_evaluations": 100000,
+            "global_search": false,
+            "max_bad_frames": -1,
+            "max_error": -1.0,
+            "max_evaluations": 50,
+            "quality": 6,
+            "threshold_ratio": 1.25,
+            "threshold_window": 0.25,
+            "tolerance": 0.001
+          },
+          "vfov_deg": 45.0,
+          "width": 384
+        },
+        "frames": 300,
+        "input": "examples/sample.mp4",
+        "median_run_mean_us": 1636.722983277593,
+        "reference_comparison": {
+          "candidate_final_position": [
+            3.620053461636,
+            -2.627296315711
+          ],
+          "endpoint_error_sphere_rad": 0.054525318251027806,
+          "frames": 300,
+          "heading_rmse_rad": 0.013184810790688728,
+          "path_point_rmse_sphere_rad": 0.04480675139756663,
+          "reference_final_position": [
+            3.674266189723,
+            -2.6214661833162
+          ],
+          "rotation_component_rmse_rad": [
+            0.008760804755303081,
+            0.008292135984256042,
+            0.014210731643506284
+          ],
+          "timestamp_max_error_ms": 3.456079866737127e-11
+        },
+        "repeats": 5,
+        "runs": [
+          {
+            "frames": 300,
+            "max_us": 2386.416,
+            "mean_us": 1646.409003344481,
+            "median_us": 1642.167,
+            "p95_us": 1877.5,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 2399.167,
+            "mean_us": 1643.6480033444823,
+            "median_us": 1621.916,
+            "p95_us": 1903.7920000000001,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 2277.417,
+            "mean_us": 1636.722983277593,
+            "median_us": 1640.7920000000001,
+            "p95_us": 1905.084,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 2126.75,
+            "mean_us": 1629.4842274247496,
+            "median_us": 1623.291,
+            "p95_us": 1903.9160000000002,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 2387.958,
+            "mean_us": 1636.047909698997,
+            "median_us": 1629.0,
+            "p95_us": 1899.6670000000001,
+            "rejected": 0
+          }
+        ]
+      }
+    },
+    {
+      "binary": "after",
+      "pair": 0,
+      "report": {
+        "boundary": "Tracker::process only, including ROI, fitting, integration, map and numerical debug views; predecoded/preconverted immutable frames; no I/O, capture, pacing, UI or recording; initialization excluded",
+        "config": {
+          "camera_to_lab": [
+            0.722445,
+            -0.131314,
+            -0.460878
+          ],
+          "fisheye": false,
+          "height": 288,
+          "ignore_polygons": [
+            [
+              [
+                96.0,
+                156.0
+              ],
+              [
+                113.0,
+                147.0
+              ],
+              [
+                106.0,
+                128.0
+              ],
+              [
+                82.0,
+                130.0
+              ],
+              [
+                81.0,
+                150.0
+              ]
+            ],
+            [
+              [
+                71.0,
+                213.0
+              ],
+              [
+                90.0,
+                219.0
+              ],
+              [
+                114.0,
+                218.0
+              ],
+              [
+                135.0,
+                211.0
+              ],
+              [
+                154.0,
+                196.0
+              ],
+              [
+                150.0,
+                217.0
+              ],
+              [
+                121.0,
+                228.0
+              ],
+              [
+                99.0,
+                234.0
+              ],
+              [
+                75.0,
+                225.0
+              ]
+            ]
+          ],
+          "iterations": 20,
+          "legacy_roi_coordinates": true,
+          "max_error": 0.16,
+          "max_rotation": 0.35,
+          "sample_stride": 2,
+          "source": "sample.mp4",
+          "sphere": {
+            "angular_radius": 0.12481674439688986,
+            "centre": [
+              -0.22938965658632982,
+              0.0999680947095317,
+              0.9681873607372448
+            ]
+          },
+          "spherical_map": {
+            "channel": null,
+            "global_evaluations": 100000,
+            "global_search": false,
+            "max_bad_frames": -1,
+            "max_error": -1.0,
+            "max_evaluations": 50,
+            "quality": 6,
+            "threshold_ratio": 1.25,
+            "threshold_window": 0.25,
+            "tolerance": 0.001
+          },
+          "vfov_deg": 45.0,
+          "width": 384
+        },
+        "frames": 300,
+        "input": "examples/sample.mp4",
+        "median_run_mean_us": 499.91260869565195,
+        "passed": true,
+        "reference_comparison": {
+          "candidate_final_position": [
+            3.64168489651,
+            -2.646768112362
+          ],
+          "endpoint_error_sphere_rad": 0.041252009416150356,
+          "frames": 300,
+          "heading_rmse_rad": 0.013651430288528159,
+          "path_point_rmse_sphere_rad": 0.025593841799898084,
+          "reference_final_position": [
+            3.674266189723,
+            -2.6214661833162
+          ],
+          "rotation_component_rmse_rad": [
+            0.009475898823054007,
+            0.010924711781146961,
+            0.01781987973491448
+          ],
+          "timestamp_max_error_ms": 3.456079866737127e-11
+        },
+        "repeats": 5,
+        "runs": [
+          {
+            "frames": 300,
+            "max_us": 738.7080000000001,
+            "mean_us": 495.0553745819402,
+            "median_us": 491.37499999999994,
+            "p95_us": 560.375,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 715.459,
+            "mean_us": 491.70106354515053,
+            "median_us": 489.20799999999997,
+            "p95_us": 567.167,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 713.375,
+            "mean_us": 499.91260869565195,
+            "median_us": 500.709,
+            "p95_us": 574.625,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 799.75,
+            "mean_us": 508.7709297658865,
+            "median_us": 505.24999999999994,
+            "p95_us": 582.583,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 779.125,
+            "mean_us": 502.4952474916388,
+            "median_us": 497.083,
+            "p95_us": 581.458,
+            "rejected": 0
+          }
+        ]
+      }
+    },
+    {
+      "binary": "after",
+      "pair": 1,
+      "report": {
+        "boundary": "Tracker::process only, including ROI, fitting, integration, map and numerical debug views; predecoded/preconverted immutable frames; no I/O, capture, pacing, UI or recording; initialization excluded",
+        "config": {
+          "camera_to_lab": [
+            0.722445,
+            -0.131314,
+            -0.460878
+          ],
+          "fisheye": false,
+          "height": 288,
+          "ignore_polygons": [
+            [
+              [
+                96.0,
+                156.0
+              ],
+              [
+                113.0,
+                147.0
+              ],
+              [
+                106.0,
+                128.0
+              ],
+              [
+                82.0,
+                130.0
+              ],
+              [
+                81.0,
+                150.0
+              ]
+            ],
+            [
+              [
+                71.0,
+                213.0
+              ],
+              [
+                90.0,
+                219.0
+              ],
+              [
+                114.0,
+                218.0
+              ],
+              [
+                135.0,
+                211.0
+              ],
+              [
+                154.0,
+                196.0
+              ],
+              [
+                150.0,
+                217.0
+              ],
+              [
+                121.0,
+                228.0
+              ],
+              [
+                99.0,
+                234.0
+              ],
+              [
+                75.0,
+                225.0
+              ]
+            ]
+          ],
+          "iterations": 20,
+          "legacy_roi_coordinates": true,
+          "max_error": 0.16,
+          "max_rotation": 0.35,
+          "sample_stride": 2,
+          "source": "sample.mp4",
+          "sphere": {
+            "angular_radius": 0.12481674439688986,
+            "centre": [
+              -0.22938965658632982,
+              0.0999680947095317,
+              0.9681873607372448
+            ]
+          },
+          "spherical_map": {
+            "channel": null,
+            "global_evaluations": 100000,
+            "global_search": false,
+            "max_bad_frames": -1,
+            "max_error": -1.0,
+            "max_evaluations": 50,
+            "quality": 6,
+            "threshold_ratio": 1.25,
+            "threshold_window": 0.25,
+            "tolerance": 0.001
+          },
+          "vfov_deg": 45.0,
+          "width": 384
+        },
+        "frames": 300,
+        "input": "examples/sample.mp4",
+        "median_run_mean_us": 504.45439130434767,
+        "passed": true,
+        "reference_comparison": {
+          "candidate_final_position": [
+            3.64168489651,
+            -2.646768112362
+          ],
+          "endpoint_error_sphere_rad": 0.041252009416150356,
+          "frames": 300,
+          "heading_rmse_rad": 0.013651430288528159,
+          "path_point_rmse_sphere_rad": 0.025593841799898084,
+          "reference_final_position": [
+            3.674266189723,
+            -2.6214661833162
+          ],
+          "rotation_component_rmse_rad": [
+            0.009475898823054007,
+            0.010924711781146961,
+            0.01781987973491448
+          ],
+          "timestamp_max_error_ms": 3.456079866737127e-11
+        },
+        "repeats": 5,
+        "runs": [
+          {
+            "frames": 300,
+            "max_us": 799.042,
+            "mean_us": 504.45439130434767,
+            "median_us": 500.833,
+            "p95_us": 582.125,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 791.9169999999999,
+            "mean_us": 506.5457157190633,
+            "median_us": 501.416,
+            "p95_us": 586.625,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 766.292,
+            "mean_us": 498.15535785953193,
+            "median_us": 493.833,
+            "p95_us": 579.291,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 768.708,
+            "mean_us": 509.0571036789295,
+            "median_us": 503.416,
+            "p95_us": 588.5,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 794.875,
+            "mean_us": 501.2286956521737,
+            "median_us": 498.209,
+            "p95_us": 581.25,
+            "rejected": 0
+          }
+        ]
+      }
+    },
+    {
+      "binary": "before",
+      "pair": 1,
+      "report": {
+        "boundary": "Tracker::process only, including ROI, fitting, integration, map and numerical debug views; predecoded/preconverted immutable frames; no I/O, capture, pacing, UI or recording; initialization excluded",
+        "config": {
+          "camera_to_lab": [
+            0.722445,
+            -0.131314,
+            -0.460878
+          ],
+          "fisheye": false,
+          "height": 288,
+          "ignore_polygons": [
+            [
+              [
+                96.0,
+                156.0
+              ],
+              [
+                113.0,
+                147.0
+              ],
+              [
+                106.0,
+                128.0
+              ],
+              [
+                82.0,
+                130.0
+              ],
+              [
+                81.0,
+                150.0
+              ]
+            ],
+            [
+              [
+                71.0,
+                213.0
+              ],
+              [
+                90.0,
+                219.0
+              ],
+              [
+                114.0,
+                218.0
+              ],
+              [
+                135.0,
+                211.0
+              ],
+              [
+                154.0,
+                196.0
+              ],
+              [
+                150.0,
+                217.0
+              ],
+              [
+                121.0,
+                228.0
+              ],
+              [
+                99.0,
+                234.0
+              ],
+              [
+                75.0,
+                225.0
+              ]
+            ]
+          ],
+          "iterations": 20,
+          "legacy_roi_coordinates": true,
+          "max_error": 0.16,
+          "max_rotation": 0.35,
+          "sample_stride": 2,
+          "source": "sample.mp4",
+          "sphere": {
+            "angular_radius": 0.12481674439688986,
+            "centre": [
+              -0.22938965658632982,
+              0.0999680947095317,
+              0.9681873607372448
+            ]
+          },
+          "spherical_map": {
+            "channel": null,
+            "global_evaluations": 100000,
+            "global_search": false,
+            "max_bad_frames": -1,
+            "max_error": -1.0,
+            "max_evaluations": 50,
+            "quality": 6,
+            "threshold_ratio": 1.25,
+            "threshold_window": 0.25,
+            "tolerance": 0.001
+          },
+          "vfov_deg": 45.0,
+          "width": 384
+        },
+        "frames": 300,
+        "input": "examples/sample.mp4",
+        "median_run_mean_us": 1641.8923311036774,
+        "reference_comparison": {
+          "candidate_final_position": [
+            3.620053461636,
+            -2.627296315711
+          ],
+          "endpoint_error_sphere_rad": 0.054525318251027806,
+          "frames": 300,
+          "heading_rmse_rad": 0.013184810790688728,
+          "path_point_rmse_sphere_rad": 0.04480675139756663,
+          "reference_final_position": [
+            3.674266189723,
+            -2.6214661833162
+          ],
+          "rotation_component_rmse_rad": [
+            0.008760804755303081,
+            0.008292135984256042,
+            0.014210731643506284
+          ],
+          "timestamp_max_error_ms": 3.456079866737127e-11
+        },
+        "repeats": 5,
+        "runs": [
+          {
+            "frames": 300,
+            "max_us": 2379.125,
+            "mean_us": 1664.4731070234106,
+            "median_us": 1648.375,
+            "p95_us": 1914.917,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 2227.917,
+            "mean_us": 1638.3575852842803,
+            "median_us": 1629.125,
+            "p95_us": 1878.917,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 2372.208,
+            "mean_us": 1644.3377625418052,
+            "median_us": 1634.75,
+            "p95_us": 1912.541,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 2783.666,
+            "mean_us": 1641.8923311036774,
+            "median_us": 1628.75,
+            "p95_us": 1891.917,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 2215.584,
+            "mean_us": 1636.9785217391307,
+            "median_us": 1628.2079999999999,
+            "p95_us": 1888.834,
+            "rejected": 0
+          }
+        ]
+      }
+    },
+    {
+      "binary": "before",
+      "pair": 2,
+      "report": {
+        "boundary": "Tracker::process only, including ROI, fitting, integration, map and numerical debug views; predecoded/preconverted immutable frames; no I/O, capture, pacing, UI or recording; initialization excluded",
+        "config": {
+          "camera_to_lab": [
+            0.722445,
+            -0.131314,
+            -0.460878
+          ],
+          "fisheye": false,
+          "height": 288,
+          "ignore_polygons": [
+            [
+              [
+                96.0,
+                156.0
+              ],
+              [
+                113.0,
+                147.0
+              ],
+              [
+                106.0,
+                128.0
+              ],
+              [
+                82.0,
+                130.0
+              ],
+              [
+                81.0,
+                150.0
+              ]
+            ],
+            [
+              [
+                71.0,
+                213.0
+              ],
+              [
+                90.0,
+                219.0
+              ],
+              [
+                114.0,
+                218.0
+              ],
+              [
+                135.0,
+                211.0
+              ],
+              [
+                154.0,
+                196.0
+              ],
+              [
+                150.0,
+                217.0
+              ],
+              [
+                121.0,
+                228.0
+              ],
+              [
+                99.0,
+                234.0
+              ],
+              [
+                75.0,
+                225.0
+              ]
+            ]
+          ],
+          "iterations": 20,
+          "legacy_roi_coordinates": true,
+          "max_error": 0.16,
+          "max_rotation": 0.35,
+          "sample_stride": 2,
+          "source": "sample.mp4",
+          "sphere": {
+            "angular_radius": 0.12481674439688986,
+            "centre": [
+              -0.22938965658632982,
+              0.0999680947095317,
+              0.9681873607372448
+            ]
+          },
+          "spherical_map": {
+            "channel": null,
+            "global_evaluations": 100000,
+            "global_search": false,
+            "max_bad_frames": -1,
+            "max_error": -1.0,
+            "max_evaluations": 50,
+            "quality": 6,
+            "threshold_ratio": 1.25,
+            "threshold_window": 0.25,
+            "tolerance": 0.001
+          },
+          "vfov_deg": 45.0,
+          "width": 384
+        },
+        "frames": 300,
+        "input": "examples/sample.mp4",
+        "median_run_mean_us": 1638.8295719063542,
+        "reference_comparison": {
+          "candidate_final_position": [
+            3.620053461636,
+            -2.627296315711
+          ],
+          "endpoint_error_sphere_rad": 0.054525318251027806,
+          "frames": 300,
+          "heading_rmse_rad": 0.013184810790688728,
+          "path_point_rmse_sphere_rad": 0.04480675139756663,
+          "reference_final_position": [
+            3.674266189723,
+            -2.6214661833162
+          ],
+          "rotation_component_rmse_rad": [
+            0.008760804755303081,
+            0.008292135984256042,
+            0.014210731643506284
+          ],
+          "timestamp_max_error_ms": 3.456079866737127e-11
+        },
+        "repeats": 5,
+        "runs": [
+          {
+            "frames": 300,
+            "max_us": 2375.916,
+            "mean_us": 1646.3414113712367,
+            "median_us": 1628.875,
+            "p95_us": 1907.0420000000001,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 2470.084,
+            "mean_us": 1635.4799297658874,
+            "median_us": 1612.1670000000001,
+            "p95_us": 1900.2920000000001,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 2154.1659999999997,
+            "mean_us": 1638.8295719063542,
+            "median_us": 1632.541,
+            "p95_us": 1878.958,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 2377.542,
+            "mean_us": 1632.6668561872907,
+            "median_us": 1623.542,
+            "p95_us": 1879.7079999999999,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 2125.583,
+            "mean_us": 1672.7992240802678,
+            "median_us": 1664.583,
+            "p95_us": 1911.5,
+            "rejected": 0
+          }
+        ]
+      }
+    },
+    {
+      "binary": "after",
+      "pair": 2,
+      "report": {
+        "boundary": "Tracker::process only, including ROI, fitting, integration, map and numerical debug views; predecoded/preconverted immutable frames; no I/O, capture, pacing, UI or recording; initialization excluded",
+        "config": {
+          "camera_to_lab": [
+            0.722445,
+            -0.131314,
+            -0.460878
+          ],
+          "fisheye": false,
+          "height": 288,
+          "ignore_polygons": [
+            [
+              [
+                96.0,
+                156.0
+              ],
+              [
+                113.0,
+                147.0
+              ],
+              [
+                106.0,
+                128.0
+              ],
+              [
+                82.0,
+                130.0
+              ],
+              [
+                81.0,
+                150.0
+              ]
+            ],
+            [
+              [
+                71.0,
+                213.0
+              ],
+              [
+                90.0,
+                219.0
+              ],
+              [
+                114.0,
+                218.0
+              ],
+              [
+                135.0,
+                211.0
+              ],
+              [
+                154.0,
+                196.0
+              ],
+              [
+                150.0,
+                217.0
+              ],
+              [
+                121.0,
+                228.0
+              ],
+              [
+                99.0,
+                234.0
+              ],
+              [
+                75.0,
+                225.0
+              ]
+            ]
+          ],
+          "iterations": 20,
+          "legacy_roi_coordinates": true,
+          "max_error": 0.16,
+          "max_rotation": 0.35,
+          "sample_stride": 2,
+          "source": "sample.mp4",
+          "sphere": {
+            "angular_radius": 0.12481674439688986,
+            "centre": [
+              -0.22938965658632982,
+              0.0999680947095317,
+              0.9681873607372448
+            ]
+          },
+          "spherical_map": {
+            "channel": null,
+            "global_evaluations": 100000,
+            "global_search": false,
+            "max_bad_frames": -1,
+            "max_error": -1.0,
+            "max_evaluations": 50,
+            "quality": 6,
+            "threshold_ratio": 1.25,
+            "threshold_window": 0.25,
+            "tolerance": 0.001
+          },
+          "vfov_deg": 45.0,
+          "width": 384
+        },
+        "frames": 300,
+        "input": "examples/sample.mp4",
+        "median_run_mean_us": 503.47253511705685,
+        "passed": true,
+        "reference_comparison": {
+          "candidate_final_position": [
+            3.64168489651,
+            -2.646768112362
+          ],
+          "endpoint_error_sphere_rad": 0.041252009416150356,
+          "frames": 300,
+          "heading_rmse_rad": 0.013651430288528159,
+          "path_point_rmse_sphere_rad": 0.025593841799898084,
+          "reference_final_position": [
+            3.674266189723,
+            -2.6214661833162
+          ],
+          "rotation_component_rmse_rad": [
+            0.009475898823054007,
+            0.010924711781146961,
+            0.01781987973491448
+          ],
+          "timestamp_max_error_ms": 3.456079866737127e-11
+        },
+        "repeats": 5,
+        "runs": [
+          {
+            "frames": 300,
+            "max_us": 792.958,
+            "mean_us": 509.79179933110333,
+            "median_us": 503.83299999999997,
+            "p95_us": 581.917,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 794.667,
+            "mean_us": 506.9914949832775,
+            "median_us": 502.83299999999997,
+            "p95_us": 580.875,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 720.333,
+            "mean_us": 503.47253511705685,
+            "median_us": 499.58299999999997,
+            "p95_us": 582.1669999999999,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 791.2919999999999,
+            "mean_us": 493.646183946488,
+            "median_us": 487.416,
+            "p95_us": 576.375,
+            "rejected": 0
+          },
+          {
+            "frames": 300,
+            "max_us": 814.125,
+            "mean_us": 497.10439464882944,
+            "median_us": 493.5,
+            "p95_us": 551.125,
+            "rejected": 0
+          }
+        ]
+      }
+    }
+  ],
+  "camera": {
+    "before": {
+      "passed": true,
+      "samples": 100,
+      "mean_us": 3044.61251,
+      "median_us": 2975.1875,
+      "p95_us": 4968.5830000000005,
+      "camera": {
+        "fps": 30.0,
+        "height": 480,
+        "width": 640
+      },
+      "dropped_running": 0,
+      "reported_tracking_ms": null,
+      "scope": "Actual room-scene camera at 640x480/30; numerical stage only after warmup, no physical sphere accuracy claim; camera scenes cannot be perfectly replayed."
+    },
+    "after": {
+      "passed": true,
+      "samples": 100,
+      "mean_us": 1398.3754,
+      "median_us": 1705.0210000000002,
+      "p95_us": 2183.4590000000003,
+      "camera": {
+        "fps": 30.0,
+        "height": 480,
+        "width": 640
+      },
+      "dropped_running": 0,
+      "reported_tracking_ms": 1.2371931854838707,
+      "scope": "Actual room-scene camera at 640x480/30; numerical stage only after warmup, no physical sphere accuracy claim; camera scenes cannot be perfectly replayed."
+    }
+  }
+}

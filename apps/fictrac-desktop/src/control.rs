@@ -316,7 +316,7 @@ fn status(s: &mut Session) -> Value {
         "processing_fps":s.snapshot.processing_fps,"command_error":s.snapshot.command_error,"dropped_running":s.snapshot.dropped_running,"dropped":s.snapshot.dropped,
         "advance_remaining":s.snapshot.advance_remaining,"recording_directory":s.snapshot.recording_directory,
         "record_options":s.snapshot.record_options,"camera":s.snapshot.camera,"outputs":s.snapshot.outputs,
-        "processing_ms":s.snapshot.processing_ms,"actual_fps":s.snapshot.actual_fps,"source_fps":s.snapshot.source_fps,"headroom_percent":s.snapshot.headroom_percent,
+        "processing_ms":s.snapshot.processing_ms,"tracking_ms":s.snapshot.tracking_ms,"tracking_samples":s.snapshot.tracking_samples,"actual_fps":s.snapshot.actual_fps,"source_fps":s.snapshot.source_fps,"headroom_percent":s.snapshot.headroom_percent,
         "view":{"settings":s.show_settings,"diagnostics":s.show_diagnostics,"overlays":s.show_overlays,"full_image":s.full_image}})
 }
 fn send(s: &mut Session, command: Command) -> Result<Value> {
