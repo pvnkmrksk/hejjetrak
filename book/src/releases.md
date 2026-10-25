@@ -4,11 +4,11 @@
 
 The landing page resolves GitHub's latest published release at download time and shows the platform archive, release tag and available SHA-256 digest. Manual OS/chip choices remain available; browser architecture detection is not treated as infallible. If the release API is unavailable or an archive has not uploaded yet, use the visible GitHub release link rather than a guessed download.
 
-## Calibration redraw and naming update
+## v0.1.4 — 25 October 2026
 
-v0.1.4 introduces the **HejjéTrac** display name and `hejjetrac` commands. Calibration opens directly into a fresh ball-outline draft, fits the outline automatically from the third point, and never joins rim marks with straight lines. Diagnostics includes the complete saved calibration, direct layer redraw and full config access. The website starts its silent demo automatically and the README download link opens the platform download page directly.
+[v0.1.4](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.4) introduces the **HejjéTrac** display name and `hejjetrac` commands. Calibration opens directly into a fresh ball-outline draft, fits the outline automatically from the third point, and never joins rim marks with straight lines. Diagnostics includes the complete saved calibration, direct layer redraw and full config access. The website starts its silent demo automatically and the README download link opens the platform download page directly.
 
-The download page reads published GitHub release assets. Source changes become available to ordinary downloads when that version’s build and upload finish.
+All five platform packages are published and v0.1.4 is the latest release. All four [native release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640739) pass: 188 workspace tests on Linux and both Macs, 185 on Windows, and 1,353 decoder tests each. The official Mac archive passes signature, version, source-commit and complete sample checks. A public README click completes the recommended download without a second click. See [validation evidence](validation.md) for hashes, execution scope and remaining hardware/visual limits.
 
 ## Earlier published checkpoint
 

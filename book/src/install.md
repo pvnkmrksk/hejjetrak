@@ -25,7 +25,7 @@ Keep the extracted folder together: it contains example videos, configuration an
 
 These steps use Apple's per-application exception, described in [Safely open apps on your Mac](https://support.apple.com/en-us/102445). They do not require disabling Gatekeeper, removing quarantine attributes or changing global security settings. If macOS says the app is damaged or contains malware, stop and investigate the exact warning rather than treating it as an ordinary unidentified-developer alert.
 
-To find your chip, use **Apple menu → About This Mac**. A browser may identify macOS without revealing whether its CPU is Apple Silicon or Intel; the download page lets you choose explicitly.
+To find your chip, use **Apple menu → About This Mac**. A browser may identify macOS without revealing whether its CPU is Apple Silicon or Intel. The automatic download uses Apple Silicon as its stated default in that case; choose **Mac · Intel** in the same dialog for an Intel Mac.
 
 ## Windows
 
@@ -69,3 +69,13 @@ If the executable bit was lost during copying, `chmod u+x hejjetrac hejjetrac-cl
 ## Updates and checksums
 
 Download a new release into a new folder and keep your experiment configuration and recordings separately. Read the release notes before changing a working experiment. GitHub's release API may provide an asset SHA-256 digest; the download dialog shows it when present. Compare it with a locally calculated digest when verifying an archive. Never overwrite your only copy of a calibrated config or run output during an update.
+
+## Download size
+
+The package includes the native GUI and graphics integration, fonts, Rust video
+codecs and tracking engine, plus the companion CLI, sample video, examples and
+notices. Much of that code is linked into the executables so you can extract and
+open the app without installing Rust or a separate media runtime. It is shared
+overhead: an app with fewer controls still needs a window, renderer and decoder.
+Size therefore does not grow in proportion to the number of features. The exact
+download size varies by platform and release and appears in the download dialog.

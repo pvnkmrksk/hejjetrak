@@ -1,6 +1,6 @@
 [book]
 title = "HejjéTrac manual"
-authors = ["HejjéTrac contributors"]
+authors = ["Pavan Kumar Kaushik", "HejjéTrac contributors"]
 language = "en"
 src = "src"
 

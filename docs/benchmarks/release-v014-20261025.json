@@ -1,0 +1,525 @@
+{
+  "version": "0.1.4",
+  "source_commit": "eed74b17dd29ed551140eab0d90c28c570308fcf",
+  "checked_at_utc": "2026-10-25T14:06:38.026397+00:00",
+  "release": {
+    "tag": "v0.1.4",
+    "url": "https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.4",
+    "is_draft_at_check": false,
+    "run_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640739",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "package (macos-latest)",
+        "id": 121184872364,
+        "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640739/job/121184872364",
+        "conclusion": "success",
+        "started_at": "2026-10-25T13:39:58Z",
+        "completed_at": "2026-10-25T13:52:53Z",
+        "operating_system": [
+          "macOS",
+          "26.6.2",
+          "25G83"
+        ],
+        "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+        "target": "aarch64-apple-darwin",
+        "workspace_tests_passed": 188,
+        "workspace_suites": 26,
+        "decoder_tests_passed": 1353,
+        "failed": 0,
+        "ignored": 0,
+        "synthetic_frames": 120,
+        "synthetic_rotation_component_rmse_rad": 0.0003040496948914138,
+        "synthetic_gate_rad": 0.003,
+        "passed_steps": [
+          "Set up job",
+          "Run actions/checkout@v4",
+          "Verify release tag matches the packaged source",
+          "Record packaged source revision",
+          "Run dtolnay/rust-toolchain@stable",
+          "Run cargo fmt --all -- --check",
+          "Run cargo clippy --workspace --all-targets --locked -- -D warnings",
+          "Run cargo test --workspace --locked",
+          "Patched Rust decoder regression suite",
+          "Run cargo build --workspace --release --locked",
+          "Run cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120",
+          "Run cargo vendor --locked third-party-source",
+          "Run python scripts/package.py",
+          "Run actions/upload-artifact@v4",
+          "Attach platform archive to release",
+          "Post Run actions/checkout@v4",
+          "Complete job"
+        ],
+        "log_path": "/tmp/hejjetrac-v014-macos-arm.log"
+      },
+      {
+        "name": "package (windows-latest)",
+        "id": 121184872403,
+        "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640739/job/121184872403",
+        "conclusion": "success",
+        "started_at": "2026-10-25T13:39:58Z",
+        "completed_at": "2026-10-25T13:57:26Z",
+        "operating_system": [
+          "Microsoft Windows Server 2025",
+          "10.0.26100",
+          "Datacenter"
+        ],
+        "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+        "target": "x86_64-pc-windows-msvc",
+        "workspace_tests_passed": 185,
+        "workspace_suites": 26,
+        "decoder_tests_passed": 1353,
+        "failed": 0,
+        "ignored": 0,
+        "synthetic_frames": 120,
+        "synthetic_rotation_component_rmse_rad": 0.0003040496948914138,
+        "synthetic_gate_rad": 0.003,
+        "passed_steps": [
+          "Set up job",
+          "Run actions/checkout@v4",
+          "Verify release tag matches the packaged source",
+          "Record packaged source revision",
+          "Run dtolnay/rust-toolchain@stable",
+          "Portable Windows runtime linkage",
+          "Run cargo fmt --all -- --check",
+          "Run cargo clippy --workspace --all-targets --locked -- -D warnings",
+          "Run cargo test --workspace --locked",
+          "Patched Rust decoder regression suite",
+          "Run cargo build --workspace --release --locked",
+          "Run cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120",
+          "Verify Windows redistributable independence",
+          "Run cargo vendor --locked third-party-source",
+          "Run python scripts/package.py",
+          "Run actions/upload-artifact@v4",
+          "Attach platform archive to release",
+          "Post Run actions/checkout@v4",
+          "Complete job"
+        ],
+        "log_path": "/tmp/hejjetrac-v014-windows.log"
+      },
+      {
+        "name": "package (ubuntu-latest)",
+        "id": 121184872423,
+        "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640739/job/121184872423",
+        "conclusion": "success",
+        "started_at": "2026-10-25T13:39:58Z",
+        "completed_at": "2026-10-25T13:52:48Z",
+        "operating_system": [
+          "Ubuntu",
+          "24.04.5",
+          "LTS"
+        ],
+        "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+        "target": "x86_64-unknown-linux-gnu",
+        "workspace_tests_passed": 188,
+        "workspace_suites": 26,
+        "decoder_tests_passed": 1353,
+        "failed": 0,
+        "ignored": 0,
+        "synthetic_frames": 120,
+        "synthetic_rotation_component_rmse_rad": 0.0003040496948914138,
+        "synthetic_gate_rad": 0.003,
+        "passed_steps": [
+          "Set up job",
+          "Run actions/checkout@v4",
+          "Verify release tag matches the packaged source",
+          "Record packaged source revision",
+          "Run dtolnay/rust-toolchain@stable",
+          "Linux development libraries",
+          "Run cargo fmt --all -- --check",
+          "Run cargo clippy --workspace --all-targets --locked -- -D warnings",
+          "Run cargo test --workspace --locked",
+          "Patched Rust decoder regression suite",
+          "Run cargo build --workspace --release --locked",
+          "Run cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120",
+          "Run cargo vendor --locked third-party-source",
+          "Run python scripts/package.py",
+          "Verify Linux installer metadata and extracted payload",
+          "Run actions/upload-artifact@v4",
+          "Attach platform archive to release",
+          "Post Run actions/checkout@v4",
+          "Complete job"
+        ],
+        "log_path": "/tmp/hejjetrac-v014-linux.log"
+      },
+      {
+        "name": "package (macos-15-intel)",
+        "id": 121184872426,
+        "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640739/job/121184872426",
+        "conclusion": "success",
+        "started_at": "2026-10-25T13:39:59Z",
+        "completed_at": "2026-10-25T14:04:50Z",
+        "operating_system": [
+          "macOS",
+          "15.7.9",
+          "24G830"
+        ],
+        "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+        "target": "x86_64-apple-darwin",
+        "workspace_tests_passed": 188,
+        "workspace_suites": 26,
+        "decoder_tests_passed": 1353,
+        "failed": 0,
+        "ignored": 0,
+        "synthetic_frames": 120,
+        "synthetic_rotation_component_rmse_rad": 0.0003040496948914138,
+        "synthetic_gate_rad": 0.003,
+        "passed_steps": [
+          "Set up job",
+          "Run actions/checkout@v4",
+          "Verify release tag matches the packaged source",
+          "Record packaged source revision",
+          "Run dtolnay/rust-toolchain@stable",
+          "Run cargo fmt --all -- --check",
+          "Run cargo clippy --workspace --all-targets --locked -- -D warnings",
+          "Run cargo test --workspace --locked",
+          "Patched Rust decoder regression suite",
+          "Run cargo build --workspace --release --locked",
+          "Run cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120",
+          "Run cargo vendor --locked third-party-source",
+          "Run python scripts/package.py",
+          "Run actions/upload-artifact@v4",
+          "Attach platform archive to release",
+          "Post Run actions/checkout@v4",
+          "Complete job"
+        ],
+        "log_path": "/tmp/hejjetrac-v014-macos-intel.log"
+      }
+    ],
+    "assets": [
+      {
+        "name": "hejjetrac-linux-amd64.deb",
+        "size_bytes": 23276216,
+        "sha256": "9800f877aa2a0370c398ff7b56182548aac08a360e316328cb8c776c92766113",
+        "url": "https://github.com/pvnkmrksk/hejjetrak/releases/download/v0.1.4/hejjetrac-linux-amd64.deb"
+      },
+      {
+        "name": "hejjetrac-linux-x86_64.tar.gz",
+        "size_bytes": 23280186,
+        "sha256": "98658a477920926f781d4f1704426515b50ac397681cc07fad3a6819bab6afaf",
+        "url": "https://github.com/pvnkmrksk/hejjetrak/releases/download/v0.1.4/hejjetrac-linux-x86_64.tar.gz"
+      },
+      {
+        "name": "hejjetrac-macos-arm64.zip",
+        "size_bytes": 21963615,
+        "sha256": "ea22e1f7d4081475d7b6349518423dccdda14117fc55bea89a755f61b43b6692",
+        "url": "https://github.com/pvnkmrksk/hejjetrak/releases/download/v0.1.4/hejjetrac-macos-arm64.zip"
+      },
+      {
+        "name": "hejjetrac-macos-x86_64.zip",
+        "size_bytes": 22812679,
+        "sha256": "1a63a88cb0e2e9962bbc136e1bd1743da1e2e36a04fc0abbdff03e6081be66d2",
+        "url": "https://github.com/pvnkmrksk/hejjetrak/releases/download/v0.1.4/hejjetrac-macos-x86_64.zip"
+      },
+      {
+        "name": "hejjetrac-windows-amd64.zip",
+        "size_bytes": 32500293,
+        "sha256": "36078bcd19d9bcc4619e43dd9148987715f7acb0f310754c5d293722f7fe574a",
+        "url": "https://github.com/pvnkmrksk/hejjetrak/releases/download/v0.1.4/hejjetrac-windows-amd64.zip"
+      }
+    ],
+    "published_at_utc": "2026-10-25T14:06:27Z",
+    "verified_as_latest": true
+  },
+  "website": {
+    "run_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640702",
+    "conclusion": "success",
+    "source_commit": "eed74b17dd29ed551140eab0d90c28c570308fcf",
+    "internal_references": 1558,
+    "html_pages": 36,
+    "jobs": [
+      {
+        "name": "build",
+        "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640702/job/121184872320",
+        "conclusion": "success"
+      },
+      {
+        "name": "deploy",
+        "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640702/job/121184926704",
+        "conclusion": "success"
+      }
+    ],
+    "mdbook_version": "0.5.4",
+    "log_path": "/tmp/hejjetrac-v014-pages.log"
+  },
+  "portability": {
+    "run_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640789",
+    "conclusion": "success",
+    "source_commit": "eed74b17dd29ed551140eab0d90c28c570308fcf",
+    "jobs": [
+      {
+        "name": "test (windows-latest)",
+        "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640789/job/121184872178",
+        "conclusion": "success"
+      },
+      {
+        "name": "test (macos-latest)",
+        "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640789/job/121184872334",
+        "conclusion": "success"
+      },
+      {
+        "name": "test (ubuntu-latest)",
+        "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640789/job/121184872534",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "scope": "Native CI compilation, tests, CLI demo and package checks. Physical camera hardware and GUI visual interaction are separate checks.",
+  "official_mac_verification": {
+    "archive_sha256": "ea22e1f7d4081475d7b6349518423dccdda14117fc55bea89a755f61b43b6692",
+    "archive_size": 21963615,
+    "build_manifest": {
+      "name": "Hejj\u00e9Trac",
+      "version": "0.1.4",
+      "platform": "macos",
+      "architecture": "arm64",
+      "source_commit": "eed74b17dd29ed551140eab0d90c28c570308fcf",
+      "source_url": "https://github.com/pvnkmrksk/hejjetrak",
+      "binary_hash_boundary": "compiled binaries before application signing",
+      "binaries": [
+        {
+          "name": "hejjetrac",
+          "compiled_sha256": "62337a6f7860b9fdcbb16a3364b50bb7545c8ac864d1e2597830f42b6aed6136"
+        },
+        {
+          "name": "hejjetrac-cli",
+          "compiled_sha256": "68e4b588acfcdbfbf9000acfc526d62deefc821172ed11001fb1cae53b20270c"
+        }
+      ]
+    },
+    "checks": [
+      {
+        "name": "signature",
+        "exit_code": 0,
+        "stdout": "",
+        "stderr": "--prepared:/private/tmp/hejjetrac-official-v014/hejjetrac-macos-arm64/hejjetrac.app/Contents/MacOS/hejjetrac-cli\n--validated:/private/tmp/hejjetrac-official-v014/hejjetrac-macos-arm64/hejjetrac.app/Contents/MacOS/hejjetrac-cli\n/tmp/hejjetrac-official-v014/hejjetrac-macos-arm64/hejjetrac.app: valid on disk\n/tmp/hejjetrac-official-v014/hejjetrac-macos-arm64/hejjetrac.app: satisfies its Designated Requirement\n"
+      },
+      {
+        "name": "version",
+        "exit_code": 0,
+        "stdout": "hejjetrac-cli 0.1.4\n",
+        "stderr": ""
+      },
+      {
+        "name": "legacy_alias",
+        "exit_code": 0,
+        "stdout": "hejjetrac-cli 0.1.4\n",
+        "stderr": ""
+      },
+      {
+        "name": "decode",
+        "exit_code": 0,
+        "stdout": "{\n  \"width\": 384,\n  \"height\": 288,\n  \"fps\": null,\n  \"codec\": \"h264 (pure Rust)\",\n  \"duration_ms\": 10000.0\n}\ndecoded_frames=300 last_timestamp_ms=9966.666667\n",
+        "stderr": ""
+      },
+      {
+        "name": "sample",
+        "exit_code": 0,
+        "stdout": "{\n  \"version\": \"0.1.4\",\n  \"input\": \"/private/tmp/hejjetrac-official-v014/hejjetrac-macos-arm64/hejjetrac.app/Contents/Resources/examples/sample.mp4\",\n  \"video\": {\n    \"width\": 384,\n    \"height\": 288,\n    \"fps\": null,\n    \"codec\": \"h264 (pure Rust)\",\n    \"duration_ms\": 10000.0\n  },\n  \"effective_config\": {\n    \"spherical_map\": {\n      \"resilient\": true,\n      \"global_search\": false,\n      \"max_bad_frames\": -1,\n      \"global_evaluations\": 100000,\n      \"channel\": null,\n      \"quality\": 6,\n      \"threshold_ratio\": 1.25,\n      \"threshold_window\": 0.25,\n      \"max_evaluations\": 50,\n      \"tolerance\": 0.001,\n      \"max_error\": -1.0\n    },\n    \"width\": 384,\n    \"height\": 288,\n    \"vfov_deg\": 45.0,\n    \"fisheye\": false,\n    \"sphere\": {\n      \"centre\": [\n        -0.22938965658632982,\n        0.0999680947095317,\n        0.9681873607372448\n      ],\n      \"angular_radius\": 0.12481674439688986\n    },\n    \"camera_to_lab\": [\n      0.722445,\n      -0.131314,\n      -0.460878\n    ],\n    \"legacy_roi_coordinates\": true,\n    \"ignore_polygons\": [\n      [\n        [\n          96.0,\n          156.0\n        ],\n        [\n          113.0,\n          147.0\n        ],\n        [\n          106.0,\n          128.0\n        ],\n        [\n          82.0,\n          130.0\n        ],\n        [\n          81.0,\n          150.0\n        ]\n      ],\n      [\n        [\n          71.0,\n          213.0\n        ],\n        [\n          90.0,\n          219.0\n        ],\n        [\n          114.0,\n          218.0\n        ],\n        [\n          135.0,\n          211.0\n        ],\n        [\n          154.0,\n          196.0\n        ],\n        [\n          150.0,\n          217.0\n        ],\n        [\n          121.0,\n          228.0\n        ],\n        [\n          99.0,\n          234.0\n        ],\n        [\n          75.0,\n          225.0\n        ]\n      ]\n    ],\n    \"max_rotation\": 0.35,\n    \"max_error\": 0.16,\n    \"sample_stride\": 2,\n    \"iterations\": 20,\n    \"source\": \"sample.mp4\"\n  },\n  \"frames\": 300,\n  \"tracked\": 299,\n  \"relocalized\": 0,\n  \"rejected\": 0,\n  \"initializing\": 1,\n  \"mean_error\": 6621.574210432903,\n  \"max_error\": 8531.321104876995,\n  \"wall_seconds\": 0.716776875,\n  \"end_to_end_fps\": 418.5402884265763,\n  \"tracking_fps\": 2101.2546864896126,\n  \"input_duration_ms\": 9966.666666666666,\n  \"final_position\": [\n    3.641684896510073,\n    -2.6467681123615514\n  ],\n  \"final_heading\": 6.175048949743612,\n  \"estimator\": \"accumulated spherical map / pure Rust BOBYQA\",\n  \"error_metric\": \"mean squared binary intensity (0..65025)\",\n  \"warnings\": []\n}\n",
+        "stderr": "100 frames \u00b7 0 rejected\n200 frames \u00b7 0 rejected\n300 frames \u00b7 0 rejected\n"
+      },
+      {
+        "name": "comparison",
+        "exit_code": 0,
+        "stdout": "{\n  \"comparison\": {\n    \"candidate_final_position\": [\n      3.64168489651,\n      -2.646768112362\n    ],\n    \"endpoint_error_sphere_rad\": 0.041252009416150356,\n    \"frames\": 300,\n    \"heading_rmse_rad\": 0.013651430288528159,\n    \"path_point_rmse_sphere_rad\": 0.025593841799898084,\n    \"reference_final_position\": [\n      3.674266189723,\n      -2.6214661833162\n    ],\n    \"rotation_component_rmse_rad\": [\n      0.009475898823054007,\n      0.010924711781146961,\n      0.01781987973491448\n    ],\n    \"timestamp_max_error_ms\": 3.456079866737127e-11\n  },\n  \"limits\": {\n    \"heading_rmse_rad\": 0.025,\n    \"path_rmse_sphere_rad\": 0.075,\n    \"rotation_component_rmse_rad\": 0.02\n  },\n  \"passed\": true\n}\n",
+        "stderr": ""
+      }
+    ],
+    "sample": {
+      "version": "0.1.4",
+      "input": "/private/tmp/hejjetrac-official-v014/hejjetrac-macos-arm64/hejjetrac.app/Contents/Resources/examples/sample.mp4",
+      "video": {
+        "width": 384,
+        "height": 288,
+        "fps": null,
+        "codec": "h264 (pure Rust)",
+        "duration_ms": 10000.0
+      },
+      "effective_config": {
+        "spherical_map": {
+          "resilient": true,
+          "global_search": false,
+          "max_bad_frames": -1,
+          "global_evaluations": 100000,
+          "channel": null,
+          "quality": 6,
+          "threshold_ratio": 1.25,
+          "threshold_window": 0.25,
+          "max_evaluations": 50,
+          "tolerance": 0.001,
+          "max_error": -1.0
+        },
+        "width": 384,
+        "height": 288,
+        "vfov_deg": 45.0,
+        "fisheye": false,
+        "sphere": {
+          "centre": [
+            -0.22938965658632982,
+            0.0999680947095317,
+            0.9681873607372448
+          ],
+          "angular_radius": 0.12481674439688986
+        },
+        "camera_to_lab": [
+          0.722445,
+          -0.131314,
+          -0.460878
+        ],
+        "legacy_roi_coordinates": true,
+        "ignore_polygons": [
+          [
+            [
+              96.0,
+              156.0
+            ],
+            [
+              113.0,
+              147.0
+            ],
+            [
+              106.0,
+              128.0
+            ],
+            [
+              82.0,
+              130.0
+            ],
+            [
+              81.0,
+              150.0
+            ]
+          ],
+          [
+            [
+              71.0,
+              213.0
+            ],
+            [
+              90.0,
+              219.0
+            ],
+            [
+              114.0,
+              218.0
+            ],
+            [
+              135.0,
+              211.0
+            ],
+            [
+              154.0,
+              196.0
+            ],
+            [
+              150.0,
+              217.0
+            ],
+            [
+              121.0,
+              228.0
+            ],
+            [
+              99.0,
+              234.0
+            ],
+            [
+              75.0,
+              225.0
+            ]
+          ]
+        ],
+        "max_rotation": 0.35,
+        "max_error": 0.16,
+        "sample_stride": 2,
+        "iterations": 20,
+        "source": "sample.mp4"
+      },
+      "frames": 300,
+      "tracked": 299,
+      "relocalized": 0,
+      "rejected": 0,
+      "initializing": 1,
+      "mean_error": 6621.574210432903,
+      "max_error": 8531.321104876995,
+      "wall_seconds": 0.716776875,
+      "end_to_end_fps": 418.5402884265763,
+      "tracking_fps": 2101.2546864896126,
+      "input_duration_ms": 9966.666666666666,
+      "final_position": [
+        3.641684896510073,
+        -2.6467681123615514
+      ],
+      "final_heading": 6.175048949743612,
+      "estimator": "accumulated spherical map / pure Rust BOBYQA",
+      "error_metric": "mean squared binary intensity (0..65025)",
+      "warnings": []
+    },
+    "comparison": {
+      "comparison": {
+        "candidate_final_position": [
+          3.64168489651,
+          -2.646768112362
+        ],
+        "endpoint_error_sphere_rad": 0.041252009416150356,
+        "frames": 300,
+        "heading_rmse_rad": 0.013651430288528159,
+        "path_point_rmse_sphere_rad": 0.025593841799898084,
+        "reference_final_position": [
+          3.674266189723,
+          -2.6214661833162
+        ],
+        "rotation_component_rmse_rad": [
+          0.009475898823054007,
+          0.010924711781146961,
+          0.01781987973491448
+        ],
+        "timestamp_max_error_ms": 3.456079866737127e-11
+      },
+      "limits": {
+        "heading_rmse_rad": 0.025,
+        "path_rmse_sphere_rad": 0.075,
+        "rotation_component_rmse_rad": 0.02
+      },
+      "passed": true
+    },
+    "native_visual": {
+      "calibrate_again_opens_empty_redraw": true,
+      "source_image": "supplied sample at frame120",
+      "packaged_rim_pointer_repeat": "Computer-use pointer routing returned windowNotFoundAtPosition on main preview; no packaged-circle click claim. Complete circle interactions verified in local v0.1.4 native build and 18 UI regressions.",
+      "signature_extraction": "Verified untouched archive after extraction under /tmp, outside the iCloud workspace."
+    }
+  },
+  "public_website": {
+    "url": "https://pvnkmrksk.github.io/hejjetrak/",
+    "title": "Hejj\u00e9Trac (hejjetrac) \u2014 FicTrac in Rust",
+    "autoplay": {
+      "muted": true,
+      "paused": false,
+      "ready_state": 4,
+      "time_advanced": true
+    },
+    "navigation": "Website and GitHub links in the manual resolve correctly",
+    "readme_download": {
+      "clicked_once": true,
+      "second_download_click": false,
+      "version": "v0.1.4",
+      "file": "hejjetrac-macos-arm64.zip",
+      "size": 21963615,
+      "sha256": "ea22e1f7d4081475d7b6349518423dccdda14117fc55bea89a755f61b43b6692",
+      "other_platforms_visible": true,
+      "query_consumed": true
+    },
+    "viewport_checks": [
+      {
+        "width": 1280,
+        "overflow": false
+      },
+      {
+        "width": 390,
+        "overflow": false,
+        "includes_manual_light_theme": true
+      }
+    ]
+  }
+}

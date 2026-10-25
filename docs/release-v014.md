@@ -1,5 +1,8 @@
 # HejjéTrac v0.1.4 release notes
 
+Published on 25 October 2026 from `eed74b17dd29ed551140eab0d90c28c570308fcf`.
+[Download v0.1.4](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.4).
+
 The display name is **HejjéTrac**; executable and download names use
 `hejjetrac`. The repository and website remain at
 [pvnkmrksk/hejjetrak](https://github.com/pvnkmrksk/hejjetrak) and
@@ -44,6 +47,10 @@ release, even if both use the same version number.
 The four native jobs retain formatting, strict Clippy, workspace and decoder
 tests, the known-motion demo, Windows static-runtime inspection, dependency
 notices, ad hoc macOS signature verification, and Linux installer validation.
-The authoritative platform execution and numerical results remain in
-[validation.md](validation.md). Creating these checks does not by itself mark
-the new release as validated or published.
+All four [native release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640739)
+passed: 188 workspace tests on Linux and both Macs, 185 applicable tests on
+Windows, and 1,353 decoder tests per platform. All five platform assets are
+published. The official Mac archive passes signature, version, source provenance
+and all 300 sample-frame checks. The public README-to-website flow downloads
+v0.1.4 without a second download click. Full execution scope and remaining
+platform limits are recorded in [validation.md](validation.md).

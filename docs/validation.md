@@ -1,5 +1,43 @@
 # HejjéTrac validation evidence
 
+## v0.1.4 published release — 2026-10-25
+
+**[v0.1.4](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.4)** is
+published as latest at **14:06:27 UTC**, from immutable source commit
+`eed74b17dd29ed551140eab0d90c28c570308fcf`. All five expected platform assets
+are present. The [four native release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640739)
+pass formatting, strict Clippy, workspace tests, **1,353 decoder tests each**, the
+120-frame known-motion demo and packaging. Linux and both Macs pass **188
+workspace tests** each; Windows passes **185** applicable tests, with three
+Unix-only cases excluded. All use Rust 1.99.1. The separate
+[portability workflow](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640789)
+also passes on all three operating systems.
+
+The downloaded official Apple Silicon ZIP SHA-256 is
+`ea22e1f7d4081475d7b6349518423dccdda14117fc55bea89a755f61b43b6692`,
+matching GitHub's asset digest. Extraction outside the iCloud workspace passes
+strict ad hoc signature verification, version, source-commit provenance and
+legacy-alias checks. The bundled sample decodes and processes all **300 frames**;
+its unchanged numerical reference comparison passes. The packaged app's
+Calibrate again entry was visually checked. Complete live-circle pointer checks
+were performed in the local native v0.1.4 build described below; repeating them
+in the packaged preview hit a computer-use window-routing error. Native
+Windows/Linux visual and physical-camera checks remain unperformed.
+
+The release-source [website and manual](https://pvnkmrksk.github.io/hejjetrak/) pass
+**1,558 local references across 36 HTML pages** and the download-controller
+regressions. The subsequent documentation/evidence build passes **1,566 references**
+across the same 36 pages. On the public GitHub README, one click on Download now opens the
+website, selects v0.1.4 and completes the recommended Mac attachment without a
+second download click. The **21,963,615-byte** browser download has the same
+SHA-256 above. Other platform choices remain visible and the one-time URL intent
+is consumed. Public autoplay remains muted and playing with readyState 4. GitHub
+recognizes CITATION.cff and renders the citation control.
+
+[CI hosts, complete native checks, asset digests and downloaded-app/browser evidence](benchmarks/release-v014-20261025.json)
+record the execution. This does not establish notarization, Gatekeeper or
+SmartScreen first-launch behavior. Source tags and prior releases were not moved.
+
 ## v0.1.4 local validation — 2026-10-25
 
 On Apple M2 Pro / macOS 27.0.1 arm64 / Rust 1.99.1 (LLVM 23.1.1),
@@ -35,8 +73,8 @@ looping autoplay (readyState 4), no horizontal overflow, the light manual and
 persistent reciprocal Website/GitHub links. The README download link carries
 `?download=1`; controller tests verify one automatic attachment selection and
 consumption of that intent. Unknown Mac hardware uses the clearly stated Apple
-Silicon default, with Intel and other platforms visible. Publication and the
-new official package are verified separately below when available. This local
+Silicon default, with Intel and other platforms visible. The published release and
+official package are verified in the preceding section. This local
 pass does not establish Windows/Linux GUI appearance or physical-camera capacity.
 
 ## Final polish — 2026-10-25

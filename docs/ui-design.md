@@ -12,7 +12,7 @@ The hierarchy follows [Apple toolbar guidance](https://developer.apple.com/desig
 
 Appearance follows the operating system by default. **More → Appearance** also
 offers Light and Dark. The preview keeps a dark surround in either theme, with
-teal selection accents in the controls. **About hejjetrak** identifies creator
+teal selection accents in the controls. **About HejjéTrac** identifies creator
 Pavan Kumar Kaushik, links the repository and manual, and credits FicTrac and
 the bundled icon artwork. These are native egui viewports and controls; they do
 not introduce an AppKit/WinUI menu-bar implementation.
