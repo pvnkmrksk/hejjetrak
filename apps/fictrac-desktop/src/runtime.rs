@@ -1,4 +1,6 @@
-use fictrac_control::MediaRecorders;
+use fictrac_control::{
+    MediaRecorders, MediaRecordingStatus, MediaRecordingTuning, RecordingOverflow,
+};
 use fictrac_core::{DebugViews, Diagnostics, GrayFrame, TrackRow, Tracker};
 use fictrac_io::{
     ConfigDocument, OutputSinks, SourceSpec, VideoSource, load_config_text, write_dat,
@@ -74,11 +76,16 @@ pub struct Snapshot {
     pub tracking_ms: f64,
     pub tracking_samples: u64,
     pub actual_fps: f64,
+    /// New source images published per second, independent of measured frames.
+    pub preview_fps: f64,
+    pub display_fps: u32,
     pub source_fps: f64,
     pub headroom_percent: f64,
     pub camera: Option<fictrac_camera::CameraCapabilities>,
     pub outputs: Option<fictrac_io::OutputStatus>,
     pub record_options: Option<fictrac_control::RecordOptions>,
+    pub media_recording: Option<MediaRecordingStatus>,
+    pub media_warnings: Vec<String>,
     pub dropped: u64,
     pub dropped_running: u64,
     pub revision: u64,
@@ -103,11 +110,16 @@ pub enum Command {
     LoadMap(PathBuf),
     SaveMap(PathBuf),
     Record(PathBuf),
-    RecordOptions(PathBuf, fictrac_control::RecordOptions),
+    RecordOptions(
+        PathBuf,
+        fictrac_control::RecordOptions,
+        MediaRecordingTuning,
+    ),
     CameraRefresh,
     CameraControl(fictrac_camera::CameraControlRequest),
     StopRecord,
     Realtime(bool),
+    DisplayFps(u32),
 }
 pub struct Worker {
     tx: SyncSender<Command>,
@@ -376,7 +388,10 @@ fn run(
     let mut pose_history = VecDeque::new();
     let mut manual_record_options: Option<fictrac_control::RecordOptions> = None;
     let mut recorder: Option<Recorder> = if doc.boolean("save_raw") || doc.boolean("save_debug") {
-        let recorder = Recorder::automatic(&doc)?;
+        let recorder = Recorder::automatic(
+            &doc,
+            source_recording_tuning(&input, MediaRecordingTuning::default()),
+        )?;
         snapshot.recording = true;
         snapshot.record_options = Some(fictrac_control::RecordOptions::from_document(&doc));
         snapshot.recording_directory = Some(recorder.directory.clone());
@@ -385,6 +400,9 @@ fn run(
         None
     };
     let mut last_publish = Instant::now() - Duration::from_secs(1);
+    let mut preview_interval = Duration::from_secs_f64(1.0 / 30.0);
+    snapshot.display_fps = 30;
+    let mut previous_preview: Option<Instant> = None;
     let mut wall_origin = Instant::now();
     let mut source_origin = None;
     let mut last_sequence = 0;
@@ -466,6 +484,8 @@ fn run(
                     wall_origin = Instant::now();
                     source_origin = None;
                     last_completed = None;
+                    previous_preview = None;
+                    snapshot.preview_fps = 0.0;
                 }
                 Command::Advance(frames) => {
                     skip_gap = true;
@@ -579,16 +599,23 @@ fn run(
                         _ => "Camera controls require a live camera source".into(),
                     };
                 }
-                Command::RecordOptions(dir, options) => {
+                Command::RecordOptions(dir, options, tuning) => {
                     manual_record_options = Some(options);
                     let effective = options.recording_document(&doc)?;
                     if let Some(mut old) = recorder.take() {
                         old.finish()?;
+                        old.refresh_media(&mut snapshot);
                     }
                     snapshot.recording_directory = Some(dir.clone());
-                    recorder = Some(Recorder::new(dir, &effective)?);
+                    recorder = Some(Recorder::new_with_tuning(
+                        dir,
+                        &effective,
+                        source_recording_tuning(&input, tuning),
+                    )?);
                     snapshot.recording = true;
                     snapshot.record_options = Some(options);
+                    snapshot.media_recording = None;
+                    snapshot.media_warnings.clear();
                 }
                 Command::Record(dir) => {
                     manual_record_options = None;
@@ -596,15 +623,22 @@ fn run(
                         old.finish()?;
                     }
                     snapshot.recording_directory = Some(dir.clone());
-                    recorder = Some(Recorder::new(dir, &doc)?);
+                    recorder = Some(Recorder::new_with_tuning(
+                        dir,
+                        &doc,
+                        source_recording_tuning(&input, MediaRecordingTuning::default()),
+                    )?);
                     snapshot.recording = true;
                     snapshot.record_options =
                         Some(fictrac_control::RecordOptions::from_document(&doc));
+                    snapshot.media_recording = None;
+                    snapshot.media_warnings.clear();
                 }
                 Command::StopRecord => {
                     manual_record_options = None;
                     if let Some(mut r) = recorder.take() {
                         r.finish()?;
+                        r.refresh_media(&mut snapshot);
                     }
                     snapshot.recording = false;
                     snapshot.record_options = None;
@@ -613,6 +647,18 @@ fn run(
                     realtime = r;
                     wall_origin = Instant::now();
                     source_origin = None;
+                }
+                Command::DisplayFps(fps) => {
+                    if !(1..=60).contains(&fps) {
+                        snapshot.command_error =
+                            Some("Display FPS must be an integer between 1 and 60".into());
+                        continue;
+                    }
+                    snapshot.display_fps = fps;
+                    preview_interval = Duration::from_secs_f64(1.0 / f64::from(fps));
+                    previous_preview = None;
+                    snapshot.preview_fps = 0.0;
+                    last_publish = Instant::now() - preview_interval;
                 }
             }
         }
@@ -658,9 +704,13 @@ fn run(
                 let effective = manual_record_options
                     .map(|o| o.recording_document(&doc))
                     .transpose()?;
+                r.tuning = source_recording_tuning(&input, r.tuning);
                 r.epoch(effective.as_ref().unwrap_or(&doc))?;
             } else if doc.boolean("save_raw") || doc.boolean("save_debug") {
-                let created = Recorder::automatic(&doc)?;
+                let created = Recorder::automatic(
+                    &doc,
+                    source_recording_tuning(&input, MediaRecordingTuning::default()),
+                )?;
                 snapshot.recording = true;
                 snapshot.recording_directory = Some(created.directory.clone());
                 recorder = Some(created);
@@ -690,6 +740,9 @@ fn run(
             }
         }
         if (paused && !step) || ended {
+            if let Some(r) = &mut recorder {
+                r.refresh_media(&mut snapshot);
+            }
             snapshot.path = Arc::new(path.clone());
             snapshot.contact_trace = Arc::new(contact_trace.iter().copied().collect());
             snapshot.pose_history = Arc::new(pose_history.iter().copied().collect());
@@ -735,6 +788,7 @@ fn run(
             snapshot.pose_history = Arc::new(pose_history.iter().copied().collect());
             ended = true;
             snapshot.ended = true;
+            snapshot.preview_fps = 0.0;
             snapshot.advance_remaining = 0;
             snapshot.notice = "Video complete · Replay to start another sequence".into();
             if let Some(r) = &mut recorder {
@@ -749,6 +803,7 @@ fn run(
                     .map_err(|e| e.to_string())?;
                 }
                 r.finish()?;
+                r.refresh_media(&mut snapshot);
             }
             snapshot.recording = false;
             continue;
@@ -907,7 +962,7 @@ fn run(
             }
         }
         let publish =
-            last_publish.elapsed() > Duration::from_millis(30) || step || snapshot.image.is_none();
+            last_publish.elapsed() >= preview_interval || step || snapshot.image.is_none();
         let mut debug = None;
         if let Some(engine) = &mut engine_state {
             // Preserve pairwise diagnostic accumulation on every measured frame.
@@ -999,6 +1054,22 @@ fn run(
             0.0
         };
         if publish {
+            let now = Instant::now();
+            if let Some(previous) = previous_preview {
+                let elapsed = now.duration_since(previous).as_secs_f64();
+                if elapsed > 0.0 && elapsed < 2.0 {
+                    let fps = 1.0 / elapsed;
+                    snapshot.preview_fps = if snapshot.preview_fps > 0.0 {
+                        snapshot.preview_fps * 0.85 + fps * 0.15
+                    } else {
+                        fps
+                    };
+                }
+            }
+            previous_preview = Some(now);
+            if let Some(r) = &mut recorder {
+                r.refresh_media(&mut snapshot);
+            }
             snapshot.outputs = Some(sinks.status());
             snapshot.path = Arc::new(path.clone());
             snapshot.contact_trace = Arc::new(contact_trace.iter().copied().collect());
@@ -1027,6 +1098,17 @@ struct PendingMedia {
     frame: GrayFrame,
     row: TrackRow,
 }
+fn source_recording_tuning(
+    input: &Input,
+    mut tuning: MediaRecordingTuning,
+) -> MediaRecordingTuning {
+    tuning.overflow = if matches!(input, Input::Camera(_)) {
+        RecordingOverflow::StopOverloaded
+    } else {
+        RecordingOverflow::Backpressure
+    };
+    tuning
+}
 struct Recorder {
     directory: PathBuf,
     index: u32,
@@ -1036,9 +1118,13 @@ struct Recorder {
     doc: ConfigDocument,
     media: Option<MediaRecorders>,
     pending: Option<PendingMedia>,
+    tuning: MediaRecordingTuning,
+    media_status: Option<MediaRecordingStatus>,
+    media_warnings: Vec<String>,
+    media_disabled: bool,
 }
 impl Recorder {
-    fn automatic(doc: &ConfigDocument) -> Result<Self> {
+    fn automatic(doc: &ConfigDocument, tuning: MediaRecordingTuning) -> Result<Self> {
         let stamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_err(|e| e.to_string())?
@@ -1048,9 +1134,22 @@ impl Recorder {
             .and_then(|v| std::path::Path::new(v).file_name())
             .and_then(|v| v.to_str())
             .unwrap_or("fictrac");
-        Self::new(recording_root().join(format!("{base}-{stamp}")), doc)
+        Self::new_with_tuning(
+            recording_root().join(format!("{base}-{stamp}")),
+            doc,
+            tuning,
+        )
     }
+    #[cfg(test)]
     fn new(directory: PathBuf, doc: &ConfigDocument) -> Result<Self> {
+        Self::new_with_tuning(directory, doc, MediaRecordingTuning::default())
+    }
+    fn new_with_tuning(
+        directory: PathBuf,
+        doc: &ConfigDocument,
+        tuning: MediaRecordingTuning,
+    ) -> Result<Self> {
+        let effective = tuning.recording_document(doc)?;
         if let Some(p) = directory.parent() {
             fs::create_dir_all(p).map_err(|e| e.to_string())?;
         }
@@ -1059,7 +1158,7 @@ impl Recorder {
         let data = file(&directory.join("epoch-0000.dat"))?;
         let all = file(&directory.join("epoch-0000-all-frames.dat"))?;
         let quality = file(&directory.join("epoch-0000-quality.csv"))?;
-        fs::write(directory.join("epoch-0000-config.txt"), doc.text())
+        fs::write(directory.join("epoch-0000-config.txt"), effective.text())
             .map_err(|e| e.to_string())?;
         let mut result = Self {
             directory,
@@ -1067,9 +1166,13 @@ impl Recorder {
             data,
             all,
             quality,
-            doc: doc.clone(),
+            doc: effective,
             media: None,
             pending: None,
+            tuning,
+            media_status: None,
+            media_warnings: vec![],
+            media_disabled: false,
         };
         result.header()?;
         Ok(result)
@@ -1080,6 +1183,7 @@ impl Recorder {
     }
     fn epoch(&mut self, doc: &ConfigDocument) -> Result<()> {
         self.finish()?;
+        let effective = self.tuning.recording_document(doc)?;
         self.index = self
             .index
             .checked_add(1)
@@ -1098,10 +1202,12 @@ impl Recorder {
         fs::write(
             self.directory
                 .join(format!("epoch-{:04}-config.txt", self.index)),
-            doc.text(),
+            effective.text(),
         )
         .map_err(|e| e.to_string())?;
-        self.doc = doc.clone();
+        self.doc = effective;
+        self.media_disabled = false;
+        self.media_status = None;
         self.header()
     }
     fn write(&mut self, row: &TrackRow) -> Result<()> {
@@ -1122,15 +1228,22 @@ impl Recorder {
                 .directory
                 .join(format!("epoch-{:04}-media", self.index));
             fs::create_dir(&directory).map_err(|e| e.to_string())?;
-            let mut media = MediaRecorders::create(&directory, &self.doc, &pending.config, fps)?;
-            media.write_row(
+            let mut media = MediaRecorders::create_with_tuning(
+                &directory,
+                &self.doc,
+                &pending.config,
+                fps,
+                self.tuning,
+            )?;
+            let result = media.write_row(
                 &pending.rgb,
                 &pending.frame,
                 &pending.debug,
                 &pending.path,
                 &pending.row,
-            )?;
+            );
             self.media = Some(media);
+            result?;
         }
         Ok(())
     }
@@ -1143,7 +1256,8 @@ impl Recorder {
         config: &fictrac_core::Config,
         row: &TrackRow,
     ) -> Result<()> {
-        if !self.doc.boolean("save_raw") && !self.doc.boolean("save_debug") {
+        if self.media_disabled || (!self.doc.boolean("save_raw") && !self.doc.boolean("save_debug"))
+        {
             return Ok(());
         }
         if let Some(pending) = &self.pending {
@@ -1153,10 +1267,15 @@ impl Recorder {
             } else {
                 1000.0 / (frame.timestamp_ms() - pending.frame.timestamp_ms())
             };
-            self.start_media(fps)?;
+            if let Err(error) = self.start_media(fps) {
+                self.stop_media_with_warning(error);
+                return Ok(());
+            }
         }
         if let Some(media) = &mut self.media {
-            media.write_row(rgb, frame, debug, path, row)?;
+            if let Err(error) = media.write_row(rgb, frame, debug, path, row) {
+                self.stop_media_with_warning(error);
+            }
         } else {
             self.pending = Some(PendingMedia {
                 rgb: rgb.to_vec(),
@@ -1170,24 +1289,56 @@ impl Recorder {
         Ok(())
     }
     fn finish(&mut self) -> Result<()> {
+        // Numeric evidence is committed independently of codec/renderer health.
+        let mut first_error = None;
+        for (name, result) in [
+            ("accepted data flush", self.data.flush()),
+            ("all-frame data flush", self.all.flush()),
+            ("quality flush", self.quality.flush()),
+            ("accepted data sync", self.data.get_ref().sync_all()),
+            ("all-frame data sync", self.all.get_ref().sync_all()),
+            ("quality sync", self.quality.get_ref().sync_all()),
+        ] {
+            if let Err(error) = result
+                && first_error.is_none()
+            {
+                first_error = Some(format!("Cannot finalize {name}: {error}"));
+            }
+        }
         if self.pending.is_some() {
             let fps = self.doc.number("src_fps", 25.0);
-            self.start_media(if fps > 0.0 { fps } else { 25.0 })?;
+            if let Err(error) = self.start_media(if fps > 0.0 { fps } else { 25.0 }) {
+                self.stop_media_with_warning(error);
+            }
         }
         if let Some(media) = self.media.take() {
-            media.finish()?;
+            let (status, warnings) = media.finish_with_status();
+            self.media_status = Some(status);
+            self.media_warnings.extend(warnings);
         }
-        self.data
-            .flush()
-            .and_then(|_| self.all.flush())
-            .and_then(|_| self.quality.flush())
-            .map_err(|e| e.to_string())?;
-        self.data
-            .get_ref()
-            .sync_all()
-            .and_then(|_| self.all.get_ref().sync_all())
-            .and_then(|_| self.quality.get_ref().sync_all())
-            .map_err(|e| e.to_string())
+        first_error.map_or(Ok(()), Err)
+    }
+    fn stop_media_with_warning(&mut self, error: String) {
+        self.media_disabled = true;
+        self.pending = None;
+        self.media_warnings.push(format!(
+            "Video is partial: {error}. Numeric data, quality and live outputs continue."
+        ));
+    }
+    fn refresh_media(&mut self, snapshot: &mut Snapshot) {
+        if let Some(media) = &mut self.media {
+            self.media_status = Some(media.status());
+            self.media_warnings.extend(media.take_warnings());
+        }
+        snapshot.media_recording = self.media_status.clone();
+        for warning in self.media_warnings.drain(..) {
+            if !snapshot.media_warnings.contains(&warning) {
+                if snapshot.media_warnings.len() >= 16 {
+                    snapshot.media_warnings.remove(0);
+                }
+                snapshot.media_warnings.push(warning);
+            }
+        }
     }
 }
 fn file(path: &PathBuf) -> Result<BufWriter<File>> {
@@ -1675,8 +1826,10 @@ mod tests {
                 raw: false,
                 debug: false,
             },
+            MediaRecordingTuning::default(),
         ))?;
         worker.send(Command::Realtime(false))?;
+        worker.send(Command::DisplayFps(1))?;
         worker.send(Command::Pause(false))?;
         // This verifies complete persisted evidence and EOF pixels, not decode
         // throughput. Shared CI runners execute other real-video tests alongside
@@ -1684,6 +1837,7 @@ mod tests {
         // keeping the separate command/deadline responsiveness assertions strict.
         let ended = wait_for_timeout(&worker, Duration::from_secs(60), |snapshot| snapshot.ended)?;
         assert_eq!(ended.frames, 300);
+        assert_eq!(ended.display_fps, 1);
         assert!(ended.resources.preview_updates > 0);
         assert!(ended.resources.preview_updates <= ended.frames);
         assert_eq!(ended.row.as_ref().ok_or("missing final row")?.frame, 299);
@@ -1782,6 +1936,7 @@ mod tests {
                 raw: false,
                 debug: false,
             },
+            MediaRecordingTuning::default(),
         ))?;
         worker.send(Command::Pause(false))?;
         let fast = wait_for(&worker, |snapshot| snapshot.frames >= before.frames + 60)?;

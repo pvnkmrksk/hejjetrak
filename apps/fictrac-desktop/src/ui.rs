@@ -52,11 +52,38 @@ fn preview_chrome(size: Vec2) -> PreviewChrome {
         status: size.x >= 320.0 && size.y >= 220.0,
     }
 }
+pub(crate) fn framebuffer_window_limit(texture_limit: u32, pixels_per_point: f32) -> Vec2 {
+    let scale = if pixels_per_point.is_finite() && pixels_per_point > 0.0 {
+        pixels_per_point
+    } else {
+        1.0
+    };
+    let edge = (texture_limit.min(4096) as f32 / scale).floor().max(96.0);
+    egui::vec2(edge, edge)
+}
+pub(crate) fn constrain_framebuffer(ctx: &egui::Context, texture_limit: u32) -> Vec2 {
+    let limit = framebuffer_window_limit(texture_limit, ctx.pixels_per_point());
+    let key = egui::Id::new(("physical-framebuffer-limit", ctx.viewport_id()));
+    let changed = ctx.data_mut(|data| {
+        if data.get_temp::<Vec2>(key) == Some(limit) {
+            false
+        } else {
+            data.insert_temp(key, limit);
+            true
+        }
+    });
+    if changed {
+        ctx.send_viewport_cmd(egui::ViewportCommand::MaxInnerSize(limit));
+    }
+    limit
+}
 impl Session {
     pub fn show(&mut self, ctx: &egui::Context) {
         self.update();
+        let limit = constrain_framebuffer(ctx, self.framebuffer_limit);
+        self.max_window_inner_size = limit;
         if let Some(size) = self.requested_window_size.take() {
-            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(size));
+            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(size.min(limit)));
         }
         let size = ctx.content_rect().size();
         self.window_inner_size = Some([size.x, size.y]);
@@ -231,6 +258,7 @@ impl Session {
             let mut builder = egui::ViewportBuilder::default()
                 .with_title(format!("HejjéTrac · {} configuration", self.display_name()))
                 .with_inner_size(inner)
+                .with_max_inner_size(self.max_window_inner_size)
                 .with_min_inner_size([340.0_f32.min(inner.x), 360.0_f32.min(inner.y)]);
             if let Some((reserved, _)) = layout {
                 builder = builder.with_position(reserved.min);
@@ -239,6 +267,7 @@ impl Session {
                 egui::ViewportId::from_hash_of(("settings", self.id)),
                 builder,
                 |ctx, _class| {
+                    constrain_framebuffer(ctx, self.framebuffer_limit);
                     if ctx.input(|i| i.viewport().close_requested()) {
                         close = true;
                     }
@@ -286,13 +315,13 @@ impl Session {
                 }
             });
         }
-        ctx.request_repaint_after(std::time::Duration::from_millis(
+        ctx.request_repaint_after(
             if self.snapshot.paused || self.snapshot.ended || self.worker.is_none() {
-                250
+                std::time::Duration::from_millis(250)
             } else {
-                30
+                std::time::Duration::from_secs_f64(1.0 / f64::from(self.display_fps))
             },
-        ));
+        );
     }
     fn toolbar(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| self.toolbar_row(ui));
@@ -414,13 +443,15 @@ impl Session {
             }
         );
         let detail = format!(
-            "{} frames\nTracking mean: {:.3} ms ({} measured frames; ROI + fitting + integration + numerical maps)\nWorker: {:.2} ms (conversion + tracking + diagnostics + recording + dispatch; excludes camera wait and playback pacing)\nSource: {:.2} fps · worker headroom {:.0}%\nCapture frames skipped: {} (includes intentional pauses)\n{}\nUDP {} · ZMQ {}\n{}\n{}",
+            "{} frames\nTracking mean: {:.3} ms ({} measured frames; ROI + fitting + integration + numerical maps)\nWorker: {:.2} ms (conversion + tracking + diagnostics + recording + dispatch; excludes camera wait and playback pacing)\nSource: {:.2} fps · worker headroom {:.0}%\nPreview updates: {:.1} fps · display limit {} fps\nCapture frames skipped: {} (includes intentional pauses)\n{}\nUDP {} · ZMQ {}\n{}\n{}",
             self.snapshot.frames,
             self.snapshot.tracking_ms,
             self.snapshot.tracking_samples,
             self.snapshot.processing_ms,
             self.snapshot.source_fps,
             self.snapshot.headroom_percent,
+            self.snapshot.preview_fps,
+            self.display_fps,
             self.snapshot.dropped,
             self.snapshot.notice,
             self.document()
@@ -445,6 +476,10 @@ impl Session {
                 ui.label("Lost").on_hover_text(
                     "Motion is unmeasured while tracking is unreliable. Inspect calibration if loss persists.",
                 );
+            }
+            if !self.snapshot.media_warnings.is_empty() {
+                ui.colored_label(ui.visuals().warn_fg_color, "Video partial")
+                    .on_hover_text(self.snapshot.media_warnings.join("\n"));
             }
             if ui.available_width() > 90.0
                 && let Some(output) = &self.snapshot.outputs
@@ -491,11 +526,72 @@ impl Session {
         });
     }
     fn recording_menu(&mut self, ui: &mut egui::Ui) {
+        use fictrac_control::RecordingEncoding;
         ui.strong("Next recording");
         ui.checkbox(&mut self.record_raw,"Raw video").on_hover_text("Original pixels at source resolution; recording starts on the next measured frame.");
         ui.checkbox(&mut self.record_debug, "Processed video")
             .on_hover_text("FicTrac diagnostic panels with measured motion and quality.");
+        let mut encoding = match self.recording_encoding {
+            RecordingEncoding::Configured => 0,
+            RecordingEncoding::Mjpeg => 1,
+            RecordingEncoding::Raw => 2,
+        };
+        if ui.add(egui::Slider::new(&mut encoding, 0..=2).text("Video speed / size")
+            .custom_formatter(|value, _| match value.round() as i32 { 1 => "MJPEG".into(), 2 => "Raw AVI".into(), _ => "Config codec".into() }))
+            .on_hover_text("Choose for the next recording. Larger files reduce compression work. Live video that cannot keep up stops with an explicit partial-file warning; tracking, numeric data and live outputs continue.").changed() {
+            self.recording_encoding = match encoding { 1 => RecordingEncoding::Mjpeg, 2 => RecordingEncoding::Raw, _ => RecordingEncoding::Configured };
+        }
+        let configured = self
+            .document()
+            .ok()
+            .and_then(|doc| doc.get("vid_codec").map(str::to_owned))
+            .unwrap_or_else(|| "h264".into());
+        ui.small(match self.recording_encoding {
+            RecordingEncoding::Configured => {
+                format!("Codec: {configured} from config · original compression and file size")
+            }
+            RecordingEncoding::Mjpeg => {
+                "Codec: MJPEG AVI · faster compression, larger files".into()
+            }
+            RecordingEncoding::Raw => {
+                "Codec: raw AVI · no compression, very large files; disk speed matters".into()
+            }
+        });
         ui.small("Numeric data and quality are always retained.");
+        self.media_recording_details(ui);
+    }
+    fn media_recording_details(&self, ui: &mut egui::Ui) {
+        if let Some(media) = &self.snapshot.media_recording {
+            ui.small(format!(
+                "Media codec: {} · file rate {:.1} fps",
+                media.codec, media.fps
+            ));
+            for (name, stream) in [("Raw", &media.raw), ("Processed", &media.debug)] {
+                if stream.requested {
+                    let actual = if stream.elapsed_seconds > 0.0 {
+                        stream.encoded_frames as f64 / stream.elapsed_seconds
+                    } else {
+                        0.0
+                    };
+                    ui.small(format!("{name}: {:.1} fps encoded · {} frames · {} queued", actual, stream.encoded_frames, stream.pending_frames))
+                        .on_hover_text(format!("Observed encoded frames / stream wall time. Mean renderer/encoder capacity {:.1} fps; the file's declared rate is {:.1} fps.", stream.processing_fps, media.fps));
+                }
+            }
+        }
+        for warning in &self.snapshot.media_warnings {
+            ui.colored_label(ui.visuals().warn_fg_color, warning);
+        }
+    }
+    fn display_rate_control(&mut self, ui: &mut egui::Ui) {
+        let mut fps = self.display_fps;
+        if ui.add(egui::Slider::new(&mut fps, 1..=60).text("Display FPS")).on_hover_text("Limit source-image updates and timed repaints. Processing, numeric data, recording cadence and live output are independent of this preview limit.").changed() {
+            let result = self.set_display_fps(fps);
+            self.report(result);
+        }
+        ui.small(format!(
+            "Processing {:.1} fps · preview updates {:.1} fps",
+            self.snapshot.actual_fps, self.snapshot.preview_fps
+        ));
     }
     fn window_menu(&mut self, ui: &mut egui::Ui) {
         if ui.button("New window  ⌘/Ctrl+N").clicked() {
@@ -528,6 +624,7 @@ impl Session {
             .on_hover_text(
                 "Show ball rim, exclusions and lab axes. Trajectory remains visible in preview.",
             );
+        self.display_rate_control(ui);
         if ui.button("Open configuration…").clicked()
             && let Some(path) = rfd::FileDialog::new()
                 .add_filter("FicTrac config", &["txt"])
@@ -1012,6 +1109,12 @@ impl Session {
             self.source_controls(ui);
             self.camera_controls(ui);
         });
+        egui::CollapsingHeader::new("Display")
+            .default_open(true)
+            .show(ui, |ui| self.display_rate_control(ui));
+        egui::CollapsingHeader::new("Recording")
+            .default_open(true)
+            .show(ui, |ui| self.recording_menu(ui));
         egui::CollapsingHeader::new("Graphical calibration")
             .default_open(true)
             .show(ui, |ui| {
@@ -2428,6 +2531,7 @@ value}
                 .with_title("Calibration precision")
                 .with_position(position)
                 .with_inner_size([size, size + 24.0])
+                .with_max_inner_size(self.max_window_inner_size)
                 .with_resizable(false)
                 .with_decorations(false)
                 .with_active(false)
@@ -2437,6 +2541,7 @@ value}
                 egui::ViewportId::from_hash_of(("calibration-magnifier", self.id)),
                 builder,
                 |ctx, _| {
+                    constrain_framebuffer(ctx, self.framebuffer_limit);
                     egui::CentralPanel::default()
                         .frame(egui::Frame::NONE.fill(Color32::from_rgb(10, 13, 18)))
                         .show(ctx, |ui| {
@@ -3597,4 +3702,22 @@ fn tiny_preview_hides_chrome_without_reducing_font_size() {
     assert!(compact.toolbar && !compact.status);
     let normal = preview_chrome(egui::vec2(480.0, 360.0));
     assert!(normal.toolbar && normal.status);
+}
+#[test]
+fn framebuffer_bounds_respect_physical_texture_limits_and_display_scale() {
+    for (texture, scale, expected) in [
+        (8192, 1.0, 4096.0),
+        (16384, 2.0, 2048.0),
+        (2048, 2.0, 1024.0),
+        (4096, 1.5, 2730.0),
+    ] {
+        assert_eq!(
+            framebuffer_window_limit(texture, scale),
+            egui::vec2(expected, expected)
+        );
+    }
+    assert_eq!(
+        framebuffer_window_limit(4096, f32::NAN),
+        egui::vec2(4096.0, 4096.0)
+    );
 }

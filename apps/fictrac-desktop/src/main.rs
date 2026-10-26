@@ -193,6 +193,17 @@ impl Desktop {
         let doc = ConfigDocument::parse(std::fs::read_to_string(&path).map_err(|e| e.to_string())?)
             .map_err(|e| e.to_string())?;
         let mut first = Session::new(1, doc.clone(), Some(path.clone()));
+        first.framebuffer_limit = cc
+            .wgpu_render_state
+            .as_ref()
+            .map(|state| state.device.limits().max_texture_dimension_2d.min(4096))
+            .unwrap_or(4096);
+        first.max_window_inner_size =
+            ui::framebuffer_window_limit(first.framebuffer_limit, cc.egui_ctx.pixels_per_point());
+        cc.egui_ctx
+            .send_viewport_cmd(egui::ViewportCommand::MaxInnerSize(
+                first.max_window_inner_size,
+            ));
         if args.config.is_none() && !args.control_stdio {
             first.startup_fallback = Some(fallback_document(&doc)?);
             if let Some(camera) = first.cameras.first() {
@@ -227,7 +238,7 @@ impl Desktop {
         let grid = args
             .grid
             .unwrap_or(Pair((monitor.x / 520.0).floor().max(1.0), 1.0));
-        let window_size = args.window_size.unwrap_or_else(|| {
+        let requested_size = args.window_size.unwrap_or_else(|| {
             if args.grid.is_some() {
                 Pair(
                     (monitor.x / grid.0 - 8.0).max(96.0),
@@ -237,6 +248,16 @@ impl Desktop {
                 Pair(520.0, 480.0)
             }
         });
+        let window_size = Pair(
+            requested_size.0.min(first.max_window_inner_size.x),
+            requested_size.1.min(first.max_window_inner_size.y),
+        );
+        if window_size.0 != requested_size.0 || window_size.1 != requested_size.1 {
+            eprintln!(
+                "Window dimensions limited to {}×{} logical pixels to respect the native framebuffer limit",
+                window_size.0, window_size.1
+            );
+        }
         let window_origin = args.window_position.unwrap_or(Pair(12.0, 36.0));
         cc.egui_ctx
             .send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(
@@ -329,6 +350,8 @@ impl Desktop {
                     None
                 };
                 let mut next = Session::new(self.next_id, doc, path);
+                next.framebuffer_limit = self.sessions[index].framebuffer_limit;
+                next.max_window_inner_size = self.sessions[index].max_window_inner_size;
                 next.startup_fallback = fallback;
                 if next.path.is_none() {
                     next.source_base = anchor;
@@ -359,13 +382,20 @@ impl Desktop {
         let mut start_all = false;
         let mut open_four = false;
         let mut tile = false;
+        let framebuffer_limit = self
+            .sessions
+            .first()
+            .map(|s| s.framebuffer_limit)
+            .unwrap_or(4096);
         ctx.show_viewport_immediate(
             egui::ViewportId::from_hash_of("rig-manager"),
             egui::ViewportBuilder::default()
                 .with_title("HejjéTrac · Rig manager")
                 .with_inner_size([580.0, 540.0])
+                .with_max_inner_size(ui::framebuffer_window_limit(framebuffer_limit, ctx.pixels_per_point()))
                 .with_min_inner_size([400.0, 300.0]),
             |ctx, _| {
+                ui::constrain_framebuffer(ctx, framebuffer_limit);
                 close = ctx.input(|i| i.viewport().close_requested());
                 egui::CentralPanel::default().show(ctx, |ui| {
                     ui.heading("Your rigs");
@@ -521,6 +551,7 @@ impl eframe::App for Desktop {
                         self.window_origin.1
                             + (cell / self.tile_columns) as f32 * (self.window_size.1 + 32.0),
                     ])
+                    .with_max_inner_size(session.max_window_inner_size)
                     .with_min_inner_size([96.0, 96.0]),
                 |ctx, class| {
                     session.native_window = class != egui::ViewportClass::Embedded;
@@ -792,6 +823,7 @@ fn run() -> Result<(), String> {
             .with_title("HejjéTrac · VR1")
             .with_icon(app_icon()?)
             .with_inner_size([520.0, 480.0])
+            .with_max_inner_size([4096.0, 4096.0])
             .with_min_inner_size([96.0, 96.0]),
         renderer: eframe::Renderer::Wgpu,
         ..Default::default()

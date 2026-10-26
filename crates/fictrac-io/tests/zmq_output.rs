@@ -435,6 +435,14 @@ fn root_vr_configs_and_fallback_use_independent_ports_labels_and_sources() -> Te
         load_config_text(document.text(), 320, 240)?;
         (document, path) = document.next_instance(path.as_deref())?;
     }
+    // Saved rigs cycle rather than inventing a fifth metadata-only camera.
+    assert_eq!(path, Some(root.join("VR1.txt")));
+    assert_eq!(document.get("rust_instance_name"), Some("VR1"));
+    assert_eq!(document.get("src_fn"), Some("0"));
+    assert_eq!(document.get("sock_port"), Some("1111"));
+    // An unsaved document still uses the generic incrementing fallback.
+    let saved = ConfigDocument::parse(std::fs::read_to_string(root.join("VR4.txt"))?)?;
+    let (mut document, path) = saved.next_instance(None)?;
     assert!(path.is_none());
     assert_eq!(document.get("rust_instance_name"), Some("VR5"));
     assert_eq!(document.get("src_fn"), Some("7"));

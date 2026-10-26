@@ -288,7 +288,7 @@ fn status(s: &mut Session) -> Value {
     if let Some(worker) = &s.worker {
         s.snapshot = worker.latest();
     }
-    let mut view = json!({"settings":s.show_settings,"diagnostics":s.show_diagnostics,"overlays":s.show_overlays,"full_image":s.full_image,"calibration_step":match s.tool { crate::session::Tool::Rim => "ball", crate::session::Tool::Exclude => "exclude", crate::session::Tool::Square => "lab", _ => "view" },"edit_marks":s.edit_existing,"magnifier":s.magnifier});
+    let mut view = json!({"settings":s.show_settings,"diagnostics":s.show_diagnostics,"overlays":s.show_overlays,"full_image":s.full_image,"display_fps":s.display_fps,"calibration_step":match s.tool { crate::session::Tool::Rim => "ball", crate::session::Tool::Exclude => "exclude", crate::session::Tool::Square => "lab", _ => "view" },"edit_marks":s.edit_existing,"magnifier":s.magnifier});
     view["calibration_action"] = json!(if s.calibration_review {
         "inspect"
     } else if s.edit_existing {
@@ -298,7 +298,7 @@ fn status(s: &mut Session) -> Value {
     } else {
         "add"
     });
-    json!({"session":s.id,"source":s.source_edit,"config_path":s.path,"native_window":s.native_window,"window_rect":s.window_rect,"window_inner_size":s.window_inner_size,"window_title":s.window_title(),"realtime":s.realtime,
+    let mut state = json!({"session":s.id,"source":s.source_edit,"config_path":s.path,"native_window":s.native_window,"window_rect":s.window_rect,"window_inner_size":s.window_inner_size,"window_title":s.window_title(),"realtime":s.realtime,
         "frames":s.snapshot.frames,"revision":s.snapshot.revision,"requested_revision":s.revision,
         "paused":s.snapshot.paused,"ended":s.snapshot.ended,"recording":s.snapshot.recording,
         "last_row":s.snapshot.row,"notice":s.snapshot.notice,"error":s.error,"status":s.status,
@@ -307,7 +307,14 @@ fn status(s: &mut Session) -> Value {
         "advance_remaining":s.snapshot.advance_remaining,"recording_directory":s.snapshot.recording_directory,
         "record_options":s.snapshot.record_options,"camera":s.snapshot.camera,"outputs":s.snapshot.outputs,
         "processing_ms":s.snapshot.processing_ms,"tracking_ms":s.snapshot.tracking_ms,"tracking_samples":s.snapshot.tracking_samples,"actual_fps":s.snapshot.actual_fps,"source_fps":s.snapshot.source_fps,"headroom_percent":s.snapshot.headroom_percent,
-        "view":view,"source_label":s.snapshot.source_label,"resources":s.snapshot.resources})
+        "view":view,"source_label":s.snapshot.source_label,"resources":s.snapshot.resources});
+    state["window_max_inner_size"] = json!([s.max_window_inner_size.x, s.max_window_inner_size.y]);
+    state["recording_encoding"] = json!(s.recording_encoding);
+    state["media_recording"] = json!(s.snapshot.media_recording);
+    state["media_warnings"] = json!(s.snapshot.media_warnings);
+    state["preview_fps"] = json!(s.snapshot.preview_fps);
+    state["preview_target_fps"] = json!(s.snapshot.display_fps);
+    state
 }
 fn send(s: &mut Session, command: Command) -> Result<Value> {
     s.worker
@@ -482,9 +489,26 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
             if path.exists() {
                 return Err("recording directory must be new".into());
             }
+            let tuning = fictrac_control::recording_tuning(a)?;
             if let Some(options) = fictrac_control::record_options(a)? {
-                let mut result = send(s, Command::RecordOptions(path, options))?;
+                let mut result = send(s, Command::RecordOptions(path, options, tuning))?;
+                s.record_raw = options.raw;
+                s.record_debug = options.debug;
+                if a.get("recording_tuning").is_some() {
+                    s.recording_encoding = tuning.encoding;
+                    result["status"] = status(s);
+                }
                 result["requested_record_options"] = json!(options);
+                result["requested_recording_tuning"] = json!({"encoding": tuning.encoding});
+                Ok(result)
+            } else if a.get("recording_tuning").is_some() {
+                let options = fictrac_control::RecordOptions::from_document(&s.document()?);
+                let mut result = send(s, Command::RecordOptions(path, options, tuning))?;
+                s.record_raw = options.raw;
+                s.record_debug = options.debug;
+                s.recording_encoding = tuning.encoding;
+                result["status"] = status(s);
+                result["requested_recording_tuning"] = json!({"encoding": tuning.encoding});
                 Ok(result)
             } else {
                 send(s, Command::Record(path))
@@ -508,6 +532,16 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
             send(s, Command::SaveMap(path))
         }
         "view" => {
+            let display_fps = a
+                .get("display_fps")
+                .map(|value| {
+                    value
+                        .as_u64()
+                        .filter(|fps| (1..=60).contains(fps))
+                        .map(|fps| fps as u32)
+                        .ok_or("Display FPS must be an integer between 1 and 60")
+                })
+                .transpose()?;
             let window_size = a
                 .get("window_size")
                 .map(|value| -> Result<eframe::egui::Vec2> {
@@ -518,6 +552,9 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
                             "window_size must be [width,height] within 96..8192 logical pixels"
                                 .into(),
                         );
+                    }
+                    if width > s.max_window_inner_size.x || height > s.max_window_inner_size.y {
+                        return Err(format!("window_size exceeds this window's current framebuffer limit: {}×{} logical pixels at the current display scale", s.max_window_inner_size.x, s.max_window_inner_size.y));
                     }
                     Ok(eframe::egui::vec2(width, height))
                 })
@@ -542,6 +579,9 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
             }
             if let Some(action) = a.get("calibration_action").and_then(Value::as_str) {
                 s.validate_calibration_action(proposed_tool, action)?;
+            }
+            if let Some(fps) = display_fps {
+                s.set_display_fps(fps)?;
             }
             if proposed_tool != s.tool {
                 s.tool = proposed_tool;
@@ -1317,11 +1357,33 @@ mod tests {
         })?;
         let before = s.history.text.clone();
         let revision = s.revision;
+        let paused_row = serde_json::to_value(&s.snapshot.row)?;
+        let paused_frames = s.snapshot.frames;
+        for fps in [1, 60] {
+            execute_session(&mut s, "view", &json!({"display_fps":fps}))?;
+            wait(&mut s, |snapshot| snapshot.display_fps == fps)?;
+            assert_eq!(s.snapshot.frames, paused_frames);
+            assert_eq!(serde_json::to_value(&s.snapshot.row)?, paused_row);
+            assert_eq!(s.history.text, before);
+            assert_eq!(s.revision, revision);
+        }
+        let previous_view = status(&mut s)["view"].clone();
+        for invalid in [json!(0), json!(61), json!(1.5), json!("30")] {
+            assert!(
+                execute_session(
+                    &mut s,
+                    "view",
+                    &json!({"display_fps":invalid,"diagnostics":true})
+                )
+                .is_err()
+            );
+            assert_eq!(status(&mut s)["view"], previous_view);
+        }
         let directory = temp()?.join("record");
         let record = execute_session(
             &mut s,
             "record_start",
-            &json!({"directory":directory,"record_options":{"raw":true,"debug":false}}),
+            &json!({"directory":directory,"record_options":{"raw":true,"debug":false},"recording_tuning":{"encoding":"raw"}}),
         )?;
         assert_eq!(record["requested_record_options"]["raw"], true);
         wait(&mut s, |snapshot| {
@@ -1341,6 +1403,16 @@ mod tests {
         wait(&mut s, |snapshot| !snapshot.recording)?;
         assert_eq!(s.history.text, before);
         assert_eq!(s.revision, revision);
+        assert!(fs::read_to_string(directory.join("epoch-0000-config.txt"))?.contains("vid_codec"));
+        let effective =
+            ConfigDocument::parse(fs::read_to_string(directory.join("epoch-0000-config.txt"))?)?;
+        assert_eq!(effective.get("vid_codec"), Some("raw"));
+        let media_status = s
+            .snapshot
+            .media_recording
+            .as_ref()
+            .ok_or("media status missing")?;
+        assert_eq!(media_status.raw.encoded_frames, 2);
         let media = directory.join("epoch-0000-media/raw.avi");
         assert!(media.is_file());
         let mut source = fictrac_io::VideoSource::open(&media)?;

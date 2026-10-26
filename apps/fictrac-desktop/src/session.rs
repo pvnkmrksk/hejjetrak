@@ -30,12 +30,14 @@ pub struct Session {
     pub show_rigs: bool,
     pub show_diagnostics: bool,
     pub show_overlays: bool,
+    pub display_fps: u32,
     pub cameras: Vec<fictrac_camera::CameraInfo>,
     pub occupied_cameras: std::collections::BTreeMap<u32, String>,
     pub camera_edit: Option<fictrac_camera::CameraFormatRequest>,
     pub camera_error: String,
     pub record_raw: bool,
     pub record_debug: bool,
+    pub recording_encoding: fictrac_control::RecordingEncoding,
     pub startup_fallback: Option<ConfigDocument>,
     pub fallback_notice: String,
     pub temporary_config: bool,
@@ -51,6 +53,8 @@ pub struct Session {
     pub square_slots: Option<[Option<[f64; 2]>; 4]>,
     pub window_rect: Option<[f32; 4]>,
     pub window_inner_size: Option<[f32; 2]>,
+    pub framebuffer_limit: u32,
+    pub max_window_inner_size: egui::Vec2,
     pub requested_window_size: Option<egui::Vec2>,
     pub calibration_preview_size: Option<egui::Vec2>,
     pub last_title: String,
@@ -96,6 +100,7 @@ impl Session {
             show_rigs: false,
             show_diagnostics: false,
             show_overlays: false,
+            display_fps: 30,
             cameras: fictrac_camera::list_cameras().unwrap_or_default(),
             occupied_cameras: std::collections::BTreeMap::new(),
             camera_edit: None,
@@ -103,6 +108,7 @@ impl Session {
             zmq_resume_port: None,
             record_raw: doc.boolean("save_raw"),
             record_debug: doc.boolean("save_debug"),
+            recording_encoding: fictrac_control::RecordingEncoding::Configured,
             startup_fallback: None,
             fallback_notice: String::new(),
             temporary_config: false,
@@ -118,6 +124,8 @@ impl Session {
             square_slots: None,
             window_rect: None,
             window_inner_size: None,
+            framebuffer_limit: 4096,
+            max_window_inner_size: egui::vec2(4096.0, 4096.0),
             requested_window_size: None,
             calibration_preview_size: None,
             last_title: String::new(),
@@ -199,6 +207,16 @@ impl Session {
             Err(error) => self.camera_error = error.to_string(),
         }
     }
+    pub fn set_display_fps(&mut self, fps: u32) -> Result<(), String> {
+        if !(1..=60).contains(&fps) {
+            return Err("Display FPS must be an integer between 1 and 60".into());
+        }
+        if let Some(worker) = &self.worker {
+            worker.send(Command::DisplayFps(fps))?;
+        }
+        self.display_fps = fps;
+        Ok(())
+    }
     pub fn begin_recording(&mut self) {
         let stamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -210,6 +228,10 @@ impl Session {
             fictrac_control::RecordOptions {
                 raw: self.record_raw,
                 debug: self.record_debug,
+            },
+            fictrac_control::MediaRecordingTuning {
+                encoding: self.recording_encoding,
+                ..fictrac_control::MediaRecordingTuning::default()
             },
         ));
     }
@@ -369,6 +391,9 @@ impl Session {
             self.realtime,
             self.path.clone().or(self.source_base.clone()),
         )?);
+        if let Some(worker) = &self.worker {
+            worker.send(Command::DisplayFps(self.display_fps))?;
+        }
         self.paused = false;
         self.changed = None;
         self.error.clear();
@@ -428,6 +453,7 @@ impl Session {
         self.worker = None;
         self.record_raw = doc.boolean("save_raw");
         self.record_debug = doc.boolean("save_debug");
+        self.recording_encoding = fictrac_control::RecordingEncoding::Configured;
         self.history = DocumentHistory::new(doc.text().to_owned());
         self.zmq_resume_port = None;
         self.saved = doc.text().to_owned();

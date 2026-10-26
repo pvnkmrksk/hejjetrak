@@ -8,6 +8,20 @@ restarts after configuration or tracking reset. `processing_fps` remains the
 instantaneous call rate for existing clients, including initial engine setup;
 neither value is source FPS. See [tracking-stage measurements](tracking-performance.md).
 
+Native `view` accepts `window_size: [width, height]` in logical pixels, bounded
+to 96..8192 on each axis. Each native window also enforces a GPU/display-scale
+bound capped at 4096 physical pixels per axis; a request exceeding its current
+`window_max_inner_size` fails before mutation. This requests an ordinary OS viewport resize and never
+changes source dimensions or calibration. Poll `status.window_inner_size` to
+observe the applied size; window managers may constrain it to the desktop.
+`window_rect` remains the outer rectangle, including window decoration.
+
+An active native session reserves its camera. The camera menu disables cameras
+used by another rig, and `source` rejects the same conflict before changing the
+working session. Selecting the already active camera preserves its tracking
+epoch. Switching to another source or closing the owning rig releases the
+camera; choosing it again reopens capture through the same menu/agent operation.
+
 The packaged `hejjetrac-cli` command is a complete headless frontend to the shared Rust engine; its Cargo compatibility name is `fictrac`. External AI agents can operate it through JSONL or MCP stdio; neither requires a model API key, a network service, Python or a GUI. The desktop also has its own asynchronous stdio bridge; its playback scheduling differs from deterministic recorded-video commands. Numerical fitting and calibration use the same core functions.
 
 The design follows [PhotoCraft's engine-first architecture](https://github.com/storytold/photocraft/blob/main/docs/architecture.md): native user interfaces and machine interfaces call reusable operations. The transcript regression processes the full supplied video and checks its output against the existing reference gates.
@@ -83,3 +97,33 @@ pending replacement. Poll revision/status to observe completion. Invalid fields 
 Recorded-video headless discovery omits these native-only commands. Explicit calls return a native-session error rather than pretending to control a camera or display. Video sessions in the desktop similarly reject camera controls. Output status exposes UDP/serial enablement plus ZeroMQ endpoint, queue capacity/length, enqueued/published/dropped/failure counters and publisher health. Unchanged output configuration retains the publisher during calibration edits, undo and rewind; applying settings can restart a failed publisher.
 
 Native status also exposes bounded-worker resource counters: `resources.preview_updates`, `resources.idle_waits` and `resources.pacing_waits`. Preview publication is coalesced separately from tracking and recorded media. Paused/EOF waits and source deadlines are command-interruptible; these counters are scheduling evidence, not measured CPU percentage or power use.
+
+Native `view.display_fps` is an integer from **1 to 60**, default **30**. It
+changes the source-image publication cadence and timed native repaints only.
+It never changes capture settings, source timestamps, tracking epochs,
+numeric/quality rows, media-frame selection or live-output rows. Explicit
+single-step and paused calibration can publish immediately. Status separates
+the requested `view.display_fps`, worker-applied `preview_target_fps`, measured
+`preview_fps` (source-image publications, not GPU presentation), and `actual_fps`
+(processed-frame delivery). Source/OS scheduling can make preview updates lower
+than their limit. The Display slider uses this same command path.
+
+`record_start` additionally accepts
+`recording_tuning: {"encoding":"configured"|"mjpeg"|"raw"}`. The recording
+speed/size slider uses the same shared recording options. `configured` is the
+default and preserves `vid_codec`; `mjpeg` selects independent compressed AVI
+frames; `raw` selects uncompressed AVI and can require substantial disk
+bandwidth/space. The effective recording config records the actual codec,
+while canonical configuration and tracking state remain unchanged.
+
+Each live camera uses bounded media workers without blocking measured-frame
+processing on an encoder queue. An overloaded raw or processed stream stops
+at its retained prefix and is explicitly partial. Numeric/quality recording,
+the other healthy media stream and live outputs continue. Recorded-video and
+headless processing use backpressure to retain every requested video image.
+Native `media_recording` exposes the codec, declared file FPS, numeric-frame
+count and separate raw/processed states, encoded/submitted/pending counts,
+processing rates, source bounds, partial paths and warnings. `media_warnings`
+remains visible after Stop/EOF; inspect the recording's `media-status.json`
+before treating its videos as complete. A stream's observed encoded throughput
+and measured render/encode capacity are different from the file's declared FPS.
