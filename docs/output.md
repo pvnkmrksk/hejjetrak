@@ -1,10 +1,13 @@
 # Output contract
 
-The accelerated local search samples a deterministic subset of valid ROI sites
-(at most about 1024 for ordinary budgets). The selected candidate and prediction
-are then scored on **all valid sites**; the lower complete score drives the
-reported map MSE and `opt_max_err` decision. These checks are reserved within
-`opt_max_evals`. Small ROIs/budgets retain complete local search. Legacy global recovery retains its existing search. Default resilient recovery
+Default resilient local search evaluates **all valid ROI sites** throughout
+`opt_max_evals`, including blurred/high-speed candidate fitting. With
+`rust_resilient : n`, accelerated legacy candidate generation samples a
+deterministic subset (at most about 1024 sites for ordinary budgets), then
+scores the selected candidate and prediction on all valid sites within that
+same budget. The complete score drives the reported map MSE and
+`opt_max_err` decision in both modes. Small ROIs/budgets retain complete local
+search. Legacy global recovery retains its existing search. Default resilient recovery
 uses bounded accepted-view seeds and a deterministic fallback cover, with
 complete final scoring; see [recovery](recovery.md).
 ROI resolution, map evidence, coordinate conventions and missing-motion rules
@@ -56,6 +59,37 @@ The SVG preview bounds its path memory at 100000 points by decimating older poin
 
 Desktop recording uses epoch-numbered data, quality and config files in a new directory. Applying settings resets the estimator and starts a new epoch. The screen path can decimate older points without changing streamed numeric data. The legacy `save_raw`/`save_debug` parameters encode real videos: default H.264 AVI, XVID AVI, MPEG-4 MP4, MJPEG/raw AVI or explicit H.264 MP4 (`vid_codec : h264_mp4`). Shared calibrated debug recording includes input/rim/exclusions/axes/contact trace and actual maps/path. H.264 uses High profile with independent frames (GOP1); compressed payloads may be larger than inter-frame encoding. Source FPS comes from metadata or prefetched PTS; no frames/RGB are dropped by inference. Encoded files remain `.partial` until finalization and never overwrite another recording. H.264 encoding preserves even display dimensions through standard SPS cropping; odd 4:2:0 H.264 dimensions fail explicitly. Segmented OpenDML AVI preserves indexes and frames across 4 GiB boundaries. UDP sends the upstream `FT, ` prefix and a 25-column row, without delivery guarantees.
 
+The display FPS setting only limits preview publication; it never decimates
+processed rows or changes the recording's declared source FPS. Transient
+`recording_tuning.encoding` chooses `configured`, `mjpeg` or `raw`, with the
+effective codec written into that take's config copy. The canonical rig config
+and numerical epoch remain unchanged.
+
+Raw and debug video use separate bounded encoder workers. File replay waits for
+space so a completed video contains every processed image. Camera acquisition
+uses nonblocking submission: if an optional stream cannot keep up, its existing
+FIFO prefix is finalized under the `.partial` filename and that stream stops.
+Numeric/quality files, the other video stream and live output continue. A partial
+prefix is never promoted or described as a complete take. `raw-status.json`,
+`debug-status.json` and final `media-status.json` retain requested/state flags,
+numeric/submitted/encoded counts, queue limits, source-frame/timestamp endpoints,
+the applied overflow policy, container finalization and warnings. Inspect them alongside all-frame data;
+camera delivered counters alone do not establish sensor-level completeness.
+
+On Linux, live video workers check available output-filesystem space before
+their first frame and at most every 100 ms. Below 512 MiB, or if the check fails,
+that optional stream stops as a failed partial prefix, preserving space for
+numeric evidence. File replay and other OSes retain ordinary filesystem error
+handling. The reserve is best effort with concurrent writers, quotas and delayed
+allocation; it does not provide indefinite recording capacity.
+
+Media status `processing_fps` measures renderer/encoder capacity during work,
+not recorded cadence. Encoded count divided by elapsed recording time is an
+average cadence, including pauses. Native status reports preview and numerical
+processing rates separately. Progress counters are sampled independently and
+can briefly reflect different instants while workers are active; final status
+and independently decoded frame counts establish completed-file alignment.
+
 Serial and UDP receive the same accepted-only newline-terminated `FT, ` plus full 25-column row, including the independent sequence counter. Serial defaults to 115200 baud, 8-N-1, no flow control. Output failures remain visible and do not manufacture measurements. Headless summary separates tracked, relocalized, initializing and rejected counts. Native GUI JSONL acknowledgments are queued; inspect actual revision/frame/advance/recording status before reporting completion.
 
 ## Simultaneous UDP and ZeroMQ PUB
@@ -78,7 +112,17 @@ Each subscriber has a 16-message queue and a 25 ms write deadline. A stalled or 
 
 Configuration edits reuse healthy output handles when transport settings are unchanged. Changing an output releases exclusive handles before reopening them. If the new settings fail, the previous settings are restored and the edit reports the failure; restoring a PUB starts a fresh socket and counters, so subscribers must reconnect and can miss rows. If restoration also fails, the error explicitly identifies the rollback failure and outputs remain disabled until valid settings are reapplied. Numeric tracking state is independent of this output transaction.
 
-The root `VR1.txt`–`VR4.txt` files keep the original BR1–BR4 camera IDs (`0, 2, 4, 6`) and saved calibrations. Their UDP ports are `1111`–`1114` and PUB ports are `9871`–`9874`, all on localhost. These are device-specific saved calibrations, **not** a claim that a different camera or resolution is calibrated. Check source dimensions and draw/refit geometry for the actual setup. Opening another instance selects the next existing numbered configuration. When no next file exists, the copy increments its numeric camera ID, enabled UDP/PUB ports and `rust_instance_name`; a video path stays a video path and disabled outputs stay disabled. Copies have no saved path, so saving cannot overwrite the parent configuration. Port or label-number overflow fails explicitly.
+The root `VR1.txt`–`VR4.txt` files use the supplied 2026-10-26 calibrations,
+320×240/100-fps capture and camera IDs `0, 2, 4, 6`. UDP ports `1111`–`1114`
+feed the setup's existing external republishers; direct PUB is disabled to
+avoid colliding with them. These are device-specific saved calibrations; check
+source dimensions and geometry for the actual setup. Opening another instance
+cycles existing VR/BR configs through slots 1–16, skipping absent files and
+already-used sources. Thus opening four from VR3 selects VR3, VR4, VR1, VR2.
+When no saved sibling is available, the copy increments its numeric camera ID,
+enabled UDP/PUB ports and `rust_instance_name`; a video path stays a video path
+and disabled outputs stay disabled. Copies have no saved path, so saving cannot
+overwrite the parent configuration. Port or label-number overflow fails explicitly.
 
 For an optional external Python subscriber (Python/pyzmq is not an application dependency):
 

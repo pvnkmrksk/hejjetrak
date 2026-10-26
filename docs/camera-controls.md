@@ -6,6 +6,23 @@ The camera crate exposes serializable Rust values, independent of the desktop an
 
 Capabilities contain the configured output dimensions/rate, bounded supported formats and frame-rate ranges, supported exposure modes, numeric exposure/gain metadata, and device-specific warnings. Numeric controls expose `value`, `minimum`, `maximum`, `step`, `unit`, `writable` and `unsupported_reason`. Missing bounds remain unknown. Read-only, inactive, disabled and automatic numeric controls cannot be set through this API. A successful setter returns readback; accepting a GUI worker command into its queue is separately an asynchronous acknowledgment.
 
+Linux enumeration now excludes metadata-only UVC nodes and preserves the actual
+image-device indices. The supplied four Arducam image sources are 0/2/4/6.
+Exposure menus preserve their advertised entries instead of converting sparse
+menus into continuous ranges. In particular, a device advertising only manual
+`1` and aperture-priority automatic `3` must never receive unsupported entry `0`.
+The automatic setter preserves the current automatic mode where possible and
+verifies the selected entry through native readback.
+
+When the native backend supplies capture timestamps, the adapter now preserves
+their relative intervals, anchored once to session elapsed time. Draining queued
+images after an encoding or rendering stall no longer assigns them the short
+delivery intervals. A backend without capture timestamps retains the host
+elapsed-time clock. A backward/discontinuous capture clock produces an actionable
+reconnect error instead of silently changing measured time. Linux delivered
+sequence numbers still count images received by the adapter; their zero-drop
+counter does not establish that the sensor/USB driver lost no images.
+
 ## Platform boundaries
 
 - **macOS / AVFoundation:** supported automatic and locked exposure modes are queried through `isExposureModeSupported:`. A camera may expose neither mode. The macOS SDK marks numerical `exposureDuration`, `ISO` and `setExposureModeCustomWithDuration:ISO:completionHandler:` unavailable on macOS; numerical exposure/ISO are consequently explicit unsupported capabilities. The API does not call unavailable selectors or emulate manual exposure in image processing. See Apple's [device exposure documentation](https://developer.apple.com/documentation/avfoundation/avcapturedevice/exposureduration) and the availability annotations in `AVCaptureDevice.h` in the installed macOS SDK.
@@ -19,12 +36,42 @@ Use automatic settings first; explicit format requests must match an advertised
 mode. A Linux stream that supplies no frames reports an error and can be
 reconnected; ordinary startup can use the sample instead.
 
+A camera already owned by another rig is labelled with that rig in the chooser.
+Selecting it reports the conflict before changing the working preview. Selecting
+the current camera retains its existing capture/tracking worker. A failed open
+without an image displays its actual camera error and reconnect advice.
+
 An occupied live-output port no longer prevents preview, tracking or recording.
 The error remains visible and actual output status stays disabled. Stop an old
 Python republisher or choose a free port, then Apply to reconnect; sending an
 edit to the worker is not yet confirmation that the port opened.
 
-## Local evidence
+## Ubuntu 22.04 Arducam exposure check — 2026-10-26
+
+The local C++ `CVSource.cpp` forces MJPEG, 320×240 and 100 FPS; it does not set an
+explicit exposure duration. The current VR1–VR4 configuration files select that
+same format. A native VR3 probe verified automatic → manual → automatic control
+and readback, then restored the original automatic mode and exposure value.
+Each stage retained all 169–178 processed images as accepted measurements.
+
+| Exposure setting | Full-image mean luma / 255 | Luma standard deviation / 255 | Median map MSE |
+|---|---:|---:|---:|
+| Original automatic | 75.75 | 55.62 | 4441.63 |
+| Nominal 1 ms | 31.84 | 11.14 | 6705.71 |
+| Nominal 2 ms | 40.53 | 21.40 | 6504.66 |
+| Nominal 5 ms | 61.75 | 42.75 | 4416.16 |
+| Nominal 10 ms | 76.37 | 55.96 | 3954.12 |
+
+Durations use the driver's reported 100-microsecond absolute-exposure units;
+they are not an independent shutter-timing measurement. The scene was not a
+controlled repeated motion, so the table compares signal/contrast and control
+functionality, not physical motion accuracy. Very short exposure reduces signal
+under the present lighting. The rig configs therefore retain the original
+exposure policy; the recorded-video benchmark tests existing blur directly.
+The private evidence is `runs/exposure-vr3-v2/report.json`, with native snapshots,
+all-frame data and the restored readback.
+
+## Historical Mac evidence
 
 `runs/camera-controls-native/` contains metadata from the built-in FaceTime HD camera on this Mac, using the pure Rust `camera_probe` example in an ad hoc signed local app. No camera pixels were stored. The device advertises seven bounded formats with 15–30 fps ranges. Explicit 640×480/30 and 1280×720/15 were opened and delivered actual frames; status readback and errors are retained in the JSON reports. This built-in camera exposes no supported automatic/locked exposure modes through AVFoundation, so both mode requests and numerical exposure/ISO requests were rejected without interrupting frame delivery. This is evidence of honest unsupported behavior, not evidence of working manual exposure on another camera. Concurrent builds can cause dropped delivered intervals; these probes are configuration/functionality checks, not camera throughput benchmarks.
 

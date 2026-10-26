@@ -1,4 +1,40 @@
-# Behavioral parity assessment — HejjéTrac v0.1.3
+# Behavioral parity assessment
+
+## Current Linux rig work — 2026-10-26
+
+The local `codex/robust-multicamera` branch is based on the requested
+`codex/ubuntu22-compat-ci` source. Its supplied VR3 recording has 5,157 images.
+The revised resilient fitter accepts all 4,678 clear pre-hand images and all
+410 images in the selected fast section. Increment RMS against the original
+live data is 0.006677/0.006547/0.009413 rad; all rolling 100-image component
+checks pass the unchanged 0.020 rad limit. The complete path still differs:
+2.486 sphere-radian path RMS and 2.700 endpoint error over 273.950 travelled
+sphere radians. Recovery occurs at image 4820, about 90–100 ms after the ball
+becomes visible, with no invented motion across the obstruction. Original
+post-hand output is unreliable and is not treated as recovery ground truth.
+[Full trajectory, alignment and recovery evidence](vr3-validation.md).
+
+On Ubuntu 22.04, this machine's Intel/NVIDIA graphics combination has passed
+native single/four-camera resize, source-switch and ownership tests. A complete
+native VR3 replay, including resizing during fast movement and the hand interval,
+matches the headless run in all 25 numeric columns and every quality decision.
+Four cameras sustain approximately 101 delivered frames/s each under the tested
+ZMQ load, with matching recorded and received accepted rows. Saved VR3-start
+Open-four checks retain four live previews in both flat and per-folder layouts.
+[Native evidence and graphics limits](linux-native-validation.md).
+
+These are measured improvements on this fixture and machine. They do not
+establish numerical identity with FicTrac, arbitrary occlusion recovery, unlimited
+camera capacity or immunity to OS/driver failures. Recording throughput and its
+separate processing/preview/media boundaries are documented in
+[recording performance](recording-performance.md).
+
+The separate 300-frame sample also passes its original gates with the selected
+complete-ROI policy: path RMS 0.044807 sphere rad, heading RMS 0.013185 rad and
+component RMS .008761/.008292/.014211 rad. The 0.025594 sample path result in
+the historical accelerated-search assessment below describes that earlier policy.
+
+## Historical v0.1.3 release assessment
 
 Published [v0.1.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.3)
 passed all four [native release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40180700262),

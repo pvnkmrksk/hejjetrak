@@ -63,6 +63,19 @@ hejjetrac --config VR1.txt --window-size 480x360
 
 Keep a saved config for each physical rig, with distinct output ports. Bundled `VR1.txt`–`VR4.txt` are examples from the original setup; review camera IDs and calibration before collecting data. Actual camera capacity depends on capture bandwidth, recording and your computer. [Multi-rig setup](https://pvnkmrksk.github.io/hejjetrak/manual/rigs.html).
 
+The current VR1–VR4 files use the supplied 2026-10-26 rig calibrations and
+explicit 320×240, 100 FPS capture, matching that setup's modified C++ capture
+adapter. Their camera IDs are 0/2/4/6 and UDP ports 1111–1114 feed the existing
+republisher; direct ZMQ is disabled in these files. The camera chooser preserves
+an active preview when a camera is already in use and identifies its owning rig.
+
+Display FPS controls preview updates independently of processing. The recording
+speed/size control selects the configured codec, faster MJPEG, or fastest
+uncompressed AVI. Live media workers have bounded queues: an overloaded video
+stream becomes an explicit partial recording while numeric data and tracking
+continue. Recorded-file sessions wait for encoding to preserve every image.
+[Recording behavior and measured limits](docs/recording-performance.md).
+
 For recorded video:
 
 ```sh
@@ -74,6 +87,10 @@ The companion CLI is in the extracted folder; on macOS it is inside `hejjetrac.a
 ## Tracking and validation
 
 HejjéTrac preserves FicTrac's legacy config text and data conventions, and checks the full supplied video against the supplied FicTrac output. Known-motion synthetic sequences cover rotation accuracy. The Rust optimizer and recovery policy differ from upstream; [compatibility](docs/parity.md), [validation](docs/validation.md) and [output semantics](docs/output.md) document those details and platform coverage. Rejected frames remain in the all-frame data; motion during a missing interval is left unmeasured.
+
+[VR3 replay validation](docs/vr3-validation.md) additionally checks the supplied
+5,157-frame recording, its high-speed section and complete trajectory, with
+explicit accuracy limits and a separate post-occlusion control.
 
 Native release CI runs on Windows, Linux, Apple Silicon and Intel Mac. Camera and GUI hardware checks are documented per platform. [Tracking performance](docs/tracking-performance.md) and [resource use](docs/resources.md) contain the fixture, hardware and timing boundaries for the published benchmarks.
 

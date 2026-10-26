@@ -1,5 +1,15 @@
 # Tracking-stage latency — 2026-10-25
 
+Current robust source uses complete-ROI local fitting in resilient mode. The
+subset-search timings below describe the earlier implementation. The [VR3
+validation](vr3-validation.md) reports current full-video accuracy and trajectory
+limits; current serial timing evidence is recorded separately in validation.md.
+On the final 2026-10-26 Linux release build, the complete-ROI policy's supplied
+300-frame sample has path RMS **0.044807 sphere radians**, heading RMS
+**0.013185 rad**, and component RMS **.008761/.008292/.014211 rad**. All original
+gates below pass. The earlier accelerated result of 0.025594 path RMS is retained
+as historical evidence, not the selected policy's current result.
+
 This assessment measures per-frame numerical processing. Capture, decoding,
 playback rate, recording and process throughput are outside the timed engine.
 It supersedes the earlier end-to-end comparison for questions about fitting

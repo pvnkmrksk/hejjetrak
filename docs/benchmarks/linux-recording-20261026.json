@@ -1,0 +1,2423 @@
+{
+  "date": "2026-10-26",
+  "host": {
+    "os": "Linux-6.8.0-124-generic-x86_64-with-glibc2.35",
+    "cpu": "Intel Core i7-6700K, 4 physical / 8 logical cores",
+    "toolchain": "rustc 1.99.1",
+    "capture": "four Arducam OV9281 UVC cameras, 320x240 MJPEG at requested 100 FPS"
+  },
+  "scope": {
+    "native_boundary": "Sustained actual desktop capture+tracking+recording after warmup; application CPU from /proc ticks, 100% is one CPU core. Startup, finalization and independent ffprobe excluded.",
+    "decode_verification": "Each completed video independently decoded in full after app closed; actual video frame count equals complete all-frame numeric and quality rows. Accepted-only rows exactly match accepted decisions.",
+    "limits": "Live scene differs between runs; this matrix proves processed numeric throughput and file alignment, not physical tracking accuracy or verified sensor-level no-loss acquisition.",
+    "target": "At least 95 processed FPS per camera for nominal 100 FPS capture; this is not a universal or exact 100 FPS guarantee."
+  },
+  "matrices": [
+    {
+      "evidence_directory": "runs/recording-baseline",
+      "measured_seconds_per_case": 8,
+      "warmup_seconds": 2,
+      "groups": [
+        {
+          "camera_count": 1,
+          "codec": "h264",
+          "binary_sha256": "ffe983a35c6b75570e83587c94133f9d25e8fec1db1f00f1f14c77659567a655",
+          "cases": [
+            {
+              "mode": "data",
+              "elapsed_seconds": 8.031567880883813,
+              "cpu_percent_one_core": 43.827059077444424,
+              "rss_median_bytes": 97576960.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 811,
+                  "processed_frames_per_second": 100.97654804490747,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.15059579722583294,
+              "meets_95_percent_of_requested_100_fps": true,
+              "recordings": [
+                {
+                  "all_frame_rows": 1027,
+                  "accepted_rows": 1027,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": []
+                }
+              ]
+            },
+            {
+              "mode": "raw",
+              "elapsed_seconds": 8.032123174518347,
+              "cpu_percent_one_core": 95.3670633973979,
+              "rss_median_bytes": 101548032.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 803,
+                  "processed_frames_per_second": 99.97356645967429,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.15001656115055084,
+              "meets_95_percent_of_requested_100_fps": true,
+              "recordings": [
+                {
+                  "all_frame_rows": 1016,
+                  "accepted_rows": 1016,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/1-camera/raw/session-1/epoch-0000-media/raw.avi",
+                      "bytes": 9651586,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "1016"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "mode": "debug",
+              "elapsed_seconds": 8.032010970637202,
+              "cpu_percent_one_core": 110.18411245145376,
+              "rss_median_bytes": 109834240.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 226,
+                  "processed_frames_per_second": 28.137411767263906,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.2672526203095913,
+              "meets_95_percent_of_requested_100_fps": false,
+              "recordings": [
+                {
+                  "all_frame_rows": 286,
+                  "accepted_rows": 286,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/1-camera/debug/session-1/epoch-0000-media/debug.avi",
+                      "bytes": 16187244,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "286"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "mode": "both",
+              "elapsed_seconds": 8.032174419611692,
+              "cpu_percent_one_core": 110.30636957244177,
+              "rss_median_bytes": 110845952.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 198,
+                  "processed_frames_per_second": 24.65085911438314,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.2667463794350624,
+              "meets_95_percent_of_requested_100_fps": false,
+              "recordings": [
+                {
+                  "all_frame_rows": 252,
+                  "accepted_rows": 252,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/1-camera/both/session-1/epoch-0000-media/raw.avi",
+                      "bytes": 3975860,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "252"
+                      }
+                    },
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/1-camera/both/session-1/epoch-0000-media/debug.avi",
+                      "bytes": 14526600,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "252"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "camera_count": 4,
+          "codec": "h264",
+          "binary_sha256": "ffe983a35c6b75570e83587c94133f9d25e8fec1db1f00f1f14c77659567a655",
+          "cases": [
+            {
+              "mode": "data",
+              "elapsed_seconds": 8.032362325116992,
+              "cpu_percent_one_core": 185.25060745169102,
+              "rss_median_bytes": 113946624.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 809,
+                  "processed_frames_per_second": 100.71756816425943,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 2,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video2)",
+                  "processed_frame_delta": 809,
+                  "processed_frames_per_second": 100.71756816425943,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 3,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video4)",
+                  "processed_frame_delta": 811,
+                  "processed_frames_per_second": 100.96656091621063,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 4,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video6)",
+                  "processed_frame_delta": 809,
+                  "processed_frames_per_second": 100.71756816425943,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.19978339597582817,
+              "meets_95_percent_of_requested_100_fps": true,
+              "recordings": [
+                {
+                  "all_frame_rows": 1033,
+                  "accepted_rows": 1033,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": []
+                },
+                {
+                  "all_frame_rows": 1034,
+                  "accepted_rows": 1034,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": []
+                },
+                {
+                  "all_frame_rows": 1033,
+                  "accepted_rows": 1033,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": []
+                },
+                {
+                  "all_frame_rows": 1034,
+                  "accepted_rows": 1034,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": []
+                }
+              ]
+            },
+            {
+              "mode": "raw",
+              "elapsed_seconds": 8.026048636063933,
+              "cpu_percent_one_core": 439.0703520242074,
+              "rss_median_bytes": 125378560.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 680,
+                  "processed_frames_per_second": 84.72413149161775,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 2,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video2)",
+                  "processed_frame_delta": 720,
+                  "processed_frames_per_second": 89.70790393230115,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 3,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video4)",
+                  "processed_frame_delta": 713,
+                  "processed_frames_per_second": 88.83574375518155,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 4,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video6)",
+                  "processed_frame_delta": 664,
+                  "processed_frames_per_second": 82.7306225153444,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.3163841813802719,
+              "meets_95_percent_of_requested_100_fps": false,
+              "recordings": [
+                {
+                  "all_frame_rows": 872,
+                  "accepted_rows": 872,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/4-camera/raw/session-1/epoch-0000-media/raw.avi",
+                      "bytes": 8604484,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "872"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 917,
+                  "accepted_rows": 917,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/4-camera/raw/session-2/epoch-0000-media/raw.avi",
+                      "bytes": 8756880,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "917"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 928,
+                  "accepted_rows": 928,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/4-camera/raw/session-3/epoch-0000-media/raw.avi",
+                      "bytes": 9087276,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "928"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 850,
+                  "accepted_rows": 850,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/4-camera/raw/session-4/epoch-0000-media/raw.avi",
+                      "bytes": 8453834,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "850"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "mode": "debug",
+              "elapsed_seconds": 8.033688228577375,
+              "cpu_percent_one_core": 441.76471615808083,
+              "rss_median_bytes": 157839360.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 182,
+                  "processed_frames_per_second": 22.654600828619532,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 2,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video2)",
+                  "processed_frame_delta": 212,
+                  "processed_frames_per_second": 26.388875690479896,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 3,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video4)",
+                  "processed_frame_delta": 186,
+                  "processed_frames_per_second": 23.152504143534248,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 4,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video6)",
+                  "processed_frame_delta": 178,
+                  "processed_frames_per_second": 22.156697513704817,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.3144540563225746,
+              "meets_95_percent_of_requested_100_fps": false,
+              "recordings": [
+                {
+                  "all_frame_rows": 235,
+                  "accepted_rows": 235,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/4-camera/debug/session-1/epoch-0000-media/debug.avi",
+                      "bytes": 13195660,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "235"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 263,
+                  "accepted_rows": 263,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/4-camera/debug/session-2/epoch-0000-media/debug.avi",
+                      "bytes": 13392856,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "263"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 235,
+                  "accepted_rows": 216,
+                  "accepted_fraction": 0.9191489361702128,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/4-camera/debug/session-3/epoch-0000-media/debug.avi",
+                      "bytes": 14941270,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "235"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 230,
+                  "accepted_rows": 230,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/4-camera/debug/session-4/epoch-0000-media/debug.avi",
+                      "bytes": 12734710,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "230"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "mode": "both",
+              "elapsed_seconds": 8.032960951328278,
+              "cpu_percent_one_core": 441.05778945858737,
+              "rss_median_bytes": 160743424.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 156,
+                  "processed_frames_per_second": 19.419987342799775,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 2,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video2)",
+                  "processed_frame_delta": 172,
+                  "processed_frames_per_second": 21.411780916420266,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 3,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video4)",
+                  "processed_frame_delta": 156,
+                  "processed_frames_per_second": 19.419987342799775,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 4,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video6)",
+                  "processed_frame_delta": 176,
+                  "processed_frames_per_second": 21.909729309825387,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.4334022291004658,
+              "meets_95_percent_of_requested_100_fps": false,
+              "recordings": [
+                {
+                  "all_frame_rows": 203,
+                  "accepted_rows": 203,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/4-camera/both/session-1/epoch-0000-media/raw.avi",
+                      "bytes": 3614300,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "203"
+                      }
+                    },
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/4-camera/both/session-1/epoch-0000-media/debug.avi",
+                      "bytes": 11736436,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "203"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 212,
+                  "accepted_rows": 212,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/4-camera/both/session-2/epoch-0000-media/raw.avi",
+                      "bytes": 3642486,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "212"
+                      }
+                    },
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/4-camera/both/session-2/epoch-0000-media/debug.avi",
+                      "bytes": 11165444,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "212"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 203,
+                  "accepted_rows": 179,
+                  "accepted_fraction": 0.8817733990147784,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/4-camera/both/session-3/epoch-0000-media/raw.avi",
+                      "bytes": 3631206,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "203"
+                      }
+                    },
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/4-camera/both/session-3/epoch-0000-media/debug.avi",
+                      "bytes": 13261996,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "203"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 215,
+                  "accepted_rows": 215,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/4-camera/both/session-4/epoch-0000-media/raw.avi",
+                      "bytes": 3710084,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "215"
+                      }
+                    },
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-baseline/4-camera/both/session-4/epoch-0000-media/debug.avi",
+                      "bytes": 12240530,
+                      "independent_full_decode": {
+                        "codec_name": "h264",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "215"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evidence_directory": "runs/recording-mjpeg",
+      "measured_seconds_per_case": 4,
+      "warmup_seconds": 1,
+      "groups": [
+        {
+          "camera_count": 1,
+          "codec": "mjpg",
+          "binary_sha256": "ffe983a35c6b75570e83587c94133f9d25e8fec1db1f00f1f14c77659567a655",
+          "cases": [
+            {
+              "mode": "raw",
+              "elapsed_seconds": 4.024112269282341,
+              "cpu_percent_one_core": 62.12550328387953,
+              "rss_median_bytes": 98070528.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 408,
+                  "processed_frames_per_second": 101.3888213592914,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.15016631036996841,
+              "meets_95_percent_of_requested_100_fps": true,
+              "recordings": [
+                {
+                  "all_frame_rows": 522,
+                  "accepted_rows": 521,
+                  "accepted_fraction": 0.9980842911877394,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/1-camera/raw/session-1/epoch-0000-media/raw.avi",
+                      "bytes": 8088484,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "522"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "mode": "debug",
+              "elapsed_seconds": 4.024648172780871,
+              "cpu_percent_one_core": 108.33245075897938,
+              "rss_median_bytes": 99829760.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 174,
+                  "processed_frames_per_second": 43.23359273408809,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.14986673183739185,
+              "meets_95_percent_of_requested_100_fps": false,
+              "recordings": [
+                {
+                  "all_frame_rows": 220,
+                  "accepted_rows": 220,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/1-camera/debug/session-1/epoch-0000-media/debug.avi",
+                      "bytes": 21984096,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "220"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "mode": "both",
+              "elapsed_seconds": 4.024250276386738,
+              "cpu_percent_one_core": 108.59165558469446,
+              "rss_median_bytes": 100235264.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 155,
+                  "processed_frames_per_second": 38.51649111127605,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.2670985199511051,
+              "meets_95_percent_of_requested_100_fps": false,
+              "recordings": [
+                {
+                  "all_frame_rows": 201,
+                  "accepted_rows": 201,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/1-camera/both/session-1/epoch-0000-media/raw.avi",
+                      "bytes": 4408658,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "201"
+                      }
+                    },
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/1-camera/both/session-1/epoch-0000-media/debug.avi",
+                      "bytes": 20423252,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "201"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "camera_count": 4,
+          "codec": "mjpg",
+          "binary_sha256": "ffe983a35c6b75570e83587c94133f9d25e8fec1db1f00f1f14c77659567a655",
+          "cases": [
+            {
+              "mode": "raw",
+              "elapsed_seconds": 4.025779606774449,
+              "cpu_percent_one_core": 306.52447986061276,
+              "rss_median_bytes": 114051072.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 409,
+                  "processed_frames_per_second": 101.59522873824197,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 2,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video2)",
+                  "processed_frame_delta": 405,
+                  "processed_frames_per_second": 100.60163236916381,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 3,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video4)",
+                  "processed_frame_delta": 405,
+                  "processed_frames_per_second": 100.60163236916381,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 4,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video6)",
+                  "processed_frame_delta": 409,
+                  "processed_frames_per_second": 101.59522873824197,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.3171777278184891,
+              "meets_95_percent_of_requested_100_fps": true,
+              "recordings": [
+                {
+                  "all_frame_rows": 529,
+                  "accepted_rows": 529,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/4-camera/raw/session-1/epoch-0000-media/raw.avi",
+                      "bytes": 8180108,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "529"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 529,
+                  "accepted_rows": 529,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/4-camera/raw/session-2/epoch-0000-media/raw.avi",
+                      "bytes": 8186182,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "529"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 529,
+                  "accepted_rows": 529,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/4-camera/raw/session-3/epoch-0000-media/raw.avi",
+                      "bytes": 8263734,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "529"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 529,
+                  "accepted_rows": 529,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/4-camera/raw/session-4/epoch-0000-media/raw.avi",
+                      "bytes": 8214646,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "529"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "mode": "debug",
+              "elapsed_seconds": 4.0251119043678045,
+              "cpu_percent_one_core": 434.0252001700283,
+              "rss_median_bytes": 121102336.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 130,
+                  "processed_frames_per_second": 32.29723870755791,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 2,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video2)",
+                  "processed_frame_delta": 133,
+                  "processed_frames_per_second": 33.04255960080925,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 3,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video4)",
+                  "processed_frame_delta": 135,
+                  "processed_frames_per_second": 33.53944019631014,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 4,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video6)",
+                  "processed_frame_delta": 135,
+                  "processed_frames_per_second": 33.53944019631014,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.43211641907691956,
+              "meets_95_percent_of_requested_100_fps": false,
+              "recordings": [
+                {
+                  "all_frame_rows": 170,
+                  "accepted_rows": 170,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/4-camera/debug/session-1/epoch-0000-media/debug.avi",
+                      "bytes": 18371504,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "170"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 172,
+                  "accepted_rows": 172,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/4-camera/debug/session-2/epoch-0000-media/debug.avi",
+                      "bytes": 17548642,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "172"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 175,
+                  "accepted_rows": 175,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/4-camera/debug/session-3/epoch-0000-media/debug.avi",
+                      "bytes": 20481788,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "175"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 181,
+                  "accepted_rows": 181,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/4-camera/debug/session-4/epoch-0000-media/debug.avi",
+                      "bytes": 19760762,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "181"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "mode": "both",
+              "elapsed_seconds": 4.024434629827738,
+              "cpu_percent_one_core": 435.09217096537867,
+              "rss_median_bytes": 122052608.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 137,
+                  "processed_frames_per_second": 34.04204878484116,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 2,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video2)",
+                  "processed_frame_delta": 119,
+                  "processed_frames_per_second": 29.56937084230728,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 3,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video4)",
+                  "processed_frame_delta": 113,
+                  "processed_frames_per_second": 28.078478194795988,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 4,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video6)",
+                  "processed_frame_delta": 138,
+                  "processed_frames_per_second": 34.290530892759705,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.4329921882599592,
+              "meets_95_percent_of_requested_100_fps": false,
+              "recordings": [
+                {
+                  "all_frame_rows": 174,
+                  "accepted_rows": 174,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/4-camera/both/session-1/epoch-0000-media/raw.avi",
+                      "bytes": 4102710,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "174"
+                      }
+                    },
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/4-camera/both/session-1/epoch-0000-media/debug.avi",
+                      "bytes": 18587782,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "174"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 156,
+                  "accepted_rows": 156,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/4-camera/both/session-2/epoch-0000-media/raw.avi",
+                      "bytes": 3895832,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "156"
+                      }
+                    },
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/4-camera/both/session-2/epoch-0000-media/debug.avi",
+                      "bytes": 16098146,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "156"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 152,
+                  "accepted_rows": 138,
+                  "accepted_fraction": 0.9078947368421053,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/4-camera/both/session-3/epoch-0000-media/raw.avi",
+                      "bytes": 3873932,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "152"
+                      }
+                    },
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/4-camera/both/session-3/epoch-0000-media/debug.avi",
+                      "bytes": 18040072,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "152"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 179,
+                  "accepted_rows": 179,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/4-camera/both/session-4/epoch-0000-media/raw.avi",
+                      "bytes": 4173130,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "179"
+                      }
+                    },
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-mjpeg/4-camera/both/session-4/epoch-0000-media/debug.avi",
+                      "bytes": 18605196,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "179"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evidence_directory": "runs/recording-cached-mjpeg",
+      "measured_seconds_per_case": 4,
+      "warmup_seconds": 1,
+      "groups": [
+        {
+          "camera_count": 1,
+          "codec": "mjpg",
+          "binary_sha256": "00495df4c5ba1b92b4c7ec2b6e97b0ee7009d169b1eeac95aec93346395bafdf",
+          "cases": [
+            {
+              "mode": "raw",
+              "elapsed_seconds": 4.024047207087278,
+              "cpu_percent_one_core": 63.86604996764539,
+              "rss_median_bytes": 98041856.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 403,
+                  "processed_frames_per_second": 100.14793049401203,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.15026883408427238,
+              "meets_95_percent_of_requested_100_fps": true,
+              "recordings": [
+                {
+                  "all_frame_rows": 521,
+                  "accepted_rows": 521,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/1-camera/raw/session-1/epoch-0000-media/raw.avi",
+                      "bytes": 8084394,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "521"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "mode": "debug",
+              "elapsed_seconds": 4.024204410612583,
+              "cpu_percent_one_core": 108.34439693226965,
+              "rss_median_bytes": 101486592.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 240,
+                  "processed_frames_per_second": 59.63911757739614,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.1500108242034912,
+              "meets_95_percent_of_requested_100_fps": false,
+              "recordings": [
+                {
+                  "all_frame_rows": 301,
+                  "accepted_rows": 301,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/1-camera/debug/session-1/epoch-0000-media/debug.avi",
+                      "bytes": 29051500,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "301"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "mode": "both",
+              "elapsed_seconds": 4.024029389023781,
+              "cpu_percent_one_core": 109.34313780117365,
+              "rss_median_bytes": 103043072.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 206,
+                  "processed_frames_per_second": 51.19246906145859,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.26688688062131405,
+              "meets_95_percent_of_requested_100_fps": false,
+              "recordings": [
+                {
+                  "all_frame_rows": 266,
+                  "accepted_rows": 266,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/1-camera/both/session-1/epoch-0000-media/raw.avi",
+                      "bytes": 5158786,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "266"
+                      }
+                    },
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/1-camera/both/session-1/epoch-0000-media/debug.avi",
+                      "bytes": 26234426,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "266"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "camera_count": 4,
+          "codec": "mjpg",
+          "binary_sha256": "00495df4c5ba1b92b4c7ec2b6e97b0ee7009d169b1eeac95aec93346395bafdf",
+          "cases": [
+            {
+              "mode": "raw",
+              "elapsed_seconds": 4.0242584105581045,
+              "cpu_percent_one_core": 304.40391123643343,
+              "rss_median_bytes": 113833984.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 407,
+                  "processed_frames_per_second": 101.13664642712524,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 2,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video2)",
+                  "processed_frame_delta": 403,
+                  "processed_frames_per_second": 100.1426744720675,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 3,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video4)",
+                  "processed_frame_delta": 407,
+                  "processed_frames_per_second": 101.13664642712524,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 4,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video6)",
+                  "processed_frame_delta": 408,
+                  "processed_frames_per_second": 101.38513941588967,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.3008349724113941,
+              "meets_95_percent_of_requested_100_fps": true,
+              "recordings": [
+                {
+                  "all_frame_rows": 529,
+                  "accepted_rows": 529,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/4-camera/raw/session-1/epoch-0000-media/raw.avi",
+                      "bytes": 8190958,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "529"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 529,
+                  "accepted_rows": 529,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/4-camera/raw/session-2/epoch-0000-media/raw.avi",
+                      "bytes": 8183044,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "529"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 528,
+                  "accepted_rows": 528,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/4-camera/raw/session-3/epoch-0000-media/raw.avi",
+                      "bytes": 8258082,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "528"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 528,
+                  "accepted_rows": 528,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/4-camera/raw/session-4/epoch-0000-media/raw.avi",
+                      "bytes": 8207490,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "528"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "mode": "debug",
+              "elapsed_seconds": 4.024250864982605,
+              "cpu_percent_one_core": 435.36053262613217,
+              "rss_median_bytes": 127850496.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 175,
+                  "processed_frames_per_second": 43.48635457167416,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 2,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video2)",
+                  "processed_frame_delta": 163,
+                  "processed_frames_per_second": 40.50443311533079,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 3,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video4)",
+                  "processed_frame_delta": 191,
+                  "processed_frames_per_second": 47.462249846798656,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 4,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video6)",
+                  "processed_frame_delta": 184,
+                  "processed_frames_per_second": 45.72279566393169,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.43308083340525627,
+              "meets_95_percent_of_requested_100_fps": false,
+              "recordings": [
+                {
+                  "all_frame_rows": 229,
+                  "accepted_rows": 229,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/4-camera/debug/session-1/epoch-0000-media/debug.avi",
+                      "bytes": 24803120,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "229"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 211,
+                  "accepted_rows": 211,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/4-camera/debug/session-2/epoch-0000-media/debug.avi",
+                      "bytes": 22231834,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "211"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 242,
+                  "accepted_rows": 242,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/4-camera/debug/session-3/epoch-0000-media/debug.avi",
+                      "bytes": 27637736,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "242"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 238,
+                  "accepted_rows": 238,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/4-camera/debug/session-4/epoch-0000-media/debug.avi",
+                      "bytes": 25751360,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "238"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "mode": "both",
+              "elapsed_seconds": 4.029585124924779,
+              "cpu_percent_one_core": 436.76952972493774,
+              "rss_median_bytes": 132687872.0,
+              "progress": [
+                {
+                  "session": 1,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+                  "processed_frame_delta": 166,
+                  "processed_frames_per_second": 41.195307917238445,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 2,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video2)",
+                  "processed_frame_delta": 173,
+                  "processed_frames_per_second": 42.93245945591717,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 3,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video4)",
+                  "processed_frame_delta": 142,
+                  "processed_frames_per_second": 35.239359784625655,
+                  "advertised_source_fps": 100.0
+                },
+                {
+                  "session": 4,
+                  "source": "Arducam OV9281 USB Camera: Ardu (/dev/video6)",
+                  "processed_frame_delta": 170,
+                  "processed_frames_per_second": 42.18796593934057,
+                  "advertised_source_fps": 100.0
+                }
+              ],
+              "stop_recording_and_finalize_latency_seconds": 0.54459816403687,
+              "meets_95_percent_of_requested_100_fps": false,
+              "recordings": [
+                {
+                  "all_frame_rows": 209,
+                  "accepted_rows": 209,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/4-camera/both/session-1/epoch-0000-media/raw.avi",
+                      "bytes": 4507308,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "209"
+                      }
+                    },
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/4-camera/both/session-1/epoch-0000-media/debug.avi",
+                      "bytes": 23009612,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "209"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 220,
+                  "accepted_rows": 220,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/4-camera/both/session-2/epoch-0000-media/raw.avi",
+                      "bytes": 4633722,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "220"
+                      }
+                    },
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/4-camera/both/session-2/epoch-0000-media/debug.avi",
+                      "bytes": 22374314,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "220"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 183,
+                  "accepted_rows": 164,
+                  "accepted_fraction": 0.8961748633879781,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/4-camera/both/session-3/epoch-0000-media/raw.avi",
+                      "bytes": 4238872,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "183"
+                      }
+                    },
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/4-camera/both/session-3/epoch-0000-media/debug.avi",
+                      "bytes": 21364886,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "183"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "all_frame_rows": 218,
+                  "accepted_rows": 218,
+                  "accepted_fraction": 1.0,
+                  "numeric_quality_and_media_aligned": true,
+                  "sensor_frame_loss_verified": false,
+                  "media": [
+                    {
+                      "kind": "raw",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/4-camera/both/session-4/epoch-0000-media/raw.avi",
+                      "bytes": 4622480,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 320,
+                        "height": 240,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "218"
+                      }
+                    },
+                    {
+                      "kind": "debug",
+                      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/recording-cached-mjpeg/4-camera/both/session-4/epoch-0000-media/debug.avi",
+                      "bytes": 22592130,
+                      "independent_full_decode": {
+                        "codec_name": "mjpeg",
+                        "width": 640,
+                        "height": 480,
+                        "r_frame_rate": "100/1",
+                        "nb_read_frames": "218"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "phase_baseline": {
+    "boundary": "Serial saved native PNGs, unchanged frame repeated; PNG read/decode and initial warmup render excluded. Render includes validation, geometry construction, remap, overlays, allocation. Codec write includes RGB conversion, encode, packet drain and AVI write; init/finalization separately timed. No capture, tracking, UI, or concurrency; not sustained camera FPS.",
+    "codecs": [
+      {
+        "codec": "h264",
+        "finish_ms": 33.766223,
+        "frames": 20,
+        "height": 240,
+        "init_ms": 1.13027,
+        "view": "raw",
+        "width": 320,
+        "write": {
+          "frames_per_second": 226.9651353521905,
+          "mean_ms": 4.4059630499999995,
+          "median_ms": 4.371969,
+          "p95_ms": 4.898403,
+          "per_frame_ms": [
+            4.898403,
+            4.712456,
+            4.422607999999999,
+            4.338875,
+            4.371969,
+            4.262032,
+            4.236765,
+            4.2955429999999994,
+            4.48325,
+            4.397268,
+            4.373928,
+            4.336763,
+            4.376477,
+            4.344947,
+            4.361387000000001,
+            4.246233999999999,
+            4.3237060000000005,
+            4.430309,
+            4.537914,
+            4.3684270000000005
+          ]
+        }
+      },
+      {
+        "codec": "h264",
+        "finish_ms": 28.987329,
+        "frames": 20,
+        "height": 480,
+        "init_ms": 0.955428,
+        "view": "debug",
+        "width": 640,
+        "write": {
+          "frames_per_second": 50.22068828598327,
+          "mean_ms": 19.912112600000004,
+          "median_ms": 20.194248,
+          "p95_ms": 22.604422,
+          "per_frame_ms": [
+            22.604422,
+            19.489183999999998,
+            20.463537,
+            22.022326,
+            18.655086,
+            20.641115000000003,
+            18.735359,
+            20.69835,
+            18.910016000000002,
+            20.194248,
+            18.774202,
+            20.253512,
+            18.808583,
+            20.422317999999997,
+            18.839378,
+            20.11883,
+            18.66126,
+            20.555067,
+            19.036896000000002,
+            20.358563
+          ]
+        }
+      },
+      {
+        "codec": "mjpg",
+        "finish_ms": 25.333395000000003,
+        "frames": 20,
+        "height": 240,
+        "init_ms": 1.0497830000000001,
+        "view": "raw",
+        "width": 320,
+        "write": {
+          "frames_per_second": 552.8648850190312,
+          "mean_ms": 1.8087602,
+          "median_ms": 1.796389,
+          "p95_ms": 2.0385020000000003,
+          "per_frame_ms": [
+            1.8351229999999998,
+            1.7501039999999999,
+            1.73793,
+            1.802191,
+            1.713092,
+            1.7571839999999999,
+            1.710089,
+            1.71045,
+            1.7898230000000002,
+            1.9658259999999999,
+            2.0172879999999997,
+            1.869197,
+            1.795835,
+            1.799477,
+            1.798935,
+            1.789795,
+            1.796389,
+            2.0385020000000003,
+            1.800185,
+            1.697789
+          ]
+        }
+      },
+      {
+        "codec": "mjpg",
+        "finish_ms": 30.502147,
+        "frames": 20,
+        "height": 480,
+        "init_ms": 0.932434,
+        "view": "debug",
+        "width": 640,
+        "write": {
+          "frames_per_second": 121.68163755400026,
+          "mean_ms": 8.21816685,
+          "median_ms": 8.155531,
+          "p95_ms": 9.655156999999999,
+          "per_frame_ms": [
+            8.20126,
+            7.8985259999999995,
+            7.881459,
+            8.330844,
+            8.004774,
+            8.097845,
+            7.966246,
+            8.560438,
+            8.170525999999999,
+            8.125889,
+            8.21187,
+            8.162284000000001,
+            8.425584,
+            8.155531,
+            8.263325,
+            8.103907000000001,
+            8.076943,
+            7.994653,
+            8.076276,
+            9.655156999999999
+          ]
+        }
+      },
+      {
+        "codec": "raw",
+        "finish_ms": 35.809527,
+        "frames": 20,
+        "height": 240,
+        "init_ms": 0.916445,
+        "view": "raw",
+        "width": 320,
+        "write": {
+          "frames_per_second": 3618.3207156459443,
+          "mean_ms": 0.2763713,
+          "median_ms": 0.26922799999999997,
+          "p95_ms": 0.39693,
+          "per_frame_ms": [
+            0.27780099999999996,
+            0.270992,
+            0.266102,
+            0.39693,
+            0.277555,
+            0.26922799999999997,
+            0.266643,
+            0.27409500000000003,
+            0.26687,
+            0.267422,
+            0.267133,
+            0.27509300000000003,
+            0.265679,
+            0.26875,
+            0.267425,
+            0.276911,
+            0.26541,
+            0.269431,
+            0.268173,
+            0.269783
+          ]
+        }
+      },
+      {
+        "codec": "raw",
+        "finish_ms": 56.524080999999995,
+        "frames": 20,
+        "height": 480,
+        "init_ms": 0.91202,
+        "view": "debug",
+        "width": 640,
+        "write": {
+          "frames_per_second": 900.1501270381875,
+          "mean_ms": 1.1109258,
+          "median_ms": 1.10976,
+          "p95_ms": 1.2177449999999999,
+          "per_frame_ms": [
+            1.163287,
+            1.070335,
+            1.2177449999999999,
+            1.184311,
+            1.066715,
+            1.062491,
+            1.1029309999999999,
+            1.0950280000000001,
+            1.0687039999999999,
+            1.062714,
+            1.119332,
+            1.132365,
+            1.10976,
+            1.056599,
+            1.091001,
+            1.06164,
+            1.1170049999999998,
+            1.110049,
+            1.1960110000000002,
+            1.130493
+          ]
+        }
+      }
+    ],
+    "config": "VR3.txt",
+    "debug_dimensions": [
+      640,
+      480
+    ],
+    "iterations": 20,
+    "path_points": 3,
+    "poses": 3,
+    "render": {
+      "frames_per_second": 103.63816009080902,
+      "mean_ms": 9.648955549999998,
+      "median_ms": 9.573059,
+      "p95_ms": 10.485303,
+      "per_frame_ms": [
+        10.066388,
+        10.098591,
+        9.943112000000001,
+        9.538115,
+        9.690711,
+        9.111506,
+        9.657433,
+        9.565097999999999,
+        9.573059,
+        9.763009,
+        10.485303,
+        9.556317,
+        9.422527,
+        9.712895,
+        9.551321999999999,
+        9.490706999999999,
+        9.333239,
+        9.683519,
+        9.54994,
+        9.18632
+      ]
+    },
+    "snapshot": "runs/exposure-vr3/original-snapshot",
+    "source_dimensions": [
+      320,
+      240
+    ],
+    "evidence_directory": "runs/recording-phase-baseline",
+    "example_source": "crates/fictrac-io/examples/profile_recording.rs",
+    "example_binary_sha256": "849b1b97c130ec7d46d09a1eebc99043695b8fe45400e4f215844d62db102dc6"
+  },
+  "original_live_reference": {
+    "log": "/home/pkaushi/src/fictrac/VR_array/VR3/fictrac-20261026_212053.log",
+    "average_fps": 100.93,
+    "average_stage_ms": {
+      "grab": 5.5,
+      "optimizer": 4.1,
+      "map": 0.2,
+      "plot": 0,
+      "log": 0,
+      "display": 0.1
+    },
+    "raw_and_debug_present": true,
+    "process_cpu_available": false,
+    "boundary": "Original internal timing; different boundary from sustained Rust native process and phase measurements."
+  },
+  "phase_cached": {
+    "boundary": "Serial saved native PNGs, unchanged frame repeated; PNG read/decode and initial warmup render excluded. Direct render includes validation, geometry construction, remap, overlays, allocation. Cached render excludes one-time validated geometry construction but includes dynamic views/overlays, RGB sampling, and allocation. Codec write includes RGB conversion, encode, packet drain and AVI write; init/finalization separately timed. No capture, tracking, UI, or concurrency; not sustained camera FPS.",
+    "cache_init_ms": 6.629751,
+    "cached_and_direct_pixels_exact": true,
+    "cached_render": {
+      "frames_per_second": 222.23538349548926,
+      "mean_ms": 4.4997335,
+      "median_ms": 4.488945999999999,
+      "p95_ms": 4.88055,
+      "per_frame_ms": [
+        4.457474,
+        4.603397,
+        4.214436999999999,
+        4.372946,
+        4.88055,
+        4.490423000000001,
+        4.445105000000001,
+        4.516433999999999,
+        4.446683,
+        4.439827,
+        4.2121889999999995,
+        4.521746,
+        4.509596,
+        4.488945999999999,
+        4.425713,
+        4.680938,
+        4.864393,
+        4.485215,
+        4.4168899999999995,
+        4.521768
+      ]
+    },
+    "codecs": [
+      {
+        "codec": "h264",
+        "finish_ms": 26.692828,
+        "frames": 20,
+        "height": 240,
+        "init_ms": 1.1512930000000001,
+        "view": "raw",
+        "width": 320,
+        "write": {
+          "frames_per_second": 223.16360565794724,
+          "mean_ms": 4.4810174,
+          "median_ms": 4.46652,
+          "p95_ms": 4.973742,
+          "per_frame_ms": [
+            4.973742,
+            4.58993,
+            4.4731440000000005,
+            4.507253,
+            4.435874,
+            4.357838999999999,
+            4.4468559999999995,
+            4.250847,
+            4.207575,
+            4.283831,
+            4.371295,
+            4.511954,
+            4.611458,
+            4.441089,
+            4.46652,
+            4.475053,
+            4.491985000000001,
+            4.419072,
+            4.430674,
+            4.874357
+          ]
+        }
+      },
+      {
+        "codec": "h264",
+        "finish_ms": 30.60951,
+        "frames": 20,
+        "height": 480,
+        "init_ms": 1.383623,
+        "view": "debug",
+        "width": 640,
+        "write": {
+          "frames_per_second": 50.56615101547627,
+          "mean_ms": 19.7760751,
+          "median_ms": 20.065607999999997,
+          "p95_ms": 21.304416,
+          "per_frame_ms": [
+            20.946569,
+            20.031572,
+            19.062484,
+            20.346319,
+            18.616523,
+            20.428892,
+            19.283890000000003,
+            20.176759,
+            18.856023999999998,
+            20.065607999999997,
+            19.282892,
+            20.914154,
+            18.643481,
+            20.339348,
+            18.779019,
+            20.737418,
+            18.440093,
+            20.820237,
+            18.445804,
+            21.304416
+          ]
+        }
+      },
+      {
+        "codec": "mjpg",
+        "finish_ms": 23.748105,
+        "frames": 20,
+        "height": 240,
+        "init_ms": 1.104014,
+        "view": "raw",
+        "width": 320,
+        "write": {
+          "frames_per_second": 528.9117579754801,
+          "mean_ms": 1.8906745500000004,
+          "median_ms": 1.872937,
+          "p95_ms": 2.222063,
+          "per_frame_ms": [
+            1.909484,
+            2.222063,
+            1.897515,
+            1.9123160000000001,
+            1.886846,
+            1.863549,
+            1.862356,
+            1.86977,
+            1.886125,
+            1.888721,
+            1.885143,
+            1.864854,
+            1.8679720000000002,
+            1.795664,
+            1.8673279999999999,
+            1.856131,
+            1.8531279999999999,
+            1.855013,
+            1.872937,
+            1.896576
+          ]
+        }
+      },
+      {
+        "codec": "mjpg",
+        "finish_ms": 26.69123,
+        "frames": 20,
+        "height": 480,
+        "init_ms": 1.044902,
+        "view": "debug",
+        "width": 640,
+        "write": {
+          "frames_per_second": 117.22987562349806,
+          "mean_ms": 8.530248750000002,
+          "median_ms": 8.421685,
+          "p95_ms": 9.148365,
+          "per_frame_ms": [
+            8.226508,
+            8.70105,
+            8.328411000000001,
+            8.382125,
+            8.172867,
+            8.247605,
+            8.928588,
+            8.314491,
+            8.192413,
+            8.134255,
+            8.869059,
+            8.426388999999999,
+            8.78923,
+            8.418316,
+            8.421685,
+            9.106186000000001,
+            8.965265,
+            9.148365,
+            8.434585,
+            8.397582
+          ]
+        }
+      },
+      {
+        "codec": "raw",
+        "finish_ms": 35.241519,
+        "frames": 20,
+        "height": 240,
+        "init_ms": 0.979841,
+        "view": "raw",
+        "width": 320,
+        "write": {
+          "frames_per_second": 3549.455540141059,
+          "mean_ms": 0.28173335,
+          "median_ms": 0.276588,
+          "p95_ms": 0.315793,
+          "per_frame_ms": [
+            0.285576,
+            0.303367,
+            0.273333,
+            0.269187,
+            0.272024,
+            0.26666,
+            0.303207,
+            0.26837900000000003,
+            0.26913000000000004,
+            0.27115100000000003,
+            0.276588,
+            0.268793,
+            0.285679,
+            0.29274,
+            0.283511,
+            0.27377,
+            0.27552499999999996,
+            0.315793,
+            0.29815,
+            0.28210399999999997
+          ]
+        }
+      },
+      {
+        "codec": "raw",
+        "finish_ms": 57.256841,
+        "frames": 20,
+        "height": 480,
+        "init_ms": 1.097031,
+        "view": "debug",
+        "width": 640,
+        "write": {
+          "frames_per_second": 864.740192700434,
+          "mean_ms": 1.1564166999999999,
+          "median_ms": 1.1502269999999999,
+          "p95_ms": 1.3420839999999998,
+          "per_frame_ms": [
+            1.154656,
+            1.1502269999999999,
+            1.152363,
+            1.157764,
+            1.144379,
+            1.330389,
+            1.3420839999999998,
+            1.3344660000000002,
+            1.1413689999999999,
+            1.171229,
+            1.0966140000000002,
+            1.113408,
+            1.1693,
+            1.060718,
+            1.0627360000000001,
+            1.061893,
+            1.209484,
+            1.139758,
+            1.0664069999999999,
+            1.0690899999999999
+          ]
+        }
+      }
+    ],
+    "config": "VR3.txt",
+    "debug_dimensions": [
+      640,
+      480
+    ],
+    "iterations": 20,
+    "path_points": 3,
+    "poses": 3,
+    "render": {
+      "frames_per_second": 96.7563671240964,
+      "mean_ms": 10.335237150000001,
+      "median_ms": 9.773703999999999,
+      "p95_ms": 16.837916,
+      "per_frame_ms": [
+        16.837916,
+        12.93388,
+        10.302393,
+        9.695465,
+        9.764421,
+        9.763869,
+        9.711088,
+        9.751492,
+        9.767701,
+        9.769549000000001,
+        9.773703999999999,
+        10.266191,
+        9.73262,
+        9.799606,
+        10.191999000000001,
+        9.820977999999998,
+        9.583503,
+        9.376696,
+        10.083426,
+        9.778246000000001
+      ]
+    },
+    "snapshot": "runs/exposure-vr3/original-snapshot",
+    "source_dimensions": [
+      320,
+      240
+    ],
+    "evidence_directory": "runs/recording-phase-cached",
+    "example_binary_sha256": "4a05b1bdcc8052afb472a296c9eebf3e76e22015d2c9733074dcba482cae8c54",
+    "baseline_and_current_png_exact": true,
+    "rendered_png_sha256": "07df5b068143968559fcc9cffeb58d9b06d20b65fa52d97eb3cfbf762ed7fbf8"
+  }
+}

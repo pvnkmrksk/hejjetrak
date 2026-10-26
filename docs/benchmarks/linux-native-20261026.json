@@ -1,0 +1,346 @@
+{
+  "date": "2026-10-26",
+  "platform": "Ubuntu22.04.5 x86_64 / kernel6.8.0-124 / Intel i7-6700K / Intel HD530 + GTX1060",
+  "graphics": {
+    "default": "X11/XWayland + GLES when DISPLAY available",
+    "observed_adapter": "NV136 (Gl, Other)",
+    "installed_failure": "egui-wgpu0.33.3 configure_surface unsupported-adapter panic during resize",
+    "wayland_gles_failure": "Mesa EGL present waiting indefinitely in wl_display_dispatch_queue"
+  },
+  "native_vr3": {
+    "binary_sha256": "ffe983a35c6b75570e83587c94133f9d25e8fec1db1f00f1f14c77659567a655",
+    "video_sha256": "0cdb83d8468fce955999a54bd04cfde48e652db8c36de9fc45b15d359c521e4b",
+    "source_frames": 5157,
+    "resizes": 10,
+    "source_paced": true,
+    "comparison": {
+      "frames": 5157,
+      "max_absolute_difference_by_column": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_component_rmse_rad": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "trajectory_point_rmse_sphere_rad": 0.0,
+      "wrapped_heading_rmse_rad": 0.0,
+      "all_quality_decisions_match": true,
+      "numeric_epsilon": 1e-09
+    },
+    "passed": true
+  },
+  "four_cameras": {
+    "binary_sha256": "ffe983a35c6b75570e83587c94133f9d25e8fec1db1f00f1f14c77659567a655",
+    "resizes_per_window": 30,
+    "camera_reconnections": 4,
+    "observation_seconds": 60.01417321152985,
+    "progress": [
+      {
+        "session": 1,
+        "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+        "processed_frame_delta": 6057,
+        "processed_frames_per_second": 100.92615920327862,
+        "advertised_source_fps": 100.0
+      },
+      {
+        "session": 2,
+        "source": "Arducam OV9281 USB Camera: Ardu (/dev/video2)",
+        "processed_frame_delta": 6054,
+        "processed_frames_per_second": 100.87617101149888,
+        "advertised_source_fps": 100.0
+      },
+      {
+        "session": 3,
+        "source": "Arducam OV9281 USB Camera: Ardu (/dev/video4)",
+        "processed_frame_delta": 6057,
+        "processed_frames_per_second": 100.92615920327862,
+        "advertised_source_fps": 100.0
+      },
+      {
+        "session": 4,
+        "source": "Arducam OV9281 USB Camera: Ardu (/dev/video6)",
+        "processed_frame_delta": 6054,
+        "processed_frames_per_second": 100.87617101149888,
+        "advertised_source_fps": 100.0
+      }
+    ],
+    "tiny_hold_seconds": 15.015580482780933,
+    "zmq_load": {
+      "pyzmq": "25.1.1",
+      "libzmq": "4.3.4",
+      "healthy_subscribers": 4,
+      "undrained_subscribers": 4,
+      "incomplete_greeting_reconnect_interval_seconds": 2,
+      "received_packets": {
+        "19871": 8947,
+        "19872": 9020,
+        "19873": 8970,
+        "19874": 8926
+      },
+      "incomplete_tcp_connections": {
+        "19871": 44,
+        "19872": 45,
+        "19873": 45,
+        "19874": 44
+      },
+      "recorded_wire_oracle": [
+        {
+          "port": 19871,
+          "recorded_all_frame_rows": 6077,
+          "quality_statuses": {
+            "tracked": 6077
+          },
+          "accepted_fraction": 1.0,
+          "recorded_accepted_rows": 6077,
+          "received_exact_recorded_rows": 6077,
+          "received_fraction": 1.0,
+          "all_matched_bytes_exact": true,
+          "ordered_without_duplicates": true,
+          "minimum_received_fraction": 0.95
+        },
+        {
+          "port": 19872,
+          "recorded_all_frame_rows": 6076,
+          "quality_statuses": {
+            "tracked": 6076
+          },
+          "accepted_fraction": 1.0,
+          "recorded_accepted_rows": 6076,
+          "received_exact_recorded_rows": 6076,
+          "received_fraction": 1.0,
+          "all_matched_bytes_exact": true,
+          "ordered_without_duplicates": true,
+          "minimum_received_fraction": 0.95
+        },
+        {
+          "port": 19873,
+          "recorded_all_frame_rows": 6077,
+          "quality_statuses": {
+            "tracked": 6077
+          },
+          "accepted_fraction": 1.0,
+          "recorded_accepted_rows": 6077,
+          "received_exact_recorded_rows": 6077,
+          "received_fraction": 1.0,
+          "all_matched_bytes_exact": true,
+          "ordered_without_duplicates": true,
+          "minimum_received_fraction": 0.95
+        },
+        {
+          "port": 19874,
+          "recorded_all_frame_rows": 6077,
+          "quality_statuses": {
+            "tracked": 6077
+          },
+          "accepted_fraction": 1.0,
+          "recorded_accepted_rows": 6077,
+          "received_exact_recorded_rows": 6077,
+          "received_fraction": 1.0,
+          "all_matched_bytes_exact": true,
+          "ordered_without_duplicates": true,
+          "minimum_received_fraction": 0.95
+        }
+      ]
+    },
+    "publishers": [
+      {
+        "dropped": 0,
+        "endpoint": "tcp://127.0.0.1:19871",
+        "enqueued": 8614,
+        "failures": 29,
+        "last_error": "ZMQ subscriber disconnected: ZMTP handshake exceeded two seconds; other subscribers and tracking continue",
+        "published": 8613,
+        "queue_capacity": 256,
+        "queue_len": 1,
+        "worker_alive": true
+      },
+      {
+        "dropped": 0,
+        "endpoint": "tcp://127.0.0.1:19872",
+        "enqueued": 8594,
+        "failures": 26,
+        "last_error": "ZMQ subscriber disconnected: ZMTP handshake exceeded two seconds; other subscribers and tracking continue",
+        "published": 8593,
+        "queue_capacity": 256,
+        "queue_len": 1,
+        "worker_alive": true
+      },
+      {
+        "dropped": 0,
+        "endpoint": "tcp://127.0.0.1:19873",
+        "enqueued": 8465,
+        "failures": 25,
+        "last_error": "ZMQ subscriber disconnected: ZMTP handshake exceeded two seconds; other subscribers and tracking continue",
+        "published": 8464,
+        "queue_capacity": 256,
+        "queue_len": 1,
+        "worker_alive": true
+      },
+      {
+        "dropped": 0,
+        "endpoint": "tcp://127.0.0.1:19874",
+        "enqueued": 8332,
+        "failures": 28,
+        "last_error": "ZMQ subscriber disconnected: ZMTP handshake exceeded two seconds; other subscribers and tracking continue",
+        "published": 8332,
+        "queue_capacity": 256,
+        "queue_len": 0,
+        "worker_alive": true
+      }
+    ],
+    "media_recording": "disabled; wire oracle records numeric data only",
+    "capture_drop_scope": "application delivered sequence; zero does not establish zero sensor/kernel drops",
+    "passed": true
+  },
+  "outline_native_captures": {
+    "same_source_frame": 0,
+    "same_numeric_state": true,
+    "off_and_on_visually_inspected": true
+  },
+  "scope": "Native GUI/replay/capture/loopback stress on this machine. No physical ground truth, sensor-loss, indefinite runtime, other-driver, or video-encoder throughput claim.",
+  "open_four_from_vr3": {
+    "binary_sha256": "00495df4c5ba1b92b4c7ec2b6e97b0ee7009d169b1eeac95aec93346395bafdf",
+    "cases": [
+      {
+        "layout": "folders",
+        "sources": [
+          "4",
+          "6",
+          "0",
+          "2"
+        ],
+        "frames": [
+          264,
+          230,
+          199,
+          165
+        ],
+        "titles": [
+          "VR3 \u00b7 Outputs off \u00b7 /dev/video4",
+          "VR4 \u00b7 Outputs off \u00b7 /dev/video6",
+          "VR1 \u00b7 Outputs off \u00b7 /dev/video0",
+          "VR2 \u00b7 Outputs off \u00b7 /dev/video2"
+        ],
+        "source_images_visually_inspected": true,
+        "passed": true
+      },
+      {
+        "layout": "flat",
+        "sources": [
+          "4",
+          "6",
+          "0",
+          "2"
+        ],
+        "frames": [
+          140,
+          172,
+          207,
+          237
+        ],
+        "titles": [
+          "VR3 \u00b7 Outputs off \u00b7 /dev/video4",
+          "VR4 \u00b7 Outputs off \u00b7 /dev/video6",
+          "VR1 \u00b7 Outputs off \u00b7 /dev/video0",
+          "VR2 \u00b7 Outputs off \u00b7 /dev/video2"
+        ],
+        "source_images_visually_inspected": true,
+        "passed": true
+      }
+    ],
+    "scope": "Native folder and flat saved-config cycling smoke, without media recording or timing claim"
+  },
+  "display_controls_20261027": {
+    "binary_sha256": "65b690733054059479625b7db4fd7284d80a1ad3073331a52a01bc0bee068f97",
+    "working_directory": "runs/native-display-final-metadata",
+    "cases": [
+      {
+        "display_limit_fps": 1,
+        "measured_preview_fps": 0.9911348654181082,
+        "processed_frames_per_second": 100.95245274854909,
+        "source_fps": 100.0
+      },
+      {
+        "display_limit_fps": 60,
+        "measured_preview_fps": 47.04672966447653,
+        "processed_frames_per_second": 101.13336525398715,
+        "source_fps": 100.0
+      }
+    ],
+    "resizes": 12,
+    "oversize_rejected": true,
+    "numeric_quality_raw_frames": 846,
+    "independent_complete_decode": {
+      "codec_name": "rawvideo",
+      "width": 320,
+      "height": 240,
+      "r_frame_rate": "100/1",
+      "nb_read_frames": "846"
+    },
+    "source_config_unchanged": true,
+    "numerical_revision_unchanged": true,
+    "sliders_and_codec_rates_visually_inspected": true,
+    "debug_guides_hidden_visually_inspected": true,
+    "passed": true,
+    "scope": "Short actual-native functional case; not isolated encoder capacity or sensor-level loss evidence"
+  },
+  "display_controls_queue8_20261027": {
+    "binary_sha256": "2a34a9bc2da67cf5e8f9e4678276f08905eead41b3e1e8fa3b0d007f0c0e6ec0",
+    "working_directory": "runs/native-display-final-queue8",
+    "cases": [
+      {
+        "display_limit_fps": 1,
+        "measured_preview_fps": 0.9979894440548156,
+        "processed_frames_per_second": 101.30043893955313,
+        "source_fps": 100.0
+      },
+      {
+        "display_limit_fps": 60,
+        "measured_preview_fps": 50.36315315069654,
+        "processed_frames_per_second": 101.47352034770556,
+        "source_fps": 100.0
+      }
+    ],
+    "resizes": 12,
+    "oversize_rejected": true,
+    "numeric_quality_raw_frames": 853,
+    "independent_complete_decode": {
+      "codec_name": "rawvideo",
+      "width": 320,
+      "height": 240,
+      "r_frame_rate": "100/1",
+      "nb_read_frames": "853"
+    },
+    "source_config_unchanged": true,
+    "numerical_revision_unchanged": true,
+    "sliders_and_codec_rates_visually_inspected": true,
+    "debug_guides_hidden_visually_inspected": true,
+    "passed": true,
+    "scope": "Final queue-eight candidate short native functional case; not isolated encoder capacity or sensor-loss evidence"
+  }
+}

@@ -17,7 +17,62 @@ rate change uses the stronger four-image confirmation described below. The
 `tracked` rows measure new relative movement. No trajectory is invented across
 the hidden interval. See [the output contract](output.md).
 
-## How the protection works
+## Continuous acceleration and long-lived reference views
+
+Resilient healthy fitting now uses the complete ROI throughout the original
+`opt_max_evals` budget. Final-score verification alone could not remove bias
+from a sampled optimizer objective on blurred motion. The legacy opt-out keeps
+sampled candidate generation, and no image-error unit or numerical regression
+tolerance changes.
+
+The current branch additionally distinguishes an observed acceleration ramp
+from an isolated motion outlier. Three consecutive accepted velocity vectors
+must increase in magnitude with consistent acceleration and direction (adjacent
+direction cosines at least 0.75). A fourth complete-score-verified image may
+establish a new motion-rate epoch within a bounded acceleration prediction.
+Rejected images clear this evidence. The image-error and texture ceilings do
+not change. This permits continuous measurement and atlas teaching during the
+supplied VR3 fast spin, instead of declaring a false gap and withholding newly
+visible surface from the atlas. It is a temporal consistency policy, not a
+physical acceleration limit or permission to integrate an occluded interval.
+
+Recovery retains the measured increment between its final visible confirmation
+images as the next optimizer seed. The relocalized output still has zero relative
+motion. The 256-view bank preserves spatially distinct older poses: a new pose
+can replace a member of the closest existing pair when it improves their
+spacing. A long run through one cluster can no longer cyclically evict all
+earlier views. Nearest-neighbor caches keep ordinary insertion linear in the
+256-view bound; an eviction can require a bounded quadratic cache repair.
+Recovery ranks probes using up to 512 ROI sites and still verifies candidates on
+the complete ROI within the original 768-objective-evaluation cap.
+
+## Mature atlas inertia
+
+The original confidence update already freezes saturated black/white cells
+(`0`/`255`) permanently. In resilient mode, the current branch also protects
+strong, partially consolidated cells against contradictory observations. Ages
+count distinct accepted teaching frames per cell, including colliding ROI
+samples only once. The first 1,024 teaching frames retain the original learning
+rate. Thereafter contradictory votes against values at least 160 or at most 96
+are applied every sixteen teaching frames.
+Agreement still consolidates at the original rate; near-neutral cells adapt at
+the original rate, and genuinely new cells retain their first-hit bonus.
+A mature observed cell crossing neutral `128` does not receive another first-hit
+bonus; younger cells retain the original update behavior.
+
+This adds inertia when a few unreliable observations pass the quality checks;
+it does not establish that an arbitrary accepted occluder is safe. A regression
+explicitly supplies 300 accepted contradictory images to mature, unsaturated
+cells. Rejected/recovering frames remain unable to teach anything. Per-cell
+ages and frame stamps are bounded and their wrap behavior is tested. A valid
+reset/template import resets age history; PNG confidence maps do not serialize
+ages, so imported partial cells rebuild maturity over 1,024 teaching frames.
+`rust_resilient : n` retains the original confidence-update policy.
+
+The private [VR3 validation](vr3-validation.md) reports the complete recording,
+source-frame mapping, fast section, trajectory drift and recovery separately.
+
+## Earlier protection policy
 
 The following describes v0.1.3. Local formatting, strict Clippy, all 173 workspace
 tests and the release build pass. All four v0.1.3 native release jobs and the

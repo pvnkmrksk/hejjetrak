@@ -1,5 +1,59 @@
 # HejjéTrac validation evidence
 
+## Linux four-camera and VR3 work — 2026-10-26–27
+
+This local branch starts from `86b71d7d3f53e8a468c4728513479d07a2d3543a`
+on `codex/ubuntu22-compat-ci`. Tests run natively on Ubuntu 22.04.5 x86-64,
+Intel i7-6700K, with Intel HD 530 / NVIDIA GTX 1060 graphics and four
+Arducam OV9281 cameras. Rust is 1.99.1; the release profile uses thin LTO,
+one codegen unit and no target-CPU override. Original rig files and private
+recordings are retained unchanged outside the repository.
+
+`cargo fmt --all -- --check`, strict locked all-target workspace Clippy and
+`cargo test --workspace --locked` pass: **252 tests across 27 suites**, zero
+failures and zero ignored tests. The suite includes actual-video output,
+unchanged decoder/numerical oracles, blurred known motion, recovery, native
+frontend controls, transport and encoder-worker failure/overload checks.
+Localhost access is required for the real transport tests. Raw final logs are
+retained under `runs/validation/final-{fmt,clippy,tests}.log`.
+
+The serial release hot-path checks pass: the 120-frame demo has component RMS
+0.00030405 rad against its unchanged 0.003 gate; the 300-frame sample has path
+RMS 0.044807 sphere rad and component RMS .008761/.008292/.014211 rad against
+the unchanged 0.075-path/0.020-component gates. The full 5,157-frame VR3 pipeline
+runs at 228.55 FPS (22.5636 s internally, approximately 22.565 s externally). The measured
+same-AVI original FicTrac replay takes 19.8739 s externally, so this Rust run
+takes about 13.5% longer. Internal original-stage timing has a different scope.
+Separate decode and tracker timings, hashes, commands and CPU boundaries are
+retained in [the final serial record](benchmarks/linux-tracking-final-queue8-20261027.json).
+
+The supplied 5,157-image VR3 replay passes the unchanged 0.020-radian component
+gates over the clear pre-hand interval, every rolling 100-image window and all
+410 fast images. All 4,678 clear pre-hand and 337 clear post-hand images are
+accepted. Recovery is confirmed at frame 4820, about 90–100 ms after visibility
+returns, with zero relative motion across the missing interval. Complete-path
+drift remains visible: 2.486 sphere-radian path RMS and 2.700 endpoint error.
+[Accuracy, blur decoder oracle and complete trajectories](vr3-validation.md).
+
+A source-paced native replay retains every quality decision and all 25 numeric
+columns exactly as headless processing, including resizing during fast movement
+and the hand interval. Four cameras pass 120 size/view transitions, minimum-size
+holds, source reconnections, camera ownership checks and 60 seconds of loaded
+ZeroMQ output at approximately 101 delivered frames/s each. An additional
+VR3-start Open-four check verifies live images in both config-folder layouts.
+The mixed-GPU resize failure and the tested default X11/GLES graphics path are
+documented in [native validation](linux-native-validation.md), with platform
+limits stated explicitly.
+
+Rendering, compression, disk I/O and preview cadence are measured separately
+from numerical tracking. [Recording evidence](recording-performance.md) retains
+the slow synchronous baseline, exact-pixel remap improvements, actor overload
+behavior, media completeness checks and source-clock limits. These measurements
+do not prove absence of sensor/driver loss or unrestricted camera capacity.
+
+Historical platform and release results below retain their original scope;
+they are not evidence that this local Linux change ran natively on other OSes.
+
 ## v0.2 series local MATREX validation — 2026-10-26
 
 On Apple M2 Pro / macOS 27.0.1 arm64 / Rust 1.99.1 (LLVM 23.1.1),
