@@ -129,3 +129,9 @@ Positions remain cumulative **sphere radians**, on the legacy axes. There is no 
 `zmq_framing : single` sends one UTF-8 JSON frame, matching Python's `send_string(json.dumps(...))`. `topic_json` sends exactly two frames in **one multipart message**, `[topic, JSON]`, for old paired-read receivers. The default topic is `FT`; the old MATREX players subscribe to all topics. A modern single-frame JSON subscriber should subscribe to the empty prefix or `{`, rather than the native `FT, ` prefix. Defaults remain `native_ft`, `single` and `FT`.
 
 See [MATREX VR compatibility](matrex-vr.md) for the unchanged-player tests and the v0.1.0 lifecycle limitation.
+
+## MATREX VR connection
+
+[MATREX VR](https://github.com/pvnkmrksk/matrexVR) is the companion Unity experiment renderer. Its [input guide](https://pvnkmrksk.github.io/matrexVR/manual/input-contracts.html) maps native FT columns 15/16/17 (forward, east and heading in radians) to its walking rig and explains sphere-radius conversion. The native decoder/transport path belongs to current source after its immutable 0.3 release; use the contract for the exact renderer build rather than treating the old JSON adapter and an FT row as the same payload.
+
+A successful connection does not turn rejected/missing motion into a measurement. Keep the all-frame/quality evidence described above. [Daari Deepa](https://github.com/pvnkmrksk/trajectory-dashboard) supplies downstream trajectory analysis; [MATREX recording and replay](https://pvnkmrksk.github.io/matrexVR/manual/recording-pipeline.html) explains its saved experiment bundle.
