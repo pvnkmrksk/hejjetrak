@@ -25,6 +25,7 @@
 - [Video and offline tracking](video.md)
 - [Recording and files](recording.md)
 - [Several rigs](rigs.md)
+- [Legacy MATREX VR output](matrex-vr.md)
 - [Occlusion recovery](recovery.md)
 - [CLI reference](cli.md)
 - [AI agents and MCP](agent-control.md)

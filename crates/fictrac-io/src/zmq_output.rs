@@ -9,14 +9,14 @@ use std::{
         mpsc,
     },
     thread::{self, JoinHandle},
-    time::{Duration, Instant},
+    time::Duration,
 };
 use tokio::sync::mpsc::{self as queue, Sender};
-use zeromq::{PubSocket, Socket, SocketSend};
+#[path = "zmq_protocol.rs"]
+mod protocol;
 const DEFAULT_CAPACITY: usize = 256;
 const MAX_CAPACITY: usize = 4096;
 const MAX_WIRE_BYTES: usize = 16_384;
-const SEND_TIMEOUT: Duration = Duration::from_millis(25);
 const CLOSE_DRAIN: Duration = Duration::from_millis(50);
 
 #[derive(Clone, Debug)]
@@ -110,7 +110,7 @@ impl Counters {
 }
 pub(crate) struct ZmqOutput {
     settings: ZmqSettings,
-    sender: Option<Sender<Vec<u8>>>,
+    sender: Option<Sender<Vec<Vec<u8>>>>,
     counters: Arc<Counters>,
     worker: Option<JoinHandle<()>>,
     reported_failures: u64,
@@ -125,7 +125,7 @@ impl ZmqOutput {
         let worker=thread::Builder::new().name("hejjetrak-zmq-pub".into()).spawn(move||{
             let outcome=std::panic::catch_unwind(std::panic::AssertUnwindSafe(||{
                 let runtime=match tokio::runtime::Builder::new_current_thread().enable_all().build(){Ok(runtime)=>runtime,Err(error)=>{let message=format!("ZMQ runtime could not start: {error}");worker_counters.fail(message.clone());let _=ready_tx.send(Err(message));return;}};
-                runtime.block_on(publish_loop(endpoint,receiver,worker_counters.clone(),ready_tx));
+                runtime.block_on(protocol::publish_loop(endpoint,receiver,worker_counters.clone(),ready_tx));
                 runtime.shutdown_timeout(Duration::from_millis(50));
             }));
             if outcome.is_err(){worker_counters.fail("ZMQ publisher stopped after an internal transport failure; reapply its configuration to restart".into());}
@@ -155,11 +155,18 @@ impl ZmqOutput {
         }
     }
     /// No socket I/O, waits or locks occur on the successful tracking path.
-    pub fn enqueue(&mut self, packet: Vec<u8>) -> Vec<String> {
+    pub fn enqueue(&mut self, packet: Vec<Vec<u8>>) -> Vec<String> {
         let mut errors = self.take_errors();
-        if packet.len() > MAX_WIRE_BYTES {
+        if packet.is_empty()
+            || packet.len() > 2
+            || packet
+                .iter()
+                .try_fold(0usize, |total, frame| total.checked_add(frame.len()))
+                .is_none_or(|length| length > MAX_WIRE_BYTES)
+        {
             self.counters.dropped.fetch_add(1, Ordering::Relaxed);
-            errors.push("ZMQ row exceeds its 16 KiB wire limit".into());
+            errors
+                .push("ZMQ output requires one or two frames within its 16 KiB wire limit".into());
             return errors;
         }
         let Some(sender) = &self.sender else {
@@ -225,69 +232,6 @@ impl Drop for ZmqOutput {
         }
     }
 }
-async fn publish_loop(
-    endpoint: String,
-    mut receiver: queue::Receiver<Vec<u8>>,
-    counters: Arc<Counters>,
-    ready: mpsc::SyncSender<std::result::Result<(), String>>,
-) {
-    let mut publisher = PubSocket::new();
-    match tokio::time::timeout(Duration::from_millis(500), publisher.bind(&endpoint)).await {
-        Ok(Ok(_)) => {
-            counters.alive.store(true, Ordering::Release);
-            let _ = ready.send(Ok(()));
-        }
-        result => {
-            let detail = match result {
-                Ok(Err(error)) => error.to_string(),
-                Err(_) => "bind timed out".into(),
-                Ok(Ok(_)) => String::new(),
-            };
-            let message = format!(
-                "cannot bind ZMQ PUB {endpoint}: {detail}; use a free zmq_port for each instance"
-            );
-            counters.fail(message.clone());
-            let _ = ready.send(Err(message));
-            return;
-        }
-    }
-    let mut close_deadline = None;
-    while let Some(packet) = receiver.recv().await {
-        if counters.closing.load(Ordering::Acquire) && close_deadline.is_none() {
-            close_deadline = Some(Instant::now() + CLOSE_DRAIN);
-        }
-        let remaining =
-            close_deadline.map(|end: Instant| end.saturating_duration_since(Instant::now()));
-        if remaining.is_some_and(|time| time.is_zero()) {
-            counters.dropped.fetch_add(1, Ordering::Relaxed);
-            break;
-        }
-        let timeout = remaining.map_or(SEND_TIMEOUT, |time| time.min(SEND_TIMEOUT));
-        match tokio::time::timeout(timeout, publisher.send(packet.into())).await {
-            Ok(Ok(())) => {
-                counters.published.fetch_add(1, Ordering::Relaxed);
-            }
-            result => {
-                let detail = match result {
-                    Ok(Err(error)) => error.to_string(),
-                    Err(_) => "subscriber backpressure exceeded 25 ms".into(),
-                    Ok(Ok(())) => String::new(),
-                };
-                counters.dropped.fetch_add(1, Ordering::Relaxed);
-                counters.fail(format!("ZMQ PUB {endpoint} stopped: {detail}; tracking continues; reapply output configuration to restart"));
-                break;
-            }
-        }
-    }
-    receiver.close();
-    let mut discarded = 0;
-    while receiver.try_recv().is_ok() {
-        discarded += 1;
-    }
-    counters.dropped.fetch_add(discarded, Ordering::Relaxed);
-    // Drop the whole socket after cancelling a send, so no partially written
-    // ZMTP frame is reused. PUB delivery remains best effort, without replay.
-}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -306,8 +250,8 @@ mod tests {
             worker: None,
             reported_failures: 0,
         };
-        assert!(output.enqueue(b"first".to_vec()).is_empty());
-        assert_eq!(output.enqueue(b"second".to_vec()).len(), 1);
+        assert!(output.enqueue(vec![b"first".to_vec()]).is_empty());
+        assert_eq!(output.enqueue(vec![b"second".to_vec()]).len(), 1);
         let status = output.status();
         assert_eq!(status.enqueued, 1);
         assert_eq!(status.dropped, 1);

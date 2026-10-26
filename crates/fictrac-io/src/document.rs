@@ -357,11 +357,23 @@ pub fn parameter_description(key: &str) -> (&'static str, &'static str) {
         ),
         "zmq_host" | "zmq_port" => (
             "Output",
-            "Pure Rust ZeroMQ PUB bind on localhost. Port -1/0 disables; use a unique port per instance (VR1..4: 9871..9874). A single UTF-8 frame contains the identical accepted FT, 25-column row sent over UDP.",
+            "Pure Rust ZeroMQ PUB bind on localhost. Port -1/0 disables; use a unique port per instance (VR1..4: 9871..9874). Native FT rows are the default; legacy MATREX VR JSON is an explicit output mode.",
         ),
         "zmq_queue_capacity" => (
             "Output",
             "Bounded asynchronous ZMQ queue capacity, 1..4096 (default 256). Overflow drops live messages and reports counters; tracking and numeric evidence continue.",
+        ),
+        "zmq_output_mode" => (
+            "Output",
+            "native_ft (default) sends the accepted FT row unchanged. legacy_matrex_vr sends Python-compatible x/y/z/yaw/pitch/roll JSON: x/y remain cumulative sphere radians, yaw is heading in degrees, and z/pitch/roll are zero. Unity applies the sphere radius.",
+        ),
+        "zmq_framing" => (
+            "Output",
+            "For legacy_matrex_vr: single (default) sends one UTF-8 JSON frame; topic_json sends an atomic topic frame followed by JSON. Native FT always uses one frame.",
+        ),
+        "zmq_topic" => (
+            "Output",
+            "First UTF-8 frame for legacy MATREX topic_json framing. Default FT; at most 256 bytes, without NUL or line breaks. Empty topics are allowed. Not used for single-frame or native FT output.",
         ),
         "com_port" | "com_baud" => (
             "Output",

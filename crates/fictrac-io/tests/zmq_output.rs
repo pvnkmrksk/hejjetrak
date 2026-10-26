@@ -1,7 +1,8 @@
 use fictrac_core::TrackRow;
 use fictrac_io::{ConfigDocument, OutputSinks, load_config_text, write_dat};
 use std::{
-    net::{TcpListener, UdpSocket},
+    io::{Read, Write},
+    net::{TcpListener, TcpStream, UdpSocket},
     time::{Duration, Instant},
 };
 use zeromq::{Socket, SocketRecv};
@@ -41,6 +42,10 @@ fn real_rust_subscriber_and_udp_receive_identical_full_rows() -> TestResult {
         udp.local_addr()?.port()
     ))?;
     let mut sinks = OutputSinks::from_config(&document)?;
+    // An old client that stalls halfway through greeting must not block a
+    // healthy modern subscriber or numerical publication.
+    let mut half_handshake = TcpStream::connect(("127.0.0.1", zmq_port))?;
+    half_handshake.write_all(&[0xff])?;
     assert_eq!(
         sinks.status().udp_destination,
         Some(udp.local_addr()?.to_string())
@@ -91,6 +96,214 @@ fn real_rust_subscriber_and_udp_receive_identical_full_rows() -> TestResult {
         assert_eq!(value["zmq"]["queue_capacity"], 8);
         Ok::<(), Box<dyn std::error::Error>>(())
     })?;
+    Ok(())
+}
+
+fn zmtp2(port: u16, fragmented: bool) -> Result<TcpStream, Box<dyn std::error::Error>> {
+    let mut socket = TcpStream::connect(("127.0.0.1", port))?;
+    socket.set_read_timeout(Some(Duration::from_millis(100)))?;
+    socket.set_write_timeout(Some(Duration::from_secs(1)))?;
+    socket.set_nodelay(true)?;
+    let mut signature = [0; 11];
+    socket.read_exact(&mut signature)?;
+    assert_eq!(signature[0], 0xff);
+    assert_eq!(signature[9], 0x7f);
+    assert_eq!(signature[10], 3);
+    let greeting = [0xff, 0, 0, 0, 0, 0, 0, 0, 1, 0x7f, 1];
+    if fragmented {
+        for byte in greeting {
+            socket.write_all(&[byte])?;
+        }
+    } else {
+        socket.write_all(&greeting)?;
+    }
+    let mut rest = [0; 3];
+    socket.read_exact(&mut rest)?;
+    assert_eq!(rest, [1, 0, 0], "PUB socket type and empty identity");
+    socket.write_all(&[2, 0, 0])?; // SUB socket type and empty identity.
+    Ok(socket)
+}
+fn subscription(socket: &mut TcpStream, prefix: &[u8], subscribe: bool) -> TestResult {
+    let length = u8::try_from(prefix.len() + 1)?;
+    socket.write_all(&[0, length, u8::from(subscribe)])?;
+    socket.write_all(prefix)?;
+    Ok(())
+}
+fn wire_frame(socket: &mut TcpStream) -> Result<(u8, Vec<u8>), Box<dyn std::error::Error>> {
+    let mut header = [0; 2];
+    socket.read_exact(&mut header)?;
+    let length = if header[0] & 2 == 0 {
+        usize::from(header[1])
+    } else {
+        let mut bytes = [0; 8];
+        bytes[0] = header[1];
+        socket.read_exact(&mut bytes[1..])?;
+        usize::try_from(u64::from_be_bytes(bytes))?
+    };
+    if length > 16384 {
+        return Err("test received an oversized frame".into());
+    }
+    let mut body = vec![0; length];
+    socket.read_exact(&mut body)?;
+    Ok((header[0], body))
+}
+fn receive_published(
+    sinks: &mut OutputSinks,
+    socket: &mut TcpStream,
+) -> Result<(u8, Vec<u8>), Box<dyn std::error::Error>> {
+    let deadline = Instant::now() + Duration::from_secs(2);
+    loop {
+        let _ = sinks.write(&row());
+        let mut peek = [0];
+        match socket.peek(&mut peek) {
+            Ok(n) if n > 0 => return wire_frame(socket),
+            Ok(_) => return Err("publisher closed unexpectedly".into()),
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    std::io::ErrorKind::TimedOut | std::io::ErrorKind::WouldBlock
+                ) => {}
+            Err(error) => return Err(error.into()),
+        }
+        if Instant::now() > deadline {
+            return Err("no published row received".into());
+        }
+    }
+}
+
+#[test]
+fn fragmented_zmtp2_greeting_and_reconnect_receive_native_ft_unchanged() -> TestResult {
+    let port = port()?;
+    let doc = ConfigDocument::parse(format!("zmq_port:{port}\n"))?;
+    let mut sinks = OutputSinks::from_config(&doc)?;
+    let mut expected = b"FT, ".to_vec();
+    write_dat(&mut expected, &row())?;
+    for _ in 0..3 {
+        let mut socket = zmtp2(port, true)?;
+        subscription(&mut socket, b"FT, ", true)?;
+        let (flags, frame) = receive_published(&mut sinks, &mut socket)?;
+        assert_eq!(flags & 1, 0);
+        assert_eq!(frame, expected);
+    }
+    assert!(sinks.status().zmq.ok_or("missing publisher")?.worker_alive);
+    Ok(())
+}
+
+#[test]
+fn zmtp2_multipart_is_atomic_and_prefix_filters_the_topic() -> TestResult {
+    let port = port()?;
+    let doc = ConfigDocument::parse(format!(
+        "zmq_port:{port}\nzmq_output_mode:legacy_matrex_vr\nzmq_framing:topic_json\nzmq_topic:legacy/test\n"
+    ))?;
+    let mut sinks = OutputSinks::from_config(&doc)?;
+    let mut socket = zmtp2(port, false)?;
+    subscription(&mut socket, b"legacy/", true)?;
+    let (flags, topic) = receive_published(&mut sinks, &mut socket)?;
+    assert_eq!(flags & 1, 1);
+    assert_eq!(topic, b"legacy/test");
+    let (flags, json) = wire_frame(&mut socket)?;
+    assert_eq!(flags & 1, 0);
+    let data: serde_json::Value = serde_json::from_slice(&json)?;
+    assert_eq!(data["x"], 0.1);
+    assert_eq!(data["z"], 0.0);
+    assert!(data["yaw"].as_f64().ok_or("missing yaw")?.is_finite());
+    Ok(())
+}
+
+#[test]
+fn oversized_peer_control_is_observable_and_other_subscribers_continue() -> TestResult {
+    let port = port()?;
+    let doc = ConfigDocument::parse(format!("zmq_port:{port}\n"))?;
+    let mut sinks = OutputSinks::from_config(&doc)?;
+    let mut bad = zmtp2(port, false)?;
+    bad.write_all(&[2])?;
+    bad.write_all(&u64::MAX.to_be_bytes())?;
+    let mut byte = [0];
+    assert_eq!(
+        bad.read(&mut byte)?,
+        0,
+        "oversize rejected before allocation"
+    );
+    let deadline = Instant::now() + Duration::from_secs(1);
+    loop {
+        if sinks.status().zmq.ok_or("missing publisher")?.failures > 0 {
+            break;
+        }
+        if Instant::now() > deadline {
+            return Err("peer error was not reported".into());
+        }
+        std::thread::yield_now();
+    }
+    let mut healthy = zmtp2(port, true)?;
+    subscription(&mut healthy, b"FT", true)?;
+    assert!(
+        receive_published(&mut sinks, &mut healthy)?
+            .1
+            .starts_with(b"FT, ")
+    );
+    assert!(sinks.status().zmq.ok_or("missing publisher")?.worker_alive);
+    Ok(())
+}
+
+fn wait_published(sinks: &OutputSinks, expected: u64) -> TestResult {
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while sinks
+        .status()
+        .zmq
+        .as_ref()
+        .ok_or("missing publisher")?
+        .published
+        < expected
+    {
+        if Instant::now() > deadline {
+            return Err("publisher did not drain its application queue".into());
+        }
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    Ok(())
+}
+fn no_frame(socket: &mut TcpStream) -> TestResult {
+    let mut byte = [0];
+    let result = socket.read(&mut byte);
+    assert!(
+        matches!(result, Err(ref error) if matches!(error.kind(), std::io::ErrorKind::TimedOut | std::io::ErrorKind::WouldBlock)),
+        "unsubscribed measurements were replayed: {result:?}"
+    );
+    Ok(())
+}
+
+#[test]
+fn no_measurements_replay_after_handshake_or_empty_prefix_resubscribe() -> TestResult {
+    let port = port()?;
+    let doc = ConfigDocument::parse(format!("zmq_port:{port}\n"))?;
+    let mut sinks = OutputSinks::from_config(&doc)?;
+    let mut socket = zmtp2(port, true)?;
+    // These rows complete publication before the peer has ever subscribed.
+    for _ in 0..20 {
+        assert!(sinks.write(&row()).is_empty());
+    }
+    wait_published(&sinks, 20)?;
+    subscription(&mut socket, b"", true)?;
+    no_frame(&mut socket)?;
+    assert!(
+        receive_published(&mut sinks, &mut socket)?
+            .1
+            .starts_with(b"FT, ")
+    );
+    subscription(&mut socket, b"", false)?;
+    no_frame(&mut socket)?;
+    let before = sinks.status().zmq.ok_or("missing publisher")?.enqueued;
+    for _ in 0..20 {
+        assert!(sinks.write(&row()).is_empty());
+    }
+    wait_published(&sinks, before + 20)?;
+    subscription(&mut socket, b"", true)?;
+    no_frame(&mut socket)?;
+    assert!(
+        receive_published(&mut sinks, &mut socket)?
+            .1
+            .starts_with(b"FT, ")
+    );
     Ok(())
 }
 #[test]

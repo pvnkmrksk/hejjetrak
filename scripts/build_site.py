@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 REPORTS = (
     "agent-control.md", "architecture.md", "camera-controls.md", "output.md",
     "parity.md", "performance.md", "tracking-performance.md", "ui-design.md",
-    "validation.md", "resources.md", "recovery.md",
+    "validation.md", "resources.md", "recovery.md", "matrex-vr.md",
 )
 REPOSITORY = "https://github.com/pvnkmrksk/hejjetrak"
 

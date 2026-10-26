@@ -65,6 +65,11 @@ pub fn load_config_text(text: &str, width: usize, height: usize) -> Result<Loade
         values.get("zmq_host").map(String::as_str),
         values.get("zmq_queue_capacity").map(String::as_str),
     )?;
+    crate::ZmqPayloadSettings::parse(
+        values.get("zmq_output_mode").map(String::as_str),
+        values.get("zmq_framing").map(String::as_str),
+        values.get("zmq_topic").map(String::as_str),
+    )?;
     let mut config = Config {
         width,
         height,
@@ -275,6 +280,9 @@ pub fn load_config_text(text: &str, width: usize, height: usize) -> Result<Loade
         "zmq_host",
         "zmq_port",
         "zmq_queue_capacity",
+        "zmq_output_mode",
+        "zmq_framing",
+        "zmq_topic",
         "com_port",
         "com_baud",
     ] {

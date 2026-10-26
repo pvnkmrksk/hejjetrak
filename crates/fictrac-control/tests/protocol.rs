@@ -704,6 +704,80 @@ fn live_output_actor_survives_parameter_edits_undo_and_video_rewind() -> Result 
 }
 
 #[test]
+fn matrex_recording_processes_the_real_video_with_no_subscriber_or_half_greeting() -> Result {
+    use std::io::Write;
+    let temp = Temp::new()?;
+    let discovery = fictrac_control::schema();
+    assert_eq!(
+        discovery["capabilities"]["zmq_output"]["default_mode"],
+        "native_ft"
+    );
+    assert_eq!(
+        discovery["capabilities"]["zmq_output"]["legacy_matrex_vr"]["accepted_only"],
+        true
+    );
+    for framing in ["single", "topic_json"] {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0")?;
+        let port = listener.local_addr()?.port();
+        drop(listener);
+        let mut c = Controller::new();
+        let id = open(&mut c)?;
+        let configured = request(
+            &mut c,
+            "set",
+            Some(id),
+            json!({"fields":{
+                "zmq_host":"127.0.0.1", "zmq_port":port.to_string(),
+                "zmq_queue_capacity":"1", "zmq_output_mode":"legacy_matrex_vr",
+                "zmq_framing":framing, "zmq_topic":"FT"
+            }}),
+        )?;
+        assert_eq!(
+            configured["outputs"]["zmq_payload"]["mode"],
+            "legacy_matrex_vr"
+        );
+        assert_eq!(configured["outputs"]["zmq_payload"]["framing"], framing);
+        // A TCP client that never completes greeting/subscription cannot become
+        // a dependency of numerical recording or starve a complete video run.
+        let mut partial = std::net::TcpStream::connect(("127.0.0.1", port))?;
+        partial.write_all(&[0xff])?;
+        let directory = temp.0.join(framing);
+        request(
+            &mut c,
+            "record_start",
+            Some(id),
+            json!({
+                "directory":directory,"record_options":{"raw":false,"debug":false}
+            }),
+        )?;
+        let output = request(&mut c, "run", Some(id), json!({"frames":1000}))?;
+        assert_eq!(output["processed"], 300);
+        assert_eq!(output["status"]["ended"], true);
+        assert_eq!(output["status"]["recording"], false);
+        assert_eq!(output["status"]["last_row"]["frame"], 299);
+        let all = fs::read_to_string(directory.join("all-frames.dat"))?;
+        let accepted = fs::read_to_string(directory.join("tracking.dat"))?;
+        let quality = fs::read_to_string(directory.join("quality.csv"))?;
+        assert_eq!(all.lines().count(), 300);
+        // The legacy initializer is accepted too; 299 following rows are tracked.
+        assert_eq!(accepted.lines().count(), 300);
+        assert_eq!(quality.lines().count(), 301);
+        let comparison = fictrac_io::compare_dat(
+            std::io::BufReader::new(fs::File::open(
+                root().join("examples/benchmark/upstream.dat"),
+            )?),
+            std::io::BufReader::new(fs::File::open(directory.join("tracking.dat"))?),
+        )?;
+        assert!(
+            comparison.passes(0.075, 0.025, 0.020),
+            "{framing}: {comparison:?}"
+        );
+        drop(partial);
+    }
+    Ok(())
+}
+
+#[test]
 fn resolution_commands_are_explicit_atomic_undoable_and_preserve_source_clock() -> Result {
     let mut c = Controller::new();
     let id = open(&mut c)?;

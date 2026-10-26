@@ -4,6 +4,20 @@
 
 The landing page resolves GitHub's latest published release at download time and shows the platform archive, release tag and available SHA-256 digest. Manual OS/chip choices remain available; browser architecture detection is not treated as infallible. If the release API is unavailable or an archive has not uploaded yet, use the visible GitHub release link rather than a guessed download.
 
+## v0.2.0 — legacy MATREX VR output
+
+The minor release adds explicit `legacy_matrex_vr` JSON output and staged Rust
+ZMTP 2/3 negotiation for the original NetMQ 4.0.0.1 DLL. Native FT remains the
+default. Single JSON matches the Python republisher; multipart topic/JSON supports
+paired-read receivers. Mode, framing, topic and port are available in Settings.
+
+Unchanged v0.1.0 and v0.3.0 Mac players pass the functional movement, heading,
+reconnect and repeated scene-reload matrix. The old v0.1.0 receiver retains its
+worker-stop warnings and strict lifecycle acceptance remains false; see
+[the complete compatibility scope](matrex-vr.md). The new transport requires no
+Python or native libzmq runtime. Full release execution evidence is recorded in
+[validation](validation.md).
+
 ## v0.1.4 — 25 October 2026
 
 [v0.1.4](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.4) introduces the **HejjéTrac** display name and `hejjetrac` commands. Calibration opens directly into a fresh ball-outline draft, fits the outline automatically from the third point, and never joins rim marks with straight lines. Diagnostics includes the complete saved calibration, direct layer redraw and full config access. The website starts its silent demo automatically and the README download link opens the platform download page directly.

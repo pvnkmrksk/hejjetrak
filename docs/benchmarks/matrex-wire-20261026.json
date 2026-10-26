@@ -1,0 +1,165 @@
+{
+  "package_version": "0.2.0",
+  "validated_utc": "2026-10-26T09:24:01Z",
+  "production_runtime": "Rust; Python, .NET and PyZMQ are optional test tooling only",
+  "old_netmq_dll": {
+    "netmq_sha256": "ce9b347a4cf35c4ed96e1343f3ce84ce6514be680347e59de0f5a29f6ee6fba1",
+    "publisher_sha256": "cf14dc02ce56121b57633ad630303db32107396460a3ca6e59d4a7cfc8222c6a",
+    "dotnet_sdk": "7.0.402",
+    "scope": "Exact historical DLL transport/data/reconnect oracle; not unchanged VR scene-reset acceptance",
+    "cases": [
+      {
+        "framing": "single",
+        "received": 141,
+        "source_rows": 180,
+        "first_index": 5,
+        "last_index": 178,
+        "payloads_exact": true,
+        "reconnect": true,
+        "netmq_cleanup_returned": false,
+        "receiver_exit_code": -9
+      },
+      {
+        "framing": "topic_json",
+        "received": 142,
+        "source_rows": 180,
+        "first_index": 4,
+        "last_index": 178,
+        "payloads_exact": true,
+        "reconnect": true,
+        "netmq_cleanup_returned": false,
+        "receiver_exit_code": -9
+      }
+    ]
+  },
+  "modern_libzmq": {
+    "pyzmq": "27.1.0",
+    "libzmq": "4.3.5",
+    "cli_sha256": "d5b88ca25d96a640230f7c54df645e5e4ed22c8fcfa35d3899487bb636aa898b",
+    "input_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+    "scope": "Modern libzmq wire oracle over all 300 real sample frames; no legacy VR acceptance claim",
+    "cases": [
+      {
+        "mode": "native_ft",
+        "framing": "single",
+        "source_frames": 300,
+        "recorded_rows": 300,
+        "received_rows": 300,
+        "first_row_index": 0,
+        "last_row_index": 299,
+        "all_received_bytes_exact": true
+      },
+      {
+        "mode": "legacy_matrex_vr",
+        "framing": "single",
+        "source_frames": 300,
+        "recorded_rows": 300,
+        "received_rows": 300,
+        "first_row_index": 0,
+        "last_row_index": 299,
+        "all_received_bytes_exact": true
+      },
+      {
+        "mode": "legacy_matrex_vr",
+        "framing": "topic_json",
+        "source_frames": 300,
+        "recorded_rows": 300,
+        "received_rows": 300,
+        "first_row_index": 0,
+        "last_row_index": 299,
+        "all_received_bytes_exact": true
+      }
+    ]
+  },
+  "reproduction": {
+    "exact_old_dll": "scripts/test_netmq_legacy.py --publisher target/release/examples/matrex_legacy_fixture --managed-directory PATH/TO/OLD/PLAYER/Managed",
+    "modern_libzmq": "scripts/test_libzmq_output.py --cli target/release/fictrac",
+    "artifact_policy": "Historical DLLs and compiled probes are supplied externally and built in a disposable test directory; none are redistributed with the repository or application",
+    "raw_evidence_location": "Local disposable test directories /private/tmp/hejjetrac-netmq-v02-final and /private/tmp/hejjetrac-libzmq-v02-final"
+  },
+  "source_sha256": {
+    "crates/fictrac-io/src/zmq_output.rs": "cac58d08cfb82acbd088ba7735755e354301b218abdfaacfdcca493f202936b4",
+    "crates/fictrac-io/src/zmq_protocol.rs": "6f2cc900ee9364d43b0eecdad31b516561d78419b83e888782448776b51aebc6",
+    "crates/fictrac-io/src/zmq_payload.rs": "ed9345f8a5718fd21caa44d7ec4807e258dbef0652cf42dc34783f9ce4d7f5d9",
+    "crates/fictrac-io/src/sinks.rs": "f458a59115e0d40d9580813daa5dcb2d36ec2c0669a5fd3c4d19ff48ddcce6b9",
+    "scripts/test_netmq_legacy.py": "4a305363e985549550a27f4697d62c23722aaf91974fb72f1fe0b8f9d35dfeb4",
+    "scripts/test_libzmq_output.py": "227ede7583beaa4083b694341d510d9d65a8a4dd10737019c6da49562455ecd1",
+    "scripts/netmq_legacy_probe/Program.cs": "9078939d2778d3e37b9b272ea1d5c22d44a551eceed167d10009f3c0ea247e2e",
+    "scripts/netmq_legacy_probe/NetMQProbe.csproj": "fe9d2d9012c3705d2727d93be98abd47ffc9aee902191b7e75551e49dabfcddb"
+  },
+  "previous_runs": [
+    {
+      "package_version_at_build": "0.1.4",
+      "provenance": "Earlier unreleased MATREX compatibility validation before the workspace version was changed to 0.2.0; retained without relabelling its binary hashes or observations",
+      "old_netmq_dll": {
+        "netmq_sha256": "ce9b347a4cf35c4ed96e1343f3ce84ce6514be680347e59de0f5a29f6ee6fba1",
+        "publisher_sha256": "3cfd735ccf7f8d25dfa568674df741aff95a6173a7b3c91570ac01c6f8fa85f5",
+        "dotnet_sdk": "7.0.402",
+        "scope": "Exact historical DLL transport/data/reconnect oracle; not unchanged VR scene-reset acceptance",
+        "cases": [
+          {
+            "framing": "single",
+            "received": 139,
+            "source_rows": 180,
+            "first_index": 6,
+            "last_index": 178,
+            "payloads_exact": true,
+            "reconnect": true,
+            "netmq_cleanup_returned": false,
+            "receiver_exit_code": -9
+          },
+          {
+            "framing": "topic_json",
+            "received": 138,
+            "source_rows": 180,
+            "first_index": 6,
+            "last_index": 178,
+            "payloads_exact": true,
+            "reconnect": true,
+            "netmq_cleanup_returned": false,
+            "receiver_exit_code": -9
+          }
+        ]
+      },
+      "modern_libzmq": {
+        "pyzmq": "27.1.0",
+        "libzmq": "4.3.5",
+        "cli_sha256": "90a484adc743aa3211df907251a01ee94ceb39a669a089da0807ae5311ce380b",
+        "input_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+        "scope": "Modern libzmq wire oracle over all 300 real sample frames; no legacy VR acceptance claim",
+        "cases": [
+          {
+            "mode": "native_ft",
+            "framing": "single",
+            "source_frames": 300,
+            "recorded_rows": 300,
+            "received_rows": 300,
+            "first_row_index": 0,
+            "last_row_index": 299,
+            "all_received_bytes_exact": true
+          },
+          {
+            "mode": "legacy_matrex_vr",
+            "framing": "single",
+            "source_frames": 300,
+            "recorded_rows": 300,
+            "received_rows": 300,
+            "first_row_index": 0,
+            "last_row_index": 299,
+            "all_received_bytes_exact": true
+          },
+          {
+            "mode": "legacy_matrex_vr",
+            "framing": "topic_json",
+            "source_frames": 300,
+            "recorded_rows": 300,
+            "received_rows": 300,
+            "first_row_index": 0,
+            "last_row_index": 299,
+            "all_received_bytes_exact": true
+          }
+        ]
+      }
+    }
+  ]
+}

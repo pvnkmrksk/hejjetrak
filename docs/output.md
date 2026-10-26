@@ -60,7 +60,7 @@ Serial and UDP receive the same accepted-only newline-terminated `FT, ` plus ful
 
 ## Simultaneous UDP and ZeroMQ PUB
 
-Hejjetrak can publish the same accepted measurement over UDP and ZeroMQ at the same time. Set the ordinary `sock_host`/`sock_port` for UDP and these additional legacy-text fields for ZeroMQ:
+HejjéTrac can publish the same accepted measurement over UDP and ZeroMQ at the same time. Set the ordinary `sock_host`/`sock_port` for UDP and these additional legacy-text fields for ZeroMQ:
 
 ```text
 zmq_host           : 127.0.0.1
@@ -68,13 +68,13 @@ zmq_port           : 9871
 zmq_queue_capacity : 256
 ```
 
-`zmq_port : -1` or `0` disables the publisher. `zmq_host` is a loopback bind address: `localhost`, `127.0.0.1`, other loopback IPs, or `::1`. The TCP endpoint is a **PUB bind**; subscribers connect to it. Each ZeroMQ message contains exactly one UTF-8 frame: the identical newline-terminated `FT, ` prefix and complete 25-column row used for UDP and serial. There is no multipart topic, JSON wrapper, added column or coordinate conversion. A subscriber can filter on the byte prefix `FT, `. Rejected measurements remain in `all-frames.dat` and `quality.csv` and are omitted from both live transports, preserving the legacy decision.
+`zmq_port : -1` or `0` disables the publisher. `zmq_host` is a loopback bind address: `localhost`, `127.0.0.1`, other loopback IPs, or `::1`. The TCP endpoint is a **PUB bind**; subscribers connect to it. The default `zmq_output_mode : native_ft` sends exactly one UTF-8 frame: the identical newline-terminated `FT, ` prefix and complete 25-column row used for UDP and serial. In native mode there is no multipart topic, JSON wrapper, added column or coordinate conversion. The explicit `legacy_matrex_vr` mode below changes only ZeroMQ; UDP/serial retain their FT rows. A subscriber can filter on the byte prefix `FT, `. Rejected measurements remain in `all-frames.dat` and `quality.csv` and are omitted from both live transports, preserving the legacy decision.
 
-The publisher implements ZMTP entirely in Rust (`zeromq`); it does not link libzmq or launch another process. A dedicated worker owns the socket. Tracking submits the already formatted row with a nonblocking bounded queue operation. Capacity defaults to 256 rows and accepts 1–4096; a row is limited to 16 KiB. A full queue discards that live row and reports the drop while numeric data recording continues. UDP and ZeroMQ are independent best-effort outputs: one output's failure does not turn a measurement into zero motion or stop the numerical engine.
+The publisher implements the loopback PUB/SUB subset of ZMTP entirely in Rust; it does not link libzmq or launch another process. It negotiates ZMTP 2.0 for the original NetMQ 4.0.0.1 DLL and NULL-authenticated ZMTP 3 with modern subscribers. The `zeromq` crate is an independent test subscriber, not the production publisher. A dedicated worker owns the socket. Tracking submits one complete, atomically framed message with a nonblocking bounded queue operation. Capacity defaults to 256 rows and accepts 1–4096; a row is limited to 16 KiB. A full queue discards that live row and reports the drop while numeric data recording continues. UDP and ZeroMQ are independent best-effort outputs: one output's failure does not turn a measurement into zero motion or stop the numerical engine.
 
-The output status includes the endpoint, queue capacity/current length, enqueued rows, completed PUB send attempts (`published`), application discards (`dropped`), failure count, worker state and last error. `published` does **not** mean a subscriber received or acknowledged a row. Like normal ZeroMQ PUB/SUB, subscribers joining late miss earlier messages; subscription setup takes time, and there is no replay. Subscriber or network losses below the application queue are not included in `dropped`. The independently sampled counters can briefly reflect different instants.
+The output status includes the endpoint, queue capacity/current length, enqueued rows, completed PUB dispatch attempts (`published`), application/per-peer queue discards (`dropped`), failure count, worker state and last error. `zmq_payload` reports the applied mode, framing and topic. Native FT always has effective single framing, even if a previous JSON framing choice remains stored. `published` does **not** mean a subscriber received or acknowledged a row. Like normal ZeroMQ PUB/SUB, subscribers joining late miss earlier messages; subscription setup takes time, and there is no replay. Subscriber or network losses below the application queue are not included in `dropped`. The independently sampled counters can briefly reflect different instants.
 
-A transport send has a 25 ms deadline. A stalled send stops and closes the publisher, so a cancelled partial ZMTP frame is never reused; tracking continues and status identifies the failure. Reapply the output configuration to restart it. Closing a publisher drains queued rows for at most approximately 75 ms before discarding any remainder; runtime teardown has a further 50 ms bound. Neither closing nor a completed run guarantees subscriber delivery. A port already in use fails configuration with the exact endpoint and a request to choose another port.
+Each subscriber has a 16-message queue and a 25 ms write deadline. A stalled or malformed peer is closed independently, so a cancelled partial frame is never reused and healthy peers continue. Handshakes have a two-second deadline, with at most 64 peers including pending greetings. Control frames are bounded to 4096 bytes and subscriptions to 64 prefixes of at most 256 bytes. Messages queued before subscription are discarded. Shutdown drains the application queue for up to 50 ms, then gives peer tasks up to another 50 ms, with a further 50 ms runtime teardown bound. Rows remaining in the application queue are counted as discarded; losses inside a peer/network are not completely measurable. Neither closing nor a completed run guarantees subscriber delivery. A port already in use fails configuration with the exact endpoint and a request to choose another port.
 
 Configuration edits reuse healthy output handles when transport settings are unchanged. Changing an output releases exclusive handles before reopening them. If the new settings fail, the previous settings are restored and the edit reports the failure; restoring a PUB starts a fresh socket and counters, so subscribers must reconnect and can miss rows. If restoration also fails, the error explicitly identifies the rollback failure and outputs remain disabled until valid settings are reapplied. Numeric tracking state is independent of this output transaction.
 
@@ -94,3 +94,38 @@ while True:
     columns = message.removeprefix("FT, ").strip().split(",")
     assert len(columns) == 25
 ```
+
+
+## Legacy MATREX VR JSON
+
+This explicit mode reproduces the [Python republisher](https://github.com/pvnkmrksk/fictrac/blob/10fc4472af1fc9062b9bf5a92738e835b98cc3ec/VR_array/socket_zmq_republisher.py), without a Python runtime or republisher process:
+
+```text
+zmq_host        : 127.0.0.1
+zmq_port        : 9871
+zmq_output_mode : legacy_matrex_vr
+zmq_framing     : topic_json
+zmq_topic       : FT
+```
+
+With the complete comma-split wire row, **including `FT` at index 0**:
+
+| JSON field | Value |
+|---|---|
+| `x` | `float(fields[15])` |
+| `y` | `float(fields[16])` |
+| `z` | `0.0` |
+| `yaw` | `math.degrees(float(fields[17]))` |
+| `pitch`, `roll` | `0.0` |
+
+Conversion reads the already formatted FT row, preserving its decimal rounding before degrees conversion. Key order, separators, signed zeros and float notation match `json.dumps`. For a stationary zero pose the payload is:
+
+```json
+{"x": 0.0, "y": 0.0, "z": 0.0, "yaw": 0.0, "pitch": 0.0, "roll": 0.0}
+```
+
+Positions remain cumulative **sphere radians**, on the legacy axes. There is no radius multiplication, axis swap, reset offset or inferred movement across missing frames. Unity applies the radius. Only accepted, entirely finite measurements are published; overflow during yaw conversion also rejects the live JSON message. Recording and quality evidence remain independent of subscribers.
+
+`zmq_framing : single` sends one UTF-8 JSON frame, matching Python's `send_string(json.dumps(...))`. `topic_json` sends exactly two frames in **one multipart message**, `[topic, JSON]`, for old paired-read receivers. The default topic is `FT`; the old MATREX players subscribe to all topics. A modern single-frame JSON subscriber should subscribe to the empty prefix or `{`, rather than the native `FT, ` prefix. Defaults remain `native_ft`, `single` and `FT`.
+
+See [MATREX VR compatibility](matrex-vr.md) for the unchanged-player tests and the v0.1.0 lifecycle limitation.

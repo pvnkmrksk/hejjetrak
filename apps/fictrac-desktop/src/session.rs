@@ -68,6 +68,7 @@ pub struct Session {
     pub auto_apply: bool,
     pub pending_drag: Option<(usize, usize)>,
     pub recording_path: String,
+    pub zmq_resume_port: Option<i32>,
 }
 impl Session {
     pub fn new(id: u64, doc: ConfigDocument, path: Option<PathBuf>) -> Self {
@@ -95,6 +96,7 @@ impl Session {
             cameras: fictrac_camera::list_cameras().unwrap_or_default(),
             camera_edit: None,
             camera_error: String::new(),
+            zmq_resume_port: None,
             record_raw: true,
             record_debug: false,
             startup_fallback: None,
@@ -363,6 +365,7 @@ impl Session {
         let doc = ConfigDocument::parse(text).map_err(|e| e.to_string())?;
         self.worker = None;
         self.history = DocumentHistory::new(doc.text().to_owned());
+        self.zmq_resume_port = None;
         self.saved = doc.text().to_owned();
         self.path = Some(path);
         self.disk_conflict = false;
@@ -422,12 +425,28 @@ impl Session {
         self.status = "Configuration saved".into();
         Ok(())
     }
+    fn observe_worker_snapshot(&mut self, snapshot: Snapshot) {
+        // A new applied revision acknowledges recovery from an earlier rejected
+        // configuration. Clear only that exact error, preserving unrelated local
+        // errors and any current command failure.
+        let recovered_configuration = snapshot.command_error.is_none()
+            && snapshot.revision > self.snapshot.revision
+            && self
+                .snapshot
+                .command_error
+                .as_ref()
+                .is_some_and(|previous| self.error == *previous);
+        if let Some(error) = &snapshot.command_error {
+            self.error = error.clone();
+        } else if recovered_configuration {
+            self.error.clear();
+        }
+        self.snapshot = snapshot;
+    }
     pub fn update(&mut self) {
         if let Some(worker) = &self.worker {
-            self.snapshot = worker.latest();
-            if let Some(error) = &self.snapshot.command_error {
-                self.error = error.clone();
-            }
+            let snapshot = worker.latest();
+            self.observe_worker_snapshot(snapshot);
         }
         if self.snapshot.ended && self.snapshot.frames == 0 && self.startup_fallback.is_some() {
             let reason = self.snapshot.notice.clone();
@@ -511,6 +530,139 @@ pub(crate) struct CalibrationCache {
 mod tests {
     use super::*;
     #[test]
+    fn successful_configuration_ack_clears_only_the_superseded_command_error()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let document = ConfigDocument::parse("src_fn:sample.mp4\n".into())?;
+        let mut session = Session::new(1, document, None);
+        let rejected = Snapshot {
+            revision: 2,
+            command_error: Some("Configuration rejected: occupied publisher port".into()),
+            ..Snapshot::default()
+        };
+        session.observe_worker_snapshot(rejected.clone());
+        assert_eq!(
+            session.error,
+            rejected.command_error.as_deref().unwrap_or("")
+        );
+        let applied = Snapshot {
+            revision: 4,
+            notice: "Configuration applied; tracking epoch reset".into(),
+            ..Snapshot::default()
+        };
+        session.observe_worker_snapshot(applied.clone());
+        assert!(session.error.is_empty());
+
+        session.observe_worker_snapshot(rejected.clone());
+        session.error = "Cannot save configuration: folder is read-only".into();
+        session.observe_worker_snapshot(applied.clone());
+        assert_eq!(
+            session.error,
+            "Cannot save configuration: folder is read-only"
+        );
+
+        session.observe_worker_snapshot(rejected.clone());
+        session.observe_worker_snapshot(Snapshot {
+            revision: 2,
+            ..Snapshot::default()
+        });
+        assert!(
+            !session.error.is_empty(),
+            "No successful revision was acknowledged"
+        );
+        session.observe_worker_snapshot(rejected);
+        session.observe_worker_snapshot(Snapshot {
+            revision: 4,
+            command_error: Some("Configuration rejected: publisher unavailable".into()),
+            ..Snapshot::default()
+        });
+        assert_eq!(
+            session.error,
+            "Configuration rejected: publisher unavailable"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn real_publisher_retry_clears_the_rejected_port_banner_after_apply()
+    -> Result<(), Box<dyn std::error::Error>> {
+        fn wait_for(
+            session: &mut Session,
+            predicate: impl Fn(&Session) -> bool,
+        ) -> Result<(), String> {
+            let deadline = Instant::now() + std::time::Duration::from_secs(15);
+            loop {
+                session.update();
+                if predicate(session) {
+                    return Ok(());
+                }
+                if Instant::now() >= deadline {
+                    return Err(format!(
+                        "Session response timed out: revision={}, requested={}, command_error={:?}, error={}, notice={}",
+                        session.snapshot.revision,
+                        session.revision,
+                        session.snapshot.command_error,
+                        session.error,
+                        session.snapshot.notice
+                    ));
+                }
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+        }
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let mut document = ConfigDocument::parse(fs::read_to_string(
+            root.join("examples/upstream-config.txt"),
+        )?)?;
+        document.set(
+            "src_fn",
+            &root.join("examples/sample.mp4").to_string_lossy(),
+        )?;
+        document.set("zmq_port", "-1")?;
+        document.set("sock_port", "-1")?;
+        document.set("save_raw", "n")?;
+        document.set("save_debug", "n")?;
+        let mut session = Session::new(1, document, None);
+        session.auto_apply = false;
+        session.start()?;
+        wait_for(&mut session, |s| s.snapshot.frames >= 3)?;
+        session.send(Command::Pause(true));
+        wait_for(&mut session, |s| s.snapshot.paused)?;
+        let source_frames = session.snapshot.frames;
+        let busy = std::net::TcpListener::bind("127.0.0.1:0")?;
+        session.fields(&[("zmq_port", busy.local_addr()?.port().to_string())])?;
+        session.apply()?;
+        wait_for(&mut session, |s| s.snapshot.command_error.is_some())?;
+        assert!(session.error.contains("Configuration rejected"));
+        assert!(session.error.contains("rollback succeeded"));
+        assert_eq!(session.snapshot.frames, source_frames);
+
+        let free = std::net::TcpListener::bind("127.0.0.1:0")?;
+        let free_port = free.local_addr()?.port();
+        drop(free);
+        session.fields(&[("zmq_port", free_port.to_string())])?;
+        session.apply()?;
+        assert!(
+            !session.error.is_empty(),
+            "A queued request is not an acknowledgement"
+        );
+        wait_for(&mut session, |s| {
+            s.snapshot.revision == s.revision && s.snapshot.command_error.is_none()
+        })?;
+        assert!(
+            session.error.is_empty(),
+            "The rejected-port banner survived a successful apply"
+        );
+        assert_eq!(session.snapshot.frames, source_frames);
+        let publisher = session
+            .snapshot
+            .outputs
+            .as_ref()
+            .and_then(|outputs| outputs.zmq.as_ref())
+            .ok_or("Publisher status missing after successful apply")?;
+        assert_eq!(publisher.endpoint, format!("tcp://127.0.0.1:{free_port}"));
+        assert!(publisher.worker_alive);
+        Ok(())
+    }
+    #[test]
     fn title_uses_applied_ports_and_source_instead_of_rejected_draft()
     -> Result<(), Box<dyn std::error::Error>> {
         let document = ConfigDocument::parse(
@@ -523,6 +675,7 @@ mod tests {
             udp_enabled: true,
             udp_destination: Some("127.0.0.1:1111".into()),
             serial_enabled: false,
+            zmq_payload: None,
             zmq: Some(fictrac_io::ZmqOutputStatus {
                 endpoint: "tcp://127.0.0.1:9871".into(),
                 queue_capacity: 256,

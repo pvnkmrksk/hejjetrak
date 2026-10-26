@@ -8,3 +8,5 @@
 /third-party-source/
 
 /_site/
+
+__pycache__/

@@ -1,5 +1,64 @@
 # HejjéTrac validation evidence
 
+## v0.2.0 local MATREX validation — 2026-10-26
+
+On Apple M2 Pro / macOS 27.0.1 arm64 / Rust 1.99.1 (LLVM 23.1.1),
+`cargo fmt --all -- --check`, locked strict all-target Clippy and the complete
+locked workspace suite pass **206 tests across 27 suites**, zero failures.
+Numerical reference tolerances and decoder-oracle constants remain unchanged.
+Native FT remains the default; the new legacy MATREX mode changes ZeroMQ
+serialization and transport, independently of the numerical engine and recording.
+
+The unchanged MATREX VR **v0.1.0** and **v0.3.0** Mac players pass all four
+version/framing functional cases, each with **four rigs and six complete scene
+loads**. The final matrix contains **33,300 CSV observations**, including repeated
+Unity render-frame observations, rather than a wire-packet throughput count.
+Movement, heading wrap, legacy axes/units, Unity-only radius scaling, rejected-row
+omission and publisher reconnect pass. Executables and managed assemblies,
+including the original NetMQ 4.0.0.1 DLL, retain their verified hashes.
+The old v0.1.0 receiver still emits **nine/twelve worker-stop timeout warnings**
+for single/multipart framing and can report an archive-sharing error during
+recording shutdown; its **strict clean-lifecycle result remains false**.
+The v0.3.0 cases complete the tested lifecycle checks cleanly. These are headless
+Mac player checks, not Windows/Linux player or unlimited scene-reload evidence.
+[Exact unchanged-player results](benchmarks/matrex-legacy-20261026.json) retain
+the functional and lifecycle decisions separately.
+
+The exact historical NetMQ DLL passes Python-identical payload-byte and reconnect
+checks in both framings; its .NET 7 cleanup still requires a bounded forced exit.
+An independent modern libzmq subscriber receives **900/900 real sample rows**
+exactly and in order: 300 native FT, 300 single JSON and 300 multipart JSON.
+Native FT and UDP bytes remain unchanged. Actual-video tests retain all 300
+numeric/quality rows with no subscriber and with an incomplete TCP greeting.
+[Wire-oracle results](benchmarks/matrex-wire-20261026.json) and the
+[MATREX setup and scope](matrex-vr.md) document the receiver and transport bounds.
+
+Fresh v0.2.0 release binaries pass the **120-frame** known-motion demo at
+component RMS **0.000304049695 rad**, against the unchanged **0.003 rad** gate.
+The supplied **384×288, 300-frame** sample processes 299 tracked frames and one
+initializing frame, with zero rejections. Path RMS is **0.0255938418 sphere rad**,
+heading RMS **0.0136514303 rad**, and all rotation components pass the original
+**0.020 rad** limit. The sample SHA-256 remains
+`afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad`.
+
+The fixtures ran serially with raw/debug video and wire outputs disabled, while
+the native QA session was paused. The first workspace-output sample run took
+**3.20373 seconds** in the CLI pipeline and **3.20983 seconds** externally; its
+separate small accuracy comparison took **2.40367 seconds**. One documented
+control run with outputs under `/tmp` took **0.79052 seconds / 379.50 frames/s**
+in the sample pipeline and **0.79661 seconds** externally; comparison took
+**0.00692 seconds**. Both runs produce byte-identical numeric outputs. The
+control synthetic pipeline took **0.21155 seconds**, or **0.31204 seconds** for
+the whole command including fixture generation and accuracy verification.
+These descriptive validation runs show timing sensitivity to filesystem/cache
+and process conditions; they do not establish a tracking or transport speed
+change. Pipeline timing includes opening, decoding, tracking, ordinary numeric/
+quality/SVG output and finalization. The release profile uses thin LTO and one
+codegen unit without a target-CPU override.
+[Both runs, commands, hashes, toolchain and timing boundaries](benchmarks/matrex-performance-20261026.json)
+retain the complete evidence. Native desktop interaction and v0.2.0 native
+release-CI results are recorded separately when completed.
+
 ## v0.1.4 published release — 2026-10-25
 
 **[v0.1.4](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.4)** is

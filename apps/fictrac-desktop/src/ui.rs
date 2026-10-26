@@ -441,8 +441,15 @@ impl Session {
                 && let Some(zmq) = &output.zmq
             {
                 let port = zmq.endpoint.rsplit(':').next().unwrap_or("");
+                let payload = output.zmq_payload.as_ref().map(|settings| {
+                    if settings.mode == fictrac_io::ZmqOutputMode::NativeFt {
+                        "native_ft · single FT frame".to_owned()
+                    } else {
+                        format!("legacy_matrex_vr · {} · topic {:?}", settings.framing.as_str(), settings.topic)
+                    }
+                }).unwrap_or_else(|| "native_ft · single FT frame".into());
                 ui.small(format!("Z:{port}")).on_hover_text(format!(
-                    "ZMQ PUB {} · UDP {}\nPublished {} · queued {} · dropped {} · failures {}\n{}",
+                    "ZMQ PUB {} · {payload} · UDP {}\nPublished {} · queued {} · dropped {} · failures {}\n{}",
                     zmq.endpoint,
                     output.udp_destination.as_deref().unwrap_or("off"),
                     zmq.published,
@@ -1020,13 +1027,17 @@ impl Session {
                                 changes.push(("rust_resilient", if resilient { "y" } else { "n" }.into()));
                             }
                         }
+                        if category == "Output & recording" {
+                            self.zmq_controls(ui);
+                            ui.separator();
+                        }
                         egui::Grid::new(("fields", self.id, category))
                             .num_columns(2)
                             .spacing([12.0, 6.0])
                             .show(ui, |ui| {
                                 for (key, original) in fields
                                     .iter()
-                                    .filter(|(key, _)| field_category(key) == category && key != "rust_resilient" && !key.starts_with("rust_normalized_") && !key.starts_with("rust_calibration_"))
+                                    .filter(|(key, _)| field_category(key) == category && key != "rust_resilient" && !key.starts_with("zmq_") && !key.starts_with("rust_normalized_") && !key.starts_with("rust_calibration_"))
                                 {
                                     let mut value = original.clone();
                                     let (status, help) = parameter_description(key);
@@ -1089,6 +1100,102 @@ impl Session {
         });
         if !self.error.is_empty() {
             ui.colored_label(ui.visuals().error_fg_color, &self.error);
+        }
+    }
+    fn zmq_controls(&mut self, ui: &mut egui::Ui) {
+        let Ok(document) = self.document() else {
+            return;
+        };
+        let original_mode = document.get("zmq_output_mode").unwrap_or("native_ft");
+        let original_framing = document.get("zmq_framing").unwrap_or("single");
+        let original_topic = document.get("zmq_topic").unwrap_or("FT");
+        let original_host = document.get("zmq_host").unwrap_or("127.0.0.1");
+        let original_port = document.get("zmq_port").unwrap_or("-1");
+        let original_capacity = document.get("zmq_queue_capacity").unwrap_or("256");
+        let mut mode = original_mode.to_owned();
+        let mut framing = original_framing.to_owned();
+        let mut topic = original_topic.to_owned();
+        let mut host = original_host.to_owned();
+        let mut port = original_port.to_owned();
+        let mut capacity = original_capacity.to_owned();
+        if let Ok(value) = port.parse::<i32>()
+            && (1..=65535).contains(&value)
+        {
+            self.zmq_resume_port = Some(value);
+        }
+        ui.strong("ZeroMQ publisher");
+        egui::Grid::new(("zmq-controls", self.id)).num_columns(2).spacing([12.0, 6.0]).show(ui, |ui| {
+            ui.label("Publisher");
+            let mut enabled = port.parse::<i32>().is_ok_and(|value| value > 0);
+            if ui.checkbox(&mut enabled, "Enabled").on_hover_text("Publish accepted measurements on localhost. Recording continues with no receiver connected.").changed() {
+                if enabled {
+                    let suggested = self.zmq_resume_port.or_else(|| self.id.checked_add(9870).and_then(|value| i32::try_from(value).ok()).filter(|value| *value <= 65535));
+                    if let Some(value) = suggested {
+                        port = value.to_string();
+                    } else {
+                        self.error = "Choose a port between 1 and 65535 before enabling this publisher.".into();
+                    }
+                } else {
+                    port = "-1".into();
+                }
+            }
+            ui.end_row();
+            ui.label("Output mode");
+            egui::ComboBox::from_id_salt(("zmq-mode", self.id))
+                .selected_text(match mode.as_str() { "legacy_matrex_vr" => "Legacy MATREX VR (JSON)", "native_ft" => "Native FicTrac (FT)", _ => "Choose output mode" })
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut mode, "native_ft".into(), "Native FicTrac (FT)");
+                    ui.selectable_value(&mut mode, "legacy_matrex_vr".into(), "Legacy MATREX VR (JSON)");
+                }).response.on_hover_text("Native FT is the default. Legacy MATREX VR matches the Python republisher: FT fields 15/16 for x/y, field 17 converted to degrees for yaw. No radius scaling.");
+            ui.end_row();
+            ui.label("Message framing");
+            ui.add_enabled_ui(mode == "legacy_matrex_vr", |ui| {
+                egui::ComboBox::from_id_salt(("zmq-framing", self.id))
+                    .selected_text(if mode == "native_ft" { "Single FT frame" } else { match framing.as_str() { "topic_json" => "Topic + JSON (paired reads)", "single" => "Single JSON frame (Python)", _ => "Choose framing" } })
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut framing, "single".into(), "Single JSON frame (Python)");
+                        ui.selectable_value(&mut framing, "topic_json".into(), "Topic + JSON (paired reads)");
+                    }).response.on_hover_text("Single frame matches Python send_string(json.dumps(...)); MATREX v0.3 supports it. Topic + JSON sends two frames in one message for MATREX v0.1's paired reads. Native FT always uses one FT frame.");
+            });
+            ui.end_row();
+            ui.label("Topic");
+            ui.add_enabled(mode == "legacy_matrex_vr" && framing == "topic_json", egui::TextEdit::singleline(&mut topic).desired_width(180.0))
+                .on_hover_text("First multipart frame. Match the receiver's topic filter; FT is the default. Ignored for single-frame output.");
+            ui.end_row();
+            ui.label("Port");
+            ui.add(egui::TextEdit::singleline(&mut port).desired_width(100.0))
+                .on_hover_text("PUB bind port: -1 or 0 disables. Give each rig a unique port, normally 9871–9874. The VR subscriber connects to this port.");
+            ui.end_row();
+            ui.label("Bind address");
+            ui.add(egui::TextEdit::singleline(&mut host).desired_width(180.0))
+                .on_hover_text("A localhost address such as 127.0.0.1 or ::1. This publisher does not bind to public interfaces.");
+            ui.end_row();
+            ui.label("Queue capacity");
+            ui.add(egui::TextEdit::singleline(&mut capacity).desired_width(100.0))
+                .on_hover_text("Bounded live-message queue. A slow or absent receiver cannot block tracking or recording; drops are reported separately.");
+            ui.end_row();
+        });
+        if mode == "legacy_matrex_vr" {
+            ui.small("x/y: cumulative displacement in sphere radians · yaw: degrees · z/pitch/roll: 0. Unity applies the sphere radius.");
+        } else {
+            ui.small("Native FT: one complete 25-column measurement. UDP and serial always retain their native FT format.");
+        }
+        let mut changes = Vec::new();
+        for (key, original, value) in [
+            ("zmq_output_mode", original_mode.to_owned(), mode),
+            ("zmq_framing", original_framing.to_owned(), framing),
+            ("zmq_topic", original_topic.to_owned(), topic),
+            ("zmq_host", original_host.to_owned(), host),
+            ("zmq_port", original_port.to_owned(), port),
+            ("zmq_queue_capacity", original_capacity.to_owned(), capacity),
+        ] {
+            if value != original {
+                changes.push((key, value));
+            }
+        }
+        if !changes.is_empty() {
+            let result = self.fields(&changes);
+            self.report(result);
         }
     }
     fn cycle_square(&mut self) -> Result<(), String> {
@@ -2480,6 +2587,133 @@ mod tests {
         assert_eq!(session.source_edit, "3");
         assert!(session.history.undo());
         assert_eq!(session.document()?.get("vfov"), Some("45"));
+        Ok(())
+    }
+    fn zmq_controls_frame(
+        ctx: &egui::Context,
+        session: &mut Session,
+        events: Vec<egui::Event>,
+    ) -> egui::FullOutput {
+        ctx.run(
+            egui::RawInput {
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(680.0, 600.0))),
+                events,
+                ..Default::default()
+            },
+            |ctx| {
+                egui::CentralPanel::default().show(ctx, |ui| session.zmq_controls(ui));
+            },
+        )
+    }
+    fn click_zmq_control(
+        ctx: &egui::Context,
+        session: &mut Session,
+        label: &str,
+    ) -> Result<(), String> {
+        let output = zmq_controls_frame(ctx, session, vec![]);
+        let position = output
+            .shapes
+            .iter()
+            .rev()
+            .find_map(|shape| match &shape.shape {
+                egui::Shape::Text(text) if text.galley.text() == label => {
+                    Some(text.pos + text.galley.size() * 0.5)
+                }
+                _ => None,
+            })
+            .ok_or_else(|| format!("ZMQ control {label} not rendered"))?;
+        for pressed in [true, false] {
+            zmq_controls_frame(
+                ctx,
+                session,
+                vec![
+                    egui::Event::PointerMoved(position),
+                    egui::Event::PointerButton {
+                        pos: position,
+                        button: egui::PointerButton::Primary,
+                        pressed,
+                        modifiers: egui::Modifiers::NONE,
+                    },
+                ],
+            );
+        }
+        Ok(())
+    }
+    #[test]
+    fn matrex_controls_keep_native_default_and_edit_only_wire_settings() -> Result<(), String> {
+        let mut session = session()?;
+        let original = session.history.text.clone();
+        let before = session.document()?;
+        let ctx = egui::Context::default();
+        let output = zmq_controls_frame(&ctx, &mut session, vec![]);
+        assert_eq!(
+            session.history.text, original,
+            "Rendering defaults must not edit config"
+        );
+        assert!(output.shapes.iter().any(|shape| matches!(&shape.shape,
+            egui::Shape::Text(text) if text.galley.text() == "Single FT frame")));
+        click_zmq_control(&ctx, &mut session, "Native FicTrac (FT)")?;
+        click_zmq_control(&ctx, &mut session, "Legacy MATREX VR (JSON)")?;
+        assert_eq!(
+            session.document()?.get("zmq_output_mode"),
+            Some("legacy_matrex_vr")
+        );
+        click_zmq_control(&ctx, &mut session, "Single JSON frame (Python)")?;
+        click_zmq_control(&ctx, &mut session, "Topic + JSON (paired reads)")?;
+        assert_eq!(session.document()?.get("zmq_framing"), Some("topic_json"));
+        for key in [
+            "roi_c",
+            "roi_r",
+            "roi_circ",
+            "roi_ignr",
+            "c2a_r",
+            "vfov",
+            "zmq_port",
+            "sock_port",
+        ] {
+            assert_eq!(
+                session.document()?.get(key),
+                before.get(key),
+                "Unexpected edit of {key}"
+            );
+        }
+        click_zmq_control(&ctx, &mut session, "Legacy MATREX VR (JSON)")?;
+        click_zmq_control(&ctx, &mut session, "Native FicTrac (FT)")?;
+        let final_document = session.document()?;
+        assert_eq!(final_document.get("zmq_output_mode"), Some("native_ft"));
+        assert_eq!(final_document.get("zmq_framing"), Some("topic_json"));
+        fictrac_io::load_config_text(final_document.text(), 384, 288).map_err(|e| e.to_string())?;
+        let output = zmq_controls_frame(&ctx, &mut session, vec![]);
+        assert!(output.shapes.iter().any(|shape| matches!(&shape.shape,
+            egui::Shape::Text(text) if text.galley.text() == "Single FT frame")));
+        Ok(())
+    }
+    #[test]
+    fn zmq_controls_preserve_invalid_drafts_and_restore_custom_ports() -> Result<(), String> {
+        for (port, capacity) in [("70000", "0"), ("abc", "-1"), ("09871", "0256")] {
+            let mut session = session()?;
+            session.fields(&[
+                ("zmq_port", port.into()),
+                ("zmq_queue_capacity", capacity.into()),
+            ])?;
+            let before = session.history.text.clone();
+            zmq_controls_frame(&egui::Context::default(), &mut session, vec![]);
+            assert_eq!(
+                session.history.text, before,
+                "Rendering must not normalize or repair draft fields"
+            );
+        }
+        let mut session = session()?;
+        session.id = 17;
+        session.fields(&[("zmq_port", "-1".into())])?;
+        let ctx = egui::Context::default();
+        click_zmq_control(&ctx, &mut session, "Enabled")?;
+        assert_eq!(session.document()?.get("zmq_port"), Some("9887"));
+        session.fields(&[("zmq_port", "12345".into())])?;
+        click_zmq_control(&ctx, &mut session, "Enabled")?;
+        assert_eq!(session.document()?.get("zmq_port"), Some("-1"));
+        click_zmq_control(&ctx, &mut session, "Enabled")?;
+        assert_eq!(session.document()?.get("zmq_port"), Some("12345"));
         Ok(())
     }
     fn pointer_frame(ctx: &egui::Context, session: &mut Session, events: Vec<egui::Event>) {

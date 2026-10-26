@@ -1,5 +1,5 @@
 //! Native serial, UDP and bounded Rust ZMQ PUB FicTrac row outputs.
-use crate::{ConfigDocument, Error, Result, write_dat};
+use crate::{ConfigDocument, Error, Result, ZmqPayloadSettings, write_dat};
 use fictrac_core::TrackRow;
 use std::{
     net::{SocketAddr, ToSocketAddrs, UdpSocket},
@@ -10,6 +10,7 @@ pub struct OutputSinks {
     udp: Option<(UdpSocket, SocketAddr)>,
     serial: Option<serial2::SerialPort>,
     zmq: Option<crate::zmq_output::ZmqOutput>,
+    zmq_payload: ZmqPayloadSettings,
 }
 impl OutputSinks {
     pub fn disabled() -> Self {
@@ -17,6 +18,7 @@ impl OutputSinks {
             udp: None,
             serial: None,
             zmq: None,
+            zmq_payload: ZmqPayloadSettings::default(),
         }
     }
     /// Reuse healthy outputs when their settings are unchanged. Otherwise close
@@ -24,6 +26,13 @@ impl OutputSinks {
     /// if the replacement fails. A failed rollback leaves outputs disabled and
     /// is explicitly reported; numerical/session state belongs to the caller.
     pub fn reconfigure(&mut self, old: &ConfigDocument, new: &ConfigDocument) -> Result<()> {
+        // Reject invalid payload edits before closing a healthy publisher or
+        // touching any exclusive output handle.
+        ZmqPayloadSettings::parse(
+            new.get("zmq_output_mode"),
+            new.get("zmq_framing"),
+            new.get("zmq_topic"),
+        )?;
         let unchanged = [
             "sock_host",
             "sock_port",
@@ -32,12 +41,15 @@ impl OutputSinks {
             "zmq_host",
             "zmq_port",
             "zmq_queue_capacity",
+            "zmq_output_mode",
+            "zmq_framing",
+            "zmq_topic",
         ]
         .iter()
         .all(|key| old.get(key) == new.get(key));
         let healthy = self.zmq.as_ref().is_none_or(|output| {
             let status = output.status();
-            status.worker_alive && status.failures == 0
+            status.worker_alive
         });
         if unchanged && healthy {
             return Ok(());
@@ -68,6 +80,7 @@ impl OutputSinks {
             udp: None,
             serial: Some(port),
             zmq: None,
+            zmq_payload: ZmqPayloadSettings::default(),
         }
     }
     /// Open explicitly configured outputs; disabled ports are never contacted.
@@ -76,6 +89,11 @@ impl OutputSinks {
             document.get("zmq_port"),
             document.get("zmq_host"),
             document.get("zmq_queue_capacity"),
+        )?;
+        let zmq_payload = ZmqPayloadSettings::parse(
+            document.get("zmq_output_mode"),
+            document.get("zmq_framing"),
+            document.get("zmq_topic"),
         )?;
         let port = document
             .get("sock_port")
@@ -137,14 +155,34 @@ impl OutputSinks {
         let zmq = zmq_settings
             .map(crate::zmq_output::ZmqOutput::start)
             .transpose()?;
-        Ok(Self { udp, serial, zmq })
+        Ok(Self {
+            udp,
+            serial,
+            zmq,
+            zmq_payload,
+        })
     }
     /// Rejected frames are omitted, matching upstream logData.
     /// One complete newline-terminated `FT, ` record, identical for serial and UDP.
     /// Sink failures never turn missing measurements into measured zero motion.
     pub fn write(&mut self, row: &TrackRow) -> Vec<String> {
-        if !row.accepted {
+        if !row.accepted || !self.active() {
             return Vec::new();
+        }
+        if row
+            .delta_camera
+            .iter()
+            .chain(std::iter::once(&row.error))
+            .chain(row.delta_lab.iter())
+            .chain(row.absolute_camera.iter())
+            .chain(row.absolute_lab.iter())
+            .chain(row.position.iter())
+            .chain([row.heading, row.direction, row.speed].iter())
+            .chain(row.integrated.iter())
+            .chain([row.timestamp_ms, row.delta_ms].iter())
+            .any(|value| !value.is_finite())
+        {
+            return vec!["live output rejects a nonfinite accepted measurement".into()];
         }
         let mut packet = b"FT, ".to_vec();
         if let Err(error) = write_dat(&mut packet, row) {
@@ -164,7 +202,10 @@ impl OutputSinks {
             errors.push(format!("serial output: {error}"));
         }
         if let Some(zmq) = &mut self.zmq {
-            errors.extend(zmq.enqueue(packet));
+            match self.zmq_payload.encode(packet) {
+                Ok(frames) => errors.extend(zmq.enqueue(frames)),
+                Err(error) => errors.push(error.to_string()),
+            }
         }
         errors
     }
@@ -174,6 +215,7 @@ impl OutputSinks {
             udp_destination: self.udp.as_ref().map(|(_, address)| address.to_string()),
             serial_enabled: self.serial.is_some(),
             zmq: self.zmq.as_ref().map(|z| z.status()),
+            zmq_payload: self.zmq.as_ref().map(|_| self.zmq_payload.clone()),
         }
     }
     pub fn active(&self) -> bool {
@@ -187,4 +229,5 @@ pub struct OutputStatus {
     pub udp_destination: Option<String>,
     pub serial_enabled: bool,
     pub zmq: Option<crate::zmq_output::ZmqOutputStatus>,
+    pub zmq_payload: Option<ZmqPayloadSettings>,
 }

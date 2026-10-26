@@ -39,6 +39,7 @@ pub use recording::{RecordingCodec, VideoRecorder};
 pub use sinks::{OutputSinks, OutputStatus};
 pub use templates::{load_sphere_map, save_sphere_map};
 pub use zmq_output::ZmqOutputStatus;
+pub use zmq_payload::{DEFAULT_ZMQ_TOPIC, ZmqFraming, ZmqOutputMode, ZmqPayloadSettings};
 
 mod mp4_recording;
 
@@ -53,3 +54,4 @@ mod avi_mux;
 pub mod h264_crop;
 
 mod zmq_output;
+mod zmq_payload;

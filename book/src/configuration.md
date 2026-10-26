@@ -76,8 +76,11 @@ The accelerated local search proposes candidates on a deterministic site subset 
 | `com_port`, `com_baud` | Serial device and baud rate |
 | `zmq_host`, `zmq_port` | Localhost PUB bind; nonpositive port disables |
 | `zmq_queue_capacity` | Bounded publish queue, 1–4096 rows; default 256 |
+| `zmq_output_mode` | `native_ft` default, or explicit `legacy_matrex_vr` JSON |
+| `zmq_framing` | `single` JSON frame or `topic_json` multipart; native FT always sends one FT frame |
+| `zmq_topic` | First frame of multipart JSON, default `FT`; at most 256 UTF-8 bytes |
 
-Ports and external handles reconfigure transactionally. Unchanged healthy publishers remain open. A failed new output attempts rollback without discarding numerical source state. See [measurement/transport reference](output.md) for exact messages and loss behavior.
+Ports and external handles reconfigure transactionally. Unchanged healthy publishers remain open. A failed new output attempts rollback without discarding numerical source state. See [measurement/transport reference](output.md) for exact messages and loss behavior, and [MATREX VR compatibility](matrex-vr.md) for old Unity receivers.
 
 ## Editing and persistence
 

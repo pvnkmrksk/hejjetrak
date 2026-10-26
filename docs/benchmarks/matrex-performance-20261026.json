@@ -1,0 +1,614 @@
+{
+  "date": "2026-10-26",
+  "version": "0.2.0",
+  "platform": "macOS-27.0.1-arm64-arm-64bit",
+  "machine": "arm64",
+  "hardware": "Apple M2 Pro (same validation host as v0.1.4)",
+  "toolchain": "rustc 1.99.1 (58cf8f9c3 2026-10-13)\nbinary: rustc\ncommit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67\ncommit-date: 2026-10-13\nhost: aarch64-apple-darwin\nrelease: 1.99.1\nLLVM version: 23.1.1\n",
+  "build": {
+    "profile": "release",
+    "lto": "thin",
+    "codegen_units": 1,
+    "target_cpu_override": false
+  },
+  "cli_version": "hejjetrac-cli 0.2.0",
+  "cli_sha256": "d5b88ca25d96a640230f7c54df645e5e4ed22c8fcfa35d3899487bb636aa898b",
+  "desktop_sha256": "20a476d6a342b6fc6c829bc3e8fe23fc7d9b43fd64f1e578e1c8bc6c534ed6f3",
+  "serial_execution": true,
+  "repetitions_per_fixture": 1,
+  "concurrent_workload": "Native desktop QA session paused at frame 120; root confirmed no tracking or UI interaction during timed fixture pair. No builds/tests/other benchmark cases run by this agent.",
+  "scope": "Single descriptive validation run per fixture on this machine, not an upstream speed comparison or sustained throughput benchmark.",
+  "artifacts": "runs/matrex-release-v020-performance-20261026",
+  "cases": [
+    {
+      "name": "synthetic",
+      "command": [
+        "/Users/pavan/Documents/ChatGPT/Fictrac/target/release/fictrac",
+        "demo",
+        "--output",
+        "/Users/pavan/Documents/ChatGPT/Fictrac/runs/matrex-release-v020-performance-20261026/demo",
+        "--frames",
+        "120"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.30932150001171976,
+      "timing_boundary": "External subprocess start through exit, including synthetic Y4M generation, opening/decoding, tracking, numeric/quality output, finalization and known-motion verification."
+    },
+    {
+      "name": "sample",
+      "command": [
+        "/Users/pavan/Documents/ChatGPT/Fictrac/target/release/fictrac",
+        "track",
+        "--config",
+        "examples/benchmark/config.txt",
+        "--input",
+        "examples/sample.mp4",
+        "--output",
+        "/Users/pavan/Documents/ChatGPT/Fictrac/runs/matrex-release-v020-performance-20261026/sample"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 3.2098310000728816,
+      "timing_boundary": "External subprocess start through exit, including source/config opening, decoding, tracking, numeric/quality/SVG output, finalization and summary/stdout writing."
+    },
+    {
+      "name": "comparison",
+      "command": [
+        "/Users/pavan/Documents/ChatGPT/Fictrac/target/release/fictrac",
+        "compare",
+        "--reference",
+        "examples/benchmark/upstream.dat",
+        "--candidate",
+        "/Users/pavan/Documents/ChatGPT/Fictrac/runs/matrex-release-v020-performance-20261026/sample/tracking.dat",
+        "--report",
+        "/Users/pavan/Documents/ChatGPT/Fictrac/runs/matrex-release-v020-performance-20261026/comparison.json"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 2.4036728750215843,
+      "timing_boundary": "Separate untimed-for-performance accuracy comparison; subprocess start through exit."
+    }
+  ],
+  "synthetic_summary": {
+    "version": "0.2.0",
+    "input": "/Users/pavan/Documents/ChatGPT/Fictrac/runs/matrex-release-v020-performance-20261026/demo/sphere.y4m",
+    "video": {
+      "width": 160,
+      "height": 160,
+      "fps": 60.0,
+      "codec": "y4m/mono",
+      "duration_ms": null
+    },
+    "effective_config": {
+      "spherical_map": null,
+      "width": 160,
+      "height": 160,
+      "vfov_deg": 45.0,
+      "fisheye": false,
+      "sphere": {
+        "centre": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "angular_radius": 0.29
+      },
+      "camera_to_lab": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "legacy_roi_coordinates": false,
+      "ignore_polygons": [],
+      "max_rotation": 0.35,
+      "max_error": 0.16,
+      "sample_stride": 2,
+      "iterations": 20,
+      "source": "sphere.y4m"
+    },
+    "frames": 120,
+    "tracked": 119,
+    "relocalized": 0,
+    "rejected": 0,
+    "initializing": 1,
+    "mean_error": 0.016496092142655572,
+    "max_error": 0.017650473980493932,
+    "wall_seconds": 0.212379292,
+    "end_to_end_fps": 565.0268388690174,
+    "tracking_fps": 615.2306941300317,
+    "input_duration_ms": 1983.3333333333333,
+    "final_position": [
+      -1.185437068437707,
+      -0.39796415863396967
+    ],
+    "final_heading": 5.7576452643299385,
+    "estimator": "perspective pairwise robust photometric SO(3)",
+    "error_metric": "normalized luma RMSE (0..1)",
+    "warnings": []
+  },
+  "synthetic_accuracy": {
+    "expected_delta": [
+      0.006,
+      -0.009,
+      0.004
+    ],
+    "passed": true,
+    "rotation_component_rmse_rad": 0.0003040496948914138,
+    "tolerance_rad": 0.003
+  },
+  "sample_summary": {
+    "version": "0.2.0",
+    "input": "/Users/pavan/Documents/ChatGPT/Fictrac/examples/sample.mp4",
+    "video": {
+      "width": 384,
+      "height": 288,
+      "fps": null,
+      "codec": "h264 (pure Rust)",
+      "duration_ms": 10000.0
+    },
+    "effective_config": {
+      "spherical_map": {
+        "resilient": true,
+        "global_search": false,
+        "max_bad_frames": -1,
+        "global_evaluations": 100000,
+        "channel": null,
+        "quality": 6,
+        "threshold_ratio": 1.25,
+        "threshold_window": 0.25,
+        "max_evaluations": 50,
+        "tolerance": 0.001,
+        "max_error": -1.0
+      },
+      "width": 384,
+      "height": 288,
+      "vfov_deg": 45.0,
+      "fisheye": false,
+      "sphere": {
+        "centre": [
+          -0.22938965658632982,
+          0.0999680947095317,
+          0.9681873607372448
+        ],
+        "angular_radius": 0.12481674439688986
+      },
+      "camera_to_lab": [
+        0.722445,
+        -0.131314,
+        -0.460878
+      ],
+      "legacy_roi_coordinates": true,
+      "ignore_polygons": [
+        [
+          [
+            96.0,
+            156.0
+          ],
+          [
+            113.0,
+            147.0
+          ],
+          [
+            106.0,
+            128.0
+          ],
+          [
+            82.0,
+            130.0
+          ],
+          [
+            81.0,
+            150.0
+          ]
+        ],
+        [
+          [
+            71.0,
+            213.0
+          ],
+          [
+            90.0,
+            219.0
+          ],
+          [
+            114.0,
+            218.0
+          ],
+          [
+            135.0,
+            211.0
+          ],
+          [
+            154.0,
+            196.0
+          ],
+          [
+            150.0,
+            217.0
+          ],
+          [
+            121.0,
+            228.0
+          ],
+          [
+            99.0,
+            234.0
+          ],
+          [
+            75.0,
+            225.0
+          ]
+        ]
+      ],
+      "max_rotation": 0.35,
+      "max_error": 0.16,
+      "sample_stride": 2,
+      "iterations": 20,
+      "source": "sample.mp4"
+    },
+    "frames": 300,
+    "tracked": 299,
+    "relocalized": 0,
+    "rejected": 0,
+    "initializing": 1,
+    "mean_error": 6621.574210432903,
+    "max_error": 8531.321104876995,
+    "wall_seconds": 3.2037278750000002,
+    "end_to_end_fps": 93.64091199537351,
+    "tracking_fps": 1905.3465981700483,
+    "input_duration_ms": 9966.666666666666,
+    "final_position": [
+      3.641684896510073,
+      -2.6467681123615514
+    ],
+    "final_heading": 6.175048949743612,
+    "estimator": "accumulated spherical map / pure Rust BOBYQA",
+    "error_metric": "mean squared binary intensity (0..65025)",
+    "warnings": []
+  },
+  "comparison": {
+    "comparison": {
+      "candidate_final_position": [
+        3.64168489651,
+        -2.646768112362
+      ],
+      "endpoint_error_sphere_rad": 0.041252009416150356,
+      "frames": 300,
+      "heading_rmse_rad": 0.013651430288528159,
+      "path_point_rmse_sphere_rad": 0.025593841799898084,
+      "reference_final_position": [
+        3.674266189723,
+        -2.6214661833162
+      ],
+      "rotation_component_rmse_rad": [
+        0.009475898823054007,
+        0.010924711781146961,
+        0.01781987973491448
+      ],
+      "timestamp_max_error_ms": 3.456079866737127e-11
+    },
+    "limits": {
+      "heading_rmse_rad": 0.025,
+      "path_rmse_sphere_rad": 0.075,
+      "rotation_component_rmse_rad": 0.02
+    },
+    "passed": true
+  },
+  "sample_input": {
+    "file": "examples/sample.mp4",
+    "sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+    "width": 384,
+    "height": 288,
+    "frames": 300,
+    "config_file": "examples/benchmark/config.txt",
+    "config_sha256": "a002a8e1c77a51979335a767ed4e45569c11ab6aa9d5d021e709f1cb0f63653c",
+    "reference_file": "examples/benchmark/upstream.dat",
+    "reference_sha256": "663d1c088cb8e94852d209518c3e39ed29a07f7c993661beed6295bf47d3c782"
+  },
+  "synthetic_input": {
+    "file": "runs/matrex-release-v020-performance-20261026/demo/sphere.y4m",
+    "sha256": "c176ee174ab544f24363ff4741c9ea39b0f3b61bcdc257826a19deb53d282997",
+    "width": 160,
+    "height": 160,
+    "frames": 120,
+    "fps": 60.0
+  },
+  "output_hashes": {
+    "synthetic_numeric": "dc7e0b82ecea0f88d9efa3a4356d7147a5646b607940391a254f00d3302af099",
+    "synthetic_quality": "aa1541c378e5a113772c1b8370b897ae787b9e71da0298b0943569170f848fed",
+    "sample_numeric": "7efe13baeb649cb4a225c267a7438e0b11a6cf2aa57cc205934671a746780f3f",
+    "sample_all_frames": "7efe13baeb649cb4a225c267a7438e0b11a6cf2aa57cc205934671a746780f3f",
+    "sample_quality": "04b30696bd3e648b75652fa1e91ac9c54e29714d78e2e612c2c7db59ff834f7f"
+  },
+  "internal_timing_boundaries": {
+    "wall_seconds": "CLI pipeline timer starts before source opening and includes decode, tracking, numeric/quality/SVG output and finalization; excludes synthetic generation, accuracy comparison, final summary/stdout and process startup/shutdown.",
+    "tracking_fps": "Sum of Tracker::process calls including numerical map/diagnostic updates; excludes decode, disk output and UI.",
+    "outputs": "Raw/debug video recording and UDP/serial/ZeroMQ wire outputs disabled; ordinary numeric/quality/SVG outputs enabled."
+  },
+  "tmp_control_run": {
+    "reason": "The first workspace-output run needed 2.40367 seconds for its separate small accuracy comparison. Repeat once with output under /tmp to record sensitivity to filesystem/process-start variability; the original run is retained unchanged.",
+    "artifacts": "/tmp/hejjetrac-v020-performance-control-20261026",
+    "serial_execution": true,
+    "repetitions_per_fixture": 1,
+    "cases": [
+      {
+        "name": "synthetic",
+        "command": [
+          "/Users/pavan/Documents/ChatGPT/Fictrac/target/release/fictrac",
+          "demo",
+          "--output",
+          "/tmp/hejjetrac-v020-performance-control-20261026/demo",
+          "--frames",
+          "120"
+        ],
+        "exit_code": 0,
+        "wall_seconds": 0.31204049999359995,
+        "timing_boundary": "External start through exit, including fixture generation, tracking, output and synthetic accuracy verification."
+      },
+      {
+        "name": "sample",
+        "command": [
+          "/Users/pavan/Documents/ChatGPT/Fictrac/target/release/fictrac",
+          "track",
+          "--config",
+          "examples/benchmark/config.txt",
+          "--input",
+          "examples/sample.mp4",
+          "--output",
+          "/tmp/hejjetrac-v020-performance-control-20261026/sample"
+        ],
+        "exit_code": 0,
+        "wall_seconds": 0.7966092079877853,
+        "timing_boundary": "External start through exit, including source/config open, decode, tracking, output, finalization and summary."
+      },
+      {
+        "name": "comparison",
+        "command": [
+          "/Users/pavan/Documents/ChatGPT/Fictrac/target/release/fictrac",
+          "compare",
+          "--reference",
+          "examples/benchmark/upstream.dat",
+          "--candidate",
+          "/tmp/hejjetrac-v020-performance-control-20261026/sample/tracking.dat",
+          "--report",
+          "/tmp/hejjetrac-v020-performance-control-20261026/comparison.json"
+        ],
+        "exit_code": 0,
+        "wall_seconds": 0.006919416016899049,
+        "timing_boundary": "Separate accuracy comparison; not a tracking throughput case."
+      }
+    ],
+    "synthetic_summary": {
+      "version": "0.2.0",
+      "input": "/private/tmp/hejjetrac-v020-performance-control-20261026/demo/sphere.y4m",
+      "video": {
+        "width": 160,
+        "height": 160,
+        "fps": 60.0,
+        "codec": "y4m/mono",
+        "duration_ms": null
+      },
+      "effective_config": {
+        "spherical_map": null,
+        "width": 160,
+        "height": 160,
+        "vfov_deg": 45.0,
+        "fisheye": false,
+        "sphere": {
+          "centre": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "angular_radius": 0.29
+        },
+        "camera_to_lab": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "legacy_roi_coordinates": false,
+        "ignore_polygons": [],
+        "max_rotation": 0.35,
+        "max_error": 0.16,
+        "sample_stride": 2,
+        "iterations": 20,
+        "source": "sphere.y4m"
+      },
+      "frames": 120,
+      "tracked": 119,
+      "relocalized": 0,
+      "rejected": 0,
+      "initializing": 1,
+      "mean_error": 0.016496092142655572,
+      "max_error": 0.017650473980493932,
+      "wall_seconds": 0.211549083,
+      "end_to_end_fps": 567.2442456297482,
+      "tracking_fps": 625.2544036420155,
+      "input_duration_ms": 1983.3333333333333,
+      "final_position": [
+        -1.185437068437707,
+        -0.39796415863396967
+      ],
+      "final_heading": 5.7576452643299385,
+      "estimator": "perspective pairwise robust photometric SO(3)",
+      "error_metric": "normalized luma RMSE (0..1)",
+      "warnings": []
+    },
+    "synthetic_accuracy": {
+      "expected_delta": [
+        0.006,
+        -0.009,
+        0.004
+      ],
+      "passed": true,
+      "rotation_component_rmse_rad": 0.0003040496948914138,
+      "tolerance_rad": 0.003
+    },
+    "sample_summary": {
+      "version": "0.2.0",
+      "input": "/Users/pavan/Documents/ChatGPT/Fictrac/examples/sample.mp4",
+      "video": {
+        "width": 384,
+        "height": 288,
+        "fps": null,
+        "codec": "h264 (pure Rust)",
+        "duration_ms": 10000.0
+      },
+      "effective_config": {
+        "spherical_map": {
+          "resilient": true,
+          "global_search": false,
+          "max_bad_frames": -1,
+          "global_evaluations": 100000,
+          "channel": null,
+          "quality": 6,
+          "threshold_ratio": 1.25,
+          "threshold_window": 0.25,
+          "max_evaluations": 50,
+          "tolerance": 0.001,
+          "max_error": -1.0
+        },
+        "width": 384,
+        "height": 288,
+        "vfov_deg": 45.0,
+        "fisheye": false,
+        "sphere": {
+          "centre": [
+            -0.22938965658632982,
+            0.0999680947095317,
+            0.9681873607372448
+          ],
+          "angular_radius": 0.12481674439688986
+        },
+        "camera_to_lab": [
+          0.722445,
+          -0.131314,
+          -0.460878
+        ],
+        "legacy_roi_coordinates": true,
+        "ignore_polygons": [
+          [
+            [
+              96.0,
+              156.0
+            ],
+            [
+              113.0,
+              147.0
+            ],
+            [
+              106.0,
+              128.0
+            ],
+            [
+              82.0,
+              130.0
+            ],
+            [
+              81.0,
+              150.0
+            ]
+          ],
+          [
+            [
+              71.0,
+              213.0
+            ],
+            [
+              90.0,
+              219.0
+            ],
+            [
+              114.0,
+              218.0
+            ],
+            [
+              135.0,
+              211.0
+            ],
+            [
+              154.0,
+              196.0
+            ],
+            [
+              150.0,
+              217.0
+            ],
+            [
+              121.0,
+              228.0
+            ],
+            [
+              99.0,
+              234.0
+            ],
+            [
+              75.0,
+              225.0
+            ]
+          ]
+        ],
+        "max_rotation": 0.35,
+        "max_error": 0.16,
+        "sample_stride": 2,
+        "iterations": 20,
+        "source": "sample.mp4"
+      },
+      "frames": 300,
+      "tracked": 299,
+      "relocalized": 0,
+      "rejected": 0,
+      "initializing": 1,
+      "mean_error": 6621.574210432903,
+      "max_error": 8531.321104876995,
+      "wall_seconds": 0.790524083,
+      "end_to_end_fps": 379.49507984818723,
+      "tracking_fps": 1902.2081028219056,
+      "input_duration_ms": 9966.666666666666,
+      "final_position": [
+        3.641684896510073,
+        -2.6467681123615514
+      ],
+      "final_heading": 6.175048949743612,
+      "estimator": "accumulated spherical map / pure Rust BOBYQA",
+      "error_metric": "mean squared binary intensity (0..65025)",
+      "warnings": []
+    },
+    "comparison": {
+      "comparison": {
+        "candidate_final_position": [
+          3.64168489651,
+          -2.646768112362
+        ],
+        "endpoint_error_sphere_rad": 0.041252009416150356,
+        "frames": 300,
+        "heading_rmse_rad": 0.013651430288528159,
+        "path_point_rmse_sphere_rad": 0.025593841799898084,
+        "reference_final_position": [
+          3.674266189723,
+          -2.6214661833162
+        ],
+        "rotation_component_rmse_rad": [
+          0.009475898823054007,
+          0.010924711781146961,
+          0.01781987973491448
+        ],
+        "timestamp_max_error_ms": 3.456079866737127e-11
+      },
+      "limits": {
+        "heading_rmse_rad": 0.025,
+        "path_rmse_sphere_rad": 0.075,
+        "rotation_component_rmse_rad": 0.02
+      },
+      "passed": true
+    },
+    "output_hashes": {
+      "synthetic_numeric": "dc7e0b82ecea0f88d9efa3a4356d7147a5646b607940391a254f00d3302af099",
+      "synthetic_quality": "aa1541c378e5a113772c1b8370b897ae787b9e71da0298b0943569170f848fed",
+      "sample_numeric": "7efe13baeb649cb4a225c267a7438e0b11a6cf2aa57cc205934671a746780f3f",
+      "sample_all_frames": "7efe13baeb649cb4a225c267a7438e0b11a6cf2aa57cc205934671a746780f3f",
+      "sample_quality": "04b30696bd3e648b75652fa1e91ac9c54e29714d78e2e612c2c7db59ff834f7f"
+    },
+    "numeric_outputs_identical_to_workspace_run": true
+  },
+  "timing_interpretation": "Both serial runs are retained. Numeric outputs and fixed oracle results are identical. Timing varies by output location/cache/process conditions; no estimator or transport performance regression/improvement is inferred from these two descriptive validation runs."
+}

@@ -47,6 +47,18 @@ The inspector groups source/camera, calibration, geometry, tracking/quality, out
 
 Numerical edits create a new tracking epoch without seeking the unchanged video source. A recording is closed rather than mixing two calibrations in one epoch. Reopen a source or rewind explicitly when a fresh timeline is wanted.
 
+## MATREX VR output
+
+In **Settings → Output & recording → ZeroMQ publisher**, enable the publisher,
+choose its port, then select **Native FicTrac (FT)** or **Legacy MATREX VR (JSON)**.
+Native FT remains the default. JSON can use a single frame matching Python, or
+**Topic + JSON** for old paired-read Unity receivers; the topic is editable.
+The status tooltip reports the applied mode rather than an unapplied draft.
+
+Legacy x/y stay in sphere radians and yaw is in degrees; Unity handles radius
+scaling. UDP/serial retain FT rows in either mode. Save your rig config for future
+launches. See [MATREX compatibility and validation](matrex-vr.md).
+
 ## Monitoring without busy work
 
 A paced source waits on command-interruptible deadlines rather than repeatedly polling for its next frame. Paused/end-of-file workers block with an interruptible health heartbeat. Each file decoder queue and staged frame are bounded; this does not skip file frames or change their timestamps.

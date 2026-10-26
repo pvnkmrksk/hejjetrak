@@ -1,0 +1,1907 @@
+{
+  "format": "hejjetrac-matrex-legacy-acceptance-v1",
+  "checked_utc": "2026-10-26T09:03:41.187132+00:00",
+  "platform": "macOS-27.0.1-arm64-arm-64bit",
+  "machine": "arm64",
+  "compiler": "rustc 1.99.1 (58cf8f9c3 2026-10-13)\nbinary: rustc\ncommit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67\ncommit-date: 2026-10-13\nhost: aarch64-apple-darwin\nrelease: 1.99.1\nLLVM version: 23.1.1\n",
+  "publisher": "Rust fictrac-io matrex_legacy_fixture example, using production OutputSinks and native ZMTP implementation",
+  "python_role": "Optional test orchestration and CSV analysis only; no Python/libzmq publisher, no receiver replacement or runtime injection.",
+  "publisher_sha256": "cf14dc02ce56121b57633ad630303db32107396460a3ca6e59d4a7cfc8222c6a",
+  "source_sha256": {
+    "crates/fictrac-io/src/zmq_protocol.rs": "6f2cc900ee9364d43b0eecdad31b516561d78419b83e888782448776b51aebc6",
+    "crates/fictrac-io/src/zmq_output.rs": "cac58d08cfb82acbd088ba7735755e354301b218abdfaacfdcca493f202936b4",
+    "crates/fictrac-io/src/zmq_payload.rs": "ed9345f8a5718fd21caa44d7ec4807e258dbef0652cf42dc34783f9ce4d7f5d9",
+    "crates/fictrac-io/src/sinks.rs": "f458a59115e0d40d9580813daa5dcb2d36ec2c0669a5fd3c4d19ff48ddcce6b9",
+    "crates/fictrac-io/examples/matrex_legacy_fixture.rs": "9f81377dd1adced25f9927bcf48b6449889def7c42a37f4add5d66080a95ac00",
+    "scripts/test_matrex_legacy_players.py": "de034ccc9f8d36288c594c9170ca96efb4e9d8d490f18b40bb60720037084d8e"
+  },
+  "republisher_reference": {
+    "repository": "https://github.com/pvnkmrksk/fictrac",
+    "revision": "10fc4472af1fc9062b9bf5a92738e835b98cc3ec",
+    "path": "VR_array/socket_zmq_republisher.py",
+    "sha256": "56f6e9bb939f50519e41d42631368d8e8132961fd54e9cf47866a24f9ef1a0bf",
+    "fields_including_FT": {
+      "x": 15,
+      "y": 16,
+      "yaw_degrees": 17
+    },
+    "zero_fields": [
+      "z",
+      "pitch",
+      "roll"
+    ],
+    "radius_scaling": false,
+    "url": "https://github.com/pvnkmrksk/fictrac/blob/10fc4472af1fc9062b9bf5a92738e835b98cc3ec/VR_array/socket_zmq_republisher.py"
+  },
+  "old_netmq": {
+    "assembly_version": "4.0.0.1",
+    "target_framework": ".NETFramework,Version=v4.0",
+    "sha256": "ce9b347a4cf35c4ed96e1343f3ce84ce6514be680347e59de0f5a29f6ee6fba1"
+  },
+  "scene_loads_per_case": 6,
+  "repeated_full_scene_reloads_per_case": 5,
+  "rigs_per_case": 4,
+  "fixture_rate_hz": 30,
+  "fixture_duration_seconds": 26,
+  "publisher_gap_seconds": 1,
+  "sphere_radius_in_Unity_only": 1.3,
+  "functional_compatibility_passed": true,
+  "strict_lifecycle_passed": false,
+  "total_csv_observations": 33300,
+  "cases": [
+    {
+      "passed": false,
+      "functional_compatibility_passed": true,
+      "clean_receiver_lifecycle": false,
+      "checks": {
+        "received_measurements": true,
+        "wire_units_axes_and_heading": true,
+        "rejected_marker_never_received": true,
+        "publisher_reconnect": true,
+        "all_rigs_all_scene_steps": true,
+        "movement_every_scene": true,
+        "heading_every_scene": true,
+        "no_critical_receiver_errors": false
+      },
+      "observations": 8341,
+      "unmatched": [],
+      "max_position_error": 7.227260473883757e-07,
+      "max_yaw_error_degrees": 6.201419773788075e-05,
+      "scene_coverage": {
+        "VR1 Swarm": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "VR2 Swarm": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "VR3 Swarm": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "VR4 Swarm": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "movement": [
+        {
+          "rig": "VR1 Swarm",
+          "step": "0",
+          "rows": 257,
+          "sensor_distance": 0.5319007509295789,
+          "world_distance": 0.6914714431588895,
+          "radius_ratio": 1.300000877890163,
+          "sensor_yaw_delta": 14.064999999999998,
+          "world_yaw_delta": 14.064940000000007,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "1",
+          "rows": 260,
+          "sensor_distance": 0.49658747456572055,
+          "world_distance": 0.6455639248904843,
+          "radius_ratio": 1.3000004187682095,
+          "sensor_yaw_delta": 13.416780000000017,
+          "world_yaw_delta": 13.416798999999997,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "2",
+          "rows": 261,
+          "sensor_distance": 0.5277934521647651,
+          "world_distance": 0.7048672113861588,
+          "radius_ratio": 1.3354982114596512,
+          "sensor_yaw_delta": 12.982439999999997,
+          "world_yaw_delta": 13.379745000000014,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "3",
+          "rows": 262,
+          "sensor_distance": 0.48665023786082745,
+          "world_distance": 0.6326460863331812,
+          "radius_ratio": 1.3000015968637124,
+          "sensor_yaw_delta": 13.987410000000011,
+          "world_yaw_delta": 13.987415999999996,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "4",
+          "rows": 263,
+          "sensor_distance": 0.5623362645757428,
+          "world_distance": 0.7310368720511231,
+          "radius_ratio": 1.2999995164862028,
+          "sensor_yaw_delta": 14.523210000000006,
+          "world_yaw_delta": 14.523212999999998,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "5",
+          "rows": 264,
+          "sensor_distance": 0.4682121925473536,
+          "world_distance": 0.6086752408776821,
+          "radius_ratio": 1.2999986983810177,
+          "sensor_yaw_delta": 14.496080000000006,
+          "world_yaw_delta": 14.496049,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "0",
+          "rows": 257,
+          "sensor_distance": 0.5319007509295789,
+          "world_distance": 0.6914714431588895,
+          "radius_ratio": 1.300000877890163,
+          "sensor_yaw_delta": 14.064999999999998,
+          "world_yaw_delta": 14.064940000000007,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "1",
+          "rows": 260,
+          "sensor_distance": 0.49658747456572055,
+          "world_distance": 0.6455639248904843,
+          "radius_ratio": 1.3000004187682095,
+          "sensor_yaw_delta": 13.416780000000017,
+          "world_yaw_delta": 13.416798999999997,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "2",
+          "rows": 259,
+          "sensor_distance": 0.5437063331220264,
+          "world_distance": 0.7068185035398622,
+          "radius_ratio": 1.3000004974766917,
+          "sensor_yaw_delta": 13.38266999999999,
+          "world_yaw_delta": 13.382666999999998,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "3",
+          "rows": 262,
+          "sensor_distance": 0.48665023786082745,
+          "world_distance": 0.6326460863331812,
+          "radius_ratio": 1.3000015968637124,
+          "sensor_yaw_delta": 13.987410000000011,
+          "world_yaw_delta": 13.987415999999996,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "4",
+          "rows": 263,
+          "sensor_distance": 0.5623362645757428,
+          "world_distance": 0.7310368720511231,
+          "radius_ratio": 1.2999995164862028,
+          "sensor_yaw_delta": 14.523210000000006,
+          "world_yaw_delta": 14.523212999999998,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "5",
+          "rows": 264,
+          "sensor_distance": 0.4682121925473536,
+          "world_distance": 0.6086752408776821,
+          "radius_ratio": 1.2999986983810177,
+          "sensor_yaw_delta": 14.496080000000006,
+          "world_yaw_delta": 14.496049,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "0",
+          "rows": 257,
+          "sensor_distance": 0.5319007509295789,
+          "world_distance": 0.6914714431588895,
+          "radius_ratio": 1.300000877890163,
+          "sensor_yaw_delta": 14.064999999999998,
+          "world_yaw_delta": 14.064940000000007,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "1",
+          "rows": 260,
+          "sensor_distance": 0.49658747456572055,
+          "world_distance": 0.6455639248904843,
+          "radius_ratio": 1.3000004187682095,
+          "sensor_yaw_delta": 13.416780000000017,
+          "world_yaw_delta": 13.416798999999997,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "2",
+          "rows": 261,
+          "sensor_distance": 0.5364877726966386,
+          "world_distance": 0.6974338954863751,
+          "radius_ratio": 1.2999996103932545,
+          "sensor_yaw_delta": 13.18401,
+          "world_yaw_delta": 13.184009000000003,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "3",
+          "rows": 262,
+          "sensor_distance": 0.48665023786082745,
+          "world_distance": 0.6326460863331812,
+          "radius_ratio": 1.3000015968637124,
+          "sensor_yaw_delta": 13.987410000000011,
+          "world_yaw_delta": 13.987415999999996,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "4",
+          "rows": 263,
+          "sensor_distance": 0.5623362645757428,
+          "world_distance": 0.7310368720511231,
+          "radius_ratio": 1.2999995164862028,
+          "sensor_yaw_delta": 14.523210000000006,
+          "world_yaw_delta": 14.523212999999998,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "5",
+          "rows": 264,
+          "sensor_distance": 0.4682121925473536,
+          "world_distance": 0.6086752408776821,
+          "radius_ratio": 1.2999986983810177,
+          "sensor_yaw_delta": 14.496080000000006,
+          "world_yaw_delta": 14.496049,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "0",
+          "rows": 257,
+          "sensor_distance": 0.5319007509295789,
+          "world_distance": 0.6914714431588895,
+          "radius_ratio": 1.300000877890163,
+          "sensor_yaw_delta": 14.064999999999998,
+          "world_yaw_delta": 14.064940000000007,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "1",
+          "rows": 260,
+          "sensor_distance": 0.49658747456572055,
+          "world_distance": 0.6455639248904843,
+          "radius_ratio": 1.3000004187682095,
+          "sensor_yaw_delta": 13.416780000000017,
+          "world_yaw_delta": 13.416798999999997,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "2",
+          "rows": 261,
+          "sensor_distance": 0.5364877726966386,
+          "world_distance": 0.6974339088609042,
+          "radius_ratio": 1.2999996353230474,
+          "sensor_yaw_delta": 13.18401,
+          "world_yaw_delta": 13.184009000000003,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "3",
+          "rows": 262,
+          "sensor_distance": 0.48665023786082745,
+          "world_distance": 0.6326460863331812,
+          "radius_ratio": 1.3000015968637124,
+          "sensor_yaw_delta": 13.987410000000011,
+          "world_yaw_delta": 13.987415999999996,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "4",
+          "rows": 263,
+          "sensor_distance": 0.5623362645757428,
+          "world_distance": 0.7310368720511231,
+          "radius_ratio": 1.2999995164862028,
+          "sensor_yaw_delta": 14.523210000000006,
+          "world_yaw_delta": 14.523212999999998,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "5",
+          "rows": 264,
+          "sensor_distance": 0.4682121925473536,
+          "world_distance": 0.6086752408776821,
+          "radius_ratio": 1.2999986983810177,
+          "sensor_yaw_delta": 14.496080000000006,
+          "world_yaw_delta": 14.496049,
+          "movement_passed": true,
+          "heading_passed": true
+        }
+      ],
+      "critical_receiver_errors": [
+        "ZMQ listener thread for VR2 did not stop within 500 ms.",
+        "ZMQ listener thread for VR1 did not stop within 500 ms.",
+        "ZMQ listener thread for VR1 Swarm did not stop within 500 ms.",
+        "ZMQ listener thread for VR3 Swarm did not stop within 500 ms.",
+        "ZMQ listener thread for VR2 Swarm did not stop within 500 ms.",
+        "ZMQ listener thread for VR4 Swarm did not stop within 500 ms.",
+        "ZMQ listener thread for VR1 Swarm did not stop within 500 ms.",
+        "ZMQ listener thread for VR3 Swarm did not stop within 500 ms.",
+        "ZMQ listener thread for VR4 Swarm did not stop within 500 ms."
+      ],
+      "version": "0.1.0",
+      "framing": "single",
+      "player_exit": 0,
+      "publisher_exit": 0,
+      "compiled_runtime_unchanged": true,
+      "launch": {
+        "command": [
+          "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.1.0-single/player/MATREX-VR-0.1.0-macOS-universal/MATREX VR.app/Contents/MacOS/MATREX VR",
+          "-batchmode",
+          "-nographics",
+          "-logFile",
+          "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.1.0-single/unity.log"
+        ],
+        "publisher": "/Users/pavan/Documents/ChatGPT/Fictrac/target/release/examples/matrex_legacy_fixture",
+        "publisher_sha256": "cf14dc02ce56121b57633ad630303db32107396460a3ca6e59d4a7cfc8222c6a",
+        "unchanged_archive_sha256": "49d3d68d80a17dfed72163aff731a995c6b9a7c4f3637de903187b67bc441b81",
+        "source_revision": "779926a80b02190d6dd0410f260e52bba105a04e",
+        "netmq_sha256": "ce9b347a4cf35c4ed96e1343f3ce84ce6514be680347e59de0f5a29f6ee6fba1",
+        "normal_json_edits_only": true,
+        "synthetic": true,
+        "started_utc": "2026-10-26T08:59:31Z"
+      },
+      "runtime_manifest_equal": true,
+      "runtime_manifest_sha256": "3936382fe9ff1ee91b5c4b48eec0977670e7855bbdf893c42e389708bc72f2af",
+      "local_evidence_directory": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.1.0-single",
+      "retained_recordings": [
+        {
+          "original": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.1.0-single/player/MATREX-VR-0.1.0-macOS-universal/MATREX VR.app/Contents/RunData/20261026_095933/20261026_095933_Swarm_VR1 Swarm_.csv",
+          "uncompressed_sha256": "b991a610e957b86e180e4ac4baa9b67d18cdd620fe512bd0818823b3dc924be5",
+          "retained": "b991a610e957b86e180e4ac4baa9b67d18cdd620fe512bd0818823b3dc924be5.csv.gz"
+        },
+        {
+          "original": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.1.0-single/player/MATREX-VR-0.1.0-macOS-universal/MATREX VR.app/Contents/RunData/20261026_095933/20261026_095933_Swarm_VR2 Swarm_.csv",
+          "uncompressed_sha256": "51d60f7c19f693a141c70df2041a0de66a582be8a12fc7d03caeca49e8f53d50",
+          "retained": "51d60f7c19f693a141c70df2041a0de66a582be8a12fc7d03caeca49e8f53d50.csv.gz"
+        },
+        {
+          "original": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.1.0-single/player/MATREX-VR-0.1.0-macOS-universal/MATREX VR.app/Contents/RunData/20261026_095933/20261026_095933_Swarm_VR3 Swarm_.csv",
+          "uncompressed_sha256": "0da641e4dbe3f9184a1255cad2f4c1f83fa2e7e235c67571019be8bcdce5fbee",
+          "retained": "0da641e4dbe3f9184a1255cad2f4c1f83fa2e7e235c67571019be8bcdce5fbee.csv.gz"
+        },
+        {
+          "original": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.1.0-single/player/MATREX-VR-0.1.0-macOS-universal/MATREX VR.app/Contents/RunData/20261026_095933/20261026_095933_Swarm_VR4 Swarm_.csv",
+          "uncompressed_sha256": "881e408f31a57eb45cb97e2334dd6f8461beea7ea78704b43146c9058d568d3c",
+          "retained": "881e408f31a57eb45cb97e2334dd6f8461beea7ea78704b43146c9058d568d3c.csv.gz"
+        }
+      ],
+      "distinct_observed_sensor_poses": 277,
+      "publisher_events": [
+        {
+          "event": "publisher_closed",
+          "seconds": 11.733333333333333,
+          "status": {
+            "serial_enabled": false,
+            "udp_destination": null,
+            "udp_enabled": false,
+            "zmq": {
+              "dropped": 0,
+              "endpoint": "tcp://127.0.0.1:29871",
+              "enqueued": 349,
+              "failures": 0,
+              "last_error": null,
+              "published": 349,
+              "queue_capacity": 256,
+              "queue_len": 0,
+              "worker_alive": true
+            },
+            "zmq_payload": {
+              "framing": "single",
+              "mode": "legacy_matrex_vr",
+              "topic": "FT"
+            }
+          }
+        },
+        {
+          "event": "publisher_rebound",
+          "seconds": 12.733333333333333
+        },
+        {
+          "event": "complete",
+          "seconds": 25.971760417,
+          "source_rows": 780,
+          "status": {
+            "serial_enabled": false,
+            "udp_destination": null,
+            "udp_enabled": false,
+            "zmq": {
+              "dropped": 0,
+              "endpoint": "tcp://127.0.0.1:29871",
+              "enqueued": 394,
+              "failures": 0,
+              "last_error": null,
+              "published": 394,
+              "queue_capacity": 256,
+              "queue_len": 0,
+              "worker_alive": true
+            },
+            "zmq_payload": {
+              "framing": "single",
+              "mode": "legacy_matrex_vr",
+              "topic": "FT"
+            }
+          },
+          "synthetic": true
+        }
+      ],
+      "other_player_shutdown_errors": [
+        "IOException: Sharing violation on path /private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.1.0-single/player/MATREX-VR-0.1.0-macOS-universal/MATREX VR.app/Contents/RunData/20261026_095933/2026-10-26_09-59-52-8428200_SimulatedLocustData_SimulatedLocustsVR1_0_200_0_100000_0.csv.gz"
+      ]
+    },
+    {
+      "passed": false,
+      "functional_compatibility_passed": true,
+      "clean_receiver_lifecycle": false,
+      "checks": {
+        "received_measurements": true,
+        "wire_units_axes_and_heading": true,
+        "rejected_marker_never_received": true,
+        "publisher_reconnect": true,
+        "all_rigs_all_scene_steps": true,
+        "movement_every_scene": true,
+        "heading_every_scene": true,
+        "no_critical_receiver_errors": false
+      },
+      "observations": 8352,
+      "unmatched": [],
+      "max_position_error": 7.990549808703726e-07,
+      "max_yaw_error_degrees": 8.042289027798688e-05,
+      "scene_coverage": {
+        "VR1 Swarm": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "VR2 Swarm": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "VR3 Swarm": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "VR4 Swarm": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "movement": [
+        {
+          "rig": "VR1 Swarm",
+          "step": "0",
+          "rows": 261,
+          "sensor_distance": 0.4973409077235653,
+          "world_distance": 0.6465438291948873,
+          "radius_ratio": 1.3000013052500654,
+          "sensor_yaw_delta": 14.222199999999987,
+          "world_yaw_delta": 14.222230999999994,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "1",
+          "rows": 266,
+          "sensor_distance": 0.4971756230358544,
+          "world_distance": 0.6572552201029275,
+          "radius_ratio": 1.3219779684482413,
+          "sensor_yaw_delta": 13.237030000000004,
+          "world_yaw_delta": 13.439924999999988,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "2",
+          "rows": 262,
+          "sensor_distance": 0.5601928002509494,
+          "world_distance": 0.738519993803675,
+          "radius_ratio": 1.3183318198178204,
+          "sensor_yaw_delta": 13.269190000000009,
+          "world_yaw_delta": 13.468347999999992,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "3",
+          "rows": 262,
+          "sensor_distance": 0.47794309971167065,
+          "world_distance": 0.6111378516086531,
+          "radius_ratio": 1.278683282544167,
+          "sensor_yaw_delta": 14.27852999999999,
+          "world_yaw_delta": 14.061949999999996,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "4",
+          "rows": 260,
+          "sensor_distance": 0.5071279453678331,
+          "world_distance": 0.6592665219719278,
+          "radius_ratio": 1.3000003805622358,
+          "sensor_yaw_delta": 14.828129999999987,
+          "world_yaw_delta": 14.828136999999998,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "5",
+          "rows": 258,
+          "sensor_distance": 0.5533846008771836,
+          "world_distance": 0.7194007553300883,
+          "radius_ratio": 1.3000013990084807,
+          "sensor_yaw_delta": 14.416210000000007,
+          "world_yaw_delta": 14.416232000000008,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "0",
+          "rows": 261,
+          "sensor_distance": 0.4973409077235653,
+          "world_distance": 0.6465438291948873,
+          "radius_ratio": 1.3000013052500654,
+          "sensor_yaw_delta": 14.222199999999987,
+          "world_yaw_delta": 14.222230999999994,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "1",
+          "rows": 266,
+          "sensor_distance": 0.4971756230358544,
+          "world_distance": 0.6463289722873287,
+          "radius_ratio": 1.300001332206744,
+          "sensor_yaw_delta": 13.237030000000004,
+          "world_yaw_delta": 13.23698300000001,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "2",
+          "rows": 262,
+          "sensor_distance": 0.5601928002509494,
+          "world_distance": 0.728249831075298,
+          "radius_ratio": 1.299998555406396,
+          "sensor_yaw_delta": 13.269190000000009,
+          "world_yaw_delta": 13.269198999999986,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "3",
+          "rows": 262,
+          "sensor_distance": 0.47794309971167065,
+          "world_distance": 0.6213263672081606,
+          "radius_ratio": 1.300000706324642,
+          "sensor_yaw_delta": 14.27852999999999,
+          "world_yaw_delta": 14.27852999999999,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "4",
+          "rows": 260,
+          "sensor_distance": 0.5071279453678331,
+          "world_distance": 0.6592665219719278,
+          "radius_ratio": 1.3000003805622358,
+          "sensor_yaw_delta": 14.828129999999987,
+          "world_yaw_delta": 14.828136999999998,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "5",
+          "rows": 258,
+          "sensor_distance": 0.5459715877818184,
+          "world_distance": 0.7097633728158013,
+          "radius_ratio": 1.3000005654130071,
+          "sensor_yaw_delta": 14.197910000000007,
+          "world_yaw_delta": 14.197932000000009,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "0",
+          "rows": 261,
+          "sensor_distance": 0.4973409077235653,
+          "world_distance": 0.6465438291948873,
+          "radius_ratio": 1.3000013052500654,
+          "sensor_yaw_delta": 14.222199999999987,
+          "world_yaw_delta": 14.222230999999994,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "1",
+          "rows": 266,
+          "sensor_distance": 0.4971756230358544,
+          "world_distance": 0.6463289722873287,
+          "radius_ratio": 1.300001332206744,
+          "sensor_yaw_delta": 13.237030000000004,
+          "world_yaw_delta": 13.23698300000001,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "2",
+          "rows": 262,
+          "sensor_distance": 0.5601928002509494,
+          "world_distance": 0.728249831075298,
+          "radius_ratio": 1.299998555406396,
+          "sensor_yaw_delta": 13.269190000000009,
+          "world_yaw_delta": 13.269198999999986,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "3",
+          "rows": 262,
+          "sensor_distance": 0.47794309971167065,
+          "world_distance": 0.6213263672081606,
+          "radius_ratio": 1.300000706324642,
+          "sensor_yaw_delta": 14.27852999999999,
+          "world_yaw_delta": 14.27852999999999,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "4",
+          "rows": 260,
+          "sensor_distance": 0.5071279453678331,
+          "world_distance": 0.6592665219719278,
+          "radius_ratio": 1.3000003805622358,
+          "sensor_yaw_delta": 14.828129999999987,
+          "world_yaw_delta": 14.828136999999998,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "5",
+          "rows": 258,
+          "sensor_distance": 0.5533846008771836,
+          "world_distance": 0.7194007553300883,
+          "radius_ratio": 1.3000013990084807,
+          "sensor_yaw_delta": 14.416210000000007,
+          "world_yaw_delta": 14.416232000000008,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "0",
+          "rows": 261,
+          "sensor_distance": 0.4973409077235653,
+          "world_distance": 0.6465438291948873,
+          "radius_ratio": 1.3000013052500654,
+          "sensor_yaw_delta": 14.222199999999987,
+          "world_yaw_delta": 14.222230999999994,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "1",
+          "rows": 266,
+          "sensor_distance": 0.4971756230358544,
+          "world_distance": 0.6463289722873287,
+          "radius_ratio": 1.300001332206744,
+          "sensor_yaw_delta": 13.237030000000004,
+          "world_yaw_delta": 13.23698300000001,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "2",
+          "rows": 262,
+          "sensor_distance": 0.5601928002509494,
+          "world_distance": 0.728249831075298,
+          "radius_ratio": 1.299998555406396,
+          "sensor_yaw_delta": 13.269190000000009,
+          "world_yaw_delta": 13.269198999999986,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "3",
+          "rows": 262,
+          "sensor_distance": 0.47794309971167065,
+          "world_distance": 0.6213263672081606,
+          "radius_ratio": 1.300000706324642,
+          "sensor_yaw_delta": 14.27852999999999,
+          "world_yaw_delta": 14.27852999999999,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "4",
+          "rows": 260,
+          "sensor_distance": 0.5071279453678331,
+          "world_distance": 0.6592665219719278,
+          "radius_ratio": 1.3000003805622358,
+          "sensor_yaw_delta": 14.828129999999987,
+          "world_yaw_delta": 14.828136999999998,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "5",
+          "rows": 258,
+          "sensor_distance": 0.5533846008771836,
+          "world_distance": 0.7194007553300883,
+          "radius_ratio": 1.3000013990084807,
+          "sensor_yaw_delta": 14.416210000000007,
+          "world_yaw_delta": 14.416232000000008,
+          "movement_passed": true,
+          "heading_passed": true
+        }
+      ],
+      "critical_receiver_errors": [
+        "ZMQ listener thread for VR3 did not stop within 500 ms.",
+        "ZMQ listener thread for VR3 Swarm did not stop within 500 ms.",
+        "ZMQ listener thread for VR2 Swarm did not stop within 500 ms.",
+        "ZMQ listener thread for VR2 Swarm did not stop within 500 ms.",
+        "ZMQ listener thread for VR3 Swarm did not stop within 500 ms.",
+        "ZMQ listener thread for VR4 Swarm did not stop within 500 ms.",
+        "ZMQ listener thread for VR1 Swarm did not stop within 500 ms.",
+        "ZMQ listener thread for VR1 Swarm did not stop within 500 ms.",
+        "ZMQ listener thread for VR2 Swarm did not stop within 500 ms.",
+        "ZMQ listener thread for VR3 Swarm did not stop within 500 ms.",
+        "ZMQ listener thread for VR1 Swarm did not stop within 500 ms.",
+        "ZMQ listener thread for VR3 Swarm did not stop within 500 ms."
+      ],
+      "version": "0.1.0",
+      "framing": "topic_json",
+      "player_exit": 0,
+      "publisher_exit": 0,
+      "compiled_runtime_unchanged": true,
+      "launch": {
+        "command": [
+          "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.1.0-topic_json/player/MATREX-VR-0.1.0-macOS-universal/MATREX VR.app/Contents/MacOS/MATREX VR",
+          "-batchmode",
+          "-nographics",
+          "-logFile",
+          "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.1.0-topic_json/unity.log"
+        ],
+        "publisher": "/Users/pavan/Documents/ChatGPT/Fictrac/target/release/examples/matrex_legacy_fixture",
+        "publisher_sha256": "cf14dc02ce56121b57633ad630303db32107396460a3ca6e59d4a7cfc8222c6a",
+        "unchanged_archive_sha256": "49d3d68d80a17dfed72163aff731a995c6b9a7c4f3637de903187b67bc441b81",
+        "source_revision": "779926a80b02190d6dd0410f260e52bba105a04e",
+        "netmq_sha256": "ce9b347a4cf35c4ed96e1343f3ce84ce6514be680347e59de0f5a29f6ee6fba1",
+        "normal_json_edits_only": true,
+        "synthetic": true,
+        "started_utc": "2026-10-26T09:00:02Z"
+      },
+      "runtime_manifest_equal": true,
+      "runtime_manifest_sha256": "3936382fe9ff1ee91b5c4b48eec0977670e7855bbdf893c42e389708bc72f2af",
+      "local_evidence_directory": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.1.0-topic_json",
+      "retained_recordings": [
+        {
+          "original": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.1.0-topic_json/player/MATREX-VR-0.1.0-macOS-universal/MATREX VR.app/Contents/RunData/20261026_100004/20261026_100004_Swarm_VR1 Swarm_.csv",
+          "uncompressed_sha256": "da3d357733888bb409767c5ca4bef6d5a7a563bd6820591473005f566b64b8aa",
+          "retained": "da3d357733888bb409767c5ca4bef6d5a7a563bd6820591473005f566b64b8aa.csv.gz"
+        },
+        {
+          "original": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.1.0-topic_json/player/MATREX-VR-0.1.0-macOS-universal/MATREX VR.app/Contents/RunData/20261026_100004/20261026_100004_Swarm_VR2 Swarm_.csv",
+          "uncompressed_sha256": "1e1c26a31a3f5db3a6c38a0296b4ba60b787e2b93c8b3d451ac3416dedcd0491",
+          "retained": "1e1c26a31a3f5db3a6c38a0296b4ba60b787e2b93c8b3d451ac3416dedcd0491.csv.gz"
+        },
+        {
+          "original": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.1.0-topic_json/player/MATREX-VR-0.1.0-macOS-universal/MATREX VR.app/Contents/RunData/20261026_100004/20261026_100004_Swarm_VR3 Swarm_.csv",
+          "uncompressed_sha256": "65cbe759b79a41a27909e61e9eb49696d09ca4ee263335c88824887015ae71a7",
+          "retained": "65cbe759b79a41a27909e61e9eb49696d09ca4ee263335c88824887015ae71a7.csv.gz"
+        },
+        {
+          "original": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.1.0-topic_json/player/MATREX-VR-0.1.0-macOS-universal/MATREX VR.app/Contents/RunData/20261026_100004/20261026_100004_Swarm_VR4 Swarm_.csv",
+          "uncompressed_sha256": "5570bcb4a2b8534e1f0c64b061ba1201c306abedd0aa2acefb35943f03b08bc9",
+          "retained": "5570bcb4a2b8534e1f0c64b061ba1201c306abedd0aa2acefb35943f03b08bc9.csv.gz"
+        }
+      ],
+      "distinct_observed_sensor_poses": 500,
+      "publisher_events": [
+        {
+          "event": "publisher_closed",
+          "seconds": 11.733333333333333,
+          "status": {
+            "serial_enabled": false,
+            "udp_destination": null,
+            "udp_enabled": false,
+            "zmq": {
+              "dropped": 0,
+              "endpoint": "tcp://127.0.0.1:29872",
+              "enqueued": 349,
+              "failures": 0,
+              "last_error": null,
+              "published": 349,
+              "queue_capacity": 256,
+              "queue_len": 0,
+              "worker_alive": true
+            },
+            "zmq_payload": {
+              "framing": "topic_json",
+              "mode": "legacy_matrex_vr",
+              "topic": "FT"
+            }
+          }
+        },
+        {
+          "event": "publisher_rebound",
+          "seconds": 12.733333333333333
+        },
+        {
+          "event": "complete",
+          "seconds": 25.967357583,
+          "source_rows": 780,
+          "status": {
+            "serial_enabled": false,
+            "udp_destination": null,
+            "udp_enabled": false,
+            "zmq": {
+              "dropped": 0,
+              "endpoint": "tcp://127.0.0.1:29872",
+              "enqueued": 394,
+              "failures": 0,
+              "last_error": null,
+              "published": 394,
+              "queue_capacity": 256,
+              "queue_len": 0,
+              "worker_alive": true
+            },
+            "zmq_payload": {
+              "framing": "topic_json",
+              "mode": "legacy_matrex_vr",
+              "topic": "FT"
+            }
+          },
+          "synthetic": true
+        }
+      ],
+      "other_player_shutdown_errors": [
+        "IOException: Sharing violation on path /private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.1.0-topic_json/player/MATREX-VR-0.1.0-macOS-universal/MATREX VR.app/Contents/RunData/20261026_100004/2026-10-26_10-00-25-1880820_SimulatedLocustData_SimulatedLocustsVR1_0_200_0_100000_0.csv.gz"
+      ]
+    },
+    {
+      "passed": true,
+      "functional_compatibility_passed": true,
+      "clean_receiver_lifecycle": true,
+      "checks": {
+        "received_measurements": true,
+        "wire_units_axes_and_heading": true,
+        "rejected_marker_never_received": true,
+        "publisher_reconnect": true,
+        "all_rigs_all_scene_steps": true,
+        "movement_every_scene": true,
+        "heading_every_scene": true,
+        "no_critical_receiver_errors": true
+      },
+      "observations": 8440,
+      "unmatched": [],
+      "max_position_error": 7.990549808703726e-07,
+      "max_yaw_error_degrees": 8.042289027798688e-05,
+      "scene_coverage": {
+        "VR1 Swarm": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "VR2 Swarm": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "VR3 Swarm": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "VR4 Swarm": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "movement": [
+        {
+          "rig": "VR1 Swarm",
+          "step": "0",
+          "rows": 263,
+          "sensor_distance": 0.5514334123091292,
+          "world_distance": 0.7055857859755535,
+          "radius_ratio": 1.279548482600847,
+          "sensor_yaw_delta": 13.967399999999998,
+          "world_yaw_delta": 13.762516000000005,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "1",
+          "rows": 261,
+          "sensor_distance": 0.4869218748949465,
+          "world_distance": 0.6437170058422761,
+          "radius_ratio": 1.3220129121969684,
+          "sensor_yaw_delta": 13.210859999999968,
+          "world_yaw_delta": 13.413196999999997,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "2",
+          "rows": 266,
+          "sensor_distance": 0.5581036159182272,
+          "world_distance": 0.7142532193056046,
+          "radius_ratio": 1.2797860449810385,
+          "sensor_yaw_delta": 13.597010000000012,
+          "world_yaw_delta": 13.395053999999988,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "3",
+          "rows": 266,
+          "sensor_distance": 0.48761058943074653,
+          "world_distance": 0.6446281884002019,
+          "radius_ratio": 1.3220143335130665,
+          "sensor_yaw_delta": 13.730889999999988,
+          "world_yaw_delta": 13.935296999999991,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "4",
+          "rows": 264,
+          "sensor_distance": 0.5414303716804219,
+          "world_distance": 0.7133667435201156,
+          "radius_ratio": 1.3175595253477559,
+          "sensor_yaw_delta": 14.375920000000008,
+          "world_yaw_delta": 14.590705000000014,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "5",
+          "rows": 265,
+          "sensor_distance": 0.48830540219211194,
+          "world_distance": 0.634797406451166,
+          "radius_ratio": 1.3000007855768516,
+          "sensor_yaw_delta": 14.602260000000001,
+          "world_yaw_delta": 14.602280000000007,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "0",
+          "rows": 263,
+          "sensor_distance": 0.5514334123091292,
+          "world_distance": 0.7168635414694602,
+          "radius_ratio": 1.300000191260794,
+          "sensor_yaw_delta": 13.967399999999998,
+          "world_yaw_delta": 13.967386000000005,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "1",
+          "rows": 261,
+          "sensor_distance": 0.4869218748949465,
+          "world_distance": 0.6329988970632177,
+          "radius_ratio": 1.3000009440935207,
+          "sensor_yaw_delta": 13.210859999999968,
+          "world_yaw_delta": 13.21086600000001,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "2",
+          "rows": 266,
+          "sensor_distance": 0.5581036159182272,
+          "world_distance": 0.7255349830068293,
+          "radius_ratio": 1.300000505843585,
+          "sensor_yaw_delta": 13.597010000000012,
+          "world_yaw_delta": 13.597014000000001,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "3",
+          "rows": 266,
+          "sensor_distance": 0.48761058943074653,
+          "world_distance": 0.6338942530967543,
+          "radius_ratio": 1.3000009984130665,
+          "sensor_yaw_delta": 13.730889999999988,
+          "world_yaw_delta": 13.730885999999998,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "4",
+          "rows": 264,
+          "sensor_distance": 0.5414303716804219,
+          "world_distance": 0.7038596157860518,
+          "radius_ratio": 1.3000002449096142,
+          "sensor_yaw_delta": 14.375920000000008,
+          "world_yaw_delta": 14.375918000000013,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "5",
+          "rows": 265,
+          "sensor_distance": 0.48830540219211194,
+          "world_distance": 0.634797406451166,
+          "radius_ratio": 1.3000007855768516,
+          "sensor_yaw_delta": 14.602260000000001,
+          "world_yaw_delta": 14.602280000000007,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "0",
+          "rows": 263,
+          "sensor_distance": 0.5514334123091292,
+          "world_distance": 0.7168635414694602,
+          "radius_ratio": 1.300000191260794,
+          "sensor_yaw_delta": 13.967399999999998,
+          "world_yaw_delta": 13.967386000000005,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "1",
+          "rows": 261,
+          "sensor_distance": 0.4869218748949465,
+          "world_distance": 0.6329988970632177,
+          "radius_ratio": 1.3000009440935207,
+          "sensor_yaw_delta": 13.210859999999968,
+          "world_yaw_delta": 13.21086600000001,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "2",
+          "rows": 266,
+          "sensor_distance": 0.5581036159182272,
+          "world_distance": 0.7255349830068293,
+          "radius_ratio": 1.300000505843585,
+          "sensor_yaw_delta": 13.597010000000012,
+          "world_yaw_delta": 13.597014000000001,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "3",
+          "rows": 266,
+          "sensor_distance": 0.48761058943074653,
+          "world_distance": 0.6338942530967543,
+          "radius_ratio": 1.3000009984130665,
+          "sensor_yaw_delta": 13.730889999999988,
+          "world_yaw_delta": 13.730885999999998,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "4",
+          "rows": 264,
+          "sensor_distance": 0.5414303716804219,
+          "world_distance": 0.7038596157860518,
+          "radius_ratio": 1.3000002449096142,
+          "sensor_yaw_delta": 14.375920000000008,
+          "world_yaw_delta": 14.375918000000013,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "5",
+          "rows": 265,
+          "sensor_distance": 0.48830540219211194,
+          "world_distance": 0.634797406451166,
+          "radius_ratio": 1.3000007855768516,
+          "sensor_yaw_delta": 14.602260000000001,
+          "world_yaw_delta": 14.602280000000007,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "0",
+          "rows": 263,
+          "sensor_distance": 0.5514334123091292,
+          "world_distance": 0.7168635414694602,
+          "radius_ratio": 1.300000191260794,
+          "sensor_yaw_delta": 13.967399999999998,
+          "world_yaw_delta": 13.967386000000005,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "1",
+          "rows": 261,
+          "sensor_distance": 0.4869218748949465,
+          "world_distance": 0.6329988970632177,
+          "radius_ratio": 1.3000009440935207,
+          "sensor_yaw_delta": 13.210859999999968,
+          "world_yaw_delta": 13.21086600000001,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "2",
+          "rows": 266,
+          "sensor_distance": 0.5581036159182272,
+          "world_distance": 0.7255349830068293,
+          "radius_ratio": 1.300000505843585,
+          "sensor_yaw_delta": 13.597010000000012,
+          "world_yaw_delta": 13.597014000000001,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "3",
+          "rows": 266,
+          "sensor_distance": 0.48761058943074653,
+          "world_distance": 0.6338942530967543,
+          "radius_ratio": 1.3000009984130665,
+          "sensor_yaw_delta": 13.730889999999988,
+          "world_yaw_delta": 13.730885999999998,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "4",
+          "rows": 264,
+          "sensor_distance": 0.5414303716804219,
+          "world_distance": 0.7038596157860518,
+          "radius_ratio": 1.3000002449096142,
+          "sensor_yaw_delta": 14.375920000000008,
+          "world_yaw_delta": 14.375918000000013,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "5",
+          "rows": 265,
+          "sensor_distance": 0.48830540219211194,
+          "world_distance": 0.634797406451166,
+          "radius_ratio": 1.3000007855768516,
+          "sensor_yaw_delta": 14.602260000000001,
+          "world_yaw_delta": 14.602280000000007,
+          "movement_passed": true,
+          "heading_passed": true
+        }
+      ],
+      "critical_receiver_errors": [],
+      "version": "0.3.0",
+      "framing": "single",
+      "player_exit": 0,
+      "publisher_exit": 0,
+      "compiled_runtime_unchanged": true,
+      "launch": {
+        "command": [
+          "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.3.0-single/player/MATREX-VR-0.3.0-macOS-universal/MATREX VR.app/Contents/MacOS/MATREX VR",
+          "-batchmode",
+          "-nographics",
+          "-logFile",
+          "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.3.0-single/unity.log",
+          "--config-dir",
+          "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.3.0-single/player/MATREX-VR-0.3.0-macOS-universal/MATREX VR.app/Contents/Resources/Data/StreamingAssets",
+          "--data-dir",
+          "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.3.0-single/player/RunData"
+        ],
+        "publisher": "/Users/pavan/Documents/ChatGPT/Fictrac/target/release/examples/matrex_legacy_fixture",
+        "publisher_sha256": "cf14dc02ce56121b57633ad630303db32107396460a3ca6e59d4a7cfc8222c6a",
+        "unchanged_archive_sha256": "49a67e383ad561ea668dbbbf5f8e0c0767b3d79ad91b1056be8bb164dae5b00e",
+        "source_revision": "cd207862cacf0a82d5e2ecfe39e23478679d5792",
+        "netmq_sha256": "ce9b347a4cf35c4ed96e1343f3ce84ce6514be680347e59de0f5a29f6ee6fba1",
+        "normal_json_edits_only": true,
+        "synthetic": true,
+        "started_utc": "2026-10-26T09:00:35Z"
+      },
+      "runtime_manifest_equal": true,
+      "runtime_manifest_sha256": "09a549890b599890bd4d926e30b34cf329287e4b3dab42ea0922d4938d59459f",
+      "local_evidence_directory": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.3.0-single",
+      "retained_recordings": [
+        {
+          "original": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.3.0-single/player/RunData/20261026_100038/20261026_100038_Swarm_VR1 Swarm_.csv",
+          "uncompressed_sha256": "349cf042e25ae7e6ac2be3c233a9c4fcc30b3cf7ba2d948b33c9da48fb91a4b0",
+          "retained": "349cf042e25ae7e6ac2be3c233a9c4fcc30b3cf7ba2d948b33c9da48fb91a4b0.csv.gz"
+        },
+        {
+          "original": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.3.0-single/player/RunData/20261026_100038/20261026_100038_Swarm_VR2 Swarm_.csv",
+          "uncompressed_sha256": "79bf51a25fac2c4c51ac079d0945541e46a04889b1a2b296fcce46d1e99adcf2",
+          "retained": "79bf51a25fac2c4c51ac079d0945541e46a04889b1a2b296fcce46d1e99adcf2.csv.gz"
+        },
+        {
+          "original": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.3.0-single/player/RunData/20261026_100038/20261026_100038_Swarm_VR3 Swarm_.csv",
+          "uncompressed_sha256": "e19ac9d41add40ea54a27d241905682e172b10ab9d6a3a9dce194f7de6efd0e6",
+          "retained": "e19ac9d41add40ea54a27d241905682e172b10ab9d6a3a9dce194f7de6efd0e6.csv.gz"
+        },
+        {
+          "original": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.3.0-single/player/RunData/20261026_100038/20261026_100038_Swarm_VR4 Swarm_.csv",
+          "uncompressed_sha256": "0bb364f8af20646632ebfa190381bcc7e24009146d57d168ce98a70c08a3b7c8",
+          "retained": "0bb364f8af20646632ebfa190381bcc7e24009146d57d168ce98a70c08a3b7c8.csv.gz"
+        }
+      ],
+      "distinct_observed_sensor_poses": 497,
+      "publisher_events": [
+        {
+          "event": "publisher_closed",
+          "seconds": 11.733333333333333,
+          "status": {
+            "serial_enabled": false,
+            "udp_destination": null,
+            "udp_enabled": false,
+            "zmq": {
+              "dropped": 0,
+              "endpoint": "tcp://127.0.0.1:29873",
+              "enqueued": 349,
+              "failures": 0,
+              "last_error": null,
+              "published": 349,
+              "queue_capacity": 256,
+              "queue_len": 0,
+              "worker_alive": true
+            },
+            "zmq_payload": {
+              "framing": "single",
+              "mode": "legacy_matrex_vr",
+              "topic": "FT"
+            }
+          }
+        },
+        {
+          "event": "publisher_rebound",
+          "seconds": 12.733333333333333
+        },
+        {
+          "event": "complete",
+          "seconds": 25.97175275,
+          "source_rows": 780,
+          "status": {
+            "serial_enabled": false,
+            "udp_destination": null,
+            "udp_enabled": false,
+            "zmq": {
+              "dropped": 0,
+              "endpoint": "tcp://127.0.0.1:29873",
+              "enqueued": 394,
+              "failures": 0,
+              "last_error": null,
+              "published": 394,
+              "queue_capacity": 256,
+              "queue_len": 0,
+              "worker_alive": true
+            },
+            "zmq_payload": {
+              "framing": "single",
+              "mode": "legacy_matrex_vr",
+              "topic": "FT"
+            }
+          },
+          "synthetic": true
+        }
+      ],
+      "other_player_shutdown_errors": []
+    },
+    {
+      "passed": true,
+      "functional_compatibility_passed": true,
+      "clean_receiver_lifecycle": true,
+      "checks": {
+        "received_measurements": true,
+        "wire_units_axes_and_heading": true,
+        "rejected_marker_never_received": true,
+        "publisher_reconnect": true,
+        "all_rigs_all_scene_steps": true,
+        "movement_every_scene": true,
+        "heading_every_scene": true,
+        "no_critical_receiver_errors": true
+      },
+      "observations": 8167,
+      "unmatched": [],
+      "max_position_error": 7.990549808703726e-07,
+      "max_yaw_error_degrees": 8.042289027798688e-05,
+      "scene_coverage": {
+        "VR1 Swarm": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "VR2 Swarm": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "VR3 Swarm": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "VR4 Swarm": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      },
+      "movement": [
+        {
+          "rig": "VR1 Swarm",
+          "step": "0",
+          "rows": 265,
+          "sensor_distance": 0.4915628001429828,
+          "world_distance": 0.6390319222717824,
+          "radius_ratio": 1.3000005738552727,
+          "sensor_yaw_delta": 14.251700000000028,
+          "world_yaw_delta": 14.251708000000008,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "1",
+          "rows": 264,
+          "sensor_distance": 0.5441322626809496,
+          "world_distance": 0.718622484953602,
+          "radius_ratio": 1.320676119098206,
+          "sensor_yaw_delta": 13.387607000000003,
+          "world_yaw_delta": 13.593594999999993,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "2",
+          "rows": 264,
+          "sensor_distance": 0.45827786217206684,
+          "world_distance": 0.6046669974994997,
+          "radius_ratio": 1.3194331374280284,
+          "sensor_yaw_delta": 12.526289999999989,
+          "world_yaw_delta": 12.725325999999995,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "3",
+          "rows": 209,
+          "sensor_distance": 0.4216974622166941,
+          "world_distance": 0.5387970534731218,
+          "radius_ratio": 1.2776862602892658,
+          "sensor_yaw_delta": 10.891160000000013,
+          "world_yaw_delta": 10.682864999999993,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "4",
+          "rows": 262,
+          "sensor_distance": 0.5004144244223981,
+          "world_distance": 0.6485334890680653,
+          "radius_ratio": 1.295992796004298,
+          "sensor_yaw_delta": 14.405169999999998,
+          "world_yaw_delta": 14.398389000000009,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR1 Swarm",
+          "step": "5",
+          "rows": 266,
+          "sensor_distance": 0.5433604561412247,
+          "world_distance": 0.6969492883936375,
+          "radius_ratio": 1.2826647219474754,
+          "sensor_yaw_delta": 14.81722000000002,
+          "world_yaw_delta": 14.595807000000008,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "0",
+          "rows": 265,
+          "sensor_distance": 0.4915628001429828,
+          "world_distance": 0.6390319222717824,
+          "radius_ratio": 1.3000005738552727,
+          "sensor_yaw_delta": 14.251700000000028,
+          "world_yaw_delta": 14.251708000000008,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "1",
+          "rows": 264,
+          "sensor_distance": 0.5441322626809496,
+          "world_distance": 0.7073715748152453,
+          "radius_ratio": 1.2999993261381204,
+          "sensor_yaw_delta": 13.387607000000003,
+          "world_yaw_delta": 13.38760099999999,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "2",
+          "rows": 264,
+          "sensor_distance": 0.45827786217206684,
+          "world_distance": 0.5957605944975717,
+          "radius_ratio": 1.2999986333048856,
+          "sensor_yaw_delta": 12.526289999999989,
+          "world_yaw_delta": 12.526295000000005,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "3",
+          "rows": 211,
+          "sensor_distance": 0.43028056163624195,
+          "world_distance": 0.559364035883422,
+          "radius_ratio": 1.2999983865325222,
+          "sensor_yaw_delta": 11.093970000000013,
+          "world_yaw_delta": 11.093966999999992,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "4",
+          "rows": 262,
+          "sensor_distance": 0.5004144244223981,
+          "world_distance": 0.6505390435316123,
+          "radius_ratio": 1.3000005830817027,
+          "sensor_yaw_delta": 14.405169999999998,
+          "world_yaw_delta": 14.405177000000009,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR2 Swarm",
+          "step": "5",
+          "rows": 266,
+          "sensor_distance": 0.5433604561412247,
+          "world_distance": 0.706368192857348,
+          "radius_ratio": 1.29999926360809,
+          "sensor_yaw_delta": 14.81722000000002,
+          "world_yaw_delta": 14.817217,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "0",
+          "rows": 265,
+          "sensor_distance": 0.4915628001429828,
+          "world_distance": 0.6390319222717824,
+          "radius_ratio": 1.3000005738552727,
+          "sensor_yaw_delta": 14.251700000000028,
+          "world_yaw_delta": 14.251708000000008,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "1",
+          "rows": 264,
+          "sensor_distance": 0.5441322626809496,
+          "world_distance": 0.7073715748152453,
+          "radius_ratio": 1.2999993261381204,
+          "sensor_yaw_delta": 13.387607000000003,
+          "world_yaw_delta": 13.38760099999999,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "2",
+          "rows": 264,
+          "sensor_distance": 0.45827786217206684,
+          "world_distance": 0.5957605123900794,
+          "radius_ratio": 1.2999984541395821,
+          "sensor_yaw_delta": 12.526289999999989,
+          "world_yaw_delta": 12.526295000000005,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "3",
+          "rows": 215,
+          "sensor_distance": 0.43028056163624195,
+          "world_distance": 0.5593638077827635,
+          "radius_ratio": 1.2999978564117618,
+          "sensor_yaw_delta": 11.093970000000013,
+          "world_yaw_delta": 11.093966999999992,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "4",
+          "rows": 262,
+          "sensor_distance": 0.5004144244223981,
+          "world_distance": 0.6505390435316123,
+          "radius_ratio": 1.3000005830817027,
+          "sensor_yaw_delta": 14.405169999999998,
+          "world_yaw_delta": 14.405177000000009,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR3 Swarm",
+          "step": "5",
+          "rows": 266,
+          "sensor_distance": 0.5433604561412247,
+          "world_distance": 0.706368192857348,
+          "radius_ratio": 1.29999926360809,
+          "sensor_yaw_delta": 14.81722000000002,
+          "world_yaw_delta": 14.817217,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "0",
+          "rows": 265,
+          "sensor_distance": 0.4915628001429828,
+          "world_distance": 0.6390319222717824,
+          "radius_ratio": 1.3000005738552727,
+          "sensor_yaw_delta": 14.251700000000028,
+          "world_yaw_delta": 14.251708000000008,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "1",
+          "rows": 264,
+          "sensor_distance": 0.5441322626809496,
+          "world_distance": 0.7073715748152453,
+          "radius_ratio": 1.2999993261381204,
+          "sensor_yaw_delta": 13.387607000000003,
+          "world_yaw_delta": 13.38760099999999,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "2",
+          "rows": 264,
+          "sensor_distance": 0.45827786217206684,
+          "world_distance": 0.5957605123900794,
+          "radius_ratio": 1.2999984541395821,
+          "sensor_yaw_delta": 12.526289999999989,
+          "world_yaw_delta": 12.526295000000005,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "3",
+          "rows": 218,
+          "sensor_distance": 0.4388753648235454,
+          "world_distance": 0.5705374075038397,
+          "radius_ratio": 1.2999987085928837,
+          "sensor_yaw_delta": 11.296690000000012,
+          "world_yaw_delta": 11.296683000000002,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "4",
+          "rows": 262,
+          "sensor_distance": 0.5004144244223981,
+          "world_distance": 0.6505390435316123,
+          "radius_ratio": 1.3000005830817027,
+          "sensor_yaw_delta": 14.405169999999998,
+          "world_yaw_delta": 14.405177000000009,
+          "movement_passed": true,
+          "heading_passed": true
+        },
+        {
+          "rig": "VR4 Swarm",
+          "step": "5",
+          "rows": 266,
+          "sensor_distance": 0.5433604561412247,
+          "world_distance": 0.706368192857348,
+          "radius_ratio": 1.29999926360809,
+          "sensor_yaw_delta": 14.81722000000002,
+          "world_yaw_delta": 14.817217,
+          "movement_passed": true,
+          "heading_passed": true
+        }
+      ],
+      "critical_receiver_errors": [],
+      "version": "0.3.0",
+      "framing": "topic_json",
+      "player_exit": 0,
+      "publisher_exit": 0,
+      "compiled_runtime_unchanged": true,
+      "launch": {
+        "command": [
+          "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.3.0-topic_json/player/MATREX-VR-0.3.0-macOS-universal/MATREX VR.app/Contents/MacOS/MATREX VR",
+          "-batchmode",
+          "-nographics",
+          "-logFile",
+          "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.3.0-topic_json/unity.log",
+          "--config-dir",
+          "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.3.0-topic_json/player/MATREX-VR-0.3.0-macOS-universal/MATREX VR.app/Contents/Resources/Data/StreamingAssets",
+          "--data-dir",
+          "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.3.0-topic_json/player/RunData"
+        ],
+        "publisher": "/Users/pavan/Documents/ChatGPT/Fictrac/target/release/examples/matrex_legacy_fixture",
+        "publisher_sha256": "cf14dc02ce56121b57633ad630303db32107396460a3ca6e59d4a7cfc8222c6a",
+        "unchanged_archive_sha256": "49a67e383ad561ea668dbbbf5f8e0c0767b3d79ad91b1056be8bb164dae5b00e",
+        "source_revision": "cd207862cacf0a82d5e2ecfe39e23478679d5792",
+        "netmq_sha256": "ce9b347a4cf35c4ed96e1343f3ce84ce6514be680347e59de0f5a29f6ee6fba1",
+        "normal_json_edits_only": true,
+        "synthetic": true,
+        "started_utc": "2026-10-26T09:01:09Z"
+      },
+      "runtime_manifest_equal": true,
+      "runtime_manifest_sha256": "09a549890b599890bd4d926e30b34cf329287e4b3dab42ea0922d4938d59459f",
+      "local_evidence_directory": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.3.0-topic_json",
+      "retained_recordings": [
+        {
+          "original": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.3.0-topic_json/player/RunData/20261026_100111/20261026_100111_Swarm_VR1 Swarm_.csv",
+          "uncompressed_sha256": "d043ae7b0bab541ac45bcac4754d078097f3d30c7ff2eda918e7785dd15e6a86",
+          "retained": "d043ae7b0bab541ac45bcac4754d078097f3d30c7ff2eda918e7785dd15e6a86.csv.gz"
+        },
+        {
+          "original": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.3.0-topic_json/player/RunData/20261026_100111/20261026_100111_Swarm_VR2 Swarm_.csv",
+          "uncompressed_sha256": "482bbb3a8c418f98155d6e16c3f27a6648be96c002afce8f3172e4ba7f1c1f6e",
+          "retained": "482bbb3a8c418f98155d6e16c3f27a6648be96c002afce8f3172e4ba7f1c1f6e.csv.gz"
+        },
+        {
+          "original": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.3.0-topic_json/player/RunData/20261026_100111/20261026_100111_Swarm_VR3 Swarm_.csv",
+          "uncompressed_sha256": "f8864038ce37cc6a525eacef3f88c7b8f235a6dd445d24e3951ac3929767351b",
+          "retained": "f8864038ce37cc6a525eacef3f88c7b8f235a6dd445d24e3951ac3929767351b.csv.gz"
+        },
+        {
+          "original": "/private/tmp/hejjetrac-matrex-legacy-v020-20261026/v0.3.0-topic_json/player/RunData/20261026_100111/20261026_100111_Swarm_VR4 Swarm_.csv",
+          "uncompressed_sha256": "a7721623986742683b1aaec400dd40b3dae911de4a16e798341c09b902138aef",
+          "retained": "a7721623986742683b1aaec400dd40b3dae911de4a16e798341c09b902138aef.csv.gz"
+        }
+      ],
+      "distinct_observed_sensor_poses": 513,
+      "publisher_events": [
+        {
+          "event": "publisher_closed",
+          "seconds": 11.733333333333333,
+          "status": {
+            "serial_enabled": false,
+            "udp_destination": null,
+            "udp_enabled": false,
+            "zmq": {
+              "dropped": 0,
+              "endpoint": "tcp://127.0.0.1:29874",
+              "enqueued": 349,
+              "failures": 0,
+              "last_error": null,
+              "published": 349,
+              "queue_capacity": 256,
+              "queue_len": 0,
+              "worker_alive": true
+            },
+            "zmq_payload": {
+              "framing": "topic_json",
+              "mode": "legacy_matrex_vr",
+              "topic": "FT"
+            }
+          }
+        },
+        {
+          "event": "publisher_rebound",
+          "seconds": 12.733333333333333
+        },
+        {
+          "event": "complete",
+          "seconds": 25.967773375,
+          "source_rows": 780,
+          "status": {
+            "serial_enabled": false,
+            "udp_destination": null,
+            "udp_enabled": false,
+            "zmq": {
+              "dropped": 0,
+              "endpoint": "tcp://127.0.0.1:29874",
+              "enqueued": 394,
+              "failures": 0,
+              "last_error": null,
+              "published": 394,
+              "queue_capacity": 256,
+              "queue_len": 0,
+              "worker_alive": true
+            },
+            "zmq_payload": {
+              "framing": "topic_json",
+              "mode": "legacy_matrex_vr",
+              "topic": "FT"
+            }
+          },
+          "synthetic": true
+        }
+      ],
+      "other_player_shutdown_errors": []
+    }
+  ],
+  "scope": [
+    "Actual unchanged published macOS universal Unity players v0.1.0 and v0.3.0 executed on arm64; archive digests match GitHub release metadata.",
+    "Only ordinary JSON experiment/system configuration edited in fresh disposable extractions; compiled executable/managed-library/engine bytes hashed unchanged before and after each run.",
+    "Both single JSON and multipart topic/JSON tested against both players; actual sensor and world-transform recordings checked, including heading wrap, TCP publisher close/rebind and five repeated full scene reloads.",
+    "The fixture is explicitly synthetic, not camera tracking. Sample-video engine/recording coverage is tested separately.",
+    "Functional motion/transport compatibility passes all four cases. Unchanged v0.1.0 still logs existing receiver-thread join timeouts; it does not meet the strict clean-lifecycle gate. v0.3.0 passes both gates.",
+    "v0.1.0 also reports its old MasterDataLogger sharing violation during quit. Raw per-rig recordings were retained independently of that archive error.",
+    "No native Windows/Linux Unity-player, physical display or animal tracking claim."
+  ],
+  "legacy_v010_lifecycle_source": {
+    "url": "https://github.com/pvnkmrksk/matrexVR/blob/779926a80b02190d6dd0410f260e52bba105a04e/Assets/Scripts/ZmqListener.cs#L204",
+    "reason": "The main thread disposes a subscriber whose worker can be blocked in ReceiveFrameString, waits only 500 ms, then discards the thread reference. Publisher protocol cannot change receiver ownership/lifetime.",
+    "prior_independent_diagnostics": "https://github.com/pvnkmrksk/matrexVR/blob/main/docs/diagnostics.md"
+  },
+  "version": "0.2.0"
+}
