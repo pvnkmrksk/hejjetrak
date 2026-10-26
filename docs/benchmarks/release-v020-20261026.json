@@ -1,0 +1,140 @@
+{
+  "version": "0.2.0",
+  "source_commit": "a7382fe905f19166ee88c21959e1582e1bbf1356",
+  "recorded_at_utc": "2026-10-26T10:04:45.041572+00:00",
+  "status": "unpublished candidate; not approved for publication",
+  "next_candidate": "0.2.1",
+  "decision": "Keep the immutable v0.2.0 Git tag, do not publish this draft, and validate a new v0.2.1 tag with the deterministic test fixture.",
+  "release": {
+    "run_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40302522495",
+    "status_at_snapshot": "completed",
+    "conclusion_at_snapshot": "cancelled",
+    "draft_at_snapshot": true,
+    "jobs_at_snapshot": [
+      {
+        "name": "package (macos-15-intel)",
+        "id": 121503590416,
+        "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40302522495/job/121503590416",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "source_guard": "success"
+      },
+      {
+        "name": "package (macos-latest)",
+        "id": 121503590540,
+        "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40302522495/job/121503590540",
+        "status": "completed",
+        "conclusion": "cancelled",
+        "source_guard": "success"
+      },
+      {
+        "name": "package (ubuntu-latest)",
+        "id": 121503590679,
+        "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40302522495/job/121503590679",
+        "status": "completed",
+        "conclusion": "success",
+        "source_guard": "success"
+      },
+      {
+        "name": "package (windows-latest)",
+        "id": 121503590747,
+        "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40302522495/job/121503590747",
+        "status": "completed",
+        "conclusion": "failure",
+        "source_guard": "success"
+      }
+    ],
+    "assets_at_snapshot": [
+      {
+        "name": "hejjetrac-linux-amd64.deb",
+        "size_bytes": 22611324,
+        "sha256": "96ee2313e76c8fbcd5049408573541286211c5a36f26eaae900f13f6ceb84270"
+      },
+      {
+        "name": "hejjetrac-linux-x86_64.tar.gz",
+        "size_bytes": 22614668,
+        "sha256": "c475b00ad44e28c8d9ea8d7ef35fca0c5cd9405f7574a2d0d5afd20c3edd8ddb"
+      }
+    ]
+  },
+  "windows_failures": [
+    {
+      "workflow": "release",
+      "run_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40302522495",
+      "job_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40302522495/job/121503590747",
+      "job_id": 121503590747,
+      "conclusion": "failure",
+      "failed_step": "Run cargo test --workspace --locked",
+      "test": "unrelated_edits_reuse_a_healthy_publisher_after_a_bad_peer",
+      "location": "crates/fictrac-io/tests/matrex_output.rs:135",
+      "assertion": "bad peer was not reported",
+      "suite_passed": 4,
+      "suite_failed": 1,
+      "suite_seconds": 2.01,
+      "raw_log_path": "/private/tmp/hejjetrac-v020-windows-failed.log",
+      "raw_log_sha256": "0fefe650fe4fe1c9cacf76d1fc2affc4a4209abafb2cac5be9263937a548c5fa"
+    },
+    {
+      "workflow": "portability-main",
+      "run_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40302521465",
+      "job_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40302521465/job/121503586889",
+      "job_id": 121503586889,
+      "conclusion": "failure",
+      "failed_step": "Run cargo test --workspace --locked",
+      "test": "unrelated_edits_reuse_a_healthy_publisher_after_a_bad_peer",
+      "location": "crates/fictrac-io/tests/matrex_output.rs:135",
+      "assertion": "bad peer was not reported",
+      "suite_passed": 4,
+      "suite_failed": 1,
+      "suite_seconds": 2.01,
+      "raw_log_path": "/private/tmp/hejjetrac-v020-portability-main-windows-failed.log",
+      "raw_log_sha256": "1ffd50d41582a3c5430c4243cbf34a985d5e0c158e0a5c09b545fef1a522de78"
+    },
+    {
+      "workflow": "portability-tag",
+      "run_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40302522404",
+      "job_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40302522404/job/121503590508",
+      "job_id": 121503590508,
+      "conclusion": "failure",
+      "failed_step": "Run cargo test --workspace --locked",
+      "test": "unrelated_edits_reuse_a_healthy_publisher_after_a_bad_peer",
+      "location": "crates/fictrac-io/tests/matrex_output.rs:135",
+      "assertion": "bad peer was not reported",
+      "suite_passed": 4,
+      "suite_failed": 1,
+      "suite_seconds": 2.01,
+      "raw_log_path": "/private/tmp/hejjetrac-v020-portability-tag-windows-failed.log",
+      "raw_log_sha256": "ca0e6efd03175a30a081aad7a444983e4066add8ad51107863c9b9fbfccb5f94"
+    }
+  ],
+  "diagnosis": "The test sent an invalid greeting and immediately dropped its peer before the server greeting/validation. Windows can report a connection reset before InvalidData, which production correctly treats as ordinary peer teardown. The fixture therefore could not reliably require a bad-peer failure count. The correction retains and reads the test connection through validation; production transport and numerical behavior do not change.",
+  "retry": {
+    "request_command": "gh run rerun 40302522495 --repo pvnkmrksk/hejjetrak --job 121503590747",
+    "request_result": "GitHub rejected: job 121503590747 cannot be rerun while the workflow remained in progress",
+    "queued": false,
+    "further_retries": false
+  },
+  "completed_linux": {
+    "job_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40302522495/job/121503590679",
+    "workspace_tests_passed": 208,
+    "workspace_suites": 27,
+    "decoder_tests_passed": 1353,
+    "failed": 0,
+    "ignored": 0,
+    "rustc": "1.99.1 (58cf8f9c3 2026-10-13)"
+  },
+  "website": {
+    "run_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40302521412",
+    "conclusion": "success",
+    "source_commit": "a7382fe905f19166ee88c21959e1582e1bbf1356",
+    "internal_references": 1642,
+    "html_pages": 37
+  },
+  "temporary_checkout": {
+    "path": "/private/tmp/hejjetrac-release-v020",
+    "fsck_passed": true,
+    "all_405_tracked_files_match_committed_blob_sha1": true,
+    "source_manifest_sha256": "3baa7d600531becf50c97e18e21718f587adc6abe3e6f76e388a98bf7df3ed31"
+  },
+  "scope": "Snapshot retained when the candidate was superseded. Other in-progress job results are not represented as complete, and this is not published-release or hardware/GUI evidence."
+}

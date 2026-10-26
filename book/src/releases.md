@@ -4,7 +4,7 @@
 
 The landing page resolves GitHub's latest published release at download time and shows the platform archive, release tag and available SHA-256 digest. Manual OS/chip choices remain available; browser architecture detection is not treated as infallible. If the release API is unavailable or an archive has not uploaded yet, use the visible GitHub release link rather than a guessed download.
 
-## v0.2.0 — legacy MATREX VR output
+## v0.2.1 — legacy MATREX VR output (upcoming)
 
 The minor release adds explicit `legacy_matrex_vr` JSON output and staged Rust
 ZMTP 2/3 negotiation for the original NetMQ 4.0.0.1 DLL. Native FT remains the
@@ -17,6 +17,11 @@ worker-stop warnings and strict lifecycle acceptance remains false; see
 [the complete compatibility scope](matrex-vr.md). The new transport requires no
 Python or native libzmq runtime. Full release execution evidence is recorded in
 [validation](validation.md).
+
+The v0.2.0 candidate was not published: Windows CI exposed a test-peer shutdown
+race. v0.2.1 corrects the test's connection lifetime without changing production
+transport or tracking behavior. The original candidate tag and CI evidence are
+retained.
 
 ## v0.1.4 — 25 October 2026
 

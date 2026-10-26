@@ -4,7 +4,7 @@ use fictrac_io::{
     ConfigDocument, OutputSinks, ZmqFraming, ZmqOutputMode, load_config_text, write_dat,
 };
 use std::{
-    io::Write,
+    io::{Read, Write},
     net::{TcpListener, TcpStream, UdpSocket},
     time::{Duration, Instant},
 };
@@ -124,8 +124,12 @@ fn unrelated_edits_reuse_a_healthy_publisher_after_a_bad_peer() -> TestResult {
     let mut sinks = OutputSinks::from_config(&document)?;
     assert!(sinks.write(&row()).is_empty());
     let mut peer = TcpStream::connect(("127.0.0.1", zmq_port))?;
+    peer.set_read_timeout(Some(Duration::from_secs(2)))?;
+    let mut greeting = [0; 11];
+    peer.read_exact(&mut greeting)?;
     peer.write_all(&[0; 11])?; // Invalid ZMTP signature: only this peer is closed.
-    drop(peer);
+    // Keep the peer open until its invalid greeting is processed. Closing with
+    // unread publisher bytes can turn this into a benign TCP reset on Windows.
     let deadline = Instant::now() + Duration::from_secs(2);
     let before = loop {
         let status = sinks.status().zmq.ok_or("publisher missing")?;
@@ -135,6 +139,7 @@ fn unrelated_edits_reuse_a_healthy_publisher_after_a_bad_peer() -> TestResult {
         assert!(Instant::now() < deadline, "bad peer was not reported");
         std::thread::sleep(Duration::from_millis(5));
     };
+    drop(peer);
     assert!(before.worker_alive);
     let mut unrelated = document.clone();
     unrelated.set("vfov", "60")?;

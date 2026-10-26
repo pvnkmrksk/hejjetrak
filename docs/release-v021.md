@@ -1,9 +1,14 @@
-# HejjéTrac v0.2.0
+# HejjéTrac v0.2.1
 
 HejjéTrac can now send pose data directly to the original MATREX VR v0.1.0 and
 v0.3.0 players. The new **Legacy MATREX VR (JSON)** mode replaces the former
 Python republisher. **Native FicTrac (FT) remains the default**, including for
 existing configuration files.
+
+v0.2.0 remained an unpublished candidate after Windows CI exposed a test-peer
+shutdown race. v0.2.1 makes that test deterministic by keeping its connection
+open until malformed-handshake validation completes; production transport and
+tracking behavior are unchanged.
 
 ## Connect a legacy MATREX rig
 

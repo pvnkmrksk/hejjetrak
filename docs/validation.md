@@ -1,10 +1,10 @@
 # HejjéTrac validation evidence
 
-## v0.2.0 local MATREX validation — 2026-10-26
+## v0.2 series local MATREX validation — 2026-10-26
 
 On Apple M2 Pro / macOS 27.0.1 arm64 / Rust 1.99.1 (LLVM 23.1.1),
 `cargo fmt --all -- --check`, locked strict all-target Clippy and the complete
-locked workspace suite pass **206 tests across 27 suites**, zero failures.
+locked workspace suite pass **208 tests across 27 suites**, zero failures.
 Numerical reference tolerances and decoder-oracle constants remain unchanged.
 Native FT remains the default; the new legacy MATREX mode changes ZeroMQ
 serialization and transport, independently of the numerical engine and recording.
@@ -56,8 +56,37 @@ change. Pipeline timing includes opening, decoding, tracking, ordinary numeric/
 quality/SVG output and finalization. The release profile uses thin LTO and one
 codegen unit without a target-CPU override.
 [Both runs, commands, hashes, toolchain and timing boundaries](benchmarks/matrex-performance-20261026.json)
-retain the complete evidence. Native desktop interaction and v0.2.0 native
-release-CI results are recorded separately when completed.
+retain the complete evidence.
+
+The final full suite and release build were repeated from the exact public tag
+`a7382fe905f19166ee88c21959e1582e1bbf1356` in a verified temporary checkout
+outside iCloud. All 405 tracked files matched their committed Git blobs. An
+earlier workspace run encountered cloud-backed source-opening timeouts; the
+unchanged tests pass in the isolated checkout, including the strict source-clock
+and staged-frame assertions. No timing or numerical tolerance was relaxed.
+
+The final native Mac desktop was visually checked after processing 120 sample
+frames. Native FT defaults to a disabled single-frame publisher; selecting legacy
+JSON exposes both framing choices and the topic. An occupied test port reports
+its bind failure and restores the previous publisher. Correcting the port to
+19871 applies successfully, clears the old error banner and preserves the paused
+source counter. Mode controls, units and port fields render without clipping.
+Raw native bridge and screenshot evidence is retained under the task's local
+`runs/matrex-compat/` evidence folder; the release-CI/package results follow below
+when completed.
+
+### Unpublished v0.2.0 candidate
+
+The immutable v0.2.0 source candidate remains at
+`a7382fe905f19166ee88c21959e1582e1bbf1356`; its GitHub release was held in
+draft. Linux native release validation passed all 208 workspace tests and
+1,353 decoder tests. Three independent Windows jobs consistently failed the
+same test fixture: the dummy malformed peer closed before reading the PUB
+greeting, allowing Windows to report a normal connection reset before invalid
+signature validation. The publisher remained healthy. The v0.2.1 test reads the
+bounded greeting and keeps that peer alive through the original error-counter
+assertion; no production tracking/transport code, assertion or numerical gate
+was changed. [Candidate workflow](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40302522495).
 
 ## v0.1.4 published release — 2026-10-25
 
