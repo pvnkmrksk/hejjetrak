@@ -258,6 +258,29 @@ impl Input {
         }
     }
 }
+fn source_failed(
+    mut error: String,
+    recorder: &mut Option<Recorder>,
+    snapshot: &mut Snapshot,
+    shared: &Arc<Mutex<Snapshot>>,
+) -> String {
+    // Finalize captured evidence before publishing an ended source. In
+    // particular, automatic camera fallback must not abandon media sample tables.
+    if let Some(mut recorder) = recorder.take()
+        && let Err(recording_error) = recorder.finish()
+    {
+        error = format!("{error}; recording finalization also failed: {recording_error}");
+    }
+    snapshot.recording = false;
+    snapshot.record_options = None;
+    snapshot.advance_remaining = 0;
+    snapshot.ended = true;
+    snapshot.notice = error.clone();
+    *shared
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner) = snapshot.clone();
+    error
+}
 struct Engine {
     config: fictrac_core::Config,
     tracker: Tracker,
@@ -393,7 +416,17 @@ fn run(
     let mut last_camera_frame = Instant::now();
     let mut last_source_time: Option<f64> = None;
     let mut retimed = false;
-    let mut sinks = OutputSinks::from_config(&doc).map_err(|e| e.to_string())?;
+    let (mut sinks, mut outputs_unavailable) = match OutputSinks::from_config(&doc) {
+        Ok(sinks) => (sinks, false),
+        Err(error) => {
+            let error = format!(
+                "Live outputs are disabled: {error}. Preview, tracking and recording continue; correct the output settings and Apply to reconnect."
+            );
+            snapshot.notice = error.clone();
+            snapshot.command_error = Some(error);
+            (OutputSinks::disabled(), true)
+        }
+    };
     let mut previous_frame: Option<GrayFrame> = None;
     let mut previous_input: Option<GrayFrame> = None;
     let mut previous_rgb: Option<Vec<u8>> = None;
@@ -404,7 +437,24 @@ fn run(
         for cmd in pending_command.take().into_iter().chain(rx.try_iter()) {
             match cmd {
                 Command::Configure(next, revision) => {
-                    if let Err(error) = sinks.reconfigure(&doc, &next) {
+                    // A failed startup has no previously configured handles.
+                    // Reapply even unchanged settings, e.g. after the old Python
+                    // publisher releases the requested port. A disabled sink is
+                    // not evidence that an enabled requested output is healthy.
+                    let output_result = if outputs_unavailable {
+                        OutputSinks::from_config(&next).map(|configured| {
+                            sinks = configured;
+                            outputs_unavailable = false;
+                        })
+                    } else {
+                        sinks.reconfigure(&doc, &next)
+                    };
+                    if let Err(error) = output_result {
+                        let status = sinks.status();
+                        outputs_unavailable = outputs_unavailable
+                            || (!status.udp_enabled
+                                && !status.serial_enabled
+                                && status.zmq.is_none());
                         snapshot.notice = format!("Configuration rejected: {error}");
                         snapshot.command_error = Some(snapshot.notice.clone());
                         continue;
@@ -680,7 +730,12 @@ fn run(
         let frame = if let Some(frame) = pending_input.take() {
             Some(frame)
         } else {
-            input.next()?
+            match input.next() {
+                Ok(frame) => frame,
+                Err(error) => {
+                    return Err(source_failed(error, &mut recorder, &mut snapshot, shared));
+                }
+            }
         };
         let input_wait = if matches!(input, Input::Camera(_)) {
             work_tick.elapsed()
@@ -691,7 +746,12 @@ fn run(
         let Some((frame, rgb, sequence)) = frame else {
             if matches!(input, Input::Camera(_)) {
                 if last_camera_frame.elapsed() > Duration::from_secs(5) {
-                    return Err("No camera frames for five seconds. Check the device and camera permission, then Connect again.".into());
+                    return Err(source_failed(
+                        "No camera frames for five seconds. Check the device and camera permission, then Connect again.".into(),
+                        &mut recorder,
+                        &mut snapshot,
+                        shared,
+                    ));
                 }
                 continue;
             }
@@ -1424,6 +1484,206 @@ mod tests {
                 .count(),
             3
         );
+        fs::remove_dir_all(directory).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    #[test]
+    fn source_read_failure_finalizes_recorded_video_and_retains_primary_error() -> Result<()> {
+        let (source, mut doc) = fixture().map_err(|e| e.to_string())?;
+        let SourceSpec::Video(sample) = source else {
+            return Err("video fixture required".into());
+        };
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|e| e.to_string())?
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!("hejjetrac-source-error-{stamp}"));
+        fs::create_dir(&directory).map_err(|e| e.to_string())?;
+        let input_path = directory.join("truncated.y4m");
+        let recording_path = directory.join("recording");
+        // Keep four actual reference-video frames, then interrupt a fifth frame.
+        // The real decoder/prefetch pipeline must deliver its queued frames and
+        // primary read error in order; this is not a synthetic error response.
+        let mut reference = VideoSource::open(&sample).map_err(|e| e.to_string())?;
+        let mut input_bytes = Vec::new();
+        for index in 0..4 {
+            let frame = reference
+                .next_frame()
+                .map_err(|e| e.to_string())?
+                .ok_or("reference fixture ended early")?;
+            if index == 0 {
+                fictrac_io::write_y4m_header(&mut input_bytes, frame.width(), frame.height(), 25)
+                    .map_err(|e| e.to_string())?;
+            }
+            fictrac_io::write_y4m_frame(&mut input_bytes, &frame).map_err(|e| e.to_string())?;
+        }
+        input_bytes.extend_from_slice(b"FRAME\n\0\0\0");
+        fs::write(&input_path, input_bytes).map_err(|e| e.to_string())?;
+        let mut oracle = VideoSource::open(&input_path).map_err(|e| e.to_string())?;
+        for _ in 0..4 {
+            oracle.next_frame().map_err(|e| e.to_string())?;
+        }
+        let primary_error = oracle
+            .next_frame()
+            .err()
+            .ok_or("truncated fixture did not fail")?
+            .to_string();
+        drop(oracle);
+        for (key, value) in [
+            ("src_fn", input_path.to_string_lossy().into_owned()),
+            ("sock_port", "-1".into()),
+            ("zmq_port", "-1".into()),
+            ("save_raw", "n".into()),
+            ("save_debug", "n".into()),
+            ("vid_codec", "mjpg".into()),
+        ] {
+            doc.set(key, &value).map_err(|e| e.to_string())?;
+        }
+        let (tx, rx) = mpsc::sync_channel(16);
+        tx.send(Command::RecordOptions(
+            recording_path.clone(),
+            fictrac_control::RecordOptions {
+                raw: true,
+                debug: false,
+            },
+        ))
+        .map_err(|e| e.to_string())?;
+        tx.send(Command::Advance(5)).map_err(|e| e.to_string())?;
+        let shared = Arc::new(Mutex::new(Snapshot::default()));
+        let error = run(
+            SourceSpec::Video(input_path),
+            doc,
+            false,
+            rx,
+            &shared,
+            &AtomicBool::new(false),
+            None,
+        )
+        .err()
+        .ok_or("source read failure was swallowed")?;
+        assert_eq!(error, primary_error);
+        let snapshot = shared
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone();
+        assert!(snapshot.ended);
+        assert!(!snapshot.recording);
+        assert!(snapshot.record_options.is_none());
+        assert_eq!(snapshot.advance_remaining, 0);
+        assert_eq!(snapshot.frames, 4);
+        assert_eq!(snapshot.notice, primary_error);
+        let all = fs::read_to_string(recording_path.join("epoch-0000-all-frames.dat"))
+            .map_err(|e| e.to_string())?;
+        let quality = fs::read_to_string(recording_path.join("epoch-0000-quality.csv"))
+            .map_err(|e| e.to_string())?;
+        assert_eq!(all.lines().count(), 4);
+        assert_eq!(quality.lines().count(), 5);
+        let saved = ConfigDocument::parse(
+            fs::read_to_string(recording_path.join("epoch-0000-config.txt"))
+                .map_err(|e| e.to_string())?,
+        )
+        .map_err(|e| e.to_string())?;
+        assert!(saved.boolean("save_raw"));
+        let media = recording_path.join("epoch-0000-media");
+        assert!(!media.join("raw.avi.partial").exists());
+        let mut recorded = VideoSource::open(&media.join("raw.avi")).map_err(|e| e.to_string())?;
+        let mut frames = 0;
+        while recorded.next_frame().map_err(|e| e.to_string())?.is_some() {
+            frames += 1;
+        }
+        assert_eq!(frames, 4);
+        drop(recorded);
+        fs::remove_dir_all(directory).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    #[test]
+    fn occupied_startup_output_keeps_preview_and_recording_then_retries_same_settings() -> Result<()>
+    {
+        let busy = std::net::TcpListener::bind("127.0.0.1:0").map_err(|e| e.to_string())?;
+        let port = busy.local_addr().map_err(|e| e.to_string())?.port();
+        let (source, mut doc) = fixture().map_err(|e| e.to_string())?;
+        if let SourceSpec::Video(path) = &source {
+            doc.set("src_fn", &path.to_string_lossy())
+                .map_err(|e| e.to_string())?;
+        }
+        for (key, value) in [
+            ("zmq_port", port.to_string()),
+            ("sock_port", "-1".into()),
+            ("save_raw", "n".into()),
+            ("save_debug", "n".into()),
+        ] {
+            doc.set(key, &value).map_err(|e| e.to_string())?;
+        }
+        let worker = Worker::start(source, doc.clone(), true)?;
+        let running = wait_for(&worker, |s| s.frames >= 3)?;
+        assert!(running.image.is_some());
+        assert!(running.row.is_some());
+        assert!(!running.ended);
+        assert!(running.command_error.as_deref().is_some_and(|s| {
+            s.contains("Live outputs are disabled") && s.contains("cannot bind")
+        }));
+        assert!(running.outputs.as_ref().is_some_and(|s| s.zmq.is_none()));
+        worker.send(Command::Pause(true))?;
+        let paused = wait_for(&worker, |s| s.paused)?;
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|e| e.to_string())?
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!("hejjetrac-busy-startup-{stamp}"));
+        worker.send(Command::Record(directory.clone()))?;
+        wait_for(&worker, |s| s.recording)?;
+        worker.send(Command::Advance(4))?;
+        let recorded = wait_for(&worker, |s| {
+            s.frames == paused.frames + 4 && s.advance_remaining == 0
+        })?;
+        assert!(recorded.command_error.is_some());
+        assert!(recorded.outputs.as_ref().is_some_and(|s| s.zmq.is_none()));
+        worker.send(Command::StopRecord)?;
+        wait_for(&worker, |s| !s.recording)?;
+        assert_eq!(
+            fs::read_to_string(directory.join("epoch-0000-all-frames.dat"))
+                .map_err(|e| e.to_string())?
+                .lines()
+                .count(),
+            4
+        );
+        assert_eq!(
+            fs::read_to_string(directory.join("epoch-0000-quality.csv"))
+                .map_err(|e| e.to_string())?
+                .lines()
+                .count(),
+            5
+        );
+        worker.send(Command::Configure(doc.clone(), 1))?;
+        let rejected = wait_for(&worker, |s| {
+            s.command_error
+                .as_deref()
+                .is_some_and(|e| e.starts_with("Configuration rejected"))
+        })?;
+        assert_eq!(rejected.revision, 0);
+        assert_eq!(rejected.frames, recorded.frames);
+        drop(busy);
+        worker.send(Command::Configure(doc, 2))?;
+        let queued = worker.latest();
+        if queued.revision < 2 {
+            assert!(
+                queued.command_error.is_some(),
+                "A queued edit is not an acknowledgement"
+            );
+        }
+        let applied = wait_for(&worker, |s| s.revision == 2)?;
+        assert!(applied.command_error.is_none());
+        assert_eq!(applied.frames, recorded.frames);
+        let publisher = applied
+            .outputs
+            .as_ref()
+            .and_then(|s| s.zmq.as_ref())
+            .ok_or("Recovered publisher is missing")?;
+        assert!(publisher.worker_alive);
+        assert_eq!(publisher.endpoint, format!("tcp://127.0.0.1:{port}"));
+        worker.send(Command::Step)?;
+        let advanced = wait_for(&worker, |s| s.frames == applied.frames + 1)?;
+        assert!(advanced.row.as_ref().is_some_and(|row| row.accepted));
         fs::remove_dir_all(directory).map_err(|e| e.to_string())?;
         Ok(())
     }

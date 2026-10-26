@@ -6,10 +6,29 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .map(|s| s.parse::<f64>())
         .transpose()?
         .unwrap_or(30.0);
-    for camera in fictrac_camera::list_cameras()? {
+    let cameras = fictrac_camera::list_cameras()?;
+    for camera in &cameras {
         println!("{}: {}", camera.id, camera.name);
     }
     fictrac_camera::request_permission()?;
+    let explicit_device = std::env::var("FICTRAC_CAMERA_PROBE_DEVICE")
+        .ok()
+        .map(|s| s.parse::<u32>())
+        .transpose()?;
+    let device = if let Some(device) = explicit_device {
+        device
+    } else if let Ok(name) = std::env::var("FICTRAC_CAMERA_PROBE_NAME") {
+        let matches = cameras
+            .iter()
+            .filter(|c| c.name.to_lowercase().contains(&name.to_lowercase()))
+            .collect::<Vec<_>>();
+        if matches.len() != 1 {
+            return Err(format!("camera name {name:?} has {} matches; choose FICTRAC_CAMERA_PROBE_DEVICE explicitly", matches.len()).into());
+        }
+        matches[0].id
+    } else {
+        0
+    };
     let request = fictrac_camera::CameraFormatRequest {
         width: std::env::var("FICTRAC_CAMERA_PROBE_WIDTH")
             .ok()
@@ -25,10 +44,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     };
     let controls = std::env::var_os("FICTRAC_CAMERA_PROBE_CONTROLS").is_some();
     let mut camera = if controls {
-        fictrac_camera::Camera::open_with_format(0, request)?
+        fictrac_camera::Camera::open_with_format(device, request)?
     } else {
-        fictrac_camera::Camera::open(0, fps)?
+        fictrac_camera::Camera::open(device, fps)?
     };
+    println!("opened_source={}", camera.source_label());
     if controls {
         let original = camera.capabilities()?;
         println!("capabilities={}", serde_json::to_string(&original)?);

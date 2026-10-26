@@ -20,7 +20,7 @@ Download the package for your computer, extract it and open **HejjéTrac**. The 
 |---|---|
 | macOS · Apple Silicon or Intel | Open `hejjetrac.app`. If blocked as an unidentified developer, attempt to open it, then use **System Settings → Privacy & Security → Open Anyway**. [Apple's instructions](https://support.apple.com/en-us/102445). |
 | Windows · x64 | Extract the ZIP and open `hejjetrac.exe`. If SmartScreen offers it, use **More info → Run anyway** for the downloaded release. [Windows details](https://pvnkmrksk.github.io/hejjetrak/manual/install.html#windows). |
-| Linux · x86_64 | Install the Debian/Ubuntu `.deb`, or extract the portable archive and launch `hejjetrac`. Current binaries require **glibc 2.39+**. [Distribution requirements](https://pvnkmrksk.github.io/hejjetrak/manual/install.html#linux). |
+| Linux · x86_64 | On Ubuntu **22.04 or newer**, install the `.deb`, or extract the portable archive and launch `hejjetrac`. New Linux packages target **glibc 2.35+**. [Distribution requirements](https://pvnkmrksk.github.io/hejjetrak/manual/install.html#linux). |
 
 Current downloads are ad hoc signed on Mac and unsigned on Windows. Use the project's release files; managed computers may require administrator approval for a first-launch exception. [Installation and permissions](https://pvnkmrksk.github.io/hejjetrak/manual/install.html) covers the exact prompts. No Rust installation or compiler is needed. Older releases use `hejjetrak` filenames; existing commands remain available as aliases.
 

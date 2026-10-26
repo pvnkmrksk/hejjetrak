@@ -23,6 +23,7 @@ LINUX_RUNTIME_DEPENDS = (
     'libx11-6', 'libx11-xcb1', 'libxcursor1', 'libxi6', 'libxrandr2',
     'libegl1', 'libgles2', 'libvulkan1',
 )
+LINUX_GLIBC_CEILING = (2, 35)
 DESKTOP_ENTRY = """[Desktop Entry]
 Type=Application
 Name=HejjéTrac
@@ -121,6 +122,33 @@ def linux_dependencies(stage):
             not line.endswith(' install ok installed') for line in installed):
         raise ValueError('Install all declared Linux runtime libraries before packaging')
     return lines[0] + ', ' + ', '.join(LINUX_RUNTIME_DEPENDS)
+
+
+def linux_abi_requirements(stage):
+    """Reject a newer build ABI instead of disguising it with weaker Depends."""
+    evidence = []
+    for name in ('hejjetrac', 'hejjetrac-cli'):
+        binary = stage / name
+        result = subprocess.run(['readelf', '--version-info', '--wide', str(binary)],
+                                check=True, text=True, capture_output=True)
+        # Version needs also expose requirements such as GLIBC_ABI_DT_RELR,
+        # which are not ordinary undefined symbols and require newer loaders.
+        names = set(re.findall(r'\bGLIBC_[A-Za-z0-9_.]+\b', result.stdout))
+        numeric = [re.fullmatch(r'GLIBC_([0-9]+(?:\.[0-9]+)+)', name) for name in names]
+        if not names or any(value is None for value in numeric):
+            raise ValueError(f'{binary}: cannot establish a public glibc ABI from ELF symbols')
+        versions = sorted({tuple(map(int, value.group(1).split('.'))) for value in numeric})
+        if versions[-1] > LINUX_GLIBC_CEILING:
+            required = '.'.join(map(str, versions[-1]))
+            raise ValueError(f'{binary} requires glibc {required}; Ubuntu 22.04 supports 2.35. '
+                             'Rebuild in the Ubuntu 22.04 release container; do not lower '
+                             'the Debian dependency without rebuilding the executable')
+        evidence.append({'binary': name,
+                         'required_glibc_versions': ['.'.join(map(str, v)) for v in versions],
+                         'maximum_required_glibc': '.'.join(map(str, versions[-1]))})
+    return {'target_baseline': 'Ubuntu 22.04 / glibc 2.35',
+            'glibc_ceiling': '.'.join(map(str, LINUX_GLIBC_CEILING)),
+            'binaries': evidence}
 
 
 def tar_gz_tree(directory, destination, epoch):
@@ -248,6 +276,12 @@ def main():
     else:
         binary = resource = stage
     binaries = install_binaries(root, binary, suffix, system, version)
+    linux_abi = linux_depends = None
+    if system == 'Linux':
+        # Audit before either archive is created: the portable tar has the same
+        # linked ABI as the Debian package and must obey the same baseline.
+        linux_abi = linux_abi_requirements(stage)
+        linux_depends = linux_dependencies(stage)
     for directory in ['examples', 'docs']:
         shutil.copytree(root / directory, resource / directory)
     for pattern in ['VR*.txt']:
@@ -281,13 +315,17 @@ def main():
                 names.append(str(relative))
         manifest.append({'package': package.name, 'notice_files': names})
     (licenses / 'manifest.json').write_text(json.dumps(manifest, indent=2))
-    (resource / 'BUILD.json').write_text(json.dumps({
+    build = {
         'name': 'HejjéTrac', 'version': version, 'platform': label,
         'architecture': arch, 'source_commit': os.environ.get('PACKAGE_SOURCE_COMMIT'),
         'source_url': 'https://github.com/pvnkmrksk/hejjetrak',
         'binary_hash_boundary': 'compiled binaries before application signing',
         'binaries': binaries,
-    }, indent=2, ensure_ascii=False) + '\n')
+    }
+    if linux_abi is not None:
+        build['linux_abi'] = linux_abi
+        build['linux_depends'] = linux_depends
+    (resource / 'BUILD.json').write_text(json.dumps(build, indent=2, ensure_ascii=False) + '\n')
     if system == 'Darwin':
         subprocess.run(['codesign', '--force', '--deep', '--sign', '-', str(stage / 'hejjetrac.app')], check=True)
         subprocess.run(['codesign', '--verify', '--deep', '--strict', str(stage / 'hejjetrac.app')], check=True)
@@ -301,8 +339,7 @@ def main():
     print(archive)
     if system == 'Linux':
         version = workspace_version(root / 'Cargo.toml', debian=True)
-        dependencies = linux_dependencies(stage)
-        print(build_deb(stage, root / 'dist' / 'hejjetrac-linux-amd64.deb', version, dependencies, root / 'assets'))
+        print(build_deb(stage, root / 'dist' / 'hejjetrac-linux-amd64.deb', version, linux_depends, root / 'assets'))
 
 
 if __name__ == "__main__":

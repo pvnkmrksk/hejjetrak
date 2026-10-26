@@ -8,7 +8,7 @@ on:
         description: Platform to rebuild
         type: choice
         default: all
-        options: [all, ubuntu-latest, windows-latest, macos-latest, macos-15-intel]
+        options: [all, ubuntu-22.04, windows-latest, macos-latest, macos-15-intel]
       source_ref:
         description: Existing source tag or commit (empty uses workflow ref)
         type: string
@@ -22,12 +22,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON(inputs.platform && inputs.platform != 'all' && format('["{0}"]', inputs.platform) || '["ubuntu-latest","windows-latest","macos-latest","macos-15-intel"]') }}
-    runs-on: ${{ matrix.os }}
+        os: ${{ fromJSON(inputs.platform && inputs.platform != 'all' && format('["{0}"]', inputs.platform) || '["ubuntu-22.04","windows-latest","macos-latest","macos-15-intel"]') }}
+    # Keep the userspace ABI at 22.04 even when GitHub updates/retires runners.
+    runs-on: ${{ matrix.os == 'ubuntu-22.04' && 'ubuntu-latest' || matrix.os }}
+    container: ${{ matrix.os == 'ubuntu-22.04' && 'ubuntu:22.04' || '' }}
     steps:
+      - name: Ubuntu 22.04 build tools and native desktop libraries
+        if: runner.os == 'Linux'
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y ca-certificates curl git gh build-essential binutils pkg-config python3 python-is-python3 libudev-dev libxkbcommon-dev libwayland-dev libclang-dev dpkg-dev desktop-file-utils libxkbcommon-x11-0 libwayland-cursor0 libwayland-egl1 libx11-6 libx11-xcb1 libxcursor1 libxi6 libxrandr2 libegl1 libgles2 libvulkan1
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.source_ref || github.ref }}
+      - name: Trust the checked-out workspace inside Linux containers
+        if: runner.os == 'Linux'
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Verify release tag matches the packaged source
         if: startsWith(github.ref, 'refs/tags/') || inputs.release_tag != ''
         env:
@@ -35,12 +47,7 @@ jobs:
           EXPECTED_RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
         shell: bash
         run: |
-          python - "$EXPECTED_RELEASE_TAG" <<'PY'
-          import pathlib, sys, tomllib
-          version = tomllib.loads(pathlib.Path('Cargo.toml').read_text())['workspace']['package']['version']
-          if sys.argv[1] != 'v' + version:
-              sys.exit(f'Release {sys.argv[1]} does not match source version v{version}')
-          PY
+          python scripts/package.py --check-release-tag "$EXPECTED_RELEASE_TAG"
           tag_commit=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${EXPECTED_RELEASE_TAG}" --jq .sha)
           source_commit=$(git rev-parse HEAD)
           if [ "$tag_commit" != "$source_commit" ]; then
@@ -49,7 +56,13 @@ jobs:
           fi
       - name: Record packaged source revision
         shell: bash
-        run: echo "PACKAGE_SOURCE_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+        run: |
+          source_commit=$(git rev-parse HEAD)
+          if [[ ! "$source_commit" =~ ^[0-9a-f]{40}$ ]]; then
+            echo '::error::Cannot identify the exact packaged source revision.'
+            exit 1
+          fi
+          echo "PACKAGE_SOURCE_COMMIT=$source_commit" >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -58,14 +71,12 @@ jobs:
         shell: pwsh
         # Explicit flags also make immutable older-tag rebuilds portable.
         run: Add-Content $env:GITHUB_ENV 'RUSTFLAGS=-C target-feature=+crt-static'
-      - name: Linux development libraries
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libudev-dev libxkbcommon-dev libwayland-dev libclang-dev dpkg-dev desktop-file-utils libxkbcommon-x11-0 libwayland-cursor0 libwayland-egl1 libx11-6 libx11-xcb1 libxcursor1 libxi6 libxrandr2 libegl1 libgles2 libvulkan1
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --locked
+      - name: Patched Linux camera adapter regression
+        if: runner.os == 'Linux' && hashFiles('vendor/nokhwa-bindings-linux/Cargo.toml') != ''
+        run: cargo test -p nokhwa-bindings-linux --lib --locked
       - name: Patched Rust decoder regression suite
         run: cargo test --manifest-path vendor/oxideav-h264/Cargo.toml --lib --locked
       - run: cargo build --workspace --release --locked
@@ -119,3 +130,41 @@ jobs:
           shopt -s nullglob
           archives=(dist/*.zip dist/*.tar.gz dist/*.deb)
           gh release upload "$RELEASE_TAG" "${archives[@]}" --clobber
+  linux-compatibility:
+    name: Linux package runtime (Ubuntu ${{ matrix.ubuntu }})
+    needs: package
+    if: inputs.platform == '' || inputs.platform == 'all' || inputs.platform == 'ubuntu-22.04'
+    runs-on: ubuntu-latest
+    container: ubuntu:${{ matrix.ubuntu }}
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu: ['22.04', '24.04']
+    steps:
+      - name: Native runtime, software graphics and installer tools
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y ca-certificates git python3 dpkg desktop-file-utils xvfb xauth mesa-vulkan-drivers libgl1-mesa-dri
+      - uses: actions/checkout@v4
+        with:
+          # Test tools follow this workflow revision, including when the build
+          # source_ref is an older immutable application tag.
+          ref: ${{ github.ref }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: hejjetrac-Linux-X64
+          path: packages
+      - name: Install actual Debian package and verify the same portable build
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get install -y ./packages/hejjetrac-linux-amd64.deb
+          python3 scripts/test_linux_package.py --archive packages/hejjetrac-linux-x86_64.tar.gz --output linux-package-runtime
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-runtime-ubuntu-${{ matrix.ubuntu }}
+          path: linux-package-runtime/
+          if-no-files-found: warn

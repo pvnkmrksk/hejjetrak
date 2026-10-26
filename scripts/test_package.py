@@ -49,14 +49,14 @@ class DebianPackageTests(unittest.TestCase):
             (stage / 'examples').mkdir()
             (stage / 'examples/sample.mp4').write_bytes(b'video fixture')
             assets = Path(__file__).resolve().parent.parent / 'assets'
-            output = PACKAGE.build_deb(stage, directory / 'test.deb', '0.1.4', 'libc6 (>= 2.39), libudev1', assets)
+            output = PACKAGE.build_deb(stage, directory / 'test.deb', '0.1.4', 'libc6 (>= 2.35), libudev1', assets)
             archive = members(output)
             self.assertEqual(list(archive), ['debian-binary', 'control.tar.gz', 'data.tar.gz'])
             self.assertEqual(archive['debian-binary'], b'2.0\n')
             with tarfile.open(fileobj=io.BytesIO(archive['control.tar.gz'])) as control:
                 text = control.extractfile('control').read().decode()
                 for line in ('Package: hejjetrak', 'Version: 0.1.4', 'Architecture: amd64',
-                             'Depends: libc6 (>= 2.39), libudev1'):
+                             'Depends: libc6 (>= 2.35), libudev1'):
                     self.assertIn(line + '\n', text)
             with tarfile.open(fileobj=io.BytesIO(archive['data.tar.gz'])) as data:
                 for entry in data.getmembers():
@@ -126,6 +126,37 @@ class ReleaseIdentityTests(unittest.TestCase):
                 self.assertEqual(alias.external_attr >> 16, 0o120777)
                 self.assertEqual(packaged.read(alias), b'hejjetrac')
                 self.assertEqual(packaged.read(stage.name + '/hejjetrac'), b'executable payload')
+
+
+class LinuxAbiTests(unittest.TestCase):
+    @staticmethod
+    def symbols(version):
+        return subprocess.CompletedProcess([], 0, stdout=(
+            '00000000 DF *UND* 00000000 (GLIBC_2.2.5) memcpy\n'
+            f'00000000 DF *UND* 00000000 (GLIBC_{version}) __libc_start_main\n'))
+
+    def test_both_executables_are_audited_and_versions_compare_numerically(self):
+        with mock.patch.object(PACKAGE.subprocess, 'run', side_effect=[
+                self.symbols('2.9'), self.symbols('2.35')]) as inspect:
+            evidence = PACKAGE.linux_abi_requirements(Path('/package'))
+        self.assertEqual([v['maximum_required_glibc'] for v in evidence['binaries']],
+                         ['2.9', '2.35'])
+        self.assertEqual([call.args[0][-1] for call in inspect.call_args_list],
+                         ['/package/hejjetrac', '/package/hejjetrac-cli'])
+
+    def test_either_newer_executable_rejects_the_package(self):
+        for versions in [('2.39', '2.34'), ('2.34', '2.36')]:
+            with self.subTest(versions=versions), mock.patch.object(
+                    PACKAGE.subprocess, 'run', side_effect=[self.symbols(v) for v in versions]):
+                with self.assertRaisesRegex(ValueError, 'Rebuild in the Ubuntu 22.04'):
+                    PACKAGE.linux_abi_requirements(Path('/package'))
+
+    def test_unknown_or_private_abi_is_not_treated_as_compatible(self):
+        for output in ['', 'GLIBC_PRIVATE', 'GLIBC_2.34 GLIBC_ABI_DT_RELR']:
+            with self.subTest(output=output), mock.patch.object(
+                    PACKAGE.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, stdout=output)):
+                with self.assertRaisesRegex(ValueError, 'cannot establish a public glibc ABI'):
+                    PACKAGE.linux_abi_requirements(Path('/package'))
 
 
 if __name__ == '__main__':

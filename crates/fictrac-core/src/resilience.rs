@@ -68,11 +68,33 @@ impl Recovery {
         self.pending = None;
         self.pending_motion = None;
     }
-    pub fn reject_motion_candidate(&mut self, pose: DQuat) {
+    pub fn reject_motion_candidate(&mut self, pose: DQuat, delta: DVec3, delta_ms: f64) {
         self.reject();
         if pose.is_finite() {
             self.pending = Some(pose);
+            if delta.is_finite() && delta_ms.is_finite() && delta_ms > 0.0 {
+                let rate = delta / delta_ms;
+                if rate.is_finite() {
+                    // This is a search proposal, not an accepted velocity or a
+                    // confirmation sample. Three subsequent consistent visible
+                    // increments are still required for a new rate epoch.
+                    self.pending_motion = Some((rate, 0));
+                }
+            }
         }
+    }
+    fn predicted_pending_pose(&self, start: DQuat, bound: f64, delta_ms: f64) -> Option<DQuat> {
+        let (rate, _) = self.pending_motion?;
+        if !delta_ms.is_finite() || delta_ms <= 0.0 {
+            return None;
+        }
+        let delta = rate * delta_ms;
+        // Match the existing visible-confirmation increment bound. Do not
+        // extrapolate an unbounded pose through a missed/long source interval.
+        if !delta.is_finite() || delta.length() > bound * 3.0f64.sqrt() {
+            return None;
+        }
+        Some(DQuat::from_scaled_axis(delta) * start)
     }
     pub fn limit(&self, settings: &MapSettings) -> f64 {
         let adaptive = if self.error_mean > 0.0 {
@@ -175,7 +197,23 @@ impl Recovery {
         let seed_error = budget.full(objective, start);
         let confirm = self.pending.is_some();
         if confirm || seed_error <= limit * 1.2 || self.lost_frames.is_multiple_of(12) {
-            let (pose, error) = refine(objective, start, bound, settings, &mut budget, 64);
+            // A sharp fast-moving ball can have a good first candidate while
+            // violating its old slow-rate history. Starting every subsequent
+            // fit at zero velocity can then lose that candidate permanently.
+            // Compare the held-velocity proposal on the complete ROI, without
+            // changing any score/motion/texture acceptance or learning rule.
+            let fit_start = self
+                .predicted_pending_pose(start, bound, delta_ms)
+                .filter(|pose| budget.full(objective, *pose) < seed_error)
+                .unwrap_or(start);
+            let (mut pose, mut error) =
+                refine(objective, fit_start, bound, settings, &mut budget, 64);
+            if fit_start != start && error > limit {
+                let fallback = refine(objective, start, bound, settings, &mut budget, 64);
+                if fallback.1 < error {
+                    (pose, error) = fallback;
+                }
+            }
             if error.is_finite() && error <= limit {
                 if confirm
                     && self.motion_ok((pose * start.inverse()).to_scaled_axis().length(), delta_ms)
@@ -452,6 +490,42 @@ mod tests {
 #[cfg(test)]
 mod motion_tests {
     use super::*;
+    #[test]
+    fn held_motion_only_predicts_search_and_does_not_count_as_confirmation() {
+        let mut recovery = Recovery::default();
+        for _ in 0..32 {
+            recovery.observe_motion(0.005, 10.0);
+        }
+        let motion = DVec3::new(0.2, 0.0, 0.0);
+        let pose = DQuat::from_scaled_axis(motion);
+        let history = recovery.motion_rates.values;
+        recovery.reject_motion_candidate(pose, motion, 10.0);
+        assert_eq!(recovery.pending_motion, Some((motion / 10.0, 0)));
+        assert_eq!(recovery.motion_rates.values, history);
+        assert!(!recovery.motion_ok(motion.length(), 10.0));
+        let predicted = recovery.predicted_pending_pose(pose, 0.35, 10.0);
+        assert!(predicted.is_some_and(|next| {
+            (next * DQuat::from_scaled_axis(motion * 2.0).inverse())
+                .to_scaled_axis()
+                .length()
+                < 1e-12
+        }));
+        assert!(
+            recovery
+                .predicted_pending_pose(pose, 0.35, 1000.0)
+                .is_none()
+        );
+        assert!(
+            recovery
+                .predicted_pending_pose(pose, 0.35, f64::NAN)
+                .is_none()
+        );
+        recovery.reject();
+        assert!(recovery.pending.is_none());
+        assert!(recovery.pending_motion.is_none());
+        assert_eq!(recovery.motion_rates.values, history);
+    }
+
     #[test]
     fn robust_motion_gate_handles_bootstrap_acceleration_clock_changes_and_outliers() {
         let mut recovery = Recovery::default();

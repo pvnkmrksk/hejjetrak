@@ -1,6 +1,6 @@
-# Behavioral parity assessment — HejjéTrac v0.1.3
+# Behavioral parity assessment
 
-Published [v0.1.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.3)
+Historical released baseline: [v0.1.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.3)
 passed all four [native release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40180700262),
 with 173 workspace tests on Linux and both Macs, 170 platform-applicable tests
 on Windows, and 1,353 decoder tests on each platform. The official Apple Silicon
@@ -20,6 +20,32 @@ unreliable images; `rust_resilient : n` restores the older permissive/reset
 behavior. The new adaptive guard is not described as an unchanged quality gate.
 The fixed healthy-trajectory regression tolerances and complete fit scores remain
 separate from this intentional policy extension.
+
+## Current compatibility and recovery corrections
+
+The current source corrects the Linux build baseline to Ubuntu 22.04 / glibc
+2.35, with an ELF symbol-version guard for both executables. A single package
+built on that baseline has been installed and run in Ubuntu 22.04 and 24.04
+userspace: installed/portable CLIs process the full sample and pass the fixed
+numerical comparison, and native Xvfb/Mesa windows show the sample and exercise
+unavailable-camera fallback. The [preflight evidence](benchmarks/ubuntu22-compatibility-20261026.json)
+identifies its exact source snapshot; it is not a claim about later in-progress
+source or physical V4L cameras. Windows/Linux capture now supports validated
+mono and pure Rust MJPEG decoding alongside the existing raw formats; V4L frame
+waits are bounded. [Camera contracts and hardware limits](camera-controls.md)
+remain explicit.
+
+Fast-motion recovery now uses a held candidate's velocity only to propose the
+next search seed. Complete ROI verification and all acceptance/learning rules
+remain unchanged. A default-budget known-motion regression that previously
+never resumed at 0.20 rad/frame now confirms on the fourth visible image for
+sharp and simulated half-frame-exposure images, then measures all 86 remaining
+relative deltas within the existing 0.008 rad/component gate. The actual-video
+full/partial-obstruction oracle retains its exact prior errors and original
+gates. These [controlled results](benchmarks/fast-motion-recovery-20261026.json)
+do not establish a universal physical speed, shutter-exposure or occluder limit.
+Final workspace/release verification of the combined changes and live-camera
+investigation are recorded in [validation](validation.md) as they complete.
 
 Assessed against pvnkmrksk/fictrac commit `10fc4472af1fc9062b9bf5a92738e835b98cc3ec` and the supplied FicTrac 2.1.2 sample output. This version closes the previously missing operational features for the supported recorded-video workflow. **It does not establish unrestricted or numerical identity.**
 

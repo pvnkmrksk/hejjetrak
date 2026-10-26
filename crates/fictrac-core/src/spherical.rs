@@ -292,6 +292,8 @@ impl MapTracker {
             if score_good {
                 self.recovery.reject_motion_candidate(
                     DQuat::from_scaled_axis(DVec3::from_array(x)) * orientation,
+                    DVec3::from_array(x),
+                    self.prepared_delta_ms,
                 );
             } else {
                 self.recovery.reject();

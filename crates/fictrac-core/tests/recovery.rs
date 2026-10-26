@@ -677,3 +677,99 @@ fn sustained_faster_known_motion_can_establish_a_new_rate_without_erasing_atlas(
     );
     Ok(())
 }
+
+#[test]
+fn fast_motion_recovery_uses_held_velocity_with_sharp_and_exposure_blurred_images() -> Result {
+    for exposure_fraction in [0.0, 0.5] {
+        let mut c = config(false);
+        c.max_rotation = 0.35;
+        if let Some(m) = &mut c.spherical_map {
+            m.resilient = true;
+            // Exercise the actual default local-fit budget rather than relying
+            // on the larger budget in the older acceleration fixture.
+            m.max_evaluations = 50;
+            m.max_error = -1.0;
+        }
+        let texture = known_template()?;
+        let mut tracker = Tracker::new(c.clone())?;
+        let interval_ms = 1000.0 / 30.0;
+        let mut last = None;
+        for i in 0..330 {
+            let row = tracker.process(render_template(
+                &c,
+                &texture,
+                DQuat::from_rotation_x(0.02 * i as f64),
+                i as f64 * interval_ms,
+            )?)?;
+            assert!(row.accepted, "warmup {i}: {} {}", row.status, row.error);
+            last = Some(row);
+        }
+        let last = last.ok_or("missing learned motion")?;
+        let atlas = tracker.sphere_template().ok_or("missing learned atlas")?;
+        let fast = DVec3::new(0.2, 0.0, 0.0);
+        let start = DQuat::from_rotation_x(0.02 * 329.0);
+        let mut recovered = None;
+        let mut measured = 0;
+        let mut squared = DVec3::ZERO;
+        for i in 1..=90 {
+            let time = (329 + i) as f64 * interval_ms;
+            // Nine symmetric exposure samples have a known midpoint pose.
+            // This is correlated optical blur, not a fabricated occluder.
+            let samples = if exposure_fraction == 0.0 { 1 } else { 9 };
+            let mut pixels = vec![0.0; c.width * c.height];
+            for sample in 0..samples {
+                let fraction = if samples == 1 {
+                    0.0
+                } else {
+                    sample as f64 / (samples - 1) as f64 - 0.5
+                };
+                let pose =
+                    DQuat::from_scaled_axis(fast * (i as f64 + fraction * exposure_fraction))
+                        * start;
+                let frame = render_template(&c, &texture, pose, time)?;
+                for (average, value) in pixels.iter_mut().zip(frame.pixels()) {
+                    *average += *value / samples as f32;
+                }
+            }
+            let row = tracker.process(GrayFrame::new(c.width, c.height, pixels, time)?)?;
+            if recovered.is_none() {
+                assert_eq!(tracker.sphere_template().as_ref(), Some(&atlas));
+                assert_eq!(row.position, last.position);
+                assert_eq!(row.integrated, last.integrated);
+                assert_eq!(row.delta_camera, [0.0; 3]);
+                if row.accepted {
+                    assert_eq!(row.status, "relocalized");
+                    assert!(i >= 4, "velocity proposal bypassed four-image confirmation");
+                    recovered = Some(i);
+                }
+            } else {
+                assert!(
+                    row.accepted && row.status == "tracked",
+                    "exposure {exposure_fraction}, fast frame {i}: {} {}",
+                    row.status,
+                    row.error
+                );
+                measured += 1;
+                if measured <= 8 {
+                    assert_eq!(tracker.sphere_template().as_ref(), Some(&atlas));
+                }
+                let error = DVec3::from_array(row.delta_camera) - fast;
+                squared += error * error;
+            }
+        }
+        assert!(
+            recovered.is_some_and(|frame| frame <= 12),
+            "exposure {exposure_fraction}: fast motion never resumed: {recovered:?}"
+        );
+        assert!(measured >= 75);
+        let rms = (squared / measured as f64).to_array().map(f64::sqrt);
+        eprintln!(
+            "exposure={exposure_fraction}, recovery={recovered:?}, measured={measured}, RMS={rms:?}"
+        );
+        assert!(
+            rms.iter().all(|value| *value < 0.008),
+            "exposure {exposure_fraction}, fast component RMS {rms:?}"
+        );
+    }
+    Ok(())
+}

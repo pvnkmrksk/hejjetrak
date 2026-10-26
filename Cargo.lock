@@ -1163,7 +1163,7 @@ dependencies = [
 
 [[package]]
 name = "fictrac"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "clap",
  "fictrac-control",
@@ -1175,11 +1175,12 @@ dependencies = [
 
 [[package]]
 name = "fictrac-camera"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "block2 0.6.2",
  "dispatch2",
  "fictrac-core",
+ "image",
  "nokhwa",
  "objc2 0.6.5",
  "objc2-av-foundation",
@@ -1194,7 +1195,7 @@ dependencies = [
 
 [[package]]
 name = "fictrac-control"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "fictrac-core",
  "fictrac-io",
@@ -1204,7 +1205,7 @@ dependencies = [
 
 [[package]]
 name = "fictrac-core"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "bobyqa",
  "glam",
@@ -1214,7 +1215,7 @@ dependencies = [
 
 [[package]]
 name = "fictrac-desktop"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "clap",
  "eframe",
@@ -1232,7 +1233,7 @@ dependencies = [
 
 [[package]]
 name = "fictrac-io"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "fictrac-core",
  "glam",
@@ -2223,8 +2224,6 @@ dependencies = [
 [[package]]
 name = "nokhwa-bindings-linux"
 version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb67e22201a53322291740ca064b20eaaade7222ef0349f312d9b37b004e1984"
 dependencies = [
  "libc",
  "nokhwa-core",

@@ -4,7 +4,20 @@
 
 The landing page resolves GitHub's latest published release at download time and shows the platform archive, release tag and available SHA-256 digest. Manual OS/chip choices remain available; browser architecture detection is not treated as infallible. If the release API is unavailable or an archive has not uploaded yet, use the visible GitHub release link rather than a guessed download.
 
-## v0.2.1 — legacy MATREX VR output (upcoming)
+## v0.2.2 — Ubuntu compatibility, fast-motion recovery and MATREX VR (upcoming)
+
+Linux packages now target Ubuntu **22.04 and newer**, with a checked glibc 2.35
+ceiling. The same installed and portable builds are tested on Ubuntu 22.04 and
+24.04 with the full sample and a visible native preview. Camera startup handles
+monochrome `GREY` and MJPEG formats, bounds frame waits, and keeps the preview
+and recording available when an output port is occupied. The Mac capture
+adapter is unchanged; physical Linux camera testing remains outstanding.
+
+Fast-motion recovery retains a valid acceleration candidate as a search
+proposal instead of repeatedly starting from a stationary guess. Quality
+thresholds, confirmation rules and missing-motion semantics remain unchanged.
+Sharp and blurred known-motion regressions and the existing real-video
+recovery oracle cover the change. [Recovery](recovery.md) explains the limits.
 
 The minor release adds explicit `legacy_matrex_vr` JSON output and staged Rust
 ZMTP 2/3 negotiation for the original NetMQ 4.0.0.1 DLL. Native FT remains the
@@ -18,10 +31,10 @@ worker-stop warnings and strict lifecycle acceptance remains false; see
 Python or native libzmq runtime. Full release execution evidence is recorded in
 [validation](validation.md).
 
-The v0.2.0 candidate was not published: Windows CI exposed a test-peer shutdown
-race. v0.2.1 corrects the test's connection lifetime without changing production
-transport or tracking behavior. The original candidate tag and CI evidence are
-retained.
+The v0.2.0 and v0.2.1 candidates remain unpublished. Windows CI exposed a
+test-peer shutdown race, corrected by retaining the test connection through its
+validation assertion. Subsequent Ubuntu and tracking fixes are included here;
+the candidate tags and CI evidence are retained.
 
 ## v0.1.4 — 25 October 2026
 

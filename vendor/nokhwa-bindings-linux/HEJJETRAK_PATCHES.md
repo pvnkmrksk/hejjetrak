@@ -1,0 +1,21 @@
+# Linux camera adapter patches
+
+Vendored from `nokhwa-bindings-linux` 0.1.4, crates.io SHA-256
+`bb67e22201a53322291740ca064b20eaaade7222ef0349f312d9b37b004e1984`.
+Original copyright and Apache-2.0 terms are retained.
+
+- Accept standard V4L2 `GREY` and legacy `GRAY` mono identifiers, emitting
+  `GREY` when selecting mono capture. Mono UVC cameras otherwise disappear
+  from the set of usable formats.
+- Bound an MMAP frame read to two seconds. Failure is propagated; the app
+  closes the stream and offers reconnect/fallback. It must not retry the same
+  timed-out `v4l` MMAP queue, whose pending buffer state is not retry-safe.
+- Use the driver's checked, nonempty `bytesused` payload instead of copying
+  unused MMAP capacity. Invalid metadata fails before copying or decoding;
+  packed pixel validation in the application does not guess row padding.
+
+Application JPEG decoding remains pure Rust, outside Nokhwa's optional
+`mozjpeg` feature. No C/C++ media runtime or subprocess is added.
+
+Linux-only regression:
+`cargo test -p nokhwa-bindings-linux --lib --locked`

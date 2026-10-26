@@ -2,7 +2,7 @@
 
 [**Download the latest release**](../?download=1) or [choose a package on GitHub](https://github.com/pvnkmrksk/hejjetrak/releases/latest). The download page reads the latest published release and offers every available platform explicitly.
 
-Release packages include four portable archives and a Debian/Ubuntu `.deb`. The download page offers only assets present in the selected published release. The package names below use the current `hejjetrac` spelling; v0.1.3 and earlier use `hejjetrak` names. Old commands remain available as compatibility aliases in new packages. The Linux binaries require **glibc 2.39 or newer**; see the distribution requirements below.
+Release packages include four portable archives and a Debian/Ubuntu `.deb`. The download page offers only assets present in the selected published release. The package names below use the current `hejjetrac` spelling; v0.1.3 and earlier use `hejjetrak` names. Old commands remain available as compatibility aliases in new packages. New Linux packages target **Ubuntu 22.04 or newer, with glibc 2.35+**; see the distribution requirements below.
 
 Choose a platform download, **not** GitHub's “Source code” ZIP. No compiler or Rust installation is needed. Portable archives need no system installation; the optional Debian/Ubuntu installer uses your package manager.
 
@@ -52,11 +52,13 @@ sudo apt install ./hejjetrac-linux-amd64.deb
 
 That command installs the package; never run the tracking app with `sudo`. Use the portable archive below if you want no system installation. The package installs resources under `/usr/lib/hejjetrak`; copy rig/example configs into your own writable experiment folder before editing/saving them. Your recordings/configs stay separate from managed application files. Remove the installed application through the package manager (`sudo apt remove hejjetrak`); preserve your experiment files independently.
 
-The installer declares actual linked ABI requirements detected from the release binaries plus the desktop, graphics-loader and camera libraries loaded at runtime. It recommends a desktop portal for the file chooser. Graphics drivers, a running graphical session and device permissions still belong to your distribution. The v0.1.3 build uses Ubuntu 24.04 and requires **glibc 2.39 or newer**. Ubuntu 22.04 and Debian 12 do not meet that requirement. Do not bypass dependency checks; the portable archive uses the same binary ABI and is not a fix for an older system. Other distributions still need the listed desktop/camera libraries and working graphics drivers.
+New Linux releases are built in an **Ubuntu 22.04** environment, with an enforced **glibc 2.35** compatibility ceiling for both executables. The installer declares the actual linked library requirements, plus the desktop, graphics-loader and camera libraries loaded at runtime. It recommends a desktop portal for the file chooser. Graphics drivers, a running graphical session and device permissions still belong to your distribution.
+
+**If an older package asks for `libc6 (>= 2.39)`:** that package was built with the previous Ubuntu 24.04 baseline. Download a release containing this Ubuntu 22.04 compatibility fix. Do not force-install it or lower its dependency by hand: the old portable archive contains the same incompatible executable. Other Linux distributions need glibc 2.35 or newer, the listed desktop/camera libraries and working graphics drivers; that minimum alone does not establish hardware support.
 
 ### Portable archive
 
-Extract the tar archive with your archive manager, then run `hejjetrac`. A graphical desktop with a working Vulkan/OpenGL-capable graphics driver is needed for the native GUI. Standard desktop and camera system libraries are not bundled; distributions differ. The Linux archive is built on a GitHub-hosted Ubuntu runner; compatibility with an older distribution's C library/graphics stack is not established.
+Extract the tar archive with your archive manager, then run `hejjetrac`. It uses the same Ubuntu 22.04/glibc 2.35 build as the installer. A graphical desktop with a working Vulkan/OpenGL-capable graphics driver is needed for the native GUI. Standard desktop and camera system libraries are not bundled; distributions differ.
 
 If your file manager asks whether to execute the file, enable its **Executable as Program** or **Allow executing file as program** permission. In GNOME Files, this is under **Properties → Permissions**; see [GNOME's file permissions guide](https://help.gnome.org/gnome-help/nautilus-file-properties-permissions.html). The archive normally preserves executable permissions. From a terminal in the extracted folder:
 

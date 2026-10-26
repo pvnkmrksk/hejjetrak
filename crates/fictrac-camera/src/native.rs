@@ -3,9 +3,9 @@ use nokhwa::{
     Camera as NativeCamera,
     pixel_format::RgbFormat,
     utils::{
-        ApiBackend, CameraControl, CameraFormat, CameraIndex, ControlValueDescription,
-        ControlValueSetter, FrameFormat, KnownCameraControl, KnownCameraControlFlag,
-        RequestedFormat, RequestedFormatType, Resolution,
+        ApiBackend, CameraControl, CameraIndex, ControlValueDescription, ControlValueSetter,
+        FrameFormat, KnownCameraControl, KnownCameraControlFlag, RequestedFormat,
+        RequestedFormatType,
     },
 };
 use std::time::Instant;
@@ -42,6 +42,7 @@ pub struct Camera {
     camera: NativeCamera,
     start: Instant,
     count: u64,
+    read_failed: bool,
 }
 impl Camera {
     /// Identity reported by the opened backend, not an inferred enumeration path.
@@ -96,33 +97,47 @@ impl Camera {
                     .into(),
             ));
         }
+        // Bootstrap without requiring YUYV: mono sensors and MJPEG-only UVC
+        // devices may not advertise that encoding, or the default 640x480 size.
+        // Select the actual bounded format from the complete advertised list
+        // before opening the capture stream or allocating image buffers.
         let format = RequestedFormat::with_formats(
-            RequestedFormatType::Closest(CameraFormat::new(
-                Resolution::new(request.width as u32, request.height as u32),
-                FrameFormat::YUYV,
-                requested_fps as u32,
-            )),
+            RequestedFormatType::None,
             &[
                 FrameFormat::YUYV,
                 FrameFormat::RAWRGB,
                 FrameFormat::RAWBGR,
                 FrameFormat::GRAY,
                 FrameFormat::NV12,
+                FrameFormat::MJPEG,
             ],
         );
-        let mut camera =
-            NativeCamera::new(CameraIndex::Index(id), format).map_err(|e| Error(e.to_string()))?;
-        if exact {
-            let selected=camera.compatible_camera_formats().map_err(|e| Error(format!("cannot enumerate camera formats: {e}")))?.into_iter().find(|f|
-                f.width() as usize==request.width && f.height() as usize==request.height && raw_format(f.format()) && request.fps.is_none_or(|fps| f64::from(f.frame_rate())==fps)
-            ).ok_or_else(|| Error("requested dimensions/FPS are not advertised as an uncompressed camera format; query camera_status formats".into()))?;
-            camera
-                .set_camera_requset(RequestedFormat::with_formats(
-                    RequestedFormatType::Exact(selected),
-                    &[selected.format()],
-                ))
-                .map_err(|e| Error(format!("cannot select camera format: {e}")))?;
-        }
+        let mut camera = NativeCamera::new(CameraIndex::Index(id), format)
+            .map_err(|e| camera_error(id, "open", e))?;
+        let formats = camera
+            .compatible_camera_formats()
+            .map_err(|e| camera_error(id, "enumerate formats for", e))?
+            .into_iter()
+            .filter(|f| supported_format(f.format()))
+            .collect::<Vec<_>>();
+        let candidates = formats
+            .iter()
+            .map(|f| crate::selection::FormatCandidate {
+                width: f.width() as usize,
+                height: f.height() as usize,
+                fps: f64::from(f.frame_rate()),
+                compressed: f.format() == FrameFormat::MJPEG,
+            })
+            .collect::<Vec<_>>();
+        let selected = crate::selection::select_format(&candidates, &request, exact)
+            .and_then(|index| formats.get(index).copied())
+            .ok_or_else(|| Error("camera does not advertise a bounded format matching the requested dimensions/FPS; use automatic settings or query camera_status formats".into()))?;
+        camera
+            .set_camera_requset(RequestedFormat::with_formats(
+                RequestedFormatType::Exact(selected),
+                &[selected.format()],
+            ))
+            .map_err(|e| camera_error(id, "select the format for", e))?;
         let actual = camera.camera_format();
         CameraFormatRequest {
             width: actual.width() as usize,
@@ -130,13 +145,14 @@ impl Camera {
             fps: Some(f64::from(actual.frame_rate())),
         }
         .validate()?;
-        if !raw_format(actual.format()) {
+        if !supported_format(actual.format()) {
             return Err(Error(
-                "camera selected a compressed format; choose an uncompressed advertised format"
-                    .into(),
+                "camera selected an unsupported pixel format; query camera_status formats".into(),
             ));
         }
-        camera.open_stream().map_err(|e| Error(e.to_string()))?;
+        camera
+            .open_stream()
+            .map_err(|e| camera_error(id, "start", e))?;
         let actual = camera
             .refresh_camera_format()
             .map_err(|e| Error(format!("cannot verify opened camera format: {e}")))?;
@@ -159,6 +175,7 @@ impl Camera {
             camera,
             start: Instant::now(),
             count: 0,
+            read_failed: false,
         })
     }
     pub fn capabilities(&mut self) -> Result<CameraCapabilities> {
@@ -170,7 +187,7 @@ impl Camera {
         let formats = match self.camera.compatible_camera_formats() {
             Ok(formats) => formats
                 .into_iter()
-                .filter(|f| raw_format(f.format()))
+                .filter(|f| supported_format(f.format()))
                 .filter_map(|f| {
                     let request = CameraFormatRequest {
                         width: f.width() as usize,
@@ -342,20 +359,52 @@ impl Camera {
         self.capabilities()
     }
     pub fn next_frame(&mut self) -> Result<Option<CameraFrame>> {
-        let frame = self.camera.frame().map_err(|e| Error(e.to_string()))?;
+        if self.read_failed {
+            return Err(Error(
+                "camera stream previously failed; reconnect before reading another frame".into(),
+            ));
+        }
+        let id = self.camera.index().as_string();
+        let frame = match self.camera.frame() {
+            Ok(frame) => frame,
+            Err(error) => {
+                // A timed-out V4L MMAP queue already has a pending buffer;
+                // retrying would enqueue it again. Reconnect creates a new queue.
+                self.read_failed = true;
+                return Err(camera_error(id, "read from", error));
+            }
+        };
         CameraFormatRequest {
             width: frame.resolution().width() as usize,
             height: frame.resolution().height() as usize,
             fps: None,
         }
         .validate()?;
-        let rgb = frame
-            .decode_image::<RgbFormat>()
-            .map_err(|e| Error(e.to_string()))?;
-        let width = rgb.width() as usize;
-        let height = rgb.height() as usize;
+        let width = frame.resolution().width() as usize;
+        let height = frame.resolution().height() as usize;
+        let encoding = frame.source_frame_format();
+        let packed_layout = match encoding {
+            FrameFormat::GRAY => Some(crate::packed::Layout::Gray8),
+            FrameFormat::RAWRGB | FrameFormat::RAWBGR => Some(crate::packed::Layout::Rgb24),
+            FrameFormat::YUYV => Some(crate::packed::Layout::Yuyv422),
+            FrameFormat::NV12 => Some(crate::packed::Layout::Nv12),
+            FrameFormat::MJPEG => None,
+        };
+        if let Some(layout) = packed_layout {
+            crate::packed::validate(layout, width, height, frame.buffer().len())?;
+        }
+        let rgb = if encoding == FrameFormat::MJPEG {
+            crate::jpeg::decode(frame.buffer(), width, height)?
+        } else {
+            frame
+                .decode_image::<RgbFormat>()
+                .map_err(|e| Error(format!("cannot convert camera pixels: {e}")))?
+                .into_raw()
+        };
+        if width.checked_mul(height).and_then(|n| n.checked_mul(3)) != Some(rgb.len()) {
+            return Err(Error("camera RGB buffer length differs from its negotiated dimensions; select another advertised format".into()));
+        }
         let gray = rgb
-            .as_raw()
             .as_chunks::<3>()
             .0
             .iter()
@@ -373,13 +422,26 @@ impl Camera {
                 self.start.elapsed().as_secs_f64() * 1000.0,
             )
             .map_err(|e| Error(e.to_string()))?,
-            rgb: rgb.into_raw(),
+            rgb,
             sequence: self.count,
         }))
     }
 }
 
-fn raw_format(format: FrameFormat) -> bool {
+fn camera_error(
+    id: impl std::fmt::Display,
+    operation: &str,
+    error: impl std::fmt::Display,
+) -> Error {
+    let access = if cfg!(target_os = "linux") {
+        "Check /dev/video device access (usually the video group), the USB connection, and close other camera apps before Connect again."
+    } else {
+        "Allow desktop camera access in system privacy settings, check the USB connection, and close other camera apps before Connect again."
+    };
+    Error(format!("cannot {operation} camera {id}: {error}. {access}"))
+}
+
+fn supported_format(format: FrameFormat) -> bool {
     matches!(
         format,
         FrameFormat::YUYV
@@ -387,6 +449,7 @@ fn raw_format(format: FrameFormat) -> bool {
             | FrameFormat::RAWBGR
             | FrameFormat::GRAY
             | FrameFormat::NV12
+            | FrameFormat::MJPEG
     )
 }
 fn numeric_capability(control: Option<&CameraControl>, unit: &str) -> NumericControlCapability {
