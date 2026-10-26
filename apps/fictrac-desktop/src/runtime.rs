@@ -1298,6 +1298,25 @@ mod tests {
         Ok(())
     }
     #[test]
+    fn failed_source_and_shutdown_do_not_stop_another_session() -> Result<()> {
+        let (source, doc) = fixture().map_err(|e| e.to_string())?;
+        let healthy = Worker::start(source, doc.clone(), true)?;
+        let broken = Worker::start(
+            SourceSpec::Video(PathBuf::from("/nonexistent-hejjetrac-fixture/source.mp4")),
+            doc,
+            true,
+        )?;
+        let failed = wait_for(&broken, |s| s.ended)?;
+        assert_eq!(failed.frames, 0);
+        assert!(failed.notice.contains("source.mp4"));
+        let before = wait_for(&healthy, |s| s.frames >= 3)?.frames;
+        drop(broken);
+        let continuing = wait_for(&healthy, |s| s.frames > before + 2)?;
+        assert!(!continuing.ended);
+        assert!(continuing.command_error.is_none());
+        Ok(())
+    }
+    #[test]
     fn malformed_config_keeps_a_responsive_video_preview() -> Result<()> {
         let (source, mut doc) = fixture().map_err(|e| e.to_string())?;
         doc.set("vfov", "invalid").map_err(|e| e.to_string())?;

@@ -111,7 +111,7 @@ pub fn request_schema() -> Value {
         object(json!({"kind":{"const":"square"},"plane":{"enum":["xy","yz","xz"]},"points":points(4,4)}),&["kind","plane","points"])
     ]});
     variants.push(descriptor("calibrate", calibration));
-    variants.push(descriptor("view",object(json!({"settings":{"type":"boolean"},"diagnostics":{"type":"boolean"},"overlays":{"type":"boolean"},"full_image":{"type":"boolean"},"calibration_step":{"enum":["view","ball","exclude","lab"]},"calibration_action":{"enum":["inspect","edit","redraw","add","keep"]},"edit_marks":{"type":"boolean"},"magnifier":{"type":"boolean"}}),&[])));
+    variants.push(descriptor("view",object(json!({"settings":{"type":"boolean"},"diagnostics":{"type":"boolean"},"overlays":{"type":"boolean"},"full_image":{"type":"boolean"},"calibration_step":{"enum":["view","ball","exclude","lab"]},"calibration_action":{"enum":["inspect","edit","redraw","add","keep"]},"edit_marks":{"type":"boolean"},"magnifier":{"type":"boolean"},"window_size":{"type":"array","minItems":2,"maxItems":2,"items":{"type":"number","minimum":96,"maximum":8192}}}),&[])));
     variants.push(descriptor("camera_status", none()));
     variants.push(descriptor("camera_format",object(json!({"width":{"type":"integer","minimum":16,"maximum":8192},"height":{"type":"integer","minimum":16,"maximum":8192},"fps":{"type":["number","null"],"minimum":0.1,"maximum":1000}}),&["width","height"])));
     variants.push(descriptor("camera_set",json!({"oneOf":[object(json!({"control":{"const":"exposure_mode"},"mode":{"enum":["automatic","locked"]}}),&["control","mode"]),object(json!({"control":{"enum":["exposure","gain"]},"value":{"type":"number"}}),&["control","value"])]})));
@@ -141,6 +141,7 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
             "calibration_action",
             "edit_marks",
             "magnifier",
+            "window_size",
         ],
         "camera_status" => &[],
         "camera_format" => &["width", "height", "fps"],
@@ -176,6 +177,19 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
         {
             return Err(format!("args.{key} must be boolean"));
         }
+    }
+    if command == "view"
+        && let Some(size) = object.get("window_size")
+        && !size.as_array().is_some_and(|values| {
+            values.len() == 2
+                && values
+                    .iter()
+                    .all(|value| value.as_f64().is_some_and(|n| (96.0..=8192.0).contains(&n)))
+        })
+    {
+        return Err(
+            "args.window_size must be [width,height] within 96..8192 logical pixels".into(),
+        );
     }
     if command == "view"
         && let Some(step) = object.get("calibration_step")

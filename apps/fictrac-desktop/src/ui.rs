@@ -55,7 +55,11 @@ fn preview_chrome(size: Vec2) -> PreviewChrome {
 impl Session {
     pub fn show(&mut self, ctx: &egui::Context) {
         self.update();
+        if let Some(size) = self.requested_window_size.take() {
+            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(size));
+        }
         let size = ctx.content_rect().size();
+        self.window_inner_size = Some([size.x, size.y]);
         if self.tool != Tool::Inspect
             && self.calibration_preview_size.is_none()
             && (size.x < 480.0 || size.y < 360.0)
@@ -190,7 +194,7 @@ impl Session {
         if self.tool != Tool::Inspect {
             egui::TopBottomPanel::top(egui::Id::new(("calibration-guide", self.id)))
                 .show(ctx, |ui| self.calibration_banner(ui));
-        } else if self.show_diagnostics {
+        } else if self.show_diagnostics && chrome.toolbar {
             egui::TopBottomPanel::top(egui::Id::new(("diagnostic-calibration", self.id)))
                 .show(ctx, |ui| self.diagnostic_calibration_controls(ui));
         }
@@ -199,6 +203,12 @@ impl Session {
             .frame(egui::Frame::NONE.fill(Color32::from_rgb(12, 15, 19)))
             .show(ctx, |ui| {
                 let rect = ui.available_rect_before_wrap();
+                // A resize/minimize can temporarily leave no canvas after the
+                // toolbar and diagnostic/calibration panels consume its height.
+                // Never project pixels or pointer coordinates through that area.
+                if !drawable_rect(rect) {
+                    return;
+                }
                 if self.show_diagnostics && chrome.toolbar {
                     let width = rect.width().min(rect.height() * 4.0 / 3.0);
                     let size = Vec2::new(width, width * 0.75);
@@ -876,21 +886,22 @@ impl Session {
                     ui.label("No cameras detected");
                 }
                 for camera in cameras {
-                    if ui
-                        .selectable_label(
+                    let owner = self.occupied_cameras.get(&camera.id);
+                    let response = ui.add_enabled(
+                        owner.is_none(),
+                        egui::Button::selectable(
                             self.source_edit == camera.id.to_string(),
                             format!("{} · {}", camera.id, camera.name),
-                        )
-                        .clicked()
-                    {
-                        {
-                            let result = self.fields(&[("src_fn", camera.id.to_string())]);
-                            self.report(result);
-                        };
-                        {
-                            let result = self.start();
-                            self.report(result);
-                        };
+                        ),
+                    );
+                    let response = if let Some(owner) = owner {
+                        response.on_disabled_hover_text(format!("Already used by {owner}"))
+                    } else {
+                        response
+                    };
+                    if response.clicked() {
+                        let result = self.select_camera(camera.id);
+                        self.report(result);
                         ui.close();
                     }
                 }
@@ -1428,6 +1439,9 @@ value}
         crop
     }
     fn preview(&mut self, ui: &mut egui::Ui, rect: Rect) {
+        if !drawable_rect(rect) {
+            return;
+        }
         if self
             .document()
             .is_ok_and(|doc| doc.get("do_display") == Some("n") && !doc.boolean("save_debug"))
@@ -1442,13 +1456,27 @@ value}
             return;
         }
         let Some(image) = &self.snapshot.image else {
-            ui.painter().text(
-                rect.center(),
-                Align2::CENTER_CENTER,
-                "Opening source…\nDrop a video to begin",
+            let failed = self.snapshot.ended || !self.error.is_empty();
+            let message = if !self.error.is_empty() {
+                &self.error
+            } else if self.snapshot.ended {
+                &self.snapshot.notice
+            } else {
+                "Opening source…\nDrop a video to begin"
+            };
+            let color = if failed {
+                ui.visuals().error_fg_color
+            } else {
+                Color32::GRAY
+            };
+            let text = ui.painter().layout(
+                message.to_owned(),
                 FontId::proportional(14.0),
-                Color32::GRAY,
+                color,
+                (rect.width() - 24.0).max(1.0),
             );
+            ui.painter()
+                .galley(rect.center() - text.size() * 0.5, text, color);
             return;
         };
         let uv = self.image_uv();
@@ -1457,7 +1485,11 @@ value}
             ui.painter().image(texture.id(), target, uv, Color32::WHITE);
         }
         self.interact_source(ui, target, uv);
-        if self.tool == Tool::Inspect && !self.snapshot.path.is_empty() && rect.width() > 300.0 {
+        if self.tool == Tool::Inspect
+            && !self.snapshot.path.is_empty()
+            && rect.width() > 300.0
+            && rect.height() > 100.0
+        {
             let path = Rect::from_min_size(
                 Pos2::new(rect.right() - 110.0, rect.bottom() - 90.0),
                 Vec2::new(104.0, 84.0),
@@ -1548,6 +1580,9 @@ value}
         config
     }
     fn canvas(&mut self, ui: &mut egui::Ui, rect: Rect) {
+        if !drawable_rect(rect) {
+            return;
+        }
         let p = ui.painter();
         p.rect_filled(rect, 0.0, Color32::BLACK);
         let cell = rect.width() / 4.0;
@@ -1662,7 +1697,7 @@ value}
         self.interact_source(ui, source, uv);
     }
     fn draw_path(&self, ui: &egui::Ui, rect: Rect) {
-        if self.snapshot.path.len() < 2 {
+        if self.snapshot.path.len() < 2 || !drawable_rect(rect) {
             return;
         }
         let mut min = [f64::INFINITY; 2];
@@ -1673,8 +1708,8 @@ value}
                 max[i] = max[i].max(p[i]);
             }
         }
-        let scale = ((rect.width() - 24.0) as f64 / (max[1] - min[1]).max(0.01))
-            .min((rect.height() - 30.0) as f64 / (max[0] - min[0]).max(0.01));
+        let scale = ((rect.width() - 24.0).max(0.0) as f64 / (max[1] - min[1]).max(0.01))
+            .min((rect.height() - 30.0).max(0.0) as f64 / (max[0] - min[0]).max(0.01));
         let points: Vec<_> = self
             .snapshot
             .path
@@ -1692,6 +1727,9 @@ value}
         ));
     }
     fn interact_source(&mut self, ui: &mut egui::Ui, rect: Rect, uv: Rect) {
+        if !drawable_rect(rect) || !drawable_rect(uv) {
+            return;
+        }
         let Some(image) = &self.snapshot.image else {
             return;
         };
@@ -1755,7 +1793,7 @@ value}
             response.clone().on_hover_text("Left-click to add a mark. Right-click the nearest mark to remove it. Esc cancels this draft.");
         }
         let painter = ui.painter_at(rect);
-        let show_guides = self.show_overlays || self.show_diagnostics;
+        let show_guides = self.show_overlays;
         let saved_visible = !self.calibration_redraw;
         let draft_config = self.calibration_preview_config().ok().flatten();
         let geometry_visible = saved_visible || draft_config.is_some();
@@ -2459,7 +2497,20 @@ fn field_category(key: &str) -> &'static str {
         "Advanced & compatibility"
     }
 }
+fn drawable_rect(rect: Rect) -> bool {
+    rect.min.x.is_finite()
+        && rect.min.y.is_finite()
+        && rect.max.x.is_finite()
+        && rect.max.y.is_finite()
+        && rect.width().is_finite()
+        && rect.height().is_finite()
+        && rect.width() > 0.0
+        && rect.height() > 0.0
+}
 fn fit_image(target: Rect, width: usize, height: usize, uv: Rect) -> Rect {
+    if !drawable_rect(target) || !drawable_rect(uv) || width == 0 || height == 0 {
+        return Rect::from_min_max(Pos2::ZERO, Pos2::ZERO);
+    }
     let size = Vec2::new(width as f32 * uv.width(), height as f32 * uv.height());
     if size.x <= 0.0 || size.y <= 0.0 {
         return target;
@@ -2984,8 +3035,74 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn diagnostics_show_saved_geometry_and_each_redraw_action_is_ready_for_clicks()
-    -> Result<(), String> {
+    fn calibration_outline_checkbox_controls_preview_and_full_debug() -> Result<(), String> {
+        let ctx = egui::Context::default();
+        for diagnostics in [false, true] {
+            for outlines in [false, true] {
+                let mut session = session()?;
+                session.show_diagnostics = diagnostics;
+                session.show_overlays = outlines;
+                let original = session.history.text.clone();
+                let output = ctx.run(egui::RawInput::default(), |ctx| {
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        session.interact_source(
+                            ui,
+                            Rect::from_min_size(Pos2::ZERO, Vec2::new(384.0, 288.0)),
+                            session.image_uv(),
+                        );
+                    });
+                });
+                for colour in [
+                    Color32::LIGHT_GREEN,
+                    Color32::LIGHT_RED,
+                    Color32::from_rgb(220, 160, 255),
+                ] {
+                    assert_eq!(
+                        output
+                            .shapes
+                            .iter()
+                            .any(|shape| has_path_colour(&shape.shape, colour)),
+                        outlines,
+                        "diagnostics={diagnostics}, outlines={outlines}, colour={colour:?}"
+                    );
+                }
+                for label in ["X forward", "Y right", "Z down"] {
+                    assert_eq!(
+                        output.shapes.iter().any(|shape| matches!(&shape.shape,
+                            egui::Shape::Text(text) if text.galley.text() == label
+                        )),
+                        outlines
+                    );
+                }
+                assert_eq!(session.history.text, original);
+            }
+        }
+        // The current calibration layer remains visible while editing even
+        // when ordinary inspection outlines are disabled.
+        let mut session = session()?;
+        session.show_diagnostics = true;
+        session.show_overlays = false;
+        session.tool = Tool::Rim;
+        let output = ctx.run(egui::RawInput::default(), |ctx| {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                session.interact_source(
+                    ui,
+                    Rect::from_min_size(Pos2::ZERO, Vec2::new(384.0, 288.0)),
+                    session.image_uv(),
+                );
+            });
+        });
+        assert!(
+            output
+                .shapes
+                .iter()
+                .any(|shape| has_path_colour(&shape.shape, Color32::LIGHT_GREEN))
+        );
+        Ok(())
+    }
+    #[test]
+    fn enabled_diagnostic_guides_and_each_redraw_action_are_ready_for_clicks() -> Result<(), String>
+    {
         let ctx = egui::Context::default();
         for (label, tool) in [
             ("Redraw ball", Tool::Rim),
@@ -2994,7 +3111,7 @@ mod tests {
         ] {
             let mut session = session()?;
             session.show_diagnostics = true;
-            session.show_overlays = false;
+            session.show_overlays = true;
             assert_eq!(
                 session.image_uv(),
                 Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0))
@@ -3390,6 +3507,85 @@ mod tests {
             assert!(
                 rect.width() <= bounds.width() + 1e-4 && rect.height() <= bounds.height() + 1e-4
             );
+        }
+    }
+    #[test]
+    fn unavailable_source_displays_its_actionable_error_in_the_preview() -> Result<(), String> {
+        let mut session = session()?;
+        session.snapshot.image = None;
+        session.snapshot.ended = true;
+        session.snapshot.notice =
+            "Camera 4 is busy. Close the other camera app and reconnect.".into();
+        let ctx = egui::Context::default();
+        let output = ctx.run(
+            egui::RawInput {
+                screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(520.0, 480.0))),
+                ..Default::default()
+            },
+            |ctx| session.show(ctx),
+        );
+        assert!(output.shapes.iter().any(|shape| {
+            matches!(&shape.shape, egui::Shape::Text(text) if text.galley.text() == session.snapshot.notice)
+        }));
+        Ok(())
+    }
+    #[test]
+    fn resize_transitions_keep_preview_and_diagnostics_geometry_finite() -> Result<(), String> {
+        let mut session = session()?;
+        session.snapshot.path = Arc::new(vec![[0.0, 0.0], [0.1, 0.2]]);
+        let ctx = egui::Context::default();
+        for diagnostics in [false, true] {
+            session.show_diagnostics = diagnostics;
+            for size in [
+                Vec2::new(520.0, 480.0),
+                Vec2::new(0.0, 0.0),
+                Vec2::new(1.0, 1.0),
+                Vec2::new(96.0, 96.0),
+                Vec2::new(320.0, 120.0),
+                Vec2::new(8192.0, 96.0),
+                Vec2::new(96.0, 8192.0),
+                Vec2::new(520.0, 480.0),
+            ] {
+                let output = ctx.run(
+                    egui::RawInput {
+                        screen_rect: Some(Rect::from_min_size(Pos2::ZERO, size)),
+                        ..Default::default()
+                    },
+                    |ctx| session.show(ctx),
+                );
+                let mut drew_source = false;
+                for primitive in ctx.tessellate(output.shapes, output.pixels_per_point) {
+                    if let egui::epaint::Primitive::Mesh(mesh) = primitive.primitive {
+                        drew_source |= session.textures.first().is_some_and(|texture| {
+                            mesh.texture_id == texture.id() && !mesh.vertices.is_empty()
+                        });
+                        assert!(mesh.vertices.iter().all(|vertex| {
+                            vertex.pos.x.is_finite()
+                                && vertex.pos.y.is_finite()
+                                && vertex.uv.x.is_finite()
+                                && vertex.uv.y.is_finite()
+                        }));
+                    }
+                }
+                if size == Vec2::new(96.0, 96.0) {
+                    assert!(drew_source, "tiny window lost its source preview");
+                }
+            }
+        }
+        Ok(())
+    }
+    #[test]
+    fn collapsed_canvas_cannot_be_used_for_image_or_pointer_projection() {
+        let full = Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0));
+        for target in [
+            Rect::from_min_max(Pos2::ZERO, Pos2::ZERO),
+            Rect::from_min_max(Pos2::new(100.0, 100.0), Pos2::new(10.0, 10.0)),
+            Rect::NOTHING,
+        ] {
+            assert!(!drawable_rect(target));
+            let fitted = fit_image(target, 320, 240, full);
+            assert!(!drawable_rect(fitted));
+            assert!(fitted.min.x.is_finite() && fitted.min.y.is_finite());
         }
     }
 }

@@ -31,6 +31,7 @@ pub struct Session {
     pub show_diagnostics: bool,
     pub show_overlays: bool,
     pub cameras: Vec<fictrac_camera::CameraInfo>,
+    pub occupied_cameras: std::collections::BTreeMap<u32, String>,
     pub camera_edit: Option<fictrac_camera::CameraFormatRequest>,
     pub camera_error: String,
     pub record_raw: bool,
@@ -49,6 +50,8 @@ pub struct Session {
     pub points: Vec<[f64; 2]>,
     pub square_slots: Option<[Option<[f64; 2]>; 4]>,
     pub window_rect: Option<[f32; 4]>,
+    pub window_inner_size: Option<[f32; 2]>,
+    pub requested_window_size: Option<egui::Vec2>,
     pub calibration_preview_size: Option<egui::Vec2>,
     pub last_title: String,
     pub plane: String,
@@ -94,11 +97,12 @@ impl Session {
             show_diagnostics: false,
             show_overlays: false,
             cameras: fictrac_camera::list_cameras().unwrap_or_default(),
+            occupied_cameras: std::collections::BTreeMap::new(),
             camera_edit: None,
             camera_error: String::new(),
             zmq_resume_port: None,
-            record_raw: true,
-            record_debug: false,
+            record_raw: doc.boolean("save_raw"),
+            record_debug: doc.boolean("save_debug"),
             startup_fallback: None,
             fallback_notice: String::new(),
             temporary_config: false,
@@ -113,6 +117,8 @@ impl Session {
             points: vec![],
             square_slots: None,
             window_rect: None,
+            window_inner_size: None,
+            requested_window_size: None,
             calibration_preview_size: None,
             last_title: String::new(),
             plane: "xy".into(),
@@ -272,7 +278,14 @@ impl Session {
                 self.display_name()
             )
         } else {
-            format!("{} · ZMQ {zmq} · {short_source}", self.display_name())
+            let output = if zmq != "off" {
+                format!("ZMQ {zmq}")
+            } else if udp != "off" {
+                format!("UDP {udp}")
+            } else {
+                "Outputs off".into()
+            };
+            format!("{} · {output} · {short_source}", self.display_name())
         }
     }
     pub fn display_name(&self) -> String {
@@ -282,6 +295,23 @@ impl Session {
                 d.get("rust_instance_name")
                     .filter(|s| !s.trim().is_empty())
                     .map(|s| s.chars().take(64).collect())
+            })
+            .or_else(|| {
+                let path = self.path.as_ref().or(self.source_base.as_ref())?;
+                // Original FicTrac rigs usually keep a plain config.txt inside
+                // VR3/ (or BR3/), without a Rust-specific instance name.
+                [path.file_stem(), path.parent().and_then(|p| p.file_name())]
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|name| name.to_str())
+                    .find(|name| {
+                        name.strip_prefix("VR")
+                            .or_else(|| name.strip_prefix("BR"))
+                            .is_some_and(|suffix| {
+                                !suffix.is_empty() && suffix.chars().all(|c| c.is_ascii_digit())
+                            })
+                    })
+                    .map(str::to_owned)
             })
             .unwrap_or_else(|| format!("VR{}", self.id))
     }
@@ -317,6 +347,7 @@ impl Session {
     }
     pub fn start(&mut self) -> Result<(), String> {
         let doc = self.document()?;
+        self.ensure_source_available(&doc)?;
         let source = doc
             .source(self.path.as_deref().or(self.source_base.as_deref()))
             .map_err(|e| e.to_string())?;
@@ -342,6 +373,37 @@ impl Session {
         self.changed = None;
         self.error.clear();
         Ok(())
+    }
+    pub fn ensure_source_available(&self, doc: &ConfigDocument) -> Result<(), String> {
+        if let Some(id) = doc
+            .get("src_fn")
+            .and_then(|source| source.parse::<u32>().ok())
+            && let Some(owner) = self.occupied_cameras.get(&id)
+        {
+            return Err(format!(
+                "Camera {id} is already used by {owner}. Close that rig or choose a free camera."
+            ));
+        }
+        Ok(())
+    }
+    pub fn select_camera(&mut self, id: u32) -> Result<(), String> {
+        let mut doc = self.document()?;
+        doc.set("src_fn", &id.to_string())
+            .map_err(|e| e.to_string())?;
+        self.ensure_source_available(&doc)?;
+        if self.running_source == id.to_string() && self.worker.is_some() && !self.snapshot.ended {
+            if doc.text() != self.history.text {
+                // Selecting the running camera can also repair a rejected
+                // source draft without needlessly closing that capture stream.
+                self.edit(doc.text().to_owned());
+                self.source_edit = id.to_string();
+                self.apply()?;
+            }
+            return Ok(());
+        }
+        self.edit(doc.text().to_owned());
+        self.source_edit = id.to_string();
+        self.start()
     }
     pub fn apply(&mut self) -> Result<(), String> {
         let doc = self.document()?;
@@ -727,5 +789,111 @@ mod tests {
             short_source_label("C:\\Videos\\trial.mp4", "C:\\Videos\\trial.mp4"),
             "trial.mp4"
         );
+    }
+    #[test]
+    fn record_selection_starts_from_the_loaded_config_flags() -> Result<(), String> {
+        for raw in [false, true] {
+            for debug in [false, true] {
+                let doc = ConfigDocument::parse(format!(
+                    "src_fn:4\nsave_raw:{}\nsave_debug:{}\n",
+                    if raw { "y" } else { "n" },
+                    if debug { "y" } else { "n" },
+                ))
+                .map_err(|error| error.to_string())?;
+                let session = Session::new(1, doc, None);
+                assert_eq!(session.record_raw, raw);
+                assert_eq!(session.record_debug, debug);
+            }
+        }
+        Ok(())
+    }
+    #[test]
+    fn repeated_camera_selection_and_busy_peer_keep_the_existing_worker() -> Result<(), String> {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let mut doc = ConfigDocument::parse(
+            fs::read_to_string(root.join("examples/upstream-config.txt"))
+                .map_err(|e| e.to_string())?,
+        )
+        .map_err(|e| e.to_string())?;
+        doc.set("src_fn", "4").map_err(|e| e.to_string())?;
+        let mut session = Session::new(1, doc.clone(), None);
+        // Exercise the real decoding/tracking worker while representing its
+        // source ownership as a camera; this test never opens a hardware device.
+        session.running_source = "4".into();
+        session.worker = Some(Worker::start(
+            SourceSpec::Video(root.join("examples/sample.mp4")),
+            doc,
+            true,
+        )?);
+        let deadline = Instant::now() + std::time::Duration::from_secs(15);
+        while session.snapshot.frames < 3 {
+            session.update();
+            if Instant::now() >= deadline {
+                return Err("real source worker did not deliver frames".into());
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        let shared = session
+            .worker
+            .as_ref()
+            .ok_or("missing running worker")?
+            .snapshot
+            .clone();
+        let original = session.history.text.clone();
+        session.select_camera(4)?;
+        assert_eq!(session.history.text, original);
+        assert_eq!(session.revision, 0);
+        session.occupied_cameras.insert(2, "VR2 (window 2)".into());
+        assert!(session.select_camera(2).is_err());
+        assert_eq!(session.history.text, original);
+        assert!(session.snapshot.image.is_some());
+        session.fields(&[("src_fn", "2".into())])?;
+        assert!(session.start().is_err());
+        session.select_camera(4)?;
+        assert_eq!(session.document()?.get("src_fn"), Some("4"));
+        assert_eq!(session.source_edit, "4");
+        assert!(std::sync::Arc::ptr_eq(
+            &shared,
+            &session.worker.as_ref().ok_or("worker was lost")?.snapshot,
+        ));
+        Ok(())
+    }
+    #[test]
+    fn compact_title_prioritizes_the_active_udp_output() -> Result<(), String> {
+        let doc = ConfigDocument::parse("src_fn:4\nsock_port:1113\nzmq_port:-1\n".into())
+            .map_err(|e| e.to_string())?;
+        let mut session = Session::new(3, doc, None);
+        assert_eq!(session.window_title(), "VR3 · UDP 1113 · Camera 4");
+        session.snapshot.outputs = Some(fictrac_io::OutputStatus {
+            udp_enabled: true,
+            udp_destination: Some("127.0.0.1:1114".into()),
+            serial_enabled: false,
+            zmq_payload: None,
+            zmq: None,
+        });
+        assert_eq!(session.window_title(), "VR3 · UDP 1114 · Camera 4");
+        if let Some(outputs) = &mut session.snapshot.outputs {
+            outputs.udp_enabled = false;
+        }
+        assert_eq!(session.window_title(), "VR3 · Outputs off · Camera 4");
+        Ok(())
+    }
+    #[test]
+    fn legacy_rig_names_come_from_the_selected_config() -> Result<(), String> {
+        for (path, expected) in [
+            ("/rigs/VR3/config.txt", "VR3"),
+            ("/rigs/BR4/config.txt", "BR4"),
+            ("/rigs/VR2.txt", "VR2"),
+            ("/rigs/VR/config.txt", "VR1"),
+            ("/rigs/VR3draft/config.txt", "VR1"),
+        ] {
+            let doc = ConfigDocument::parse("src_fn:4\n".into()).map_err(|e| e.to_string())?;
+            let mut session = Session::new(1, doc, Some(PathBuf::from(path)));
+            assert_eq!(session.display_name(), expected);
+            assert!(session.window_title().starts_with(expected));
+            session.fields(&[("rust_instance_name", "Rig A".into())])?;
+            assert_eq!(session.display_name(), "Rig A");
+        }
+        Ok(())
     }
 }

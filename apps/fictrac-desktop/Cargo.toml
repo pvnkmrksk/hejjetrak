@@ -24,3 +24,4 @@ wgpu = { version = "27", default-features = false, features = ["metal", "wgsl"] 
 wgpu = { version = "27", default-features = false, features = ["dx12", "wgsl"] }
 [target.'cfg(target_os = "linux")'.dependencies]
 wgpu = { version = "27", default-features = false, features = ["vulkan", "gles", "wgsl"] }
+winit = { version = "=0.30.13", default-features = false, features = ["x11", "wayland"] }

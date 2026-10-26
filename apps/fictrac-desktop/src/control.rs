@@ -136,6 +136,7 @@ impl Bridge {
         }
     }
     pub fn execute(app: &mut Desktop, request: Request) -> Response {
+        app.refresh_camera_occupancy();
         let id = request.id.clone();
         match dispatch(app, request) {
             Ok(value) => Response {
@@ -251,6 +252,7 @@ fn dispatch(app: &mut Desktop, r: Request) -> Result<Value> {
             };
             preflight_source(&doc, path.as_deref())?;
             let mut session = Session::new(app.next_id, doc, path);
+            session.occupied_cameras = app.camera_owners(Some(session.id));
             if let Some(text) = disk_text {
                 session.saved = text;
             }
@@ -296,7 +298,7 @@ fn status(s: &mut Session) -> Value {
     } else {
         "add"
     });
-    json!({"session":s.id,"source":s.source_edit,"config_path":s.path,"native_window":s.native_window,"window_rect":s.window_rect,"window_title":s.window_title(),"realtime":s.realtime,
+    json!({"session":s.id,"source":s.source_edit,"config_path":s.path,"native_window":s.native_window,"window_rect":s.window_rect,"window_inner_size":s.window_inner_size,"window_title":s.window_title(),"realtime":s.realtime,
         "frames":s.snapshot.frames,"revision":s.snapshot.revision,"requested_revision":s.revision,
         "paused":s.snapshot.paused,"ended":s.snapshot.ended,"recording":s.snapshot.recording,
         "last_row":s.snapshot.row,"notice":s.snapshot.notice,"error":s.error,"status":s.status,
@@ -315,6 +317,7 @@ fn send(s: &mut Session, command: Command) -> Result<Value> {
     Ok(json!({"queued":true,"status":status(s)}))
 }
 fn edited(s: &mut Session, doc: ConfigDocument) -> Result<Value> {
+    s.ensure_source_available(&doc)?;
     if doc.get("src_fn") != s.document()?.get("src_fn") {
         preflight_source(&doc, s.path.as_deref().or(s.source_base.as_deref()))?;
     }
@@ -360,6 +363,15 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
             let mut result = edited(s, doc)?;
             result["calibration"] = serde_json::to_value(calibration).map_err(display)?;
             Ok(result)
+        }
+        "source"
+            if a.get("input")
+                .and_then(Value::as_str)
+                .is_some_and(|source| source.parse::<u32>().is_ok()) =>
+        {
+            let id = string(a, "input")?.parse::<u32>().map_err(display)?;
+            s.select_camera(id)?;
+            Ok(json!({"queued":true,"status":status(s)}))
         }
         "set" | "source" | "replace_config" | "calibrate" => {
             let mut doc = s.document()?;
@@ -496,6 +508,20 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
             send(s, Command::SaveMap(path))
         }
         "view" => {
+            let window_size = a
+                .get("window_size")
+                .map(|value| -> Result<eframe::egui::Vec2> {
+                    let [width, height]: [f32; 2] =
+                        serde_json::from_value(value.clone()).map_err(display)?;
+                    if !(96.0..=8192.0).contains(&width) || !(96.0..=8192.0).contains(&height) {
+                        return Err(
+                            "window_size must be [width,height] within 96..8192 logical pixels"
+                                .into(),
+                        );
+                    }
+                    Ok(eframe::egui::vec2(width, height))
+                })
+                .transpose()?;
             let proposed_tool = a
                 .get("calibration_step")
                 .and_then(Value::as_str)
@@ -543,6 +569,9 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
             }
             if let Some(value) = a.get("full_image").and_then(Value::as_bool) {
                 s.full_image = value;
+            }
+            if let Some(size) = window_size {
+                s.requested_window_size = Some(size);
             }
             Ok(status(s))
         }
@@ -945,6 +974,54 @@ mod tests {
         assert_eq!(image::open(output.join("debug.png"))?.width(), 768);
         assert!(execute_session(&mut s, "snapshot", &json!({"directory":output})).is_err());
         fs::remove_dir_all(dir)?;
+        Ok(())
+    }
+    #[test]
+    fn occupied_camera_selection_is_atomic_for_native_source_commands() -> TestResult {
+        let mut s = session()?;
+        s.occupied_cameras.insert(2, "VR2 (window 2)".into());
+        let text = s.history.text.clone();
+        let error = execute_session(&mut s, "source", &json!({"input":"2"}))
+            .err()
+            .ok_or("occupied camera was accepted")?;
+        assert!(error.contains("already used by VR2"));
+        assert_eq!(s.history.text, text);
+        assert_eq!(s.revision, 0);
+        assert!(s.worker.is_none());
+        Ok(())
+    }
+    #[test]
+    fn view_resize_is_bounded_and_does_not_mutate_tracking_config() -> TestResult {
+        let mut s = session()?;
+        let text = s.history.text.clone();
+        execute_session(
+            &mut s,
+            "view",
+            &json!({"window_size":[96,96],"diagnostics":true}),
+        )?;
+        assert_eq!(
+            s.requested_window_size,
+            Some(eframe::egui::vec2(96.0, 96.0))
+        );
+        assert!(s.show_diagnostics);
+        for size in [
+            json!([0, 96]),
+            json!([96, 8193]),
+            json!([96]),
+            json!("96x96"),
+        ] {
+            assert!(
+                execute_session(
+                    &mut s,
+                    "view",
+                    &json!({"window_size":size,"diagnostics":false}),
+                )
+                .is_err()
+            );
+            assert!(s.show_diagnostics);
+        }
+        assert_eq!(s.history.text, text);
+        assert_eq!(s.revision, 0);
         Ok(())
     }
     #[test]

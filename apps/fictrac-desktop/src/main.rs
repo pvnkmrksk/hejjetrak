@@ -143,7 +143,45 @@ struct Desktop {
     root_hidden: bool,
 }
 impl Desktop {
+    fn camera_owners(&self, except: Option<u64>) -> std::collections::BTreeMap<u32, String> {
+        self.sessions
+            .iter()
+            .filter(|session| {
+                !session.closed
+                    && Some(session.id) != except
+                    && session.worker.is_some()
+                    && !session.snapshot.ended
+            })
+            .filter_map(|session| {
+                session.running_source.parse::<u32>().ok().map(|id| {
+                    (
+                        id,
+                        format!("{} (window {})", session.display_name(), session.id),
+                    )
+                })
+            })
+            .collect()
+    }
+    fn refresh_camera_occupancy(&mut self) {
+        let reservations = self
+            .sessions
+            .iter()
+            .map(|session| (session.id, self.camera_owners(Some(session.id))))
+            .collect::<Vec<_>>();
+        for session in &mut self.sessions {
+            if let Some((_, cameras)) = reservations.iter().find(|(id, _)| *id == session.id) {
+                session.occupied_cameras = cameras.clone();
+            }
+        }
+    }
     fn new(cc: &eframe::CreationContext<'_>, args: Args) -> Result<Self, String> {
+        if let Some(render_state) = &cc.wgpu_render_state {
+            let info = render_state.adapter.get_info();
+            eprintln!(
+                "Graphics: {} ({:?}, {:?})",
+                info.name, info.backend, info.device_type
+            );
+        }
         ui::configure_appearance(&cc.egui_ctx);
         let path = args.config.clone().map(Ok).unwrap_or_else(|| {
             if args.control_stdio {
@@ -458,6 +496,7 @@ impl Desktop {
 }
 impl eframe::App for Desktop {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.refresh_camera_occupancy();
         if let Some(mut bridge) = self.control.take() {
             bridge.poll(self);
             self.control = Some(bridge);
@@ -474,7 +513,7 @@ impl eframe::App for Desktop {
             ctx.show_viewport_immediate(
                 id,
                 egui::ViewportBuilder::default()
-                    .with_title(format!("HejjéTrac · {}", session.display_name()))
+                    .with_title(session.window_title())
                     .with_inner_size([self.window_size.0, self.window_size.1])
                     .with_position([
                         self.window_origin.0
@@ -602,6 +641,101 @@ fn app_icon() -> Result<egui::IconData, String> {
         rgba: icon.into_raw(),
     })
 }
+#[cfg(target_os = "linux")]
+fn linux_graphics_backends(explicit: Option<wgpu::Backends>, x11: bool) -> wgpu::Backends {
+    explicit.unwrap_or(if x11 {
+        wgpu::Backends::GL
+    } else {
+        wgpu::Backends::PRIMARY | wgpu::Backends::GL
+    })
+}
+
+#[cfg(target_os = "linux")]
+fn linux_use_x11(display: bool, requested: Option<&str>) -> Result<bool, String> {
+    match requested {
+        None => Ok(display),
+        Some("x11") if display => Ok(true),
+        Some("x11") => Err("WINIT_UNIX_BACKEND=x11 requires a nonempty DISPLAY; enable X11/XWayland or unset the override".into()),
+        Some("wayland") => Ok(false),
+        Some(other) => Err(format!("WINIT_UNIX_BACKEND={other:?} is unsupported; choose x11 or wayland, or unset it")),
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn x11_bootstrap_needed(
+    x11: bool,
+    wayland_display: Option<&str>,
+    wayland_socket: Option<&str>,
+) -> bool {
+    x11 && (wayland_display != Some("") || wayland_socket.is_some())
+}
+
+#[cfg(target_os = "linux")]
+fn bootstrap_linux_display() -> Result<(), String> {
+    use std::os::unix::process::CommandExt;
+    let requested = std::env::var("WINIT_UNIX_BACKEND").ok();
+    let display = std::env::var("DISPLAY").is_ok_and(|value| !value.is_empty());
+    let x11 = linux_use_x11(display, requested.as_deref())?;
+    let wayland_display = std::env::var("WAYLAND_DISPLAY").ok();
+    let wayland_socket = std::env::var("WAYLAND_SOCKET").ok();
+    if x11_bootstrap_needed(x11, wayland_display.as_deref(), wayland_socket.as_deref()) {
+        // wgpu's GLES instance probes Wayland independently of winit. Align
+        // both before creating any windows or capture threads. Replacing this
+        // same executable safely applies a private environment without unsafe
+        // process-wide environment mutation or any external media runtime.
+        // An empty display is intentional: an absent WAYLAND_DISPLAY can
+        // connect to the default socket anyway. Remove WAYLAND_SOCKET rather
+        // than giving that numeric inherited-FD variable an empty value.
+        let executable = std::env::current_exe()
+            .map_err(|error| format!("Cannot locate the application for X11 startup: {error}"))?;
+        let error = std::process::Command::new(executable)
+            .args(std::env::args_os().skip(1))
+            .env("WAYLAND_DISPLAY", "")
+            .env_remove("WAYLAND_SOCKET")
+            .stdin(std::process::Stdio::inherit())
+            .stdout(std::process::Stdio::inherit())
+            .stderr(std::process::Stdio::inherit())
+            .exec();
+        return Err(format!(
+            "Cannot start the compatible X11 graphics session: {error}"
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn configure_graphics(mut options: eframe::NativeOptions) -> Result<eframe::NativeOptions, String> {
+    let requested = std::env::var("WINIT_UNIX_BACKEND").ok();
+    let display = std::env::var("DISPLAY").is_ok_and(|value| !value.is_empty());
+    let x11 = linux_use_x11(display, requested.as_deref())?;
+    if x11 {
+        // The tested hybrid Vulkan driver loses surface capabilities on
+        // resize, and Wayland EGL can block indefinitely in presentation.
+        // X11/XWayland + GLES avoids both observed driver paths. Preserve
+        // explicit backend overrides and native Wayland-only installations.
+        eprintln!("Linux window system: X11/XWayland");
+        options.event_loop_builder = Some(Box::new(|builder| {
+            use winit::platform::x11::EventLoopBuilderExtX11;
+            builder.with_x11();
+        }));
+    } else if requested.as_deref() == Some("wayland") {
+        options.event_loop_builder = Some(Box::new(|builder| {
+            use winit::platform::wayland::EventLoopBuilderExtWayland;
+            builder.with_wayland();
+        }));
+    }
+    if let eframe::egui_wgpu::WgpuSetup::CreateNew(setup) = &mut options.wgpu_options.wgpu_setup {
+        setup.instance_descriptor.backends =
+            linux_graphics_backends(wgpu::Backends::from_env(), x11);
+    }
+    Ok(options)
+}
+
+#[cfg(not(target_os = "linux"))]
+fn configure_graphics(options: eframe::NativeOptions) -> Result<eframe::NativeOptions, String> {
+    Ok(options)
+}
+
 fn run() -> Result<(), String> {
     let args = Args::parse();
     if !(1..=16).contains(&args.windows) {
@@ -651,7 +785,9 @@ fn run() -> Result<(), String> {
     if args.screenshot.as_ref().is_some_and(|p| p.exists()) {
         return Err("screenshot output already exists".into());
     }
-    let options = eframe::NativeOptions {
+    #[cfg(target_os = "linux")]
+    bootstrap_linux_display()?;
+    let options = configure_graphics(eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("HejjéTrac · VR1")
             .with_icon(app_icon()?)
@@ -659,7 +795,7 @@ fn run() -> Result<(), String> {
             .with_min_inner_size([96.0, 96.0]),
         renderer: eframe::Renderer::Wgpu,
         ..Default::default()
-    };
+    })?;
     eframe::run_native(
         "HejjéTrac",
         options,
@@ -684,6 +820,31 @@ fn main() -> std::process::ExitCode {
 #[cfg(test)]
 mod arguments_tests {
     use super::*;
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn linux_preview_prefers_x11_gles_and_preserves_explicit_backends() -> Result<(), String> {
+        assert!(linux_use_x11(true, None)?);
+        assert!(!linux_use_x11(false, None)?);
+        assert!(!linux_use_x11(true, Some("wayland"))?);
+        assert!(linux_use_x11(false, Some("x11")).is_err());
+        assert!(linux_use_x11(true, Some("unknown")).is_err());
+        assert!(x11_bootstrap_needed(true, Some("wayland-0"), None));
+        assert!(x11_bootstrap_needed(true, None, None));
+        assert!(!x11_bootstrap_needed(true, Some(""), None));
+        assert!(x11_bootstrap_needed(true, Some(""), Some("")));
+        assert!(!x11_bootstrap_needed(false, Some("wayland-0"), None));
+        assert_eq!(linux_graphics_backends(None, true), wgpu::Backends::GL);
+        assert_eq!(
+            linux_graphics_backends(Some(wgpu::Backends::VULKAN), true),
+            wgpu::Backends::VULKAN
+        );
+        assert_eq!(
+            linux_graphics_backends(None, false),
+            wgpu::Backends::PRIMARY | wgpu::Backends::GL
+        );
+        Ok(())
+    }
 
     #[test]
     fn tiny_preview_size_is_available_through_the_public_cli()
