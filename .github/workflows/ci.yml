@@ -33,7 +33,7 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           apt-get update
-          apt-get install -y ca-certificates curl git build-essential pkg-config python3 libudev-dev libxkbcommon-dev libwayland-dev libclang-dev
+          apt-get install -y ca-certificates curl git build-essential pkg-config python3 python-is-python3 libudev-dev libxkbcommon-dev libwayland-dev libclang-dev
       - uses: actions/checkout@v4
       - name: Trust the checked-out workspace inside Linux containers
         if: runner.os == 'Linux'
@@ -53,6 +53,7 @@ jobs:
       - run: cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120
       # Include dependency sources and license texts in downloadable artifacts.
       - run: cargo vendor --locked third-party-source
+      - run: python scripts/prepare_missing_notices.py --registry third-party-source --fetch-upstream
       - uses: actions/upload-artifact@v4
         with:
           name: fictrac-${{ matrix.os }}-${{ runner.arch }}

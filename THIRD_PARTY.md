@@ -23,6 +23,13 @@ OxideAV supplies Rust codec/container implementations. No FFmpeg/OpenH264/libav/
 
 Dependency sources, authorship and full license texts remain in Cargo registry distributions. CI vendors the locked dependency graph, and the packager copies its available license/notice files into `DependencyLicenses/` with a manifest listing each package's included files. On macOS this directory is under `Contents/Resources/`. Windows x64 releases use [Rust's static CRT linkage](https://doc.rust-lang.org/reference/linkage.html#static-and-dynamic-c-runtimes) to avoid a separately installed Visual C++ redistributable; native Windows system DLLs remain OS dependencies. Historical development archives in this workspace must not be confused with current GitHub releases.
 
+For local packaging, `scripts/prepare_missing_notices.py` also preserves notices
+with unusual filenames, including the bundled fonts' OFL, Ubuntu-font, Hack and
+emoji notices. When a crate archive omits its repository-wide license, the helper
+can retrieve it from the exact `.cargo_vcs_info.json` commit and records each
+source URL and SHA256. The Linux package preparation on 2026-10-26 retains actual
+notice text for all 330 resolved registry packages, plus the local patched crates.
+
 Upstream FicTrac's CC BY-NC-SA terms remain in LICENSE and ATTRIBUTION.md. Permissive dependency licenses do not remove those terms.
 
 Lucide artwork is pinned to commit `7faf87628a1ad6175975bc595344337ce14a7db4`.

@@ -99,6 +99,7 @@ jobs:
             }
           }
       - run: cargo vendor --locked third-party-source
+      - run: python scripts/prepare_missing_notices.py --registry third-party-source --fetch-upstream
       - run: python scripts/package.py
       - name: Verify Linux installer metadata and extracted payload
         if: runner.os == 'Linux'

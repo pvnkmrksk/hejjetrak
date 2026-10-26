@@ -177,6 +177,33 @@ def check_install(root, directory):
         actual = hashlib.sha256((root / entry['name']).read_bytes()).hexdigest()
         if actual != entry['compiled_sha256']:
             raise RuntimeError(f'{root}: executable differs from BUILD.json: {entry["name"]}')
+    notices = root / 'DependencyLicenses'
+    notice_manifest = json.loads((notices / 'manifest.json').read_text())
+    verified_notices = 0
+    for package in notice_manifest:
+        files = [notices / package['package'] / name for name in package['notice_files']]
+        if not files or any(not path.is_file() for path in files):
+            raise RuntimeError(f'{root}: dependency notices missing for {package["package"]}')
+        actual_text = [path for path in files if path.suffix.lower() != '.json']
+        if not actual_text or any(path.stat().st_size == 0 for path in actual_text):
+            raise RuntimeError(f'{root}: dependency has metadata without actual notice text: {package["package"]}')
+        provenance = notices / package['package'] / 'LICENSE-UPSTREAM-PROVENANCE.json'
+        if provenance.exists():
+            for entry in json.loads(provenance.read_text()):
+                relative = Path(entry['notice_file'])
+                if relative.is_absolute() or '..' in relative.parts:
+                    raise RuntimeError('Invalid dependency notice provenance path')
+                path = notices / package['package'] / relative
+                if not path.exists():
+                    raise RuntimeError(f'{root}: provenance notice is absent from package: {path}')
+                if hashlib.sha256(path.read_bytes()).hexdigest() != entry['sha256']:
+                    raise RuntimeError(f'{root}: dependency notice differs from provenance: {path}')
+        verified_notices += 1
+    font_entries = [package for package in notice_manifest if package['package'].startswith('epaint_default_fonts-')]
+    if font_entries:
+        font_names = ' '.join(font_entries[0]['notice_files'])
+        if any(name not in font_names for name in ('OFL', 'UFL', 'Hack-Regular', 'emoji-icon-font-mit-license')):
+            raise RuntimeError(f'{root}: bundled font license notices are incomplete')
     cli = root / 'hejjetrac-cli'
     sample = root / 'examples/sample.mp4'
     reference = root / 'examples/benchmark/upstream.dat'
@@ -195,7 +222,7 @@ def check_install(root, directory):
     if summary['frames'] != 300 or summary['rejected'] != 0 or not comparison['passed']:
         raise RuntimeError(f'{root}: full sample failed: {summary}, {comparison}')
     checks.append(gui(root / 'hejjetrac', directory, 'native-video', config_path=configured))
-    return {'root': str(root), 'build': build,
+    return {'root': str(root), 'build': build, 'dependency_packages_with_verified_notice_text': verified_notices,
             'sample': summary, 'comparison': comparison, 'checks': checks}
 
 
