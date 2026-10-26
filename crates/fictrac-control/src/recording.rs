@@ -92,7 +92,7 @@ pub struct MediaStreamStatus {
     pub submitted_frames: u64,
     pub encoded_frames: u64,
     /// Includes queued, in-flight, and currently prepared producer frames.
-    /// The FIFO itself is capped at two and all payloads share the byte budget.
+    /// The FIFO itself is capped at eight and all payloads share the byte budget.
     pub pending_frames: usize,
     pub pending_bytes: usize,
     pub queue_capacity: usize,
@@ -125,7 +125,7 @@ pub struct MediaRecordingStatus {
     pub debug: MediaStreamStatus,
 }
 
-const MEDIA_QUEUE_CAPACITY: usize = 2;
+const MEDIA_QUEUE_CAPACITY: usize = 8;
 const MEDIA_QUEUE_BYTE_CAPACITY: usize = 32 * 1024 * 1024;
 
 const LIVE_VIDEO_STORAGE_RESERVE: u64 = 512 * 1024 * 1024;
@@ -1104,11 +1104,18 @@ mod actor_tests {
         started_rx
             .recv_timeout(Duration::from_secs(5))
             .map_err(display)?;
-        recorder.submit(768, identity(1), || Arc::from(vec![1; 768]))?;
-        recorder.submit(768, identity(2), || Arc::from(vec![2; 768]))?;
+        for index in 1..=MEDIA_QUEUE_CAPACITY {
+            recorder.submit(768, identity(index as u64), || {
+                Arc::from(vec![index as u8; 768])
+            })?;
+        }
+        assert_eq!(recorder.status().pending_frames, MEDIA_QUEUE_CAPACITY + 1);
         let (done_tx, done_rx) = mpsc::channel();
         let producer = thread::spawn(move || {
-            let result = recorder.submit(768, identity(3), || Arc::from(vec![3; 768]));
+            let index = MEDIA_QUEUE_CAPACITY + 1;
+            let result = recorder.submit(768, identity(index as u64), || {
+                Arc::from(vec![index as u8; 768])
+            });
             let _ = done_tx.send((recorder, result));
         });
         // The encoder remains blocked until after this response is received.
@@ -1121,7 +1128,10 @@ mod actor_tests {
             response.map_err(|_| "live media submission blocked behind its encoder".to_owned())?;
         result?;
         assert_eq!(recorder.status().state, MediaStreamState::StoppedOverload);
-        assert_eq!(recorder.status().submitted_frames, 3);
+        assert_eq!(
+            recorder.status().submitted_frames,
+            (MEDIA_QUEUE_CAPACITY + 1) as u64
+        );
         recorder.finish();
         let report = recorder.status();
         assert_eq!(report.state, MediaStreamState::StoppedOverload);
@@ -1129,11 +1139,16 @@ mod actor_tests {
         assert_eq!(report.submitted_frames, report.encoded_frames);
         assert_eq!(report.pending_frames, 0);
         assert_eq!(report.pending_bytes, 0);
-        assert_eq!(report.last_encoded_source_frame, Some(102));
+        assert_eq!(
+            report.last_encoded_source_frame,
+            Some(100 + MEDIA_QUEUE_CAPACITY as u64)
+        );
         assert!(!dir.join("raw.avi").exists());
         assert_eq!(
             decode(&dir.join("raw.avi.partial"))?,
-            vec![vec![0; 768], vec![1; 768], vec![2; 768]]
+            (0..=MEDIA_QUEUE_CAPACITY)
+                .map(|index| vec![index as u8; 768])
+                .collect::<Vec<_>>()
         );
         let manifest: serde_json::Value =
             serde_json::from_slice(&std::fs::read(dir.join("raw-status.json")).map_err(display)?)
@@ -1156,11 +1171,18 @@ mod actor_tests {
         started_rx
             .recv_timeout(Duration::from_secs(5))
             .map_err(display)?;
-        recorder.submit(768, identity(1), || Arc::from(vec![1; 768]))?;
-        recorder.submit(768, identity(2), || Arc::from(vec![2; 768]))?;
+        for index in 1..=MEDIA_QUEUE_CAPACITY {
+            recorder.submit(768, identity(index as u64), || {
+                Arc::from(vec![index as u8; 768])
+            })?;
+        }
+        assert_eq!(recorder.status().pending_frames, MEDIA_QUEUE_CAPACITY + 1);
         let (done_tx, done_rx) = mpsc::channel();
         let producer = thread::spawn(move || {
-            let result = recorder.submit(768, identity(3), || Arc::from(vec![3; 768]));
+            let index = MEDIA_QUEUE_CAPACITY + 1;
+            let result = recorder.submit(768, identity(index as u64), || {
+                Arc::from(vec![index as u8; 768])
+            });
             let _ = done_tx.send((recorder, result));
         });
         assert!(done_rx.recv_timeout(Duration::from_millis(30)).is_err());
