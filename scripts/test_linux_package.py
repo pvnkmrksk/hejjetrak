@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+"""Exercise the same release on Ubuntu 22.04/24.04 userspace, without a camera.
+
+CI supplies an installed .deb, its portable tar, Xvfb and Mesa software graphics.
+This checks ABI/dependencies, resource discovery, full-video numerical output,
+native rendering and the no-camera fallback. It does not simulate V4L hardware.
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import platform
+import signal
+import shutil
+import struct
+import subprocess
+import tarfile
+import time
+
+
+def run(arguments, directory, label, *, env=None, timeout=60):
+    arguments = [str(value) for value in arguments]
+    tick = time.monotonic()
+    process = subprocess.Popen(arguments, cwd=directory, env=env,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               text=True, start_new_session=True)
+    try:
+        stdout, stderr = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        os.killpg(process.pid, signal.SIGTERM)
+        try:
+            stdout, stderr = process.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+            stdout, stderr = process.communicate()
+        (directory / (label + '.stdout')).write_text(stdout)
+        (directory / (label + '.stderr')).write_text(stderr)
+        raise RuntimeError(f'{label} exceeded {timeout}s; see saved stdout/stderr')
+    (directory / (label + '.stdout')).write_text(stdout)
+    (directory / (label + '.stderr')).write_text(stderr)
+    if process.returncode:
+        raise RuntimeError(f'{label} exited {process.returncode}: {stderr[-2000:]}')
+    return {'command': arguments, 'seconds': time.monotonic() - tick,
+            'exit_code': process.returncode}
+
+
+def config(cli, source, destination, sample, directory, label, *, camera=False):
+    arguments = [cli, 'config', '--config', source, '--output', destination]
+    for key, value in {'src_fn': '9999' if camera else str(sample),
+                       'zmq_port': '-1', 'sock_port': '-1',
+                       'save_raw': 'n', 'save_debug': 'n'}.items():
+        arguments.extend(['--set', key + '=' + value])
+    return run(arguments, directory, label)
+
+
+def gui(binary, directory, label, *, config_path=None, expect_fallback=False):
+    state = directory / (label + '.json')
+    screenshot = directory / (label + '.png')
+    runtime = directory / (label + '-runtime')
+    runtime.mkdir(mode=0o700)
+    env = {**os.environ, 'XDG_RUNTIME_DIR': str(runtime),
+           'LIBGL_ALWAYS_SOFTWARE': '1', 'WINIT_UNIX_BACKEND': 'x11'}
+    arguments = ['xvfb-run', '-a', '-s', '-screen 0 1280x800x24', binary,
+                 '--window-size', '640x480', '--exit-after', '8',
+                 '--state-output', state, '--screenshot', screenshot,
+                 '--screenshot-after', '3']
+    if config_path is not None:
+        arguments.extend(['--config', config_path])
+    result = run(arguments, directory, label, env=env, timeout=45)
+    value = json.loads(state.read_text())
+    instances = value.get('instances', [])
+    if len(instances) != 1 or instances[0]['frames'] < 3 or instances[0]['error']:
+        raise RuntimeError(f'{label}: no working preview: {value}')
+    if expect_fallback and not instances[0]['source'].endswith('sample.mp4'):
+        raise RuntimeError(f'{label}: unavailable camera did not switch to sample: {value}')
+    pixels = screenshot.read_bytes()
+    if len(pixels) < 1024 or pixels[:8] != b'\x89PNG\r\n\x1a\n':
+        raise RuntimeError(f'{label}: missing native rendered screenshot')
+    width, height = struct.unpack('>II', pixels[16:24])
+    result.update({'frames': instances[0]['frames'], 'source': instances[0]['source'],
+                   'error': instances[0]['error'], 'screenshot_size': [width, height],
+                   'screenshot_sha256': hashlib.sha256(pixels).hexdigest()})
+    return result
+
+
+def check_install(root, directory):
+    directory.mkdir()
+    build = json.loads((root / 'BUILD.json').read_text())
+    for entry in build['binaries']:
+        actual = hashlib.sha256((root / entry['name']).read_bytes()).hexdigest()
+        if actual != entry['compiled_sha256']:
+            raise RuntimeError(f'{root}: executable differs from BUILD.json: {entry["name"]}')
+    cli = root / 'hejjetrac-cli'
+    sample = root / 'examples/sample.mp4'
+    reference = root / 'examples/benchmark/upstream.dat'
+    configured = directory / 'config.txt'
+    checks = [run([cli, '--version'], directory, 'version'),
+              config(cli, root / 'examples/benchmark/config.txt', configured,
+                     sample, directory, 'configure'),
+              run([cli, 'inspect', sample, '--decode'], directory, 'decode'),
+              run([cli, 'track', '--config', configured, '--input', sample,
+                   '--output', directory / 'tracking'], directory, 'track'),
+              run([cli, 'compare', '--reference', reference, '--candidate',
+                   directory / 'tracking/tracking.dat', '--report',
+                   directory / 'comparison.json'], directory, 'compare')]
+    summary = json.loads((directory / 'tracking/summary.json').read_text())
+    comparison = json.loads((directory / 'comparison.json').read_text())
+    if summary['frames'] != 300 or summary['rejected'] != 0 or not comparison['passed']:
+        raise RuntimeError(f'{root}: full sample failed: {summary}, {comparison}')
+    checks.append(gui(root / 'hejjetrac', directory, 'native-video', config_path=configured))
+    return {'root': str(root), 'build': build,
+            'sample': summary, 'comparison': comparison, 'checks': checks}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--archive', required=True, type=Path)
+    parser.add_argument('--installed', type=Path, default=Path('/usr/lib/hejjetrak'))
+    parser.add_argument('--output', required=True, type=Path)
+    args = parser.parse_args()
+    if platform.system() != 'Linux':
+        parser.error('This test requires Linux userspace, Xvfb and the installed package')
+    output = args.output.resolve()
+    output.mkdir(parents=True, exist_ok=False)
+    report = {'distribution': platform.freedesktop_os_release(), 'libc': platform.libc_ver(),
+              'archive_sha256': hashlib.sha256(args.archive.read_bytes()).hexdigest(),
+              'scope': 'Actual packaged CLI and software-rendered GUI; no physical V4L camera',
+              'status': 'running', 'checks': []}
+    try:
+        with tarfile.open(args.archive) as archive:
+            # Release archives contain only this package root, files and relative
+            # command aliases. Refuse absolute/traversal paths before extraction.
+            for member in archive.getmembers():
+                path = Path(member.name)
+                if path.is_absolute() or '..' in path.parts:
+                    raise ValueError('Unsafe path in package archive: ' + member.name)
+                if not (member.isfile() or member.isdir() or member.issym()):
+                    raise ValueError('Unexpected package member type: ' + member.name)
+                if member.islnk() or (member.issym() and
+                                     member.linkname not in ('hejjetrac', 'hejjetrac-cli')):
+                    raise ValueError('Unexpected package link: ' + member.name)
+            archive.extractall(output / 'extracted')
+        roots = [path for path in (output / 'extracted').iterdir() if path.is_dir()]
+        if len(roots) != 1:
+            raise RuntimeError('Expected one portable package root')
+        portable = roots[0]
+        for label, root in [('installed', args.installed.resolve()), ('portable', portable)]:
+            report['checks'].append(check_install(root, output / label))
+        if not list(Path('/dev').glob('video*')):
+            # Exercise ordinary double-click startup in a disposable copy, with
+            # a known unavailable camera and wire ports disabled.
+            fallback = output / 'default-startup'
+            fallback.mkdir()
+            app = fallback / 'app'
+            shutil.copytree(portable, app, symlinks=True)
+            new_config = fallback / 'VR1.txt'
+            config(app / 'hejjetrac-cli', app / 'VR1.txt', new_config,
+                   app / 'examples/sample.mp4', fallback, 'configure-camera', camera=True)
+            new_config.replace(app / 'VR1.txt')
+            report['no_camera_startup'] = gui(app / 'hejjetrac', fallback,
+                                             'native-fallback', expect_fallback=True)
+        else:
+            report['no_camera_startup'] = {'skipped': 'Runner exposes V4L hardware'}
+        report['status'] = 'passed'
+    except Exception as error:
+        report['status'] = 'failed'
+        report['error'] = str(error)
+        raise
+    finally:
+        (output / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
+        # The original tar/deb are already retained as build artifacts. Keep the
+        # runtime evidence compact instead of uploading duplicate executables.
+        for generated in (output / 'extracted', output / 'default-startup/app'):
+            shutil.rmtree(generated, ignore_errors=True)
+    print(json.dumps({'status': report['status'], 'output': str(output)}))
+
+
+if __name__ == '__main__':
+    main()

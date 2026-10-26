@@ -11,16 +11,33 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+        include:
+          - os: ubuntu-22.04
+            runner: ubuntu-latest
+            image: ubuntu:22.04
+          - os: ubuntu-24.04
+            runner: ubuntu-latest
+            image: ubuntu:24.04
+          - os: windows-latest
+            runner: windows-latest
+            image: ''
+          - os: macos-latest
+            runner: macos-latest
+            image: ''
+    runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.image }}
     steps:
+      - name: Linux build tools and native desktop libraries
+        if: runner.os == 'Linux'
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y ca-certificates curl git build-essential pkg-config python3 libudev-dev libxkbcommon-dev libwayland-dev libclang-dev
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - name: Linux development libraries
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libudev-dev libxkbcommon-dev libwayland-dev libclang-dev
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --locked
@@ -32,7 +49,7 @@ jobs:
       - run: cargo vendor --locked third-party-source
       - uses: actions/upload-artifact@v4
         with:
-          name: fictrac-${{ runner.os }}-${{ runner.arch }}
+          name: fictrac-${{ matrix.os }}-${{ runner.arch }}
           path: |
             target/release/fictrac
             target/release/fictrac.exe
