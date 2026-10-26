@@ -1,0 +1,358 @@
+{
+  "format": 1,
+  "date": "2026-10-26",
+  "recorded_at_utc": "2026-10-26T18:20:34.948655+00:00",
+  "release": {
+    "id": 424507951,
+    "tag_name": "v0.2.2",
+    "name": "Hejj\u00e9Trac v0.2.2",
+    "target_commitish": "d4aad90e233b4ba4b695d1a48a285dbff543d40b",
+    "published_at": "2026-10-26T17:22:53Z",
+    "draft": false,
+    "prerelease": false,
+    "html_url": "https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.2.2"
+  },
+  "source_commit": "d4aad90e233b4ba4b695d1a48a285dbff543d40b",
+  "assets": [
+    {
+      "name": "hejjetrac-linux-amd64.deb",
+      "size": 22727784,
+      "digest": "sha256:0a20c183bff17c8b1ac009e5dca8a526ffdad134148da936b5cf4e2fb4402846",
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/pvnkmrksk/hejjetrak/releases/download/v0.2.2/hejjetrac-linux-amd64.deb",
+      "downloaded_bytes_independently_hashed": true,
+      "downloaded_sha256": "0a20c183bff17c8b1ac009e5dca8a526ffdad134148da936b5cf4e2fb4402846"
+    },
+    {
+      "name": "hejjetrac-linux-x86_64.tar.gz",
+      "size": 22726113,
+      "digest": "sha256:c4c24f8e672d2575e322f59635e480c84a58fd59c9ee56af37bbc079745e39b4",
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/pvnkmrksk/hejjetrak/releases/download/v0.2.2/hejjetrac-linux-x86_64.tar.gz",
+      "downloaded_bytes_independently_hashed": true,
+      "downloaded_sha256": "c4c24f8e672d2575e322f59635e480c84a58fd59c9ee56af37bbc079745e39b4"
+    },
+    {
+      "name": "hejjetrac-macos-arm64.zip",
+      "size": 21432834,
+      "digest": "sha256:36b505f29fdbcd8b292379595ac04751f93c4b432f0c1186a8016cd921586088",
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/pvnkmrksk/hejjetrak/releases/download/v0.2.2/hejjetrac-macos-arm64.zip",
+      "downloaded_bytes_independently_hashed": true,
+      "downloaded_sha256": "36b505f29fdbcd8b292379595ac04751f93c4b432f0c1186a8016cd921586088"
+    },
+    {
+      "name": "hejjetrac-macos-x86_64.zip",
+      "size": 22229235,
+      "digest": "sha256:87b91b3c5efd594cce67a5b6081bf16a7d22f474f6ae906e380a22d4020977e6",
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/pvnkmrksk/hejjetrak/releases/download/v0.2.2/hejjetrac-macos-x86_64.zip",
+      "downloaded_bytes_independently_hashed": false
+    },
+    {
+      "name": "hejjetrac-windows-amd64.zip",
+      "size": 31479297,
+      "digest": "sha256:4fa5be49afac337c25f16e211f8bdde1cfc4f30632915f4accd1e31012f49350",
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/pvnkmrksk/hejjetrak/releases/download/v0.2.2/hejjetrac-windows-amd64.zip",
+      "downloaded_bytes_independently_hashed": false
+    }
+  ],
+  "ci": [
+    {
+      "id": 40361383864,
+      "head_sha": "d4aad90e233b4ba4b695d1a48a285dbff543d40b",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40361383864",
+      "jobs": [
+        {
+          "id": 121707449889,
+          "name": "package (ubuntu-22.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40361383864/job/121707449889"
+        },
+        {
+          "id": 121707450114,
+          "name": "package (macos-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40361383864/job/121707450114"
+        },
+        {
+          "id": 121707450229,
+          "name": "package (macos-15-intel)",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40361383864/job/121707450229"
+        },
+        {
+          "id": 121707450241,
+          "name": "package (windows-latest)",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40361383864/job/121707450241"
+        },
+        {
+          "id": 121728513489,
+          "name": "Linux package runtime (Ubuntu 24.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40361383864/job/121728513489"
+        },
+        {
+          "id": 121728513790,
+          "name": "Linux package runtime (Ubuntu 22.04)",
+          "status": "completed",
+          "conclusion": "success",
+          "html_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40361383864/job/121728513790"
+        }
+      ]
+    },
+    {
+      "id": 40361378082,
+      "head_sha": "d4aad90e233b4ba4b695d1a48a285dbff543d40b",
+      "status": "completed",
+      "conclusion": "success",
+      "html_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40361378082"
+    }
+  ],
+  "linux_evidence": {
+    "path": "release-v022-linux-20261026.json",
+    "sha256": "f3c746f807fedd7d8be5012f7174bb4003609eaba5ea85c084c993f83d70d825",
+    "status": "passed",
+    "workspace_tests": 217,
+    "linux_vendor_tests": 2,
+    "decoder_tests": 1353,
+    "glibc_ceiling": "2.35",
+    "userspace": [
+      "Ubuntu 22.04.5 / glibc 2.35",
+      "Ubuntu 24.04.5 / glibc 2.39"
+    ],
+    "installed_and_portable_each": {
+      "sample_frames": 300,
+      "rejected_frames": 0,
+      "unchanged_reference_comparison": "passed",
+      "native_preview_and_missing_camera_fallback": "passed"
+    },
+    "physical_v4l_camera_tested": false,
+    "graphics": "Xvfb and Mesa software rendering"
+  },
+  "official_apple_silicon": {
+    "platform": "Apple M2 Pro / macOS27.0.1 arm64",
+    "source_commit": "d4aad90e233b4ba4b695d1a48a285dbff543d40b",
+    "version": "0.2.2",
+    "asset": {
+      "name": "hejjetrac-macos-arm64.zip",
+      "size": 21432834,
+      "digest": "sha256:36b505f29fdbcd8b292379595ac04751f93c4b432f0c1186a8016cd921586088",
+      "state": "uploaded",
+      "browser_download_url": "https://github.com/pvnkmrksk/hejjetrak/releases/download/v0.2.2/hejjetrac-macos-arm64.zip",
+      "downloaded_bytes_independently_hashed": true,
+      "downloaded_sha256": "36b505f29fdbcd8b292379595ac04751f93c4b432f0c1186a8016cd921586088"
+    },
+    "strict_ad_hoc_signature": {
+      "label": "signature",
+      "command": [
+        "codesign",
+        "--verify",
+        "--deep",
+        "--strict",
+        "/private/tmp/hejjetrac-v022-official/extracted/hejjetrac-macos-arm64/hejjetrac.app"
+      ],
+      "seconds": 0.06997791600042547,
+      "exit_code": 0
+    },
+    "completed_checks": [
+      {
+        "label": "release-api",
+        "exit_code": 0
+      },
+      {
+        "label": "download",
+        "exit_code": 0
+      },
+      {
+        "label": "extract",
+        "exit_code": 0
+      },
+      {
+        "label": "signature",
+        "exit_code": 0
+      },
+      {
+        "label": "version",
+        "exit_code": 0
+      },
+      {
+        "label": "decode",
+        "exit_code": 0
+      },
+      {
+        "label": "track",
+        "exit_code": 0
+      },
+      {
+        "label": "compare",
+        "exit_code": 0
+      },
+      {
+        "label": "native-config",
+        "exit_code": 0
+      },
+      {
+        "label": "native-gui",
+        "exit_code": 0
+      }
+    ],
+    "build_manifest": {
+      "name": "Hejj\u00e9Trac",
+      "version": "0.2.2",
+      "platform": "macos",
+      "architecture": "arm64",
+      "source_commit": "d4aad90e233b4ba4b695d1a48a285dbff543d40b",
+      "source_url": "https://github.com/pvnkmrksk/hejjetrak",
+      "binary_hash_boundary": "compiled binaries before application signing",
+      "binaries": [
+        {
+          "name": "hejjetrac",
+          "compiled_sha256": "2b8140d16686c57e72452b981508c6e4decce45b6901dfda25eeb36f1f46a2dd"
+        },
+        {
+          "name": "hejjetrac-cli",
+          "compiled_sha256": "8e356e8a1c70aa18d0de47960b0a12c6d8d4153b91bbe244043ab512e8163ca7"
+        }
+      ]
+    },
+    "cli_version": "hejjetrac-cli 0.2.2",
+    "sample": {
+      "sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+      "frames": 300,
+      "tracked": 299,
+      "initializing": 1,
+      "rejected": 0
+    },
+    "comparison": {
+      "comparison": {
+        "candidate_final_position": [
+          3.64168489651,
+          -2.646768112362
+        ],
+        "endpoint_error_sphere_rad": 0.041252009416150356,
+        "frames": 300,
+        "heading_rmse_rad": 0.013651430288528159,
+        "path_point_rmse_sphere_rad": 0.025593841799898084,
+        "reference_final_position": [
+          3.674266189723,
+          -2.6214661833162
+        ],
+        "rotation_component_rmse_rad": [
+          0.009475898823054007,
+          0.010924711781146961,
+          0.01781987973491448
+        ],
+        "timestamp_max_error_ms": 3.456079866737127e-11
+      },
+      "limits": {
+        "heading_rmse_rad": 0.025,
+        "path_rmse_sphere_rad": 0.075,
+        "rotation_component_rmse_rad": 0.02
+      },
+      "passed": true
+    },
+    "native_gui": {
+      "frames": 175,
+      "error": "",
+      "screenshot_sha256": "50f6d474d8dad40ccd31083e982966a3cad3606790ae16dbad6a4200474706e4",
+      "visual_inspection": "passed: ball, contact trace, path and FPS/tracking-time strip visible; no error"
+    },
+    "scope": "Exact official Apple Silicon archive, bundled recorded sample and native GUI; no physical high-speed camera accuracy or other-platform hardware claim."
+  },
+  "public_browser": {
+    "prepublication": {
+      "date": "2026-10-26",
+      "source": "d4aad90e233b4ba4b695d1a48a285dbff543d40b",
+      "site": "https://pvnkmrksk.github.io/hejjetrak/",
+      "desktop": {
+        "width": 1280,
+        "scrollWidth": 1280,
+        "autoplay": true,
+        "muted": true,
+        "loop": true,
+        "paused": false,
+        "readyState": 4
+      },
+      "mobile": {
+        "width": 390,
+        "scrollWidth": 390,
+        "paused": false
+      },
+      "manualProjectNavigation": {
+        "website": true,
+        "github": true,
+        "websiteReturnSucceeded": true
+      }
+    },
+    "website_screenshot_sha256": {
+      "website.png": "6b5d1f6c457794972cdaf25614793c5c025263da1827d0c537f3827fbdfdeefc",
+      "website-mobile.png": "e39941c4deb70e2c5a6f4d28a7e745d798e6fa3a12c775c7f97a71afe94f3036"
+    },
+    "final_readme_download": {
+      "attempted": true,
+      "completion_verified": false,
+      "result": "Computer-use download call did not finish; its session was reset. No final v0.2.2 browser-download completion claim."
+    },
+    "distinction": "Official Apple Silicon archive download by GitHub CLI completed and was hashed; it is separate from the incomplete browser attempt."
+  },
+  "live_camera_observation": {
+    "duration_approx_seconds": 30,
+    "acquisition_and_preview": "observed running",
+    "tracking_accuracy": "provisional: old example calibration included the holder; corrected ball-only calibration and independent physical reference are still required",
+    "raw_images_recordings_and_per_frame_data": "retained locally; not included or uploaded"
+  },
+  "known_v022_limitations": [
+    {
+      "area": "Desktop live-camera recording FPS metadata",
+      "observation": "A 9 ms first frame interval selected approximately 111.111 FPS for the recorded video while the source reported approximately 120 FPS.",
+      "numeric_timestamps": "Original numeric source timestamps remain intact; video playback FPS is not a substitute for those timestamps.",
+      "correction_status": "Investigation and testing for a later patch are in progress. No v0.2.3 correction is claimed complete; the v0.2.2 tag is unchanged."
+    },
+    {
+      "area": "Platform and scientific coverage",
+      "scope": "No physical Linux V4L, hardware GPU, Wayland or unrestricted high-speed/blurred physical-motion accuracy acceptance. Native Windows GUI visual checks are not established."
+    },
+    {
+      "area": "Distribution signing",
+      "scope": "Ad hoc macOS signature verification is not Developer ID notarization, Gatekeeper or Windows SmartScreen/Authenticode first-launch validation."
+    }
+  ],
+  "related_evidence": [
+    "local-v022-20261026.json",
+    "wire-v022-20261026.json",
+    "fast-motion-recovery-20261026.json",
+    "matrex-legacy-20261026.json"
+  ],
+  "provenance": {
+    "published_metadata_local": "/private/tmp/hejjetrac-v022-official/published-release.json",
+    "published_metadata_sha256": "10b80aa857eddbfd98b0eb4c620b500c714f645bdd0b1d85517c310371b4528c",
+    "official_mac_report_local": "/private/tmp/hejjetrac-v022-official/report.json",
+    "official_mac_report_sha256": "8a36ac3f39e3af6cb32ae7ce1fd97d4eb87ed542b86755a6e6c42ac224b37a73",
+    "note": "The official Mac report was collected while the same release was a draft. The publication metadata above records its later published state and unchanged asset digest."
+  },
+  "documentation_checks": {
+    "static_site": {
+      "command": "python3 scripts/build_site.py /private/tmp/hejjetrac-v022-published-docs --mdbook /private/tmp/hejjetrac-mdbook/mdbook",
+      "status": "passed",
+      "internal_references": 1696,
+      "html_pages": 37
+    },
+    "download_controller": {
+      "command": "node scripts/test_downloads.mjs",
+      "status": "passed",
+      "scope": "Controller regression tests, separate from the incomplete final browser download"
+    },
+    "git_diff_check": "passed",
+    "evidence_json_parse": "passed"
+  }
+}

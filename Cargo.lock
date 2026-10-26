@@ -1163,7 +1163,7 @@ dependencies = [
 
 [[package]]
 name = "fictrac"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "clap",
  "fictrac-control",
@@ -1175,7 +1175,7 @@ dependencies = [
 
 [[package]]
 name = "fictrac-camera"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "block2 0.6.2",
  "dispatch2",
@@ -1195,7 +1195,7 @@ dependencies = [
 
 [[package]]
 name = "fictrac-control"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "fictrac-core",
  "fictrac-io",
@@ -1205,7 +1205,7 @@ dependencies = [
 
 [[package]]
 name = "fictrac-core"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "bobyqa",
  "glam",
@@ -1215,7 +1215,7 @@ dependencies = [
 
 [[package]]
 name = "fictrac-desktop"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "clap",
  "eframe",
@@ -1233,7 +1233,7 @@ dependencies = [
 
 [[package]]
 name = "fictrac-io"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "fictrac-core",
  "glam",

@@ -4,7 +4,7 @@ message: >-
   the original FicTrac method listed in references. Use a version-specific
   Zenodo DOI when one is available for your release.
 type: software
-version: "0.2.2"
+version: "0.2.3"
 date-released: "2026-10-26"
 title: "HejjéTrac: native spherical-motion tracking"
 abstract: >-

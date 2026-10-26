@@ -45,6 +45,22 @@ A source running at 30 Hz can remain on schedule while taking several millisecon
 
 The inspector groups source/camera, calibration, geometry, tracking/quality, outputs and raw configuration. Canonical config text preserves comments, unknown fields, formatting and line endings. Field and graphical edits share undo/redo. Saving is explicit. An external disk conflict is reported rather than silently overwriting either copy.
 
+Normal launch keeps its editable default in your user config folder. Calibrate,
+choose the source and Save; the next launch reuses those settings. The installed
+template and signed app resources stay unchanged. Explicit `--config` files are
+edited where you opened them; Save As lets you keep another rig file.
+
+| System | Default configuration |
+|---|---|
+| macOS | `~/Library/Application Support/Hejjetrac/VR1.txt` |
+| Windows | `%APPDATA%\Hejjetrac\VR1.txt` |
+| Linux | `$XDG_CONFIG_HOME/hejjetrac/VR1.txt`, or `~/.config/hejjetrac/VR1.txt` |
+
+Existing user files are never replaced during startup. If the default cannot
+be read or created, the app opens a temporary bundled preview with Save As
+guidance. Review the ball outline and vertical field of view for each camera;
+the bundled rig geometry is an example.
+
 Numerical edits create a new tracking epoch without seeking the unchanged video source. A recording is closed rather than mixing two calibrations in one epoch. Reopen a source or rewind explicitly when a fresh timeline is wanted.
 
 ## MATREX VR output

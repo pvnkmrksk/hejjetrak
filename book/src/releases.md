@@ -4,7 +4,25 @@
 
 The landing page resolves GitHub's latest published release at download time and shows the platform archive, release tag and available SHA-256 digest. Manual OS/chip choices remain available; browser architecture detection is not treated as infallible. If the release API is unavailable or an archive has not uploaded yet, use the visible GitHub release link rather than a guessed download.
 
-## v0.2.2 — Ubuntu compatibility, fast-motion recovery and MATREX VR (upcoming)
+## v0.2.3 — recording frame rate (upcoming)
+
+Desktop recordings prefer an explicit `src_fps`, then the source's reported
+frame rate. Capture jitter in the first two frames no longer changes the whole
+video's playback speed. Numeric and quality timestamps remain unchanged;
+constant-rate video still approximates capture jitter and gaps. A single-frame
+take also uses the known source rate. Normal launch keeps a writable default
+config in the user's config folder and reloads its saved source and calibration.
+Installed templates remain unchanged; an unavailable config folder falls back
+to a temporary preview with Save As guidance.
+
+## v0.2.2 — 26 October 2026
+
+[v0.2.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.2.2) is published
+with all five platform packages. All four native package jobs and both Ubuntu
+runtime jobs pass. The official Apple Silicon archive passes strict ad hoc
+signature, version, source and complete sample checks; its native preview was
+visually checked. [Validation](validation.md#v022-published-release--2026-10-26)
+records exact package hashes, test scope and remaining limits.
 
 Linux packages now target Ubuntu **22.04 and newer**, with a checked glibc 2.35
 ceiling. The same installed and portable builds are tested on Ubuntu 22.04 and
@@ -36,11 +54,18 @@ test-peer shutdown race, corrected by retaining the test connection through its
 validation assertion. Subsequent Ubuntu and tracking fixes are included here;
 the candidate tags and CI evidence are retained.
 
+**Known recording limitation:** on a live camera, the desktop can select video
+recording FPS from a jittered first frame interval. A 9 ms interval produced
+111.111 FPS video metadata for an approximately 120 FPS source. Numeric
+timestamps remain intact. Use those timestamps for capture timing; a correction
+is under investigation for a later patch. The live tracking check also needs a
+corrected ball-only calibration before it can support an accuracy claim.
+
 ## v0.1.4 — 25 October 2026
 
 [v0.1.4](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.4) introduces the **HejjéTrac** display name and `hejjetrac` commands. Calibration opens directly into a fresh ball-outline draft, fits the outline automatically from the third point, and never joins rim marks with straight lines. Diagnostics includes the complete saved calibration, direct layer redraw and full config access. The website starts its silent demo automatically and the README download link opens the platform download page directly.
 
-All five platform packages are published and v0.1.4 is the latest release. All four [native release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640739) pass: 188 workspace tests on Linux and both Macs, 185 on Windows, and 1,353 decoder tests each. The official Mac archive passes signature, version, source-commit and complete sample checks. A public README click completes the recommended download without a second click. See [validation evidence](validation.md) for hashes, execution scope and remaining hardware/visual limits.
+All five platform packages were published. All four [native release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640739) pass: 188 workspace tests on Linux and both Macs, 185 on Windows, and 1,353 decoder tests each. The official Mac archive passes signature, version, source-commit and complete sample checks. A public README click completed the recommended v0.1.4 download without a second click. See [validation evidence](validation.md) for hashes, execution scope and remaining hardware/visual limits.
 
 ## Earlier published checkpoint
 
