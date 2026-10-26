@@ -11,6 +11,18 @@ pub fn render_debug_rgb(
     path: &[[f64; 2]],
     cell: usize,
 ) -> Result<Vec<u8>> {
+    render_debug_panels(rgb, width, height, views, path, cell, true)
+}
+
+fn render_debug_panels(
+    rgb: &[u8],
+    width: usize,
+    height: usize,
+    views: &DebugViews,
+    path: &[[f64; 2]],
+    cell: usize,
+    draw_input: bool,
+) -> Result<Vec<u8>> {
     if !(16..=512).contains(&cell)
         || !(16..=8192).contains(&width)
         || !(16..=8192).contains(&height)
@@ -42,11 +54,15 @@ pub fn render_debug_rgb(
     let w = 4 * cell;
     let h = 3 * cell;
     let mut out = vec![0u8; w * h * 3];
-    for y in 0..2 * cell {
-        for x in 0..2 * cell {
-            let src = ((y * height / (2 * cell)) * width + x * width / (2 * cell)) * 3;
-            let dst = (y * w + x) * 3;
-            out[dst..dst + 3].copy_from_slice(&rgb[src..src + 3]);
+    if draw_input {
+        let source_x: Vec<_> = (0..2 * cell).map(|x| x * width / (2 * cell)).collect();
+        for y in 0..2 * cell {
+            let source_row = y * height / (2 * cell) * width;
+            for (x, sx) in source_x.iter().enumerate() {
+                let src = (source_row + sx) * 3;
+                let dst = (y * w + x) * 3;
+                out[dst..dst + 3].copy_from_slice(&rgb[src..src + 3]);
+            }
         }
     }
     let panels = [
@@ -72,9 +88,11 @@ pub fn render_debug_rgb(
         ),
     ];
     for (data, sw, sh, dx, dy, dw, dh) in panels {
+        let source_x: Vec<_> = (0..dw).map(|x| x * sw / dw).collect();
         for y in 0..dh {
-            for x in 0..dw {
-                let v = data[(y * sh / dh) * sw + x * sw / dw];
+            let source_row = y * sh / dh * sw;
+            for (x, sx) in source_x.iter().enumerate() {
+                let v = data[source_row + sx];
                 let dst = ((dy + y) * w + dx + x) * 3;
                 out[dst..dst + 3].fill(v);
             }
@@ -192,6 +210,109 @@ fn label(out: &mut [u8], w: usize, h: usize, text: &str, x: usize, y: usize) {
     }
 }
 
+/// Reusable calibrated debug compositor. The camera/configuration and cell size
+/// are immutable; dynamic RGB, numerical views, paths and poses stay per frame.
+/// Recreate this object after changing the source geometry or calibration.
+pub struct CalibratedDebugRenderer {
+    config: fictrac_core::Config,
+    cell: usize,
+    source_remap: Vec<Option<RgbRemapSample>>,
+}
+
+/// Bilinear coordinates are invariant for a calibrated source. Keep the exact
+/// f64 interpolation order of `sample_rgb`, including its final rounding.
+struct RgbRemapSample {
+    top: usize,
+    bottom: usize,
+    fx: f64,
+    fy: f64,
+}
+impl RgbRemapSample {
+    fn new(width: usize, height: usize, x: f64, y: f64) -> Option<Self> {
+        if !x.is_finite()
+            || !y.is_finite()
+            || x < 0.0
+            || y < 0.0
+            || x >= (width - 1) as f64
+            || y >= (height - 1) as f64
+        {
+            return None;
+        }
+        let ix = x.floor() as usize;
+        let iy = y.floor() as usize;
+        Some(Self {
+            top: (iy * width + ix) * 3,
+            bottom: ((iy + 1) * width + ix) * 3,
+            fx: x - ix as f64,
+            fy: y - iy as f64,
+        })
+    }
+
+    fn sample(&self, rgb: &[u8]) -> [u8; 3] {
+        let mut color = [0; 3];
+        for (channel, value) in color.iter_mut().enumerate() {
+            let a = f64::from(rgb[self.top + channel]);
+            let b = f64::from(rgb[self.top + 3 + channel]);
+            let c = f64::from(rgb[self.bottom + channel]);
+            let d = f64::from(rgb[self.bottom + 3 + channel]);
+            *value = ((a * (1.0 - self.fx) + b * self.fx) * (1.0 - self.fy)
+                + (c * (1.0 - self.fx) + d * self.fx) * self.fy)
+                .round() as u8;
+        }
+        color
+    }
+}
+impl CalibratedDebugRenderer {
+    pub fn new(config: &fictrac_core::Config, cell: usize) -> Result<Self> {
+        use glam::{DQuat, DVec3};
+        if !(16..=512).contains(&cell) {
+            return Err(Error::Video("debug cell size must be 16..512".into()));
+        }
+        let geometry = fictrac_core::Geometry::new(config.clone())?;
+        let basis = DQuat::from_rotation_arc(DVec3::from_array(config.sphere.centre), DVec3::Z);
+        let radians_per_pixel = 3.0 * config.sphere.angular_radius / (2.0 * cell as f64);
+        let mut source_remap = Vec::with_capacity(4 * cell * cell);
+        for y in 0..2 * cell {
+            for x in 0..2 * cell {
+                let dx = (x as f64 + 0.5 - cell as f64) * radians_per_pixel;
+                let dy = (y as f64 + 0.5 - cell as f64) * radians_per_pixel;
+                let angle = dx.hypot(dy);
+                let factor = if angle > 1e-12 {
+                    angle.sin() / angle
+                } else {
+                    1.0
+                };
+                let ray = basis.inverse() * DVec3::new(dx * factor, dy * factor, angle.cos());
+                source_remap.push(geometry.project_ray(ray).and_then(|p| {
+                    RgbRemapSample::new(config.width, config.height, p[0] - 0.5, p[1] - 0.5)
+                }));
+            }
+        }
+        Ok(Self {
+            config: config.clone(),
+            cell,
+            source_remap,
+        })
+    }
+    pub fn render(
+        &self,
+        rgb: &[u8],
+        views: &DebugViews,
+        path: &[[f64; 2]],
+        poses: &[[f64; 3]],
+    ) -> Result<Vec<u8>> {
+        render_calibrated_debug_impl(
+            rgb,
+            &self.config,
+            views,
+            path,
+            poses,
+            self.cell,
+            Some(&self.source_remap),
+        )
+    }
+}
+
 /// Full calibrated input remap and contact history, using the same ROI coordinate
 /// convention as upstream. `poses` are accepted absolute_camera Rodrigues vectors,
 /// oldest first, limited to the latest 1000 samples by the caller.
@@ -202,6 +323,18 @@ pub fn render_calibrated_debug_rgb(
     path: &[[f64; 2]],
     poses: &[[f64; 3]],
     cell: usize,
+) -> Result<Vec<u8>> {
+    render_calibrated_debug_impl(rgb, config, views, path, poses, cell, None)
+}
+
+fn render_calibrated_debug_impl(
+    rgb: &[u8],
+    config: &fictrac_core::Config,
+    views: &DebugViews,
+    path: &[[f64; 2]],
+    poses: &[[f64; 3]],
+    cell: usize,
+    source_remap: Option<&[Option<RgbRemapSample>]>,
 ) -> Result<Vec<u8>> {
     use glam::{DQuat, DVec3};
     config.validate()?;
@@ -215,29 +348,48 @@ pub fn render_calibrated_debug_rgb(
             "diagnostic pose history must contain at most 1000 finite rotations".into(),
         ));
     }
-    let mut out = render_debug_rgb(rgb, config.width, config.height, views, path, cell)?;
-    let geometry = fictrac_core::Geometry::new(config.clone())?;
+    // The calibrated input replaces this entire quadrant. Avoid computing a
+    // nearest-neighbour source image that would be discarded immediately.
+    let mut out = render_debug_panels(rgb, config.width, config.height, views, path, cell, false)?;
     let basis = DQuat::from_rotation_arc(DVec3::from_array(config.sphere.centre), DVec3::Z);
     let radians_per_pixel = 3.0 * config.sphere.angular_radius / (2.0 * cell as f64);
     let w = 4 * cell;
     let h = 3 * cell;
-    for y in 0..2 * cell {
-        for x in 0..2 * cell {
-            let dx = (x as f64 + 0.5 - cell as f64) * radians_per_pixel;
-            let dy = (y as f64 + 0.5 - cell as f64) * radians_per_pixel;
-            let angle = dx.hypot(dy);
-            let factor = if angle > 1e-12 {
-                angle.sin() / angle
-            } else {
-                1.0
-            };
-            let ray = basis.inverse() * DVec3::new(dx * factor, dy * factor, angle.cos());
-            let color = geometry
-                .project_ray(ray)
-                .and_then(|p| sample_rgb(rgb, config.width, config.height, p[0] - 0.5, p[1] - 0.5))
-                .unwrap_or([0; 3]);
-            let target = (y * w + x) * 3;
-            out[target..target + 3].copy_from_slice(&color);
+    if let Some(remap) = source_remap {
+        if remap.len() != 4 * cell * cell {
+            return Err(Error::Video("debug remap dimensions changed".into()));
+        }
+        for (y, row) in remap.chunks(2 * cell).enumerate() {
+            for (x, point) in row.iter().enumerate() {
+                let color = point.as_ref().map(|p| p.sample(rgb)).unwrap_or([0; 3]);
+                let target = (y * w + x) * 3;
+                out[target..target + 3].copy_from_slice(&color);
+            }
+        }
+    } else {
+        // Keep the direct projection path for one-off renders and as an
+        // independent per-pixel oracle for the recording cache.
+        let geometry = fictrac_core::Geometry::new(config.clone())?;
+        for y in 0..2 * cell {
+            for x in 0..2 * cell {
+                let dx = (x as f64 + 0.5 - cell as f64) * radians_per_pixel;
+                let dy = (y as f64 + 0.5 - cell as f64) * radians_per_pixel;
+                let angle = dx.hypot(dy);
+                let factor = if angle > 1e-12 {
+                    angle.sin() / angle
+                } else {
+                    1.0
+                };
+                let ray = basis.inverse() * DVec3::new(dx * factor, dy * factor, angle.cos());
+                let color = geometry
+                    .project_ray(ray)
+                    .and_then(|p| {
+                        sample_rgb(rgb, config.width, config.height, p[0] - 0.5, p[1] - 0.5)
+                    })
+                    .unwrap_or([0; 3]);
+                let target = (y * w + x) * 3;
+                out[target..target + 3].copy_from_slice(&color);
+            }
         }
     }
     let project = |v: DVec3| -> Option<[i32; 2]> {
@@ -345,4 +497,86 @@ fn sample_rgb(rgb: &[u8], width: usize, height: usize, x: f64, y: f64) -> Option
             ((a * (1.0 - fx) + b * fx) * (1.0 - fy) + (c * (1.0 - fx) + d * fx) * fy).round() as u8;
     }
     Some(color)
+}
+
+#[cfg(test)]
+mod cache_tests {
+    use super::*;
+    use fictrac_core::Tracker;
+    use std::path::PathBuf;
+
+    #[test]
+    fn cached_remap_matches_direct_projection_for_real_frames_and_dynamic_history() -> Result<()> {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let mut source = crate::VideoSource::open(&root.join("examples/sample.mp4"))?;
+        source.enable_color();
+        let loaded = crate::load_config_text(
+            include_str!("../../../examples/benchmark/config.txt"),
+            source.info.width,
+            source.info.height,
+        )?;
+        let mut frames = Vec::new();
+        for _ in 0..3 {
+            let frame = source
+                .next_tracking_frame(None)?
+                .ok_or_else(|| Error::Video("real renderer fixture ended early".into()))?;
+            let rgb = source
+                .take_rgb()
+                .ok_or_else(|| Error::Video("real renderer fixture has no RGB".into()))?;
+            frames.push((frame, rgb));
+        }
+        let mut off_axis = loaded.config.clone();
+        off_axis.sphere.centre = glam::DVec3::new(0.12, -0.08, 1.0).normalize().to_array();
+        let mut fisheye = off_axis.clone();
+        fisheye.fisheye = true;
+        fisheye.legacy_roi_coordinates = false;
+        for (variant, config) in [loaded.config, off_axis, fisheye].iter().enumerate() {
+            for cell in [64, 160] {
+                let cached = CalibratedDebugRenderer::new(config, cell)?;
+                let mut tracker = Tracker::new(config.clone())?;
+                let mut path = Vec::new();
+                let mut poses = Vec::new();
+                for (index, (frame, rgb)) in frames.iter().enumerate() {
+                    let row = tracker.process(frame.clone())?;
+                    path.push(row.position);
+                    if row.accepted {
+                        poses.push(row.absolute_camera);
+                    }
+                    let views = tracker.debug_views().ok_or_else(|| {
+                        Error::Video("real renderer fixture has no numerical views".into())
+                    })?;
+                    let direct =
+                        render_calibrated_debug_rgb(rgb, config, views, &path, &poses, cell)?;
+                    let actual = cached.render(rgb, views, &path, &poses)?;
+                    let mismatch = actual.iter().zip(&direct).position(|(a, b)| a != b);
+                    assert_eq!(actual.len(), direct.len());
+                    assert_eq!(
+                        mismatch, None,
+                        "variant {variant}, cell {cell}, real frame {index}"
+                    );
+                    assert!(
+                        cached
+                            .render(&rgb[..rgb.len() - 1], views, &path, &poses)
+                            .is_err()
+                    );
+                    assert!(
+                        cached
+                            .render(rgb, views, &path, &[[f64::NAN, 0.0, 0.0]])
+                            .is_err()
+                    );
+                }
+            }
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn cached_renderer_rejects_invalid_geometry_before_allocating_remap() {
+        let config = fictrac_core::Config::default();
+        for cell in [0, 15, 513, usize::MAX] {
+            assert!(CalibratedDebugRenderer::new(&config, cell).is_err());
+        }
+        let invalid = fictrac_core::Config { width: 0, ..config };
+        assert!(CalibratedDebugRenderer::new(&invalid, 160).is_err());
+    }
 }
