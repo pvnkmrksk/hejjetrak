@@ -426,6 +426,8 @@ impl Session {
         let text = fs::read_to_string(&path).map_err(|e| e.to_string())?;
         let doc = ConfigDocument::parse(text).map_err(|e| e.to_string())?;
         self.worker = None;
+        self.record_raw = doc.boolean("save_raw");
+        self.record_debug = doc.boolean("save_debug");
         self.history = DocumentHistory::new(doc.text().to_owned());
         self.zmq_resume_port = None;
         self.saved = doc.text().to_owned();
@@ -789,6 +791,63 @@ mod tests {
             short_source_label("C:\\Videos\\trial.mp4", "C:\\Videos\\trial.mp4"),
             "trial.mp4"
         );
+    }
+    #[test]
+    fn loading_another_config_refreshes_record_defaults_and_keeps_manual_edits_local()
+    -> Result<(), String> {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let mut doc = ConfigDocument::parse(
+            fs::read_to_string(root.join("examples/upstream-config.txt"))
+                .map_err(|error| error.to_string())?,
+        )
+        .map_err(|error| error.to_string())?;
+        doc.set(
+            "src_fn",
+            &root.join("examples/sample.mp4").to_string_lossy(),
+        )
+        .map_err(|error| error.to_string())?;
+        doc.set("save_raw", "y")
+            .map_err(|error| error.to_string())?;
+        doc.set("save_debug", "y")
+            .map_err(|error| error.to_string())?;
+        let mut session = Session::new(1, doc.clone(), None);
+        assert!(session.record_raw && session.record_debug);
+        for key in ["save_raw", "save_debug"] {
+            doc.set(key, "n").map_err(|error| error.to_string())?;
+        }
+        doc.set("sock_port", "0")
+            .map_err(|error| error.to_string())?;
+        doc.set("zmq_port", "0")
+            .map_err(|error| error.to_string())?;
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|error| error.to_string())?
+            .as_nanos();
+        let directory =
+            std::env::temp_dir().join(format!("hejjetrac-load-record-defaults-{stamp}"));
+        fs::create_dir(&directory).map_err(|error| error.to_string())?;
+        let path = directory.join("config.txt");
+        fs::write(&path, doc.text()).map_err(|error| error.to_string())?;
+        session.load(path)?;
+        assert!(!session.record_raw && !session.record_debug);
+        let deadline = Instant::now() + std::time::Duration::from_secs(15);
+        while session.snapshot.frames < 2 {
+            session.update();
+            if Instant::now() >= deadline {
+                return Err("loaded real-video source did not advance".into());
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        // Ordinary numerical edits preserve the user's transient recording
+        // selection; opening a different config is the reset boundary.
+        session.record_raw = true;
+        session.fields(&[("opt_tol", "0.002".into())])?;
+        session.apply()?;
+        assert!(session.record_raw && !session.record_debug);
+        assert_eq!(session.document()?.get("save_raw"), Some("n"));
+        session.worker = None;
+        fs::remove_dir_all(directory).map_err(|error| error.to_string())?;
+        Ok(())
     }
     #[test]
     fn record_selection_starts_from_the_loaded_config_flags() -> Result<(), String> {

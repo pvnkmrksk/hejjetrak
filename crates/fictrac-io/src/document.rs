@@ -4,6 +4,15 @@ use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
 };
+
+fn rig_successors(index: u32, cycle: bool) -> Vec<u32> {
+    if cycle && (1..=16).contains(&index) {
+        (index + 1..=16).chain(1..index).collect()
+    } else {
+        index.checked_add(1).into_iter().collect()
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum SourceSpec {
     Camera(u32),
@@ -117,7 +126,8 @@ impl ConfigDocument {
                 .join(path),
         ))
     }
-    /// Find the next BR/VR sibling; otherwise copy while incrementing only a numeric camera source.
+    /// Find a saved BR/VR sibling, cycling through the sixteen rig slots.
+    /// Without a saved sibling, copy while incrementing only a numeric source.
     pub fn next_instance(&self, path: Option<&Path>) -> Result<(Self, Option<PathBuf>)> {
         if let Some(path) = path
             && let Some(parent) = path.parent()
@@ -130,13 +140,15 @@ impl ConfigDocument {
                 let name = parent.file_name().and_then(|p| p.to_str()).unwrap_or("");
                 let index = name.get(2..).and_then(|p| p.parse::<u32>().ok());
                 index
-                    .and_then(|i| i.checked_add(1))
-                    .map(|next_index| {
-                        vec![
-                            parent
-                                .with_file_name(format!("{}{}", &name[..2], next_index))
-                                .join(path.file_name().unwrap_or_default()),
-                        ]
+                    .map(|i| {
+                        rig_successors(i, true)
+                            .into_iter()
+                            .map(|next_index| {
+                                parent
+                                    .with_file_name(format!("{}{}", &name[..2], next_index))
+                                    .join(path.file_name().unwrap_or_default())
+                            })
+                            .collect::<Vec<_>>()
                     })
                     .unwrap_or_default()
             } else {
@@ -144,14 +156,18 @@ impl ConfigDocument {
                 let split = stem.trim_end_matches(|c: char| c.is_ascii_digit()).len();
                 stem.get(split..)
                     .and_then(|s| s.parse::<u32>().ok())
-                    .and_then(|n| n.checked_add(1))
                     .map(|n| {
-                        vec![path.with_file_name(format!(
-                            "{}{}.{}",
-                            &stem[..split],
-                            n,
-                            path.extension().and_then(|x| x.to_str()).unwrap_or("txt")
-                        ))]
+                        rig_successors(n, matches!(&stem[..split], "VR" | "BR"))
+                            .into_iter()
+                            .map(|index| {
+                                path.with_file_name(format!(
+                                    "{}{}.{}",
+                                    &stem[..split],
+                                    index,
+                                    path.extension().and_then(|x| x.to_str()).unwrap_or("txt")
+                                ))
+                            })
+                            .collect::<Vec<_>>()
                     })
                     .unwrap_or_default()
             };

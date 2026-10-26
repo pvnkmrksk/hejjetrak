@@ -62,6 +62,44 @@ fn instances_select_next_rig_and_increment_only_camera_sources() -> Result {
     assert_eq!(copy.text(), file.text());
     Ok(())
 }
+
+#[test]
+fn saved_rig_selection_wraps_and_skips_missing_slots() -> Result {
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)?
+        .as_nanos();
+    let directory = std::env::temp_dir().join(format!(
+        "hejjetrac-rig-cycle-{}-{stamp}",
+        std::process::id()
+    ));
+    fs::create_dir(&directory)?;
+    for index in [1, 3, 4] {
+        let text = format!("# rig {index}\nsrc_fn : {}\n", (index - 1) * 2);
+        fs::write(directory.join(format!("VR{index}.txt")), &text)?;
+        let folder = directory.join(format!("VR{index}"));
+        fs::create_dir(&folder)?;
+        fs::write(folder.join("config.txt"), text)?;
+    }
+    for start in [directory.join("VR3.txt"), directory.join("VR3/config.txt")] {
+        let mut path = start;
+        let mut document = ConfigDocument::parse(fs::read_to_string(&path)?)?;
+        for expected in ["6", "0", "4"] {
+            let (next, selected) = document.next_instance(Some(&path))?;
+            assert_eq!(next.get("src_fn"), Some(expected));
+            path = selected.ok_or("saved sibling was replaced by an uncalibrated camera copy")?;
+            assert_eq!(next.text(), fs::read_to_string(&path)?);
+            document = next;
+        }
+    }
+    // Ordinary numbered experiments keep their existing forward-only fallback.
+    fs::write(directory.join("trial1.txt"), "src_fn:99\n")?;
+    let document = ConfigDocument::parse("src_fn:41\n".into())?;
+    let (copy, path) = document.next_instance(Some(&directory.join("trial9.txt")))?;
+    assert!(path.is_none());
+    assert_eq!(copy.get("src_fn"), Some("42"));
+    fs::remove_dir_all(directory)?;
+    Ok(())
+}
 #[test]
 fn saved_roi_has_precedence_over_rim_refitting() -> Result {
     let path = root().join("examples/rigs/BR1/config.txt");
