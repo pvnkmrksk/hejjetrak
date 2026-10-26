@@ -188,6 +188,8 @@ mod macos;
 #[cfg(target_os = "macos")]
 pub use macos::{Camera, list_cameras, request_permission};
 #[cfg(not(target_os = "macos"))]
+mod clock;
+#[cfg(not(target_os = "macos"))]
 mod native;
 #[cfg(not(target_os = "macos"))]
 pub use native::{Camera, list_cameras, request_permission};

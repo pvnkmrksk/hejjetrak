@@ -41,6 +41,7 @@ pub fn list_cameras() -> Result<Vec<CameraInfo>> {
 pub struct Camera {
     camera: NativeCamera,
     start: Instant,
+    clock: crate::clock::CaptureClock,
     count: u64,
 }
 impl Camera {
@@ -173,6 +174,7 @@ impl Camera {
         Ok(Self {
             camera,
             start: Instant::now(),
+            clock: crate::clock::CaptureClock::default(),
             count: 0,
         })
     }
@@ -381,15 +383,14 @@ impl Camera {
                     / 255.0
             })
             .collect();
-        self.count += 1;
+        let timestamp = self.clock.timestamp(
+            frame.capture_timestamp(),
+            self.start.elapsed().as_secs_f64() * 1000.0,
+        )?;
+        self.count = self.count.saturating_add(1);
         Ok(Some(CameraFrame {
-            gray: GrayFrame::new(
-                width,
-                height,
-                gray,
-                self.start.elapsed().as_secs_f64() * 1000.0,
-            )
-            .map_err(|e| Error(e.to_string()))?,
+            gray: GrayFrame::new(width, height, gray, timestamp)
+                .map_err(|e| Error(e.to_string()))?,
             rgb,
             sequence: self.count,
         }))
