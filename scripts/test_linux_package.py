@@ -20,6 +20,9 @@ import subprocess
 import tarfile
 import time
 
+from PIL import Image
+import zlib
+
 
 def run(arguments, directory, label, *, env=None, timeout=60):
     arguments = [str(value) for value in arguments]
@@ -51,9 +54,76 @@ def config(cli, source, destination, sample, directory, label, *, camera=False):
     arguments = [cli, 'config', '--config', source, '--output', destination]
     for key, value in {'src_fn': '9999' if camera else str(sample),
                        'zmq_port': '-1', 'sock_port': '-1',
-                       'save_raw': 'n', 'save_debug': 'n'}.items():
+                       'save_raw': 'n', 'save_debug': 'n', 'do_display': 'y'}.items():
         arguments.extend(['--set', key + '=' + value])
     return run(arguments, directory, label)
+
+
+def preview_pattern(png):
+    """Check the known sample's light/dark texture, not just nonempty UI chrome."""
+    if png[:8] != b'\x89PNG\r\n\x1a\n':
+        raise ValueError('Native screenshot is not PNG')
+    offset, compressed, header = 8, [], None
+    while offset + 12 <= len(png):
+        length = struct.unpack('>I', png[offset:offset + 4])[0]
+        kind = png[offset + 4:offset + 8]
+        data = png[offset + 8:offset + 8 + length]
+        if len(data) != length:
+            raise ValueError('Truncated native PNG')
+        if kind == b'IHDR':
+            header = struct.unpack('>IIBBBBB', data)
+        elif kind == b'IDAT':
+            compressed.append(data)
+        offset += length + 12
+    if header is None:
+        raise ValueError('Native PNG has no header')
+    width, height, depth, color, compression, filtering, interlace = header
+    if (width, height) != (640, 480) or depth != 8 or color not in (2, 6) or any(
+            (compression, filtering, interlace)):
+        raise ValueError('Unexpected native screenshot format: ' + str(header))
+    channels = 4 if color == 6 else 3
+    stride = width * channels
+    expected = (stride + 1) * height
+    decoder = zlib.decompressobj()
+    raw = decoder.decompress(b''.join(compressed), expected + 1)
+    if len(raw) != expected or not decoder.eof or decoder.unused_data:
+        raise ValueError('Unexpected native PNG pixel length')
+    previous = bytearray(stride)
+    light = dark = total = 0
+    for y in range(height):
+        start = y * (stride + 1)
+        mode = raw[start]
+        row = bytearray(raw[start + 1:start + 1 + stride])
+        if mode > 4:
+            raise ValueError('Unknown PNG filter')
+        for x in range(stride):
+            left = row[x - channels] if x >= channels else 0
+            up = previous[x]
+            corner = previous[x - channels] if x >= channels else 0
+            if mode == 1:
+                predictor = left
+            elif mode == 2:
+                predictor = up
+            elif mode == 3:
+                predictor = (left + up) // 2
+            elif mode == 4:
+                p = left + up - corner
+                distances = (abs(p - left), abs(p - up), abs(p - corner))
+                predictor = (left, up, corner)[distances.index(min(distances))]
+            else:
+                predictor = 0
+            row[x] = (row[x] + predictor) & 255
+        if height // 4 <= y < 3 * height // 4:
+            for x in range(width // 4, 3 * width // 4):
+                gray = sum(row[x * channels:x * channels + 3]) / 3
+                dark += gray <= 100
+                light += gray >= 160
+                total += 1
+        previous = row
+    evidence = {'dark_fraction': dark / total, 'light_fraction': light / total}
+    if min(evidence.values()) < 0.08:
+        raise ValueError('Sample preview is blank or hidden: ' + str(evidence))
+    return evidence
 
 
 def gui(binary, directory, label, *, config_path=None, expect_fallback=False):
@@ -80,9 +150,23 @@ def gui(binary, directory, label, *, config_path=None, expect_fallback=False):
     if len(pixels) < 1024 or pixels[:8] != b'\x89PNG\r\n\x1a\n':
         raise RuntimeError(f'{label}: missing native rendered screenshot')
     width, height = struct.unpack('>II', pixels[16:24])
+    # A rendered window alone is insufficient: a headless config can keep
+    # tracking while deliberately hiding its preview. Inspect the center of the
+    # supplied high-contrast ball, away from toolbar/status text.
+    with Image.open(screenshot) as rendered:
+        center = rendered.convert('RGB').crop((width // 3, height // 3,
+                                               2 * width // 3, 2 * height // 3))
+        luminance = [sum(pixel) / 3 for pixel in center.getdata()]
+    bright = sum(value > 70 for value in luminance) / len(luminance)
+    dark = sum(value < 180 for value in luminance) / len(luminance)
+    if bright < 0.15 or dark < 0.15:
+        raise RuntimeError(f'{label}: center does not show the supplied ball: '
+                           f'bright={bright:.3f}, dark={dark:.3f}')
+    result['preview_center'] = {'bright_fraction': bright, 'dark_fraction': dark}
     result.update({'frames': instances[0]['frames'], 'source': instances[0]['source'],
                    'error': instances[0]['error'], 'screenshot_size': [width, height],
-                   'screenshot_sha256': hashlib.sha256(pixels).hexdigest()})
+                   'screenshot_sha256': hashlib.sha256(pixels).hexdigest(),
+                   'visible_sample_pattern': preview_pattern(pixels)})
     return result
 
 
@@ -127,6 +211,7 @@ def main():
     output.mkdir(parents=True, exist_ok=False)
     report = {'distribution': platform.freedesktop_os_release(), 'libc': platform.libc_ver(),
               'archive_sha256': hashlib.sha256(args.archive.read_bytes()).hexdigest(),
+              'harness_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
               'scope': 'Actual packaged CLI and software-rendered GUI; no physical V4L camera',
               'status': 'running', 'checks': []}
     try:

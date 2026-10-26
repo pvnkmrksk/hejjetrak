@@ -50,6 +50,14 @@ or a universal speed limit.
 Ordinary recovery confirmation checks motion between consecutive proposed visible
 poses against the same guard. A good image-score motion outlier remains only an
 unaccepted candidate; it never teaches the atlas or appears as measured motion.
+Its fitted velocity is retained only as a proposal for the next recovery search.
+The proposal is compared with the held pose on the complete ROI before choosing
+the solver's starting pose. If that fit fails the unchanged image-score limit,
+the solver can fall back to the held pose, within the same total recovery budget.
+Without this proposal, recovery repeatedly assumed zero velocity even after a
+good fast-motion fit and could remain stuck on a clearly patterned rotating ball.
+An extrapolation beyond the existing visible-increment bound is discarded.
+
 To avoid permanent lock after genuine acceleration, an alternate confirmation
 requires **three mutually consistent fitted angular velocities over four good
 images**. Each increment must remain within `sqrt(3) × opt_bound`; rate consistency
@@ -98,6 +106,28 @@ calibration, ball appearance or initial reference is wrong; initialize while the
 ball is visible.
 
 ## What is tested
+
+A default-budget regression first learns 330 sharp images at 0.02 rad/frame,
+then changes to 0.20 rad/frame for 90 images at 30 frames/s. It covers both sharp
+images and symmetric nine-sample exposures spanning half the frame interval.
+The identical regression fails against the unmodified v0.2.1 engine: no fast
+frame is recovered. With the held-velocity search proposal, both cases recover
+on the fourth visible image and measure all 86 subsequent relative deltas.
+Component RMS is `[0.003609, 0.002340, 0.005844]` rad for sharp images and
+`[0.005320, 0.002951, 0.005703]` rad for the blurred case, under the unchanged
+0.008 rad/component synthetic gate. The tests also check exact atlas/pose/path
+preservation before confirmation, zero-delta relocalization and the eight-row
+atlas-learning probation. The fit budget stays at the actual default 50
+evaluations; no image-error, edge-density or motion acceptance threshold changes.
+These are controlled rendering tests, not a measured physical-camera speed or
+exposure limit. [Source hashes, exact results and unchanged gates](benchmarks/fast-motion-recovery-20261026.json)
+retain the regression evidence.
+
+The existing actual-video full/partial-obstruction regression also passes with
+the proposal change. Its 178 measured suffix rows in each case retain the exact
+path, heading and rotation errors recorded in the v0.1.3 table below; the original
+0.075 sphere-radian path, 0.025 radian heading and 0.020 radian/component gates
+are unchanged.
 
 A v0.1.3 known-motion acceleration fixture changes roughly 0.0054 to 0.065
 rad/frame. It requires rejecting the first jump, recovering on the fourth good

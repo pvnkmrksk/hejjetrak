@@ -1,0 +1,131 @@
+{
+  "baseline_commit": "27476386d07ff8b4dcb46cb2cd57fecd14e749d7",
+  "scope": "Controlled known-motion renderer; no physical camera speed claim",
+  "core_tests_passed": 48,
+  "baseline_identical_regression_failed": true,
+  "source_sha256": {
+    "crates/fictrac-core/src/resilience.rs": "7397232a7ed84094b7eb11b75bfc568b8b2de129ef0fa9ee11b08ed8513abc37",
+    "crates/fictrac-core/src/spherical.rs": "164294a2195b6f4045ff9a2440efb5fbf44fd3c5c4f0dcb092ab508c7f8311f8",
+    "crates/fictrac-core/tests/recovery.rs": "5423bad88357bc2162cf74a2302584e0903af80082ae6600ce045715fecf29c4"
+  },
+  "unchanged_gates": [
+    "binary-map MSE limits",
+    "edge-density gate",
+    "accepted-motion guard",
+    "four-image acceleration confirmation",
+    "zero-relative-motion relocalization",
+    "eight-row atlas probation",
+    "768 maximum recovery evaluations",
+    "existing occluder/impostor regression tolerances"
+  ],
+  "date": "2026-10-26",
+  "platform": {
+    "macos": "27.0.1",
+    "architecture": "aarch64-apple-darwin"
+  },
+  "toolchain": {
+    "rustc": "1.99.1",
+    "llvm": "23.1.1",
+    "release_profile": "thin LTO, one codegen unit, no target-CPU override"
+  },
+  "algorithm_change": "Hold a rejected low-error motion candidate velocity only as a bounded, fully scored recovery-search proposal; retain every existing acceptance/learning rule.",
+  "fixture": {
+    "test": "fast_motion_recovery_uses_held_velocity_with_sharp_and_exposure_blurred_images",
+    "source": "crates/fictrac-core/tests/recovery.rs",
+    "dimensions": [
+      160,
+      160
+    ],
+    "fps": 30,
+    "warmup_frames": 330,
+    "warmup_angular_increment": [
+      0.02,
+      0,
+      0
+    ],
+    "fast_frames": 90,
+    "fast_angular_increment": [
+      0.2,
+      0,
+      0
+    ],
+    "default_fit_evaluations": 50,
+    "map_quality": 6,
+    "exposures": [
+      {
+        "fraction": 0,
+        "samples": 1,
+        "recovery_frame": 4,
+        "measured_fast_rows": 86,
+        "rotation_component_rms_rad": [
+          0.0036088036980469517,
+          0.002339839157791612,
+          0.005843796876185131
+        ]
+      },
+      {
+        "fraction": 0.5,
+        "samples": 9,
+        "recovery_frame": 4,
+        "measured_fast_rows": 86,
+        "rotation_component_rms_rad": [
+          0.005319747824285406,
+          0.002950597058212322,
+          0.005702953857417561
+        ]
+      }
+    ],
+    "fixed_component_rms_gate_rad": 0.008,
+    "safety_assertions": [
+      "First three fast candidates remain unaccepted",
+      "At least four visible images before acceleration confirmation",
+      "Exact learned-atlas/pose/path preservation while unaccepted",
+      "Zero relative motion on relocalization",
+      "Eight measured rows retain atlas probation"
+    ]
+  },
+  "baseline_regression": {
+    "code_commit": "27476386d07ff8b4dcb46cb2cd57fecd14e749d7",
+    "new_test_identical": true,
+    "result": "fails: sharp fast motion never resumes in 90 frames",
+    "source_policy": "Unmodified baseline resilience.rs and spherical.rs restored from Git; identical new public-API regression copied into isolated crate. No baseline tolerances changed."
+  },
+  "runtime_boundary": "Core controlled rendering correctness tests. No timing, physical-camera speed/exposure, or actual ball-angle accuracy claim.",
+  "real_video_recovery": {
+    "command": "cargo test -p fictrac-io --test recovery_video --release --locked -- --nocapture",
+    "result": "1 passed; 0 failed",
+    "sample": "examples/sample.mp4",
+    "sample_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+    "fixtures": [
+      "900 learned frames followed by 240 full-obstruction frames and 180 clear frames",
+      "Approximately 70% partial obstruction followed by 180 clear frames"
+    ],
+    "full_obstruction": {
+      "measured_suffix_rows": 178,
+      "path_rms_sphere_rad": 0.015622900289682733,
+      "heading_rms_rad": 0.010661528116696092,
+      "rotation_component_rms_rad": [
+        0.0073494446782363075,
+        0.007955788389072594,
+        0.012259253032265995
+      ]
+    },
+    "partial_obstruction": {
+      "measured_suffix_rows": 178,
+      "path_rms_sphere_rad": 0.015419112380507537,
+      "heading_rms_rad": 0.010576674575242207,
+      "rotation_component_rms_rad": [
+        0.008068676673392764,
+        0.00841973486431192,
+        0.014038066924699812
+      ]
+    },
+    "unchanged_gates": {
+      "path_rms_sphere_rad": 0.075,
+      "heading_rms_rad": 0.025,
+      "rotation_component_rms_rad": 0.02
+    },
+    "numeric_results_match_recorded_v013_recovery_evidence": true,
+    "scope": "actual supplied video plus synthetic full/partial occlusion overlays; no physical live-camera claim"
+  }
+}

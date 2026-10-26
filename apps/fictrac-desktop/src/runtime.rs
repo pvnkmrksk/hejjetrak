@@ -393,7 +393,17 @@ fn run(
     let mut last_camera_frame = Instant::now();
     let mut last_source_time: Option<f64> = None;
     let mut retimed = false;
-    let mut sinks = OutputSinks::from_config(&doc).map_err(|e| e.to_string())?;
+    let (mut sinks, mut outputs_unavailable) = match OutputSinks::from_config(&doc) {
+        Ok(sinks) => (sinks, false),
+        Err(error) => {
+            let error = format!(
+                "Live outputs are disabled: {error}. Preview, tracking and recording continue; correct the output settings and Apply to reconnect."
+            );
+            snapshot.notice = error.clone();
+            snapshot.command_error = Some(error);
+            (OutputSinks::disabled(), true)
+        }
+    };
     let mut previous_frame: Option<GrayFrame> = None;
     let mut previous_input: Option<GrayFrame> = None;
     let mut previous_rgb: Option<Vec<u8>> = None;
@@ -404,7 +414,24 @@ fn run(
         for cmd in pending_command.take().into_iter().chain(rx.try_iter()) {
             match cmd {
                 Command::Configure(next, revision) => {
-                    if let Err(error) = sinks.reconfigure(&doc, &next) {
+                    // A failed startup has no previously configured handles.
+                    // Reapply even unchanged settings, e.g. after the old Python
+                    // publisher releases the requested port. A disabled sink is
+                    // not evidence that an enabled requested output is healthy.
+                    let output_result = if outputs_unavailable {
+                        OutputSinks::from_config(&next).map(|configured| {
+                            sinks = configured;
+                            outputs_unavailable = false;
+                        })
+                    } else {
+                        sinks.reconfigure(&doc, &next)
+                    };
+                    if let Err(error) = output_result {
+                        let status = sinks.status();
+                        outputs_unavailable = outputs_unavailable
+                            || (!status.udp_enabled
+                                && !status.serial_enabled
+                                && status.zmq.is_none());
                         snapshot.notice = format!("Configuration rejected: {error}");
                         snapshot.command_error = Some(snapshot.notice.clone());
                         continue;
@@ -1424,6 +1451,97 @@ mod tests {
                 .count(),
             3
         );
+        fs::remove_dir_all(directory).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    #[test]
+    fn occupied_startup_output_keeps_preview_and_recording_then_retries_same_settings() -> Result<()>
+    {
+        let busy = std::net::TcpListener::bind("127.0.0.1:0").map_err(|e| e.to_string())?;
+        let port = busy.local_addr().map_err(|e| e.to_string())?.port();
+        let (source, mut doc) = fixture().map_err(|e| e.to_string())?;
+        if let SourceSpec::Video(path) = &source {
+            doc.set("src_fn", &path.to_string_lossy())
+                .map_err(|e| e.to_string())?;
+        }
+        for (key, value) in [
+            ("zmq_port", port.to_string()),
+            ("sock_port", "-1".into()),
+            ("save_raw", "n".into()),
+            ("save_debug", "n".into()),
+        ] {
+            doc.set(key, &value).map_err(|e| e.to_string())?;
+        }
+        let worker = Worker::start(source, doc.clone(), true)?;
+        let running = wait_for(&worker, |s| s.frames >= 3)?;
+        assert!(running.image.is_some());
+        assert!(running.row.is_some());
+        assert!(!running.ended);
+        assert!(running.command_error.as_deref().is_some_and(|s| {
+            s.contains("Live outputs are disabled") && s.contains("cannot bind")
+        }));
+        assert!(running.outputs.as_ref().is_some_and(|s| s.zmq.is_none()));
+        worker.send(Command::Pause(true))?;
+        let paused = wait_for(&worker, |s| s.paused)?;
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|e| e.to_string())?
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!("hejjetrac-busy-startup-{stamp}"));
+        worker.send(Command::Record(directory.clone()))?;
+        wait_for(&worker, |s| s.recording)?;
+        worker.send(Command::Advance(4))?;
+        let recorded = wait_for(&worker, |s| {
+            s.frames == paused.frames + 4 && s.advance_remaining == 0
+        })?;
+        assert!(recorded.command_error.is_some());
+        assert!(recorded.outputs.as_ref().is_some_and(|s| s.zmq.is_none()));
+        worker.send(Command::StopRecord)?;
+        wait_for(&worker, |s| !s.recording)?;
+        assert_eq!(
+            fs::read_to_string(directory.join("epoch-0000-all-frames.dat"))
+                .map_err(|e| e.to_string())?
+                .lines()
+                .count(),
+            4
+        );
+        assert_eq!(
+            fs::read_to_string(directory.join("epoch-0000-quality.csv"))
+                .map_err(|e| e.to_string())?
+                .lines()
+                .count(),
+            5
+        );
+        worker.send(Command::Configure(doc.clone(), 1))?;
+        let rejected = wait_for(&worker, |s| {
+            s.command_error
+                .as_deref()
+                .is_some_and(|e| e.starts_with("Configuration rejected"))
+        })?;
+        assert_eq!(rejected.revision, 0);
+        assert_eq!(rejected.frames, recorded.frames);
+        drop(busy);
+        worker.send(Command::Configure(doc, 2))?;
+        let queued = worker.latest();
+        if queued.revision < 2 {
+            assert!(
+                queued.command_error.is_some(),
+                "A queued edit is not an acknowledgement"
+            );
+        }
+        let applied = wait_for(&worker, |s| s.revision == 2)?;
+        assert!(applied.command_error.is_none());
+        assert_eq!(applied.frames, recorded.frames);
+        let publisher = applied
+            .outputs
+            .as_ref()
+            .and_then(|s| s.zmq.as_ref())
+            .ok_or("Recovered publisher is missing")?;
+        assert!(publisher.worker_alive);
+        assert_eq!(publisher.endpoint, format!("tcp://127.0.0.1:{port}"));
+        worker.send(Command::Step)?;
+        let advanced = wait_for(&worker, |s| s.frames == applied.frames + 1)?;
+        assert!(advanced.row.as_ref().is_some_and(|row| row.accepted));
         fs::remove_dir_all(directory).map_err(|e| e.to_string())?;
         Ok(())
     }

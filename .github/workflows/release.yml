@@ -37,6 +37,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.source_ref || github.ref }}
+      - name: Trust the checked-out workspace inside Linux containers
+        if: runner.os == 'Linux'
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Verify release tag matches the packaged source
         if: startsWith(github.ref, 'refs/tags/') || inputs.release_tag != ''
         env:
@@ -53,7 +56,13 @@ jobs:
           fi
       - name: Record packaged source revision
         shell: bash
-        run: echo "PACKAGE_SOURCE_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+        run: |
+          source_commit=$(git rev-parse HEAD)
+          if [[ ! "$source_commit" =~ ^[0-9a-f]{40}$ ]]; then
+            echo '::error::Cannot identify the exact packaged source revision.'
+            exit 1
+          fi
+          echo "PACKAGE_SOURCE_COMMIT=$source_commit" >> "$GITHUB_ENV"
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -65,6 +74,9 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --locked
+      - name: Patched Linux camera adapter regression
+        if: runner.os == 'Linux' && hashFiles('vendor/nokhwa-bindings-linux/Cargo.toml') != ''
+        run: cargo test -p nokhwa-bindings-linux --lib --locked
       - name: Patched Rust decoder regression suite
         run: cargo test --manifest-path vendor/oxideav-h264/Cargo.toml --lib --locked
       - run: cargo build --workspace --release --locked
@@ -134,10 +146,12 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           apt-get update
-          apt-get install -y ca-certificates git python3 dpkg desktop-file-utils xvfb xauth mesa-vulkan-drivers libgl1-mesa-dri
+          apt-get install -y ca-certificates git python3 python3-pil dpkg desktop-file-utils xvfb xauth mesa-vulkan-drivers libgl1-mesa-dri
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.source_ref || github.ref }}
+          # Test tools follow this workflow revision, including when the build
+          # source_ref is an older immutable application tag.
+          ref: ${{ github.ref }}
       - uses: actions/download-artifact@v4
         with:
           name: hejjetrac-Linux-X64

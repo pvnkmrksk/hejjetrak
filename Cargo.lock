@@ -1180,6 +1180,7 @@ dependencies = [
  "block2 0.6.2",
  "dispatch2",
  "fictrac-core",
+ "image",
  "nokhwa",
  "objc2 0.6.5",
  "objc2-av-foundation",
@@ -2223,8 +2224,6 @@ dependencies = [
 [[package]]
 name = "nokhwa-bindings-linux"
 version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb67e22201a53322291740ca064b20eaaade7222ef0349f312d9b37b004e1984"
 dependencies = [
  "libc",
  "nokhwa-core",

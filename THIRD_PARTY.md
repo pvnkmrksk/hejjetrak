@@ -11,7 +11,7 @@ Cargo.lock pins the complete dependency graph. These are Rust libraries, not ext
 | eframe/egui 0.33.3 | Native desktop GUI | MIT OR Apache-2.0 |
 | wgpu 27 | Native GPU rendering | MIT OR Apache-2.0 |
 | rfd 0.15 | Native file dialogs | MIT |
-| image 0.25 | Rust image buffers/PNG | MIT OR Apache-2.0 |
+| image 0.25 | Rust image buffers/PNG and bounded camera JPEG decoding | MIT OR Apache-2.0 |
 | Lucide icon artwork | Bundled professional toolbar icons | ISC; Feather-derived subset MIT |
 | serial2 0.2 | Native serial configuration and bounded writes | BSD-2-Clause OR Apache-2.0 |
 | zeromq 0.6, tokio 1 | Pure Rust ZMQ transport and bounded asynchronous publisher | MIT |
@@ -19,7 +19,7 @@ Cargo.lock pins the complete dependency graph. These are Rust libraries, not ext
 | nokhwa 0.10 | Windows/Linux native capture | Apache-2.0 |
 | objc2 and framework crates, block2, dispatch2 | Rust bindings to macOS native APIs | MIT |
 
-OxideAV supplies Rust codec/container implementations. No FFmpeg/OpenH264/libav/OpenCV/NLopt C/C++ implementation is linked or invoked. Nokhwa's decoding/MJPEG features are disabled. OS libraries and graphics drivers are native system dependencies, accessed through Rust bindings; this is not a claim that the operating system itself is Rust. The CLI links libSystem on macOS; the GUI additionally links native Apple frameworks.
+OxideAV supplies Rust codec/container implementations. No FFmpeg/OpenH264/libav/OpenCV/NLopt C/C++ implementation is linked or invoked. Nokhwa's optional native MJPEG decoder remains disabled. Camera MJPEG frames use the existing pure Rust `image`/`zune-jpeg` decoder with explicit dimension/allocation limits. OS libraries and graphics drivers are native system dependencies, accessed through Rust bindings; this is not a claim that the operating system itself is Rust. The CLI links libSystem on macOS; the GUI additionally links native Apple frameworks.
 
 Dependency sources, authorship and full license texts remain in Cargo registry distributions. CI vendors the locked dependency graph, and the packager copies its available license/notice files into `DependencyLicenses/` with a manifest listing each package's included files. On macOS this directory is under `Contents/Resources/`. Windows x64 releases use [Rust's static CRT linkage](https://doc.rust-lang.org/reference/linkage.html#static-and-dynamic-c-runtimes) to avoid a separately installed Visual C++ redistributable; native Windows system DLLs remain OS dependencies. Historical development archives in this workspace must not be confused with current GitHub releases.
 
@@ -37,3 +37,10 @@ by Cargo's registry patch table; provenance and changed files are listed in
 `vendor/oxideav-h264/HEJJETRAK_PATCHES.md`. Packaging collects local-path notices
 alongside registry-vendored licenses. CI runs the decoder's library suite
 separately because this third-party package is excluded from our workspace.
+
+`nokhwa-bindings-linux` 0.1.4 is retained under
+`vendor/nokhwa-bindings-linux` with the original copyright and Apache-2.0
+license. Its small documented patch recognizes V4L2 `GREY` mono cameras and
+bounds a stalled MMAP frame read. Provenance and the Linux regression command
+are in `vendor/nokhwa-bindings-linux/HEJJETRAK_PATCHES.md`; package notices include
+this local dependency as well. No native JPEG/media library is enabled.
