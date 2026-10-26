@@ -107,6 +107,17 @@ the requested `view.display_fps`, worker-applied `preview_target_fps`, measured
 `preview_fps` (source-image publications, not GPU presentation), and `actual_fps`
 (processed-frame delivery). Source/OS scheduling can make preview updates lower
 than their limit. The Display slider uses this same command path.
+Numerical frame/clock counters, media progress and output health remain available
+at approximately 30-ms publication intervals even at a 1-fps display limit;
+immutable image and displayed-path snapshots are reused between image updates.
+Consequently, a running session's `frames`/`last_row` can be newer than its
+displayed image, diagnostic maps, path and pose-history snapshots. The native
+`snapshot` command exports those last-published preview images alongside current
+processing status. For a frame-aligned diagnostic capture, request `pause`, poll
+until paused, then capture; pausing promotes the latest measured image and its
+diagnostics. An explicit paused step followed by completion polling also aligns
+the capture. Ordinary running captures are approximate visual annotations;
+numeric and quality recordings remain independent and complete.
 
 `record_start` additionally accepts
 `recording_tuning: {"encoding":"configured"|"mjpeg"|"raw"}`. The recording

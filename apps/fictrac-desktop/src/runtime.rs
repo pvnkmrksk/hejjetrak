@@ -400,6 +400,7 @@ fn run(
         None
     };
     let mut last_publish = Instant::now() - Duration::from_secs(1);
+    let mut last_status_publish = Instant::now() - Duration::from_secs(1);
     let mut preview_interval = Duration::from_secs_f64(1.0 / 30.0);
     snapshot.display_fps = 30;
     let mut previous_preview: Option<Instant> = None;
@@ -1067,17 +1068,22 @@ fn run(
                 }
             }
             previous_preview = Some(now);
+            snapshot.path = Arc::new(path.clone());
+            snapshot.contact_trace = Arc::new(contact_trace.iter().copied().collect());
+            snapshot.pose_history = Arc::new(pose_history.iter().copied().collect());
+            last_publish = Instant::now();
+        }
+        // Control/status freshness is independent of image/display cadence.
+        // Reuse immutable image/path Arcs between requested image publications.
+        if publish || last_status_publish.elapsed() >= Duration::from_millis(30) {
             if let Some(r) = &mut recorder {
                 r.refresh_media(&mut snapshot);
             }
             snapshot.outputs = Some(sinks.status());
-            snapshot.path = Arc::new(path.clone());
-            snapshot.contact_trace = Arc::new(contact_trace.iter().copied().collect());
-            snapshot.pose_history = Arc::new(pose_history.iter().copied().collect());
             *shared
                 .lock()
                 .unwrap_or_else(std::sync::PoisonError::into_inner) = snapshot.clone();
-            last_publish = Instant::now();
+            last_status_publish = Instant::now();
         }
         previous_frame = Some(frame);
         previous_input = Some(input_frame);
@@ -1367,7 +1373,7 @@ mod tests {
     fn wait_for_timeout(
         worker: &Worker,
         timeout: Duration,
-        test: impl Fn(&Snapshot) -> bool,
+        mut test: impl FnMut(&Snapshot) -> bool,
     ) -> Result<Snapshot> {
         let start = Instant::now();
         let initial_frames = worker.latest().frames;
@@ -1835,7 +1841,32 @@ mod tests {
         // throughput. Shared CI runners execute other real-video tests alongside
         // this debug-build 300-frame decode; allow that work sixty seconds while
         // keeping the separate command/deadline responsiveness assertions strict.
-        let ended = wait_for_timeout(&worker, Duration::from_secs(60), |snapshot| snapshot.ended)?;
+        let mut previous = worker.latest();
+        let mut saw_independent_metadata = false;
+        let ended = wait_for_timeout(&worker, Duration::from_secs(60), |snapshot| {
+            if snapshot.frames > previous.frames
+                && let (Some(before), Some(after)) = (&previous.image, &snapshot.image)
+                && Arc::ptr_eq(before, after)
+            {
+                assert_eq!(
+                    snapshot.resources.preview_updates,
+                    previous.resources.preview_updates
+                );
+                assert!(Arc::ptr_eq(&previous.path, &snapshot.path));
+                assert!(Arc::ptr_eq(
+                    &previous.contact_trace,
+                    &snapshot.contact_trace
+                ));
+                assert!(Arc::ptr_eq(&previous.pose_history, &snapshot.pose_history));
+                saw_independent_metadata = true;
+            }
+            previous = snapshot.clone();
+            snapshot.ended
+        })?;
+        assert!(
+            saw_independent_metadata,
+            "numeric/status counters must advance between 1-fps source images"
+        );
         assert_eq!(ended.frames, 300);
         assert_eq!(ended.display_fps, 1);
         assert!(ended.resources.preview_updates > 0);
