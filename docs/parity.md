@@ -1,15 +1,16 @@
 # Behavioral parity assessment
 
-Published baseline: [v0.2.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.2.2),
-source `d4aad90e233b4ba4b695d1a48a285dbff543d40b`, passes all four
-[native package jobs and both Ubuntu runtime jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40361383864).
+Published baseline: [v0.2.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.2.3),
+source `35859b3faf7ec7a394b6608730e20a78d6e5d9b8`, passes all four
+[native package jobs and both Ubuntu runtime jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40381876617).
 The official Apple Silicon archive passes strict ad hoc signature/version/source
 checks, the complete sample comparison and native preview inspection. The same
 Linux packages pass installed/portable sample and visible Xvfb/Mesa preview
 checks on Ubuntu 22.04 and 24.04. Native Windows visual checks, physical Linux
 cameras and unrestricted physical-motion accuracy remain unverified. The
-[published validation](validation.md#v022-published-release--2026-10-26) also
-records a known desktop live-camera recording-FPS metadata bug in v0.2.2.
+[published validation](validation.md#v023-published-release--2026-10-26) records
+the v0.2.3 recording-rate correction, unchanged numeric timestamps and native
+saved-default relaunch checks. The numerical engine is unchanged from v0.2.2.
 
 Current source also includes live calibration previews, a multi-rig manager, system/light/dark appearance and stricter invalid-input checks. The [polish validation](validation.md#final-polish--2026-10-25) records native Mac interaction checks and the unchanged numerical comparison gates.
 
@@ -71,12 +72,12 @@ Assessed against pvnkmrksk/fictrac commit `10fc4472af1fc9062b9bf5a92738e835b98cc
 | Full CLI | Conventional commands plus legacy positional config invocation; structured status, schema, all numerical/calibration/recording operations through JSONL |
 | AI agent control | JSONL/MCP share the numerical controller; native GUI JSONL controls displayed sessions, including calibration steps/edit/loupe/full-image choices. Historical v0.1.1 native video/camera/grid transcripts and current validation are distinguished in validation.md |
 | Video inputs | H.264 MP4/MOV/AVI (including B-frame ordering), MPEG-4 Part 2 MP4/MOV/AVI, MJPEG/raw AVI and mono/420 Y4M |
-| Video recording | H.264 AVI default, XVID AVI, MPEG-4 MP4, MJPEG/raw AVI; explicit H.264 MP4; FPS/container tests, calibrated debug mosaic, safe partial finalization. Known v0.2.2 desktop live-camera bug: a jittered first interval can select incorrect video FPS metadata; original numeric timestamps remain intact. See validation.md |
+| Video recording | H.264 AVI default, XVID AVI, MPEG-4 MP4, MJPEG/raw AVI; explicit H.264 MP4; FPS/container tests, calibrated debug mosaic, safe partial finalization. v0.2.3 prefers explicit FPS, then source metadata, with interval inference only when unknown. Real-frame tests retain exact numeric/quality timestamps; encoded video remains constant-rate. See validation.md |
 | Video codec boundaries | Segmented OpenDML AVI supports >4 GiB offsets; H.264 encodes even dimensions with SPS cropping; odd H.264 4:2:0 dimensions fail explicitly; exotic profiles/formats remain outside tested coverage |
 | Serial/UDP | Native Rust serial2 and datagram sinks with original prefix/full row; actual OS pseudo-terminal and loopback tests; physical serial hardware untested |
 | Camera | Historical FaceTime HD checks cover 640×480/30 and 1280×720/15 format/readback, pause/step/config, two 35-frame recordings, source switch and reopen. A v0.2.2 ~120 FPS USB-camera check maintains acquisition/preview for ~30 seconds, but its old calibration includes the holder and cannot establish tracking accuracy. Physical Linux V4L, iPhone and industrial SDKs remain unverified |
-| Native platforms | Published v0.2.2 passes four native package jobs and four portability jobs. Official Apple Silicon signature/version/source/sample and 175-frame preview checks pass; Ubuntu 22.04/24.04 installed/portable sample, Xvfb/Mesa previews and fallback pass. Native hover/loupe pointer testing remains incomplete; Windows visual checks, Linux hardware GPU/Wayland and physical V4L cameras remain unverified |
-| Packaging | Published v0.2.2 has five assets: two Mac ZIPs, Windows ZIP, Linux portable tar and Linux amd64 `.deb`, with dependency notices. Actual Linux GUI/CLI ELF requirements stop at glibc 2.35; installed/portable binary hashes and full sample checks match on Ubuntu 22.04/24.04. No Developer ID notarization or Windows Authenticode signing |
+| Native platforms | Published v0.2.3 passes four native package jobs and four portability jobs. Official Apple Silicon signature/version/source/sample, 175-frame preview and saved-user-config relaunch checks pass; Ubuntu 22.04/24.04 installed/portable sample, Xvfb/Mesa previews and per-user default fallback pass. Native hover/loupe pointer testing remains incomplete; Windows visual checks, Linux hardware GPU/Wayland and physical V4L cameras remain unverified |
+| Packaging | Published v0.2.3 has five assets: two Mac ZIPs, Windows ZIP, Linux portable tar and Linux amd64 `.deb`, with dependency notices. Actual Linux GUI/CLI ELF requirements stop at glibc 2.35; installed/portable binary hashes and full sample checks match on Ubuntu 22.04/24.04. Writable defaults live outside installed/signed resources. No Developer ID notarization or Windows Authenticode signing |
 | Resource scheduling | Interruptible source deadlines/idle waits, bounded queues/staged frame, coalesced preview publication, unchanged per-frame numerical/recording evidence, cached geometry/textures and deque history. CPU/RSS methodology/results in resources.md; no wattage or sixteen high-rate camera capacity claim |
 
 A protocol request accepted into a GUI worker queue is not proof the action completed. Clients poll revision/frame/advance/recording/notice state and validate files. Synchronous headless commands expose the same numerical operations; playback and OS-window scheduling differ deliberately.

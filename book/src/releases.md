@@ -4,7 +4,13 @@
 
 The landing page resolves GitHub's latest published release at download time and shows the platform archive, release tag and available SHA-256 digest. Manual OS/chip choices remain available; browser architecture detection is not treated as infallible. If the release API is unavailable or an archive has not uploaded yet, use the visible GitHub release link rather than a guessed download.
 
-## v0.2.3 — recording frame rate (upcoming)
+## v0.2.3 — 26 October 2026
+
+[v0.2.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.2.3) is the latest
+published release, with all five packages. All native build and Ubuntu runtime
+checks pass. The official Mac archive passes signature, complete-sample,
+preview and saved-default relaunch checks. [Validation](validation.md#v023-published-release--2026-10-26)
+records hashes and execution scope.
 
 Desktop recordings prefer an explicit `src_fps`, then the source's reported
 frame rate. Capture jitter in the first two frames no longer changes the whole

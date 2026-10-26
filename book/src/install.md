@@ -72,6 +72,10 @@ If the executable bit was lost during copying, `chmod u+x hejjetrac hejjetrac-cl
 
 Download a new release into a new folder and keep your experiment configuration and recordings separately. Read the release notes before changing a working experiment. GitHub's release API may provide an asset SHA-256 digest; the download dialog shows it when present. Compare it with a locally calculated digest when verifying an archive. Never overwrite your only copy of a calibrated config or run output during an update.
 
+When upgrading from v0.2.2 or earlier, use Save As to keep any calibrated config
+outside the old application folder before replacing it. Current versions keep
+the editable default in the [user config folder](desktop.md#settings-and-state).
+
 ## Download size
 
 The package includes the native GUI and graphics integration, fonts, Rust video

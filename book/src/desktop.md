@@ -61,6 +61,9 @@ be read or created, the app opens a temporary bundled preview with Save As
 guidance. Review the ball outline and vertical field of view for each camera;
 the bundled rig geometry is an example.
 
+Camera numbers are assigned by the operating system. Check the displayed device
+name after reconnecting cameras or changing USB ports.
+
 Numerical edits create a new tracking epoch without seeking the unchanged video source. A recording is closed rather than mixing two calibrations in one epoch. Reopen a source or rewind explicitly when a fresh timeline is wanted.
 
 ## MATREX VR output

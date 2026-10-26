@@ -1,5 +1,44 @@
 # HejjéTrac validation evidence
 
+## v0.2.3 published release — 2026-10-26
+
+**[v0.2.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.2.3)** is
+published as latest at **19:27:46 UTC**, from immutable source
+`35859b3faf7ec7a394b6608730e20a78d6e5d9b8`, with all five platform assets.
+All six [release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40381876617)
+and all four [portability jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40381869205)
+pass. Linux and both Macs pass **225 workspace tests**; Windows passes **222**
+applicable tests. Every platform passes **1,353 decoder tests** and the 120-frame
+demo; Linux also passes both camera-vendor regressions. Formatting, strict
+Clippy, source/version checks, Mac ad hoc signatures and Windows static-runtime
+dependency checks pass.
+
+The actual installed and portable Linux builds pass on Ubuntu **22.04.5** and
+**24.04.5**: complete 300-frame decode/tracking, zero sample rejections, unchanged
+reference gates and visible Xvfb/Mesa previews. Both unavailable-camera startup
+states use `/github/home/.config/hejjetrac/VR1.txt`, preserving the installed
+template. Independently decoded ELF requirements remain at **glibc 2.35**.
+[Final Linux hashes, user-config paths and six inspected previews](benchmarks/release-v023-linux-20261026.json)
+retain the exact runtime evidence; physical V4L and hardware-GPU testing remain
+outside this execution.
+
+The official Mac ARM ZIP SHA-256 is
+`d78cca6e4ef51f64b004a848a787936315049a9929246b38f5fe4366a49ec35c`.
+It passes strict signature, aliases, version/source and full sample comparison.
+Its native preview advances 175 frames and was visually checked. Two normal
+launches from a test-owned user default each advance 113 frames with no error,
+retain the saved video source/config bytes and leave the signed bundle intact.
+Only the unchanged test-owned user file was removed afterward.
+
+An anonymous public API lookup selects v0.2.3, and its public attachment returns
+HTTP 200 with the same 21,475,538-byte archive and SHA-256. This verifies the
+public route independently of the browser tool; final browser-download
+completion remains unverified after that tool's earlier failure. The one-click
+controller regressions pass. [Published metadata, native counts, official Mac
+checks and anonymous download](benchmarks/release-v023-20261026.json) record the
+complete release scope. The numerical tracking engine, coordinates and quality
+thresholds are unchanged from v0.2.2.
+
 ## v0.2.3 local recording and startup checks — 2026-10-26
 
 The frozen patch source passes workspace formatting, locked strict all-target
@@ -11,7 +50,7 @@ write. Two native normal launches retain the user-owned video config, advance
 114/113 frames with no error and leave both config and signed bundle unchanged.
 The rendered preview was visually checked; the unchanged test-owned user file
 was removed afterward. [Checks, source hashes and native result](benchmarks/local-v023-20261026.json)
-record this local execution. Official patch packages remain pending here.
+record this local execution. Official package execution is recorded above.
 
 Real-frame recording tests cover nominal 120.00048 FPS with a 9 ms first gap,
 an explicit 60 FPS override, unknown-rate inference and one-frame recordings.
