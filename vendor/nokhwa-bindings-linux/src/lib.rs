@@ -41,11 +41,13 @@ mod internal {
         control::{Control, Flags, Type, Value},
         frameinterval::FrameIntervalEnum,
         framesize::FrameSizeEnum,
-        io::traits::{CaptureStream, Stream},
+        io::traits::CaptureStream,
         prelude::MmapStream,
         video::{capture::Parameters, Capture},
         Device, Format, FourCC,
     };
+    #[cfg(feature = "no-arena-buffer")]
+    use v4l::io::traits::Stream;
 
     /// Attempts to convert a [`KnownCameraControl`] into a V4L2 Control ID.
     /// If the associated control is not found, this will return `None` (`ColorEnable`, `Roll`)
@@ -100,8 +102,17 @@ mod internal {
     #[allow(clippy::cast_possible_truncation)]
     pub fn query() -> Result<Vec<CameraInfo>, NokhwaError> {
         Ok({
-            let camera_info: Vec<CameraInfo> = v4l::context::enum_devices()
+            let mut camera_info: Vec<CameraInfo> = v4l::context::enum_devices()
                 .iter()
+                // UVC cameras often expose a second /dev/video node carrying
+                // metadata only. Opening it as the first camera fails despite
+                // a working image device next to it. Our MMAP adapter requires
+                // single-plane streaming video capture, not a metadata node.
+                .filter(|node| {
+                    Device::new(node.index())
+                        .and_then(|device| device.query_caps())
+                        .is_ok_and(|caps| capture_node(caps.capabilities))
+                })
                 .map(|node| {
                     CameraInfo::new(
                         &node
@@ -113,8 +124,13 @@ mod internal {
                     )
                 })
                 .collect();
+            camera_info.sort_by_key(|camera| camera.index().as_index().unwrap_or(u32::MAX));
             camera_info
         })
+    }
+
+    fn capture_node(flags: v4l::capability::Flags) -> bool {
+        flags.contains(v4l::capability::Flags::VIDEO_CAPTURE | v4l::capability::Flags::STREAMING)
     }
 
     type SharedDevice = std::sync::Arc<std::sync::Mutex<Device>>;
@@ -726,14 +742,21 @@ mod internal {
                     let ctrl_current = device.control(desc.id)?.value;
 
                     let ctrl_value_desc = match (desc.typ, ctrl_current) {
+                        (Type::Menu | Type::IntegerMenu, Value::Integer(current)) => {
+                            ControlValueDescription::Enum {
+                                value: current,
+                                possible: desc.items.as_ref().map_or_else(Vec::new, |items| {
+                                    items.iter().map(|(index, _)| i64::from(*index)).collect()
+                                }),
+                                default: desc.default,
+                            }
+                        }
                         (
                             Type::Integer
                             | Type::Integer64
-                            | Type::Menu
                             | Type::U8
                             | Type::U16
-                            | Type::U32
-                            | Type::IntegerMenu,
+                            | Type::U32,
                             Value::Integer(current),
                         ) => ControlValueDescription::IntegerRange {
                             min: desc.minimum as i64,
@@ -816,7 +839,7 @@ mod internal {
         ) -> Result<(), NokhwaError> {
             let conv_value = match value.clone() {
                 ControlValueSetter::None => Value::None,
-                ControlValueSetter::Integer(i) => Value::Integer(i),
+                ControlValueSetter::Integer(i) | ControlValueSetter::EnumValue(i) => Value::Integer(i),
                 ControlValueSetter::Boolean(b) => Value::Boolean(b),
                 ControlValueSetter::String(s) => Value::String(s),
                 ControlValueSetter::Bytes(b) => Value::CompoundU8(b),
@@ -947,6 +970,14 @@ mod internal {
     #[cfg(test)]
     mod hejjetrac_tests {
         use super::*;
+        #[test]
+        fn metadata_nodes_are_not_advertised_as_image_cameras() {
+            use v4l::capability::Flags;
+            assert!(capture_node(Flags::VIDEO_CAPTURE | Flags::STREAMING));
+            assert!(!capture_node(Flags::META_CAPTURE | Flags::STREAMING));
+            assert!(!capture_node(Flags::VIDEO_CAPTURE));
+            assert!(!capture_node(Flags::VIDEO_CAPTURE_MPLANE | Flags::STREAMING));
+        }
         #[test]
         fn standard_and_legacy_grey_fourccs_select_mono_capture() {
             assert_eq!(

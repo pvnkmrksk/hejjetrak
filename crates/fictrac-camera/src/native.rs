@@ -245,18 +245,19 @@ impl Camera {
             .camera
             .camera_control(KnownCameraControl::Other(0x009a0901))
         {
-            if let ControlValueSetter::Integer(value) = control.value() {
+            if let ControlValueSetter::Integer(value) | ControlValueSetter::EnumValue(value) =
+                control.value()
+            {
                 exposure_mode = match value {
                     1 => Some(ExposureMode::Locked),
                     0 | 3 => Some(ExposureMode::Automatic),
                     _ => None,
                 };
             }
-            let cap = numeric_capability(Some(&control), "V4L2 exposure mode");
-            if cap.validate(1.0).is_ok() {
+            if linux_exposure_setter(&control, ExposureMode::Locked).is_some() {
                 supported_exposure_modes.push(ExposureMode::Locked);
             }
-            if automatic_linux_value(&cap).is_some() {
+            if linux_exposure_setter(&control, ExposureMode::Automatic).is_some() {
                 supported_exposure_modes.push(ExposureMode::Automatic);
             }
         }
@@ -310,20 +311,10 @@ impl Camera {
                                 "camera has no V4L2 automatic-exposure control: {e}"
                             ))
                         })?;
-                    let cap = numeric_capability(Some(&control), "V4L2 exposure mode");
-                    let value = match mode {
-                        ExposureMode::Locked => 1.0,
-                        ExposureMode::Automatic => {
-                            automatic_linux_value(&cap).ok_or_else(|| {
-                                Error(
-                                    "camera does not advertise a supported automatic exposure mode"
-                                        .into(),
-                                )
-                            })?
-                        }
-                    };
-                    cap.validate(value)?;
-                    (control, ControlValueSetter::Integer(value as i64))
+                    let setter = linux_exposure_setter(&control, mode).ok_or_else(|| {
+                        Error(format!("camera does not advertise writable {mode:?} exposure; query camera_status supported_exposure_modes"))
+                    })?;
+                    (control, setter)
                 }
             }
             CameraControlRequest::Exposure { value } => {
@@ -477,15 +468,7 @@ fn numeric_capability(control: Option<&CameraControl>, unit: &str) -> NumericCon
             "camera supplied invalid numeric control metadata",
         );
     }
-    let writable = c.active()
-        && !c.flag().iter().any(|f| {
-            matches!(
-                f,
-                KnownCameraControlFlag::ReadOnly
-                    | KnownCameraControlFlag::Disabled
-                    | KnownCameraControlFlag::Automatic
-            )
-        });
+    let writable = control_writable(c);
     NumericControlCapability {
         value: Some(value).filter(|v| v.is_finite()),
         minimum: min,
@@ -496,6 +479,17 @@ fn numeric_capability(control: Option<&CameraControl>, unit: &str) -> NumericCon
         unsupported_reason: (!writable)
             .then(|| "camera control is inactive, automatic, disabled or read-only".into()),
     }
+}
+fn control_writable(c: &CameraControl) -> bool {
+    c.active()
+        && !c.flag().iter().any(|f| {
+            matches!(
+                f,
+                KnownCameraControlFlag::ReadOnly
+                    | KnownCameraControlFlag::Disabled
+                    | KnownCameraControlFlag::Automatic
+            )
+        })
 }
 fn numeric_setter(control: &CameraControl, value: f64) -> Result<ControlValueSetter> {
     match control.value() {
@@ -511,9 +505,77 @@ fn numeric_setter(control: &CameraControl, value: f64) -> Result<ControlValueSet
     }
 }
 #[cfg(target_os = "linux")]
-fn automatic_linux_value(cap: &NumericControlCapability) -> Option<f64> {
-    // V4L2 menus may omit entries: only use automatic entries at an advertised endpoint.
-    [0.0, 3.0].into_iter().find(|value| {
-        (cap.minimum == Some(*value) || cap.maximum == Some(*value)) && cap.validate(*value).is_ok()
+fn linux_exposure_setter(
+    control: &CameraControl,
+    mode: ExposureMode,
+) -> Option<ControlValueSetter> {
+    if !control_writable(control) {
+        return None;
+    }
+    let current = match control.value() {
+        ControlValueSetter::Integer(value) | ControlValueSetter::EnumValue(value) => value,
+        _ => return None,
+    };
+    let candidates = match mode {
+        ExposureMode::Locked => [1, 1],
+        // Preserve the camera's existing automatic mode when possible. UVC
+        // cameras commonly advertise only manual=1 and aperture-priority=3;
+        // the missing menu entry 0 is not implied by its numeric range.
+        ExposureMode::Automatic if current == 0 || current == 3 => [current, current],
+        ExposureMode::Automatic => [3, 0],
+    };
+    candidates.into_iter().find_map(|value| {
+        let setter = if matches!(control.description(), ControlValueDescription::Enum { .. }) {
+            ControlValueSetter::EnumValue(value)
+        } else {
+            ControlValueSetter::Integer(value)
+        };
+        control
+            .description()
+            .verify_setter(&setter)
+            .then_some(setter)
     })
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod exposure_tests {
+    use super::*;
+
+    #[test]
+    fn sparse_uvc_exposure_menu_never_selects_an_unadvertised_entry() {
+        let control = CameraControl::new(
+            KnownCameraControl::Other(0x009a0901),
+            "Exposure mode".into(),
+            ControlValueDescription::Enum {
+                value: 1,
+                possible: vec![1, 3],
+                default: 3,
+            },
+            vec![],
+            true,
+        );
+        assert_eq!(
+            linux_exposure_setter(&control, ExposureMode::Automatic),
+            Some(ControlValueSetter::EnumValue(3))
+        );
+        assert_eq!(
+            linux_exposure_setter(&control, ExposureMode::Locked),
+            Some(ControlValueSetter::EnumValue(1))
+        );
+        let manual_only = CameraControl::new(
+            KnownCameraControl::Other(0x009a0901),
+            "Exposure mode".into(),
+            ControlValueDescription::Enum {
+                value: 1,
+                possible: vec![1],
+                default: 1,
+            },
+            vec![],
+            true,
+        );
+        assert_eq!(
+            linux_exposure_setter(&manual_only, ExposureMode::Automatic),
+            None
+        );
+    }
 }

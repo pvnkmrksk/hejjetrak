@@ -1,13 +1,12 @@
-# Hejjetrak VR2: independent native instance using the original BR2 calibration.
-# Camera ID and saved geometry are preserved from examples/rigs/BR2/config.txt.
-# Calibrate for the actual camera/resolution before interpreting physical motion.
-# UDP sends to localhost:1112; ZMQ PUB binds localhost:9872 simultaneously.
-## FicTrac v2.1.2 config file (build date Jan 28 2025)
-c2a_cnrs_xy      : {}
-c2a_cnrs_yz      : { 277, 80, 46, 87, 72, 163, 255, 155 }
-c2a_r            : { 0.292715, -0.301806, -1.514842 }
+# VR2: calibration from the physical rig config, 2026-10-26.
+# Pixel marks were measured at 320x240; keep this capture size.
+# UDP port 1112 feeds the existing external republisher. Direct ZMQ is disabled.
+## FicTrac v2.1.1 config file (build date Aug 21 2023)
+c2a_cnrs_xy      : { 284, 38, 320, 36, 321, 96, 281, 94 }
+c2a_cnrs_yz      : { 195, 88, 123, 88, 124, 135, 193, 136 }
+c2a_r            : { 0.577885, -0.567261, -1.499009 }
 c2a_src          : c2a_cnrs_yz
-c2a_t            : { 0.012867, 0.027952, 3.933274 }
+c2a_t            : { -0.017782, -0.106250, 11.412769 }
 do_display       : y
 max_bad_frames   : -1
 opt_bound        : 0.35
@@ -16,21 +15,22 @@ opt_max_err      : -1.000000
 opt_max_evals    : 50
 opt_tol          : 0.001
 q_factor         : 6
-roi_c            : { 0.001024, -0.021912, 0.999759 }
-roi_circ         : { 51, 20, 46, 178, 112, 231, 273, 180, 279, 30 }
-roi_ignr         : { { 98, 52, 127, 79, 203, 94, 225, 43, 225, 2, 99, 7 } }
-roi_r            : 0.169617
+roi_c            : { -0.004759, -0.001515, 0.999988 }
+roi_circ         : { 102, 56, 76, 103, 81, 156, 137, 199, 237, 100, 161, 36, 206, 53, 229, 158, 192, 193 }
+roi_ignr         : { { 177, 39, 167, 82, 150, 96, 134, 81, 130, 43, 149, 20 } }
+roi_r            : 0.102667
 save_debug       : n
 save_raw         : n
 sock_host        : 127.0.0.1
 sock_port        : 1112
 src_fn           : 2
-src_fps          : -1.000000
+src_fps          : 100
 thr_ratio        : 1.25
 thr_win_pc       : 0.25
 vfov             : 17
 
 rust_instance_name : VR2
-zmq_host           : 127.0.0.1
-zmq_port           : 9872
-zmq_queue_capacity : 256
+rust_resilient     : y
+rust_camera_width  : 320
+rust_camera_height : 240
+zmq_port           : 0

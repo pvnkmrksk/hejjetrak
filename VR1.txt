@@ -1,36 +1,36 @@
-# Hejjetrak VR1: independent native instance using the original BR1 calibration.
-# Camera ID and saved geometry are preserved from examples/rigs/BR1/config.txt.
-# Calibrate for the actual camera/resolution before interpreting physical motion.
-# UDP sends to localhost:1111; ZMQ PUB binds localhost:9871 simultaneously.
-## FicTrac v2.1.2 config file (build date Jan 28 2025)
-c2a_cnrs_xy      : {  }
-c2a_cnrs_yz      : { 255, 74, 22, 70, 56, 155, 242, 159 }
-c2a_r            : { 0.291686, -0.358684, -1.575034 }
+# VR1: calibration from the physical rig config, 2026-10-26.
+# Pixel marks were measured at 320x240; keep this capture size.
+# UDP port 1111 feeds the existing external republisher. Direct ZMQ is disabled.
+## FicTrac v2.1.1 config file (build date Aug 21 2023)
+c2a_cnrs_xy      : { 284, 38, 320, 36, 321, 96, 281, 94 }
+c2a_cnrs_yz      : { 194, 85, 126, 86, 127, 130, 194, 132 }
+c2a_r            : { 0.559708, -0.582700, -1.508258 }
 c2a_src          : c2a_cnrs_yz
-c2a_t            : { -0.077998, -0.006554, 4.685952 }
+c2a_t            : { 0.003460, -0.163998, 11.929694 }
 do_display       : y
-max_bad_frames   : 1000
+max_bad_frames   : -1
 opt_bound        : 0.35
 opt_do_global    : n
 opt_max_err      : -1.000000
 opt_max_evals    : 50
 opt_tol          : 0.001
 q_factor         : 6
-roi_c            : { -0.014917, -0.021012, 0.999668 }
-roi_circ         : { 49, 199, 106, 233, 239, 200, 277, 55, 252, 11, 32, 178 }
-roi_ignr         : { { 95, 1, 101, 48, 129, 66, 155, 59, 173, 46, 179, 28, 182, 11, 182, 2 } }
-roi_r            : 0.140809
+roi_c            : { 0.001815, 0.004549, 0.999988 }
+roi_circ         : { 179, 47, 242, 123, 154, 204, 174, 201, 115, 58, 82, 120, 99, 171, 223, 75 }
+roi_ignr         : { { 181, 50, 176, 91, 156, 101, 145, 82, 147, 48, 148, 26, 180, 35 } }
+roi_r            : 0.098537
 save_debug       : n
 save_raw         : n
 sock_host        : 127.0.0.1
 sock_port        : 1111
 src_fn           : 0
-src_fps          : -1.000000
+src_fps          : 100
 thr_ratio        : 1.25
 thr_win_pc       : 0.25
-vfov             : 14
+vfov             : 17
 
 rust_instance_name : VR1
-zmq_host           : 127.0.0.1
-zmq_port           : 9871
-zmq_queue_capacity : 256
+rust_resilient     : y
+rust_camera_width  : 320
+rust_camera_height : 240
+zmq_port           : 0

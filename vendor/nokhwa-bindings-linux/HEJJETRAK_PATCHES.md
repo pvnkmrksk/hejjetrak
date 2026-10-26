@@ -10,6 +10,11 @@ Original copyright and Apache-2.0 terms are retained.
 - Bound an MMAP frame read to two seconds. Failure is propagated; the app
   closes the stream and offers reconnect/fallback. It must not retry the same
   timed-out `v4l` MMAP queue, whose pending buffer state is not retry-safe.
+- Advertise only single-plane streaming image-capture nodes, excluding UVC
+  metadata companions, and sort by actual device index.
+- Preserve sparse V4L2 menu entries as typed enums, including exposure modes.
+  Accept enum setters and verify their native readback. A menu containing only
+  manual `1` and aperture-priority `3` must not fabricate support for entry `0`.
 
 Application JPEG decoding remains pure Rust, outside Nokhwa's optional
 `mozjpeg` feature. No C/C++ media runtime or subprocess is added.

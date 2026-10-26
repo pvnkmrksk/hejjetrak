@@ -1,13 +1,12 @@
-# Hejjetrak VR4: independent native instance using the original BR4 calibration.
-# Camera ID and saved geometry are preserved from examples/rigs/BR4/config.txt.
-# Calibrate for the actual camera/resolution before interpreting physical motion.
-# UDP sends to localhost:1114; ZMQ PUB binds localhost:9874 simultaneously.
+# VR4: calibration from the physical rig config, 2026-10-26.
+# Pixel marks were measured at 320x240; keep this capture size.
+# UDP port 1114 feeds the existing external republisher. Direct ZMQ is disabled.
 ## FicTrac v2.1.1 config file (build date Aug 21 2023)
 c2a_cnrs_xy      : { 284, 38, 320, 36, 321, 96, 281, 94 }
-c2a_cnrs_yz      : { 175, 39, 166, 39, 165, 48, 176, 48 }
-c2a_r            : { 0.590328, -0.659152, -1.513426 }
+c2a_cnrs_yz      : { 190, 95, 123, 96, 125, 141, 189, 141 }
+c2a_r            : { 0.597435, -0.601450, -1.478908 }
 c2a_src          : c2a_cnrs_yz
-c2a_t            : { 1.054982, -7.684071, 27.741608 }
+c2a_t            : { -0.049562, -0.016555, 12.275471 }
 do_display       : y
 max_bad_frames   : -1
 opt_bound        : 0.35
@@ -16,21 +15,22 @@ opt_max_err      : -1.000000
 opt_max_evals    : 50
 opt_tol          : 0.001
 q_factor         : 6
-roi_c            : { 0.030036, 0.031657, 0.999047 }
-roi_circ         : { 102, 66, 78, 110, 112, 204, 246, 181, 254, 89 }
-roi_ignr         : { { 115, 26, 108, 56, 114, 83, 143, 108, 174, 110, 212, 91, 234, 69, 234, 33 } }
-roi_r            : 0.325251
+roi_c            : { -0.001774, -0.012878, 0.999915 }
+roi_circ         : { 86, 141, 104, 53, 155, 185, 223, 159, 231, 85 }
+roi_ignr         : { { 181, 37, 176, 75, 149, 91, 123, 75, 129, 42, 153, 30 } }
+roi_r            : 0.097049
 save_debug       : n
 save_raw         : n
 sock_host        : 127.0.0.1
 sock_port        : 1114
 src_fn           : 6
-src_fps          : -1.000000
+src_fps          : 100
 thr_ratio        : 1.25
 thr_win_pc       : 0.25
-vfov             : 47
+vfov             : 17
 
 rust_instance_name : VR4
-zmq_host           : 127.0.0.1
-zmq_port           : 9874
-zmq_queue_capacity : 256
+rust_resilient     : y
+rust_camera_width  : 320
+rust_camera_height : 240
+zmq_port           : 0

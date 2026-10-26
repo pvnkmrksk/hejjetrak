@@ -43,7 +43,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         fps: Some(fps),
     };
     let controls = std::env::var_os("FICTRAC_CAMERA_PROBE_CONTROLS").is_some();
-    let mut camera = if controls {
+    let exact_format = controls
+        || std::env::var_os("FICTRAC_CAMERA_PROBE_WIDTH").is_some()
+        || std::env::var_os("FICTRAC_CAMERA_PROBE_HEIGHT").is_some();
+    let mut camera = if exact_format {
         fictrac_camera::Camera::open_with_format(device, request)?
     } else {
         fictrac_camera::Camera::open(device, fps)?
