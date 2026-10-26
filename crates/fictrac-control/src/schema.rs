@@ -82,7 +82,7 @@ pub fn request_schema() -> Value {
             object(json!({"path":path()}), &["path"]),
         ));
     }
-    variants.push(descriptor("record_start",object(json!({"directory":path(),"record_options":object(json!({"raw":{"type":"boolean"},"debug":{"type":"boolean"}}),&["raw","debug"])}),&["directory"])));
+    variants.push(descriptor("record_start",object(json!({"directory":path(),"record_options":object(json!({"raw":{"type":"boolean"},"debug":{"type":"boolean"}}),&["raw","debug"]),"recording_tuning":object(json!({"encoding":{"enum":["configured","mjpeg","raw"]}}),&[])}),&["directory"])));
     for command in ["snapshot", "export"] {
         variants.push(descriptor(
             command,
@@ -111,7 +111,7 @@ pub fn request_schema() -> Value {
         object(json!({"kind":{"const":"square"},"plane":{"enum":["xy","yz","xz"]},"points":points(4,4)}),&["kind","plane","points"])
     ]});
     variants.push(descriptor("calibrate", calibration));
-    variants.push(descriptor("view",object(json!({"settings":{"type":"boolean"},"diagnostics":{"type":"boolean"},"overlays":{"type":"boolean"},"full_image":{"type":"boolean"},"calibration_step":{"enum":["view","ball","exclude","lab"]},"calibration_action":{"enum":["inspect","edit","redraw","add","keep"]},"edit_marks":{"type":"boolean"},"magnifier":{"type":"boolean"},"window_size":{"type":"array","minItems":2,"maxItems":2,"items":{"type":"number","minimum":96,"maximum":8192}}}),&[])));
+    variants.push(descriptor("view",object(json!({"settings":{"type":"boolean"},"diagnostics":{"type":"boolean"},"overlays":{"type":"boolean"},"full_image":{"type":"boolean"},"display_fps":{"type":"integer","minimum":1,"maximum":60},"calibration_step":{"enum":["view","ball","exclude","lab"]},"calibration_action":{"enum":["inspect","edit","redraw","add","keep"]},"edit_marks":{"type":"boolean"},"magnifier":{"type":"boolean"},"window_size":{"type":"array","minItems":2,"maxItems":2,"items":{"type":"number","minimum":96,"maximum":8192}}}),&[])));
     variants.push(descriptor("camera_status", none()));
     variants.push(descriptor("camera_format",object(json!({"width":{"type":"integer","minimum":16,"maximum":8192},"height":{"type":"integer","minimum":16,"maximum":8192},"fps":{"type":["number","null"],"minimum":0.1,"maximum":1000}}),&["width","height"])));
     variants.push(descriptor("camera_set",json!({"oneOf":[object(json!({"control":{"const":"exposure_mode"},"mode":{"enum":["automatic","locked"]}}),&["control","mode"]),object(json!({"control":{"enum":["exposure","gain"]},"value":{"type":"number"}}),&["control","value"])]})));
@@ -130,7 +130,7 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
         "replace_config" => &["text"],
         "source" => &["input"],
         "save_config" | "map_load" | "map_save" => &["path"],
-        "record_start" => &["directory", "record_options"],
+        "record_start" => &["directory", "record_options", "recording_tuning"],
         "snapshot" | "export" => &["directory"],
         "view" => &[
             "settings",
@@ -142,6 +142,7 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
             "edit_marks",
             "magnifier",
             "window_size",
+            "display_fps",
         ],
         "camera_status" => &[],
         "camera_format" => &["width", "height", "fps"],
@@ -177,6 +178,12 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
         {
             return Err(format!("args.{key} must be boolean"));
         }
+    }
+    if command == "view"
+        && let Some(value) = object.get("display_fps")
+        && !value.as_u64().is_some_and(|fps| (1..=60).contains(&fps))
+    {
+        return Err("args.display_fps must be an integer between 1 and 60".into());
     }
     if command == "view"
         && let Some(size) = object.get("window_size")
@@ -258,6 +265,9 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
         serde_json::from_value::<crate::RecordOptions>(options.clone())
             .map_err(|e| format!("args.record_options: {e}"))?;
     }
+    if object.contains_key("recording_tuning") {
+        crate::recording_tuning(args).map_err(|error| format!("args.recording_tuning: {error}"))?;
+    }
     if command == "camera_set" {
         match object.get("control").and_then(Value::as_str) {
             Some("exposure_mode") => {
@@ -317,4 +327,40 @@ pub fn headless_request_schema() -> Value {
         });
     }
     schema
+}
+
+#[cfg(test)]
+mod tuning_tests {
+    use super::*;
+    #[test]
+    fn display_rate_and_recording_encoding_are_strictly_typed() {
+        for fps in [json!(1), json!(30), json!(60)] {
+            assert!(validate_arguments("view", &json!({"display_fps":fps})).is_ok());
+        }
+        for fps in [json!(0), json!(61), json!(1.5), json!("30"), Value::Null] {
+            assert!(validate_arguments("view", &json!({"display_fps":fps})).is_err());
+        }
+        for encoding in ["configured", "mjpeg", "raw"] {
+            assert!(
+                validate_arguments(
+                    "record_start",
+                    &json!({"directory":"new","recording_tuning":{"encoding":encoding}})
+                )
+                .is_ok()
+            );
+        }
+        for tuning in [
+            json!({"encoding":"typo"}),
+            json!({"encoding":"raw","overflow":"backpressure"}),
+            json!("raw"),
+        ] {
+            assert!(
+                validate_arguments(
+                    "record_start",
+                    &json!({"directory":"new","recording_tuning":tuning})
+                )
+                .is_err()
+            );
+        }
+    }
 }

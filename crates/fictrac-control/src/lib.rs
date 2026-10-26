@@ -4,7 +4,10 @@ mod recording;
 mod schema;
 use fictrac_core::{Config, DebugViews, Diagnostics, GrayFrame, TrackRow, Tracker};
 use fictrac_io::{ConfigDocument, DocumentHistory, SourceSpec, VideoSource, load_config_text};
-pub use recording::{MediaRecorders, RecordOptions, gray_rgb};
+pub use recording::{
+    MediaRecorders, MediaRecordingStatus, MediaRecordingTuning, MediaStreamState,
+    MediaStreamStatus, RecordOptions, RecordingEncoding, RecordingOverflow, gray_rgb,
+};
 pub use schema::{headless_request_schema, request_schema};
 pub fn validate_request_arguments(command: &str, args: &Value) -> Result<()> {
     schema::validate_arguments(command, args)
@@ -152,7 +155,7 @@ impl Session {
         })
     }
     fn status(&self, id: u64) -> Value {
-        json!({"session":id,"source":self.input,"config_path":self.path,"paused":self.paused,"realtime":self.realtime,"ended":self.ended,"epoch":self.epoch,"frames":self.rows.len(),"total_frames":self.total_frames,"last_row":self.rows.last(),"video":self.source.info,"warnings":self.warnings,"recording":self.recording.is_some(),"record_options":self.recording.as_ref().map(|r|r.options()),"sinks_active":self.sinks.active(),"outputs":self.sinks.status()})
+        json!({"session":id,"source":self.input,"config_path":self.path,"paused":self.paused,"realtime":self.realtime,"ended":self.ended,"epoch":self.epoch,"frames":self.rows.len(),"total_frames":self.total_frames,"last_row":self.rows.last(),"video":self.source.info,"warnings":self.warnings,"recording":self.recording.is_some(),"record_options":self.recording.as_ref().map(|r|r.options()),"media_recording":self.recording.as_ref().map(|r|r.media_status()),"sinks_active":self.sinks.active(),"outputs":self.sinks.status()})
     }
     fn replace(&mut self, text: String, history: DocumentHistory) -> Result<()> {
         let old_document = ConfigDocument::parse(self.history.text.clone()).map_err(display)?;
@@ -705,7 +708,8 @@ impl Controller {
                 let canonical = ConfigDocument::parse(s.history.text.clone()).map_err(display)?;
                 let options =
                     record_options(a)?.unwrap_or_else(|| RecordOptions::from_document(&canonical));
-                let doc = options.recording_document(&canonical)?;
+                let tuning = recording_tuning(a)?;
+                let doc = tuning.recording_document(&options.recording_document(&canonical)?)?;
                 let requested = doc.number("src_fps", -1.);
                 let fps = if requested > 0. {
                     requested
@@ -715,12 +719,14 @@ impl Controller {
                     1.0
                 };
                 // No encoder is created for data-only recording, so its rate is unused.
-                s.recording = Some(recording::Recording::create(
-                    Path::new(string(a, "directory")?),
-                    &doc,
-                    &s.config,
-                    fps,
-                )?);
+                let directory = Path::new(string(a, "directory")?);
+                s.recording = Some(if tuning == MediaRecordingTuning::default() {
+                    recording::Recording::create(directory, &doc, &s.config, fps)?
+                } else {
+                    recording::Recording::create_with_tuning(
+                        directory, &doc, &s.config, fps, tuning,
+                    )?
+                });
                 Ok(s.status(id))
             }
             "record_stop" => {
@@ -946,7 +952,7 @@ pub fn schema() -> Value {
         {"name":"rows","args":{"offset":"default0","limit":"1..10000 default100"}},
         {"name":"snapshot","args":{"directory":"new directory; input and four diagnostic PGM images"}},
         {"name":"export","args":{"directory":"new directory; dat, quality, config and path SVG"}},
-        {"name":"record_start","args":{"directory":"new directory; dat, all-frames, quality, config and raw/debug videos","record_options":"optional {raw:boolean,debug:boolean}; transient override without config edits or tracker reset"}},
+        {"name":"record_start","args":{"directory":"new directory; dat, all-frames, quality, config and raw/debug videos","record_options":"optional {raw:boolean,debug:boolean}; transient override without config edits or tracker reset","recording_tuning":"optional {encoding:configured|mjpeg|raw}; configured preserves vid_codec, MJPEG trades file size for speed, raw retains uncompressed pixels"}},
         {"name":"record_stop","args":{}},
         {"name":"map_save","args":{"path":"new sphere template PGM/PNG path"}},
         {"name":"map_load","args":{"path":"saved sphere template"}},
@@ -1121,6 +1127,24 @@ pub fn record_options(args: &Value) -> Result<Option<RecordOptions>> {
     args.get("record_options")
         .map(|value| serde_json::from_value(value.clone()).map_err(display))
         .transpose()
+}
+/// Transient codec choice; sources choose their own backpressure policy.
+pub fn recording_tuning(args: &Value) -> Result<MediaRecordingTuning> {
+    #[derive(Deserialize, Default)]
+    #[serde(deny_unknown_fields)]
+    struct Selection {
+        #[serde(default)]
+        encoding: RecordingEncoding,
+    }
+    let selected: Selection = args
+        .get("recording_tuning")
+        .map(|value| serde_json::from_value(value.clone()).map_err(display))
+        .transpose()?
+        .unwrap_or_default();
+    Ok(MediaRecordingTuning {
+        encoding: selected.encoding,
+        ..MediaRecordingTuning::default()
+    })
 }
 /// Replace optional exclusion polygons atomically, sharing GUI/agent validation.
 pub fn replace_exclusions_document(

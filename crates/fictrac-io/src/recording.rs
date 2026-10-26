@@ -214,6 +214,18 @@ impl VideoRecorder {
     }
     /// Must be called to write MP4 sample tables / AVI index and close cleanly.
     pub fn finish(mut self) -> Result<()> {
+        self.finalize()?;
+        drop(self.inner);
+        std::fs::hard_link(&self.partial, &self.destination)?;
+        std::fs::remove_file(&self.partial)?;
+        Ok(())
+    }
+    /// Finalize a recorded prefix while retaining its explicit `.partial` name.
+    /// Used when optional live video cannot keep up with numerical acquisition.
+    pub fn finish_partial(mut self) -> Result<()> {
+        self.finalize()
+    }
+    fn finalize(&mut self) -> Result<()> {
         match &mut self.inner {
             Recording::Avi(avi) => avi.finish()?,
             Recording::EncodedAvi { encoder, avi } => {
@@ -227,9 +239,6 @@ impl VideoRecorder {
                 muxer.finish()?;
             }
         }
-        drop(self.inner);
-        std::fs::hard_link(&self.partial, &self.destination)?;
-        std::fs::remove_file(&self.partial)?;
         Ok(())
     }
     pub fn frame_count(&self) -> u64 {
