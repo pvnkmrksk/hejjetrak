@@ -75,10 +75,11 @@ impl MapTracker {
         )?;
         let mut solver_config = SolverConfig::new(3);
         let count = sampler.points.iter().flatten().count();
-        // Search a spatially distributed subset, then score both the candidate
-        // and predictor on every site. Reserve those two evaluations in the
-        // original budget. Small ROIs/budgets retain the complete objective.
-        let local_stride = if settings.max_evaluations >= 16 {
+        // Resilient fitting uses the complete objective throughout local search:
+        // a sampled objective can bias blurred-image increments even when its
+        // final score is verified. Legacy mode retains sampled generation and
+        // reserves two full verification evaluations in the original budget.
+        let local_stride = if !settings.resilient && settings.max_evaluations >= 16 {
             count.div_ceil(1024).max(1)
         } else {
             1
@@ -233,10 +234,13 @@ impl MapTracker {
                 &self.settings,
                 self.prepared_delta_ms,
             );
-            self.guess = DVec3::ZERO;
+            // Confirmation observes real motion between visible images. Keep
+            // that increment only as the next solver seed; the recovery row
+            // still exports zero relative motion across the missing interval.
+            self.guess = pose.as_ref().map_or(DVec3::ZERO, |p| p.increment);
             return Estimate {
                 rotation: DVec3::ZERO,
-                absolute: pose.map(|p| basis.inverse() * p * basis),
+                absolute: pose.as_ref().map(|p| basis.inverse() * p.pose * basis),
                 error: if error.is_finite() { error } else { 1e12 },
                 accepted: pose.is_some(),
                 samples: count,
@@ -283,11 +287,21 @@ impl MapTracker {
                 self.settings.max_error
             },
         );
+        let motion = DVec3::from_array(x);
         let local_good = score_good
             && (!self.settings.resilient
                 || self
                     .recovery
-                    .motion_ok(DVec3::from_array(x).length(), self.prepared_delta_ms));
+                    .motion_ok(motion.length(), self.prepared_delta_ms)
+                || if self
+                    .recovery
+                    .accepted_ramp_ok(motion, self.prepared_delta_ms)
+                {
+                    self.recovery.begin_ramp_epoch();
+                    true
+                } else {
+                    false
+                });
         if self.settings.resilient && !local_good {
             if score_good {
                 self.recovery.reject_motion_candidate(
@@ -346,8 +360,12 @@ impl MapTracker {
             self.ready = true;
             self.clean_map = false;
             if self.settings.resilient && row.status == "tracked" {
-                self.recovery.observe_motion(
-                    DVec3::from_array(row.delta_camera).length(),
+                self.recovery.observe_tracked_motion(
+                    if legacy {
+                        DVec3::from_array(row.delta_camera)
+                    } else {
+                        self.sampler.basis * DVec3::from_array(row.delta_camera)
+                    },
                     self.prepared_delta_ms,
                 );
             }
@@ -577,6 +595,53 @@ impl AtlasProjection {
 #[cfg(test)]
 mod projection_tests {
     use super::*;
+    #[test]
+    fn confirmed_visible_motion_seeds_next_fit_without_exporting_gap_motion() -> Result<()> {
+        let config = Config::default();
+        let settings = MapSettings::default();
+        let mut tracker = MapTracker::new(&config, settings)?;
+        let width = tracker.sampler.map_width;
+        let height = tracker.sampler.map_height;
+        for y in 0..height {
+            for x in 0..width {
+                let py = (y as f64 + 0.5) * 2.0 / height as f64 - 1.0;
+                let longitude = PI - (x as f64 + 0.5) * TAU / width as f64;
+                let radius = (1.0 - py * py).sqrt();
+                let point = DVec3::new(radius * longitude.sin(), py, radius * longitude.cos());
+                let value = point.dot(DVec3::new(17.0, 11.0, 7.0)).sin()
+                    + 0.7 * point.dot(DVec3::new(-9.0, 23.0, 15.0)).cos();
+                tracker.sampler.map[y * width + x] = if value > 0.0 { 255 } else { 0 };
+            }
+        }
+        let visible_increment = DVec3::new(0.19, -0.04, 0.02);
+        let held = DQuat::from_scaled_axis(DVec3::new(0.3, 0.1, -0.2));
+        let current = DQuat::from_scaled_axis(visible_increment) * held;
+        let mut roi = vec![128; tracker.sampler.size * tracker.sampler.size];
+        for &(point, index) in &tracker.active_sites {
+            roi[index] = tracker.sampler.map[map_index(current.inverse() * point, width, height)];
+        }
+        tracker.ready = true;
+        tracker.prepared_delta_ms = 10.0;
+        tracker
+            .recovery
+            .reject_motion_candidate(held, visible_increment, 10.0);
+        let map = tracker.sampler.map.clone();
+        let estimate = tracker.estimate_roi(&roi, 0.1);
+        assert_eq!(estimate.status, "relocalized");
+        assert!(estimate.accepted);
+        assert_eq!(estimate.rotation, DVec3::ZERO);
+        assert!(estimate.absolute.is_some_and(|found| {
+            (found * current.inverse()).to_scaled_axis().length() < 0.001
+        }));
+        assert!(
+            (tracker.guess - visible_increment).length() < 0.001,
+            "confirmed visible motion was discarded: {:?}",
+            tracker.guess
+        );
+        assert_eq!(tracker.sampler.map, map);
+        Ok(())
+    }
+
     #[test]
     fn reset_and_template_import_clear_motion_and_quality_history() -> Result<()> {
         let config = Config::default();

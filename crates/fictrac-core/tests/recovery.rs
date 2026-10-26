@@ -593,6 +593,65 @@ fn resilient_motion_floor_preserves_real_acceleration_after_stationary_history()
 }
 
 #[test]
+fn accepted_acceleration_ramp_preserves_known_motion() -> Result {
+    let mut c = config(false);
+    c.width = 320;
+    c.height = 240;
+    if let Some(m) = &mut c.spherical_map {
+        m.resilient = true;
+        m.max_error = -1.0;
+        m.max_evaluations = 50;
+        m.quality = 12;
+    }
+    let texture = known_template_dimensions(360, 180)?;
+    let mut tracker = Tracker::new(c.clone())?;
+    let mut angle = 0.0;
+    for i in 0..330 {
+        angle += 0.02;
+        let row = tracker.process(render_template(
+            &c,
+            &texture,
+            DQuat::from_rotation_x(angle),
+            i as f64 * 10.0,
+        )?)?;
+        assert!(
+            row.accepted,
+            "ramp warmup {i}: {} {}",
+            row.status, row.error
+        );
+    }
+    let ramp = [0.03, 0.04, 0.055, 0.08, 0.10, 0.14, 0.20, 0.28];
+    let mut squared = DVec3::ZERO;
+    let mut count = 0;
+    for (i, delta) in ramp
+        .into_iter()
+        .chain(std::iter::repeat_n(0.28, 50))
+        .enumerate()
+    {
+        angle += delta;
+        let row = tracker.process(render_template(
+            &c,
+            &texture,
+            DQuat::from_rotation_x(angle),
+            (330 + i) as f64 * 10.0,
+        )?)?;
+        assert!(
+            row.accepted && row.status == "tracked",
+            "visible ramp frame {i}: {} {}",
+            row.status,
+            row.error
+        );
+        let error = DVec3::from_array(row.delta_camera) - DVec3::X * delta;
+        squared += error * error;
+        count += 1;
+    }
+    let rms = (squared / count as f64).to_array().map(f64::sqrt);
+    eprintln!("accepted ramp measured={count}, component RMS={rms:?}");
+    assert!(rms.iter().all(|value| *value < 0.008), "ramp RMS {rms:?}");
+    Ok(())
+}
+
+#[test]
 fn sustained_faster_known_motion_can_establish_a_new_rate_without_erasing_atlas() -> Result {
     let mut c = config(true);
     c.max_rotation = 0.12;

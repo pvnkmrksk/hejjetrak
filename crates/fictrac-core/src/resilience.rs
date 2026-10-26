@@ -54,19 +54,33 @@ pub(crate) struct Recovery {
     error_mean: f64,
     errors: Samples,
     motion_rates: Samples,
+    recent_velocity: [DVec3; 3],
+    recent_interval: [f64; 3],
+    recent_motion_count: usize,
     probation: usize,
     edge_mean: f64,
     // Unit ROI poses learned only from accepted frames. This small spatial bank
     // revisits known views instead of expecting a coarse uniform SO(3) cover to
     // land near an earlier appearance after a long occlusion.
     trusted: Vec<DQuat>,
+    // Exact nearest-neighbor similarities, updated incrementally. Coverage
+    // replacement is normally linear; only neighbors of an evicted pose need
+    // a bounded rescan of the bank.
+    trusted_nearest: Vec<(usize, f64)>,
     next_trusted: usize,
+}
+pub(crate) struct RecoveredPose {
+    pub pose: DQuat,
+    /// Observed between consecutive clear confirmation images, never across
+    /// the missing interval. This seeds the next fit without being integrated.
+    pub increment: DVec3,
 }
 impl Recovery {
     pub fn reject(&mut self) {
         self.lost_frames = self.lost_frames.saturating_add(1);
         self.pending = None;
         self.pending_motion = None;
+        self.recent_motion_count = 0;
     }
     pub fn reject_motion_candidate(&mut self, pose: DQuat, delta: DVec3, delta_ms: f64) {
         self.reject();
@@ -146,6 +160,60 @@ impl Recovery {
             self.motion_rates.push(angle / delta_ms);
         }
     }
+    pub fn observe_tracked_motion(&mut self, delta: DVec3, delta_ms: f64) {
+        self.observe_motion(delta.length(), delta_ms);
+        if !delta.is_finite() || !delta_ms.is_finite() || delta_ms <= 0.0 {
+            return;
+        }
+        self.recent_velocity.rotate_left(1);
+        self.recent_interval.rotate_left(1);
+        self.recent_velocity[2] = delta / delta_ms;
+        self.recent_interval[2] = delta_ms;
+        self.recent_motion_count = (self.recent_motion_count + 1).min(3);
+    }
+    /// Three already accepted, consistently accelerating visible measurements
+    /// plus this complete-score-verified image can establish a new rate epoch
+    /// without declaring an artificial gap in a continuous measured ramp.
+    pub fn accepted_ramp_ok(&self, delta: DVec3, delta_ms: f64) -> bool {
+        if self.recent_motion_count < 3
+            || !delta.is_finite()
+            || !delta_ms.is_finite()
+            || delta_ms <= 0.0
+        {
+            return false;
+        }
+        let rates = self.recent_velocity.map(|v| v.length());
+        let rise = [
+            (rates[1] - rates[0]) / ((self.recent_interval[0] + self.recent_interval[1]) * 0.5),
+            (rates[2] - rates[1]) / ((self.recent_interval[1] + self.recent_interval[2]) * 0.5),
+        ];
+        if rates[0] <= 0.0 || rise[0] <= 0.0 || rise[1] <= 0.0 {
+            return false;
+        }
+        // Speed must rise on both accepted transitions at a consistent scale;
+        // direction must remain supported by all three accepted observations.
+        if rise[0].max(rise[1]) > rise[0].min(rise[1]) * 4.0
+            || (0..2).any(|i| {
+                self.recent_velocity[i].dot(self.recent_velocity[i + 1])
+                    < 0.75 * rates[i] * rates[i + 1]
+            })
+        {
+            return false;
+        }
+        let velocity = delta / delta_ms;
+        let rate = velocity.length();
+        let prediction =
+            rates[2] + 2.0 * rise[0].max(rise[1]) * (self.recent_interval[2] + delta_ms) * 0.5;
+        rate >= rates[2] * 0.65
+            && rate <= prediction + (0.006 / delta_ms).max(prediction * 0.35)
+            && velocity.dot(self.recent_velocity[2]) >= 0.75 * rate * rates[2]
+    }
+    pub fn begin_ramp_epoch(&mut self) {
+        self.motion_rates = Samples::default();
+        for velocity in self.recent_velocity {
+            self.motion_rates.push(velocity.length());
+        }
+    }
     pub fn observe(&mut self, error: f64, edge: f64, pose: DQuat) {
         if error.is_finite() && (0.0..1e11).contains(&error) {
             self.errors.push(error);
@@ -162,20 +230,67 @@ impl Recovery {
         } else {
             edge
         };
-        let near = (POSE_SEPARATION * 0.5).cos();
-        if self
+        let nearest = self
             .trusted
             .iter()
-            .any(|saved| saved.dot(pose).abs() >= near)
-        {
+            .enumerate()
+            .map(|(index, saved)| (index, saved.dot(pose).abs()))
+            .max_by(|a, b| a.1.total_cmp(&b.1));
+        if nearest.is_some_and(|(_, similarity)| similarity >= (POSE_SEPARATION * 0.5).cos()) {
             return;
         }
         if self.trusted.len() < MAX_TRUSTED_POSES {
+            let index = self.trusted.len();
+            for (saved, neighbor) in self.trusted.iter().zip(&mut self.trusted_nearest) {
+                let similarity = saved.dot(pose).abs();
+                if similarity > neighbor.1 {
+                    *neighbor = (index, similarity);
+                }
+            }
             self.trusted.push(pose);
+            self.trusted_nearest
+                .push(nearest.unwrap_or((usize::MAX, -1.0)));
         } else {
-            self.trusted[self.next_trusted] = pose;
-            self.next_trusted = (self.next_trusted + 1) % MAX_TRUSTED_POSES;
+            // Evict a member of the closest existing pair only when this new
+            // view is farther from the bank than that pair's separation. A
+            // long recent cluster must not erase an isolated older viewpoint.
+            let Some((replacement, similarity)) = self
+                .trusted_nearest
+                .iter()
+                .enumerate()
+                .cycle()
+                .skip(self.next_trusted)
+                .take(self.trusted.len())
+                .max_by(|a, b| a.1.1.total_cmp(&b.1.1))
+                .map(|(index, neighbor)| (index, neighbor.1))
+            else {
+                return;
+            };
+            if nearest.is_none_or(|(_, incoming)| incoming >= similarity) {
+                return;
+            }
+            self.trusted[replacement] = pose;
+            self.next_trusted = (replacement + 1) % MAX_TRUSTED_POSES;
+            for index in 0..self.trusted.len() {
+                if index == replacement || self.trusted_nearest[index].0 == replacement {
+                    self.trusted_nearest[index] = self.nearest_to(index);
+                } else {
+                    let similarity = self.trusted[index].dot(pose).abs();
+                    if similarity > self.trusted_nearest[index].1 {
+                        self.trusted_nearest[index] = (replacement, similarity);
+                    }
+                }
+            }
         }
+    }
+    fn nearest_to(&self, index: usize) -> (usize, f64) {
+        self.trusted
+            .iter()
+            .enumerate()
+            .filter(|(other, _)| *other != index)
+            .map(|(other, pose)| (other, self.trusted[index].dot(*pose).abs()))
+            .max_by(|a, b| a.1.total_cmp(&b.1))
+            .unwrap_or((usize::MAX, -1.0))
     }
     /// Returns an absolute ROI pose only after two consecutive matching frames.
     /// No relative motion across the rejected interval can be inferred here.
@@ -186,7 +301,7 @@ impl Recovery {
         bound: f64,
         settings: &MapSettings,
         delta_ms: f64,
-    ) -> (Option<DQuat>, f64) {
+    ) -> (Option<RecoveredPose>, f64) {
         self.lost_frames = self.lost_frames.saturating_add(1);
         // Candidate probes, local fitting, coarse probes and complete scoring
         // all consume the same cap. Recovery can never spend the original
@@ -215,13 +330,18 @@ impl Recovery {
                 }
             }
             if error.is_finite() && error <= limit {
-                if confirm
-                    && self.motion_ok((pose * start.inverse()).to_scaled_axis().length(), delta_ms)
-                {
+                let delta = (pose * start.inverse()).to_scaled_axis();
+                if confirm && self.motion_ok(delta.length(), delta_ms) {
                     self.pending = None;
                     self.pending_motion = None;
                     self.lost_frames = 0;
-                    return (Some(pose), error);
+                    return (
+                        Some(RecoveredPose {
+                            pose,
+                            increment: delta,
+                        }),
+                        error,
+                    );
                 }
                 if !confirm {
                     self.pending = Some(pose);
@@ -229,7 +349,6 @@ impl Recovery {
                 }
                 // A rate change beyond old history needs independent temporal
                 // evidence, never a single outlier or two unrelated poses.
-                let delta = (pose * start.inverse()).to_scaled_axis();
                 if delta_ms > 0.0 && delta.length() <= bound * 3.0f64.sqrt() {
                     let rate = delta / delta_ms;
                     let streak = if let Some((previous, count)) = self.pending_motion {
@@ -251,7 +370,13 @@ impl Recovery {
                         // does not modify atlas/error/view history or invent gap motion.
                         self.motion_rates = Samples::default();
                         self.probation = MIN_MOTION_HISTORY;
-                        return (Some(pose), error);
+                        return (
+                            Some(RecoveredPose {
+                                pose,
+                                increment: delta,
+                            }),
+                            error,
+                        );
                     }
                     self.pending = Some(pose);
                     self.pending_motion = Some((rate, streak));
@@ -307,7 +432,11 @@ impl Budget {
     }
     fn coarse(&mut self, objective: &AtlasObjective<'_>, pose: DQuat) -> f64 {
         if self.take() {
-            objective.coarse_cost(pose, 128)
+            // A sparse 128-site probe can rank a coincidental patch ahead of
+            // the correct learned view on a real speckled ball. Recovery is
+            // infrequent; spend more sites per bounded probe before complete
+            // refinement, retaining the same total objective-evaluation cap.
+            objective.coarse_cost(pose, 512)
         } else {
             1e12
         }
@@ -469,9 +598,65 @@ mod tests {
             );
         }
         assert_eq!(recovery.trusted.len(), MAX_TRUSTED_POSES);
+        assert_eq!(recovery.trusted_nearest.len(), MAX_TRUSTED_POSES);
+        for index in 0..MAX_TRUSTED_POSES {
+            assert_eq!(
+                recovery.trusted_nearest[index].1,
+                recovery.nearest_to(index).1
+            );
+        }
         let known = recovery.trusted.clone();
         recovery.reject();
         assert_eq!(recovery.trusted, known);
+    }
+    #[test]
+    fn spatial_bank_retains_an_old_isolated_view_after_a_long_recent_cluster() {
+        let mut recovery = Recovery::default();
+        let old = DQuat::from_rotation_y(-2.5);
+        recovery.observe(2000.0, 0.1, old);
+        for index in 0..255 {
+            recovery.observe(
+                2000.0,
+                0.1,
+                DQuat::from_euler(
+                    glam::EulerRot::XYZ,
+                    (index % 17) as f64 * 0.09,
+                    (index / 17) as f64 * 0.09,
+                    0.0,
+                ),
+            );
+        }
+        assert_eq!(recovery.trusted.len(), MAX_TRUSTED_POSES);
+        let original = recovery.trusted.clone();
+        for index in 0..3000 {
+            recovery.observe(
+                2000.0,
+                0.1,
+                DQuat::from_euler(
+                    glam::EulerRot::XYZ,
+                    (index as f64 * 0.137).sin() * 0.8 + 0.8,
+                    (index as f64 * 0.193).cos() * 0.8 + 0.8,
+                    (index as f64 * 0.317).sin() * 0.4 + 0.5,
+                ),
+            );
+        }
+        assert_eq!(recovery.trusted.len(), MAX_TRUSTED_POSES);
+        assert_ne!(
+            recovery.trusted, original,
+            "fixture must exercise replacement"
+        );
+        assert!(
+            recovery
+                .trusted
+                .iter()
+                .any(|pose| pose.dot(old).abs() > 1.0 - 1e-12)
+        );
+        for index in 0..MAX_TRUSTED_POSES {
+            assert_eq!(
+                recovery.trusted_nearest[index].1,
+                recovery.nearest_to(index).1
+            );
+        }
     }
     #[test]
     fn objective_budget_cannot_overrun_its_configured_limit() {
@@ -490,6 +675,37 @@ mod tests {
 #[cfg(test)]
 mod motion_tests {
     use super::*;
+    #[test]
+    fn accepted_acceleration_ramp_needs_four_consistent_good_images() {
+        let mut recovery = Recovery::default();
+        for _ in 0..32 {
+            recovery.observe_motion(0.005, 10.0);
+        }
+        let candidate = DVec3::X * 0.10;
+        assert!(!recovery.motion_ok(candidate.length(), 10.0));
+        for angle in [0.025, 0.050] {
+            recovery.observe_tracked_motion(DVec3::X * angle, 10.0);
+            assert!(!recovery.accepted_ramp_ok(candidate, 10.0));
+        }
+        recovery.observe_tracked_motion(DVec3::X * 0.075, 10.0);
+        assert!(recovery.accepted_ramp_ok(candidate, 10.0));
+        assert!(!recovery.accepted_ramp_ok(DVec3::Y * 0.10, 10.0));
+        assert!(!recovery.accepted_ramp_ok(DVec3::X * 0.5, 10.0));
+        assert!(!recovery.accepted_ramp_ok(DVec3::X * 0.01, 10.0));
+        recovery.begin_ramp_epoch();
+        assert!(recovery.motion_ok(candidate.length(), 10.0));
+        recovery.reject();
+        assert!(!recovery.accepted_ramp_ok(candidate, 10.0));
+
+        // A lone textured jump after constant motion has no ramp evidence.
+        let mut steady = Recovery::default();
+        for _ in 0..32 {
+            steady.observe_tracked_motion(DVec3::X * 0.005, 10.0);
+        }
+        assert!(!steady.accepted_ramp_ok(candidate, 10.0));
+        assert!(!steady.motion_ok(candidate.length(), 10.0));
+    }
+
     #[test]
     fn held_motion_only_predicts_search_and_does_not_count_as_confirmation() {
         let mut recovery = Recovery::default();
