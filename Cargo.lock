@@ -1199,6 +1199,7 @@ version = "0.2.1"
 dependencies = [
  "fictrac-core",
  "fictrac-io",
+ "rustix 1.1.5",
  "serde",
  "serde_json",
 ]

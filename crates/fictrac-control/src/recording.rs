@@ -128,6 +128,54 @@ pub struct MediaRecordingStatus {
 const MEDIA_QUEUE_CAPACITY: usize = 2;
 const MEDIA_QUEUE_BYTE_CAPACITY: usize = 32 * 1024 * 1024;
 
+const LIVE_VIDEO_STORAGE_RESERVE: u64 = 512 * 1024 * 1024;
+#[derive(Default)]
+struct StorageReserveGuard {
+    checked_at: Option<std::time::Instant>,
+}
+impl StorageReserveGuard {
+    fn check(
+        &mut self,
+        now: std::time::Instant,
+        probe: impl FnOnce() -> Result<Option<u64>>,
+    ) -> Result<()> {
+        if self.checked_at.is_some_and(|last| {
+            now.saturating_duration_since(last) < std::time::Duration::from_millis(100)
+        }) {
+            return Ok(());
+        }
+        self.checked_at = Some(now);
+        let available = probe().map_err(|error| format!("cannot check recording storage: {error}; optional video stopped, numeric data/quality/live outputs continue"))?;
+        if let Some(available) = available
+            && available < LIVE_VIDEO_STORAGE_RESERVE
+        {
+            return Err(format!(
+                "optional video stopped: only {available} bytes available, below the 512 MiB storage reserve for numeric data/quality; recorded video remains partial and live outputs continue"
+            ));
+        }
+        Ok(())
+    }
+}
+fn available_recording_storage(directory: &Path) -> Result<Option<u64>> {
+    #[cfg(target_os = "linux")]
+    {
+        let status = rustix::fs::statvfs(directory).map_err(display)?;
+        status
+            .f_bavail
+            .checked_mul(status.f_frsize)
+            .filter(|_| status.f_frsize != 0)
+            .map(Some)
+            .ok_or_else(|| "filesystem reported invalid available storage metadata".into())
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        // Other platforms retain ordinary encoder/filesystem error handling;
+        // no unverified free-space protection is claimed for them.
+        let _ = directory;
+        Ok(None)
+    }
+}
+
 #[derive(Clone, Copy, Default)]
 struct FrameIdentity {
     frame: Option<u64>,
@@ -227,8 +275,34 @@ impl<T: Send + 'static> MediaActor<T> {
         fps: f64,
         codec: RecordingCodec,
         overflow: RecordingOverflow,
-        mut process: impl FnMut(&mut VideoRecorder, T) -> Result<()> + Send + 'static,
+        process: impl FnMut(&mut VideoRecorder, T) -> Result<()> + Send + 'static,
     ) -> Result<Self> {
+        let storage_directory = path.parent().unwrap_or_else(|| Path::new(".")).to_owned();
+        Self::new_with_probe(
+            path,
+            manifest,
+            dimensions,
+            fps,
+            codec,
+            overflow,
+            (process, move || {
+                available_recording_storage(&storage_directory)
+            }),
+        )
+    }
+    fn new_with_probe(
+        path: &Path,
+        manifest: &Path,
+        dimensions: [usize; 2],
+        fps: f64,
+        codec: RecordingCodec,
+        overflow: RecordingOverflow,
+        handlers: (
+            impl FnMut(&mut VideoRecorder, T) -> Result<()> + Send + 'static,
+            impl FnMut() -> Result<Option<u64>> + Send + 'static,
+        ),
+    ) -> Result<Self> {
+        let (mut process, mut storage_probe) = handlers;
         let [width, height] = dimensions;
         let mut recorder =
             VideoRecorder::create(path, width, height, fps, codec).map_err(display)?;
@@ -258,9 +332,13 @@ impl<T: Send + 'static> MediaActor<T> {
         let manifest_path = manifest.to_owned();
         let started = std::time::Instant::now();
         let worker = std::thread::Builder::new().name("hejjetrac-video".into()).spawn(move || {
+            let mut storage_guard = StorageReserveGuard::default();
             let processing = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| -> Result<()> {
                 while let Ok(message) = receiver.recv() {
                     let MediaMessage { input, identity, permit } = message;
+                    if overflow == RecordingOverflow::StopOverloaded {
+                        storage_guard.check(std::time::Instant::now(), &mut storage_probe)?;
+                    }
                     let before = recorder.frame_count();
                     let tick = std::time::Instant::now();
                     let result = process(&mut recorder, input);
@@ -937,11 +1015,46 @@ mod actor_tests {
         )
     }
     #[test]
+    fn storage_probe_cadence_and_errors_are_explicit() -> Result<()> {
+        let start = std::time::Instant::now();
+        let calls = std::cell::Cell::new(0);
+        let mut guard = StorageReserveGuard::default();
+        let probe = || {
+            calls.set(calls.get() + 1);
+            Ok(Some(LIVE_VIDEO_STORAGE_RESERVE))
+        };
+        guard.check(start, probe)?;
+        guard.check(start + Duration::from_millis(99), probe)?;
+        assert_eq!(calls.get(), 1);
+        let low = guard.check(start + Duration::from_millis(100), || {
+            Ok(Some(LIVE_VIDEO_STORAGE_RESERVE - 1))
+        });
+        assert!(low.is_err_and(|error| error.contains("512 MiB") && error.contains("numeric")));
+        let mut guard = StorageReserveGuard::default();
+        let failure = guard.check(start, || Err("statvfs permission denied".into()));
+        assert!(
+            failure.is_err_and(|error| error.contains("permission denied")
+                && error.contains("optional video stopped")
+                && error.contains("numeric"))
+        );
+        guard.check(start + Duration::from_millis(100), || Ok(None))?;
+        Ok(())
+    }
+    #[test]
     fn lossless_actor_owns_pixels_and_drains_every_frame_in_order() -> Result<()> {
         let dir = directory("ordered")?;
-        let mut recorder = actor(&dir, RecordingOverflow::Backpressure, |writer, rgb| {
-            writer.write_rgb(&rgb).map_err(display)
-        })?;
+        let mut recorder = MediaActor::new_with_probe(
+            &dir.join("raw.avi"),
+            &dir.join("raw-status.json"),
+            [16, 16],
+            100.0,
+            RecordingCodec::Raw,
+            RecordingOverflow::Backpressure,
+            (
+                |writer, rgb: Arc<[u8]>| writer.write_rgb(&rgb).map_err(display),
+                || Err("offline recordings must not probe live storage reserve".into()),
+            ),
+        )?;
         let mut expected = Vec::new();
         let mut input = vec![0; 16 * 16 * 3];
         for index in 0..20 {
@@ -1122,7 +1235,7 @@ mod finalization_tests {
         time::{Duration, Instant},
     };
     #[test]
-    fn a_failed_raw_actor_does_not_stop_debug_or_numeric_accounting() -> Result<()> {
+    fn low_storage_finalizes_partial_video_and_preserves_numeric_and_peer_stream() -> Result<()> {
         let dir = std::env::temp_dir().join(format!(
             "hejjetrac-two-streams-{}-{}",
             std::process::id(),
@@ -1134,17 +1247,28 @@ mod finalization_tests {
         std::fs::create_dir(&dir).map_err(display)?;
         let config = Config::default();
         let (failed_tx, failed_rx) = mpsc::channel();
-        let raw = MediaActor::new(
+        let mut probes = 0;
+        let raw = MediaActor::new_with_probe(
             &dir.join("raw.avi"),
             &dir.join("raw-status.json"),
             [config.width, config.height],
             100.0,
             RecordingCodec::Raw,
             RecordingOverflow::StopOverloaded,
-            move |_, _: Arc<[u8]>| {
-                failed_tx.send(()).map_err(display)?;
-                Err("injected raw-only failure".into())
-            },
+            (
+                move |writer, rgb: Arc<[u8]>| {
+                    writer.write_rgb(&rgb).map_err(display)?;
+                    failed_tx.send(()).map_err(display)
+                },
+                move || {
+                    probes += 1;
+                    Ok(Some(if probes == 1 {
+                        LIVE_VIDEO_STORAGE_RESERVE + 1
+                    } else {
+                        LIVE_VIDEO_STORAGE_RESERVE - 1
+                    }))
+                },
+            ),
         )?;
         let renderer = CalibratedDebugRenderer::new(&config, 160).map_err(display)?;
         let debug = MediaActor::new(
@@ -1193,40 +1317,59 @@ mod finalization_tests {
             .recv_timeout(Duration::from_secs(5))
             .map_err(display)?;
         let deadline = Instant::now() + Duration::from_secs(5);
-        while media.status().raw.state != MediaStreamState::Failed {
+        while media.status().raw.encoded_frames != 1 {
             if Instant::now() > deadline {
-                return Err("raw actor failure was not visible".into());
+                return Err("raw actor's first frame was not visible".into());
             }
             std::thread::sleep(Duration::from_millis(1));
         }
+        std::thread::sleep(Duration::from_millis(110));
         let frame = frame.with_timestamp(10.0).map_err(display)?;
         let row = tracker.process(frame.clone()).map_err(display)?;
         let views = diagnostics.update(&frame, Some(&row));
         media.write_row(&rgb, &frame, &views, &[row.position], &row)?;
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while media.status().raw.state != MediaStreamState::Failed {
+            if Instant::now() > deadline {
+                return Err("raw storage failure was not visible".into());
+            }
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        let frame = frame.with_timestamp(20.0).map_err(display)?;
+        let row = tracker.process(frame.clone()).map_err(display)?;
+        let views = diagnostics.update(&frame, Some(&row));
+        media.write_row(&rgb, &frame, &views, &[row.position], &row)?;
         let (status, warnings) = media.finish_with_status();
-        assert_eq!(status.numeric_frames, 2);
+        assert_eq!(status.numeric_frames, 3);
+        assert_eq!(status.raw.encoded_frames, 1);
+        assert!(status.raw.container_finalized);
+        assert_eq!(status.raw.pending_frames, 0);
         assert_eq!(status.raw.state, MediaStreamState::Failed);
         assert_eq!(status.debug.state, MediaStreamState::Complete);
-        assert_eq!(status.debug.submitted_frames, 2);
-        assert_eq!(status.debug.encoded_frames, 2);
+        assert_eq!(status.debug.submitted_frames, 3);
+        assert_eq!(status.debug.encoded_frames, 3);
         assert!(status.debug.container_finalized);
         assert!(
             warnings
                 .iter()
-                .any(|w| w.contains("injected raw-only failure"))
+                .any(|w| w.contains("512 MiB storage reserve"))
         );
         assert!(!dir.join("raw.avi").exists());
         assert!(dir.join("raw.avi.partial").exists());
+        let mut partial =
+            fictrac_io::VideoSource::open(&dir.join("raw.avi.partial")).map_err(display)?;
+        assert!(partial.next_frame().map_err(display)?.is_some());
+        assert!(partial.next_frame().map_err(display)?.is_none());
         let mut source = fictrac_io::VideoSource::open(&dir.join("debug.avi")).map_err(display)?;
         let mut frames = 0;
         while source.next_frame().map_err(display)?.is_some() {
             frames += 1;
         }
-        assert_eq!(frames, 2);
+        assert_eq!(frames, 3);
         let manifest: serde_json::Value =
             serde_json::from_slice(&std::fs::read(dir.join("media-status.json")).map_err(display)?)
                 .map_err(display)?;
-        assert_eq!(manifest["numeric_frames"], 2);
+        assert_eq!(manifest["numeric_frames"], 3);
         assert_eq!(manifest["debug"]["state"], "complete");
         std::fs::remove_dir_all(dir).map_err(display)
     }
