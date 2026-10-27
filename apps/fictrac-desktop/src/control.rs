@@ -298,6 +298,7 @@ fn status(s: &mut Session) -> Value {
     } else {
         "add"
     });
+    view["calibration"] = json!(s.show_settings && s.show_calibration);
     let mut state = json!({"session":s.id,"source":s.source_edit,"config_path":s.path,"native_window":s.native_window,"window_rect":s.window_rect,"window_inner_size":s.window_inner_size,"window_title":s.window_title(),"realtime":s.realtime,
         "frames":s.snapshot.frames,"revision":s.snapshot.revision,"requested_revision":s.revision,
         "paused":s.snapshot.paused,"ended":s.snapshot.ended,"recording":s.snapshot.recording,
@@ -311,9 +312,21 @@ fn status(s: &mut Session) -> Value {
     state["window_max_inner_size"] = json!([s.max_window_inner_size.x, s.max_window_inner_size.y]);
     state["recording_encoding"] = json!(s.recording_encoding);
     state["media_recording"] = json!(s.snapshot.media_recording);
+    state["recording_finalizations"] = json!(s.snapshot.recording_finalizations);
     state["media_warnings"] = json!(s.snapshot.media_warnings);
     state["preview_fps"] = json!(s.snapshot.preview_fps);
     state["preview_target_fps"] = json!(s.snapshot.display_fps);
+    let calibration_layers = [
+        ("ball", crate::session::Tool::Rim),
+        ("exclude", crate::session::Tool::Exclude),
+        ("lab", crate::session::Tool::Square),
+    ].map(|(step, tool)| json!({"step":step,"saved":s.saved_layer_available(tool),"saved_marks":s.saved_mark_count_for(tool),"summary":s.saved_calibration_summary_for(tool)}));
+    state["calibration_summary"] = json!({
+        "visual_check_required": true,
+        "configuration_valid": s.core_config().is_ok(),
+        "source_dimensions": s.snapshot.image.as_ref().map(|image| [image.width, image.height]),
+        "layers": calibration_layers
+    });
     state
 }
 fn send(s: &mut Session, command: Command) -> Result<Value> {
@@ -532,6 +545,11 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
             send(s, Command::SaveMap(path))
         }
         "view" => {
+            if a.get("settings").and_then(Value::as_bool) == Some(false)
+                && a.get("calibration").and_then(Value::as_bool) == Some(true)
+            {
+                return Err("calibration:true opens its inspector; omit settings:false".into());
+            }
             let display_fps = a
                 .get("display_fps")
                 .map(|value| {
@@ -583,6 +601,9 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
             if let Some(fps) = display_fps {
                 s.set_display_fps(fps)?;
             }
+            if a.get("calibration").and_then(Value::as_bool) == Some(true) {
+                s.set_calibration_panel(true);
+            }
             if proposed_tool != s.tool {
                 s.tool = proposed_tool;
                 s.begin_calibration_step();
@@ -598,8 +619,13 @@ fn execute_session(s: &mut Session, command: &str, a: &Value) -> Result<Value> {
             if let Some(value) = a.get("magnifier").and_then(Value::as_bool) {
                 s.magnifier = value;
             }
-            if let Some(value) = a.get("settings").and_then(Value::as_bool) {
-                s.show_settings = value;
+            if let Some(value) = a.get("settings").and_then(Value::as_bool)
+                && a.get("calibration").and_then(Value::as_bool) != Some(true)
+            {
+                s.set_settings_panel(value);
+            }
+            if a.get("calibration").and_then(Value::as_bool) == Some(false) {
+                s.set_calibration_panel(false);
             }
             if let Some(value) = a.get("diagnostics").and_then(Value::as_bool) {
                 s.show_diagnostics = value;
@@ -1240,6 +1266,114 @@ mod tests {
         let done = execute_session(&mut s, "view", &json!({"calibration_action":"keep"}))?;
         assert_eq!(done["view"]["calibration_step"], "view");
         assert_eq!(s.history.text, original);
+        Ok(())
+    }
+    #[test]
+    fn daily_calibration_overview_and_skips_preserve_real_video_rows_and_paused_clock() -> TestResult
+    {
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let mut doc = ConfigDocument::parse(fs::read_to_string(
+            root.join("examples/benchmark/config.txt"),
+        )?)?;
+        doc.set(
+            "src_fn",
+            &root.join("examples/sample.mp4").to_string_lossy(),
+        )?;
+        let mut s = Session::new(1, doc, None);
+        s.realtime = false;
+        s.start()?;
+        execute_session(&mut s, "pause", &json!({}))?;
+        execute_session(&mut s, "step", &json!({"frames":5}))?;
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        loop {
+            let state = status(&mut s);
+            if state["frames"].as_u64().unwrap_or(0) >= 5
+                && state["advance_remaining"] == 0
+                && state["paused"] == true
+            {
+                break;
+            }
+            if std::time::Instant::now() > deadline {
+                return Err("real-video calibration fixture did not settle".into());
+            }
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        s.full_image = false;
+        s.show_overlays = false;
+        let before = status(&mut s);
+        let canonical = s.history.text.clone();
+        let opened = execute_session(&mut s, "view", &json!({"calibration":true}))?;
+        assert_eq!(opened["view"]["calibration"], true);
+        assert_eq!(opened["calibration_summary"]["visual_check_required"], true);
+        assert_eq!(
+            opened["calibration_summary"]["layers"]
+                .as_array()
+                .map(Vec::len),
+            Some(3)
+        );
+        execute_session(
+            &mut s,
+            "view",
+            &json!({"calibration_step":"ball","calibration_action":"inspect"}),
+        )?;
+        for next in ["exclude", "lab", "view"] {
+            let state = execute_session(&mut s, "view", &json!({"calibration_action":"keep"}))?;
+            assert_eq!(state["view"]["calibration_step"], next);
+            assert_eq!(state["view"]["calibration_action"], "inspect");
+            assert!(s.paused);
+        }
+        execute_session(&mut s, "view", &json!({"calibration":false}))?;
+        let after = status(&mut s);
+        for field in [
+            "frames",
+            "last_row",
+            "revision",
+            "requested_revision",
+            "paused",
+        ] {
+            assert_eq!(after[field], before[field], "changed {field}");
+        }
+        assert!(!s.full_image && !s.show_overlays);
+        assert_eq!(s.history.text, canonical);
+        execute_session(
+            &mut s,
+            "view",
+            &json!({"calibration":true,"calibration_step":"exclude","calibration_action":"redraw"}),
+        )?;
+        let invalid_before = status(&mut s);
+        assert!(
+            execute_session(
+                &mut s,
+                "view",
+                &json!({"calibration_action":"continue","display_fps":15})
+            )
+            .is_err()
+        );
+        assert_eq!(status(&mut s)["view"], invalid_before["view"]);
+        execute_session(
+            &mut s,
+            "view",
+            &json!({"calibration_action":"cancel","calibration":false}),
+        )?;
+        assert!(s.paused && s.tool == crate::session::Tool::Inspect);
+        assert_eq!(s.history.text, canonical);
+        execute_session(&mut s, "step", &json!({"frames":3}))?;
+        loop {
+            let state = status(&mut s);
+            if state["frames"].as_u64().unwrap_or(0) >= before["frames"].as_u64().unwrap_or(0) + 3
+                && state["advance_remaining"] == 0
+            {
+                assert!(
+                    state["last_row"]["timestamp_ms"].as_f64()
+                        > before["last_row"]["timestamp_ms"].as_f64()
+                );
+                break;
+            }
+            if std::time::Instant::now() > deadline {
+                return Err("real video did not continue after calibration review".into());
+            }
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
         Ok(())
     }
     #[test]

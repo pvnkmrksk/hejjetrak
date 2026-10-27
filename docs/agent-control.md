@@ -82,11 +82,13 @@ The legacy positional config invocation maps to `track`; with no output flag it 
 
 ## Native display and camera controls
 
-The native desktop JSONL bridge advertises `view` with optional boolean `settings`, `diagnostics`, `overlays`, `full_image`, `edit_marks` and `magnifier` fields, plus `calibration_step` as `view`, `ball`, `exclude` or `lab`. The selected step starts read-only saved review and limits visible geometry.
-`calibration_action` accepts `inspect`, `edit`, `redraw`, `add` or `keep`:
+The native desktop JSONL bridge advertises `view` with optional boolean `settings`, `calibration`, `diagnostics`, `overlays`, `full_image`, `edit_marks` and `magnifier` fields, plus `calibration_step` as `view`, `ball`, `exclude` or `lab`. The selected step starts read-only saved review and limits visible geometry.
+`calibration:true` opens the dedicated daily-check inspector, temporarily showing the saved full-image guides. It does not pause, reset or rewrite configuration. `calibration:false` closes it and restores the previous ordinary preview flags. Status exposes `calibration_summary` with saved-layer summaries and `visual_check_required:true`; configuration validity does not certify physical alignment or detect a bumped camera. `settings:true` opens the general configuration inspector instead.
+
+`calibration_action` accepts `inspect`, `edit`, `redraw`, `add`, `keep`, `continue`, `finish` or `cancel`:
 inspect cancels an uncommitted draft back to saved review; edit enables saved
 marks; redraw starts an isolated replacement; add appends an exclusion; keep
-preserves/advances the current review step. `edit_marks` remains a compatibility
+preserves/advances the current review step to the next saved review; continue applies a valid draft and advances; finish applies the current valid layer and finishes; cancel discards its pending draft. Finish and cancel restore playback from calibration entry, including an initially paused source. Closing the inspector alone keeps any active draft available in the main preview banner; finish or cancel to leave that workflow. `edit_marks` remains a compatibility
 control for saved-point editing, and `magnifier` toggles the precision loupe.
 Returned view status includes the review action. Display-only flags do not alter
 numerical geometry; calibration actions can pause/resume or commit a validated
@@ -138,3 +140,31 @@ processing rates, source bounds, partial paths and warnings. `media_warnings`
 remains visible after Stop/EOF; inspect the recording's `media-status.json`
 before treating its videos as complete. A stream's observed encoded throughput
 and measured render/encode capacity are different from the file's declared FPS.
+
+Live native Stop and recording replacement retire the old take to one owned
+background finalizer per camera. At most two retired takes may be queued or
+running, in addition to the current take. A further change is rejected with
+`command_error` before creating a destination or changing the active recording;
+tracking and that recording continue. Retry after a pending take completes.
+`recording=false` means no active take receives new frames; it does not mean
+previous numeric files/encoders have finished. Likewise, acknowledgment of a
+new `recording_directory` does not establish completion of the previous take.
+
+Native `recording_finalizations` retains the most recent 16 entries with
+`directory`, `state` (`queued`, `finalizing`, `complete`, `failed`),
+`numeric_error`, `media_recording`, `media_warnings` and `completion_error`.
+Active destinations and those in this recent history remain reserved, including
+path aliases and externally removed directories. Use a fresh unique directory
+instead of reusing a take's path; this prevents an old save from being mistaken
+for a new one.
+After numeric flush/sync and media drain, the take receives an atomically
+renamed `completion.json` with the same terminal fields. Wait for this marker
+before reading/verifying/pruning the old take. `complete` establishes numeric
+commit and the completion of finalization, while optional video can still be
+partial or failed: inspect `media_warnings` and each stream's state/counts.
+`failed` and non-null errors require inspection; a marker-write failure appears
+in native status without a committed marker. Status updates while running and
+paused. Graceful source close/app shutdown stops acquisition before draining
+all owned finalization work. Recorded-file native sessions retain synchronous
+Stop/replacement finalization; the headless controller's behavior is unchanged.
+Configuration-epoch changes still finalize synchronously.

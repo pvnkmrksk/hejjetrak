@@ -161,7 +161,9 @@ impl Session {
 
     pub(crate) fn calibration_progress(&self) -> Result<String, String> {
         if self.calibration_review {
-            return Ok("Review the saved marks, or choose Redraw in Settings.".into());
+            return Ok(
+                "Check the saved layer. Keep saved / skip, or redraw only this step.".into(),
+            );
         }
         if self.edit_existing {
             self.validated_calibration_document(self.document()?)?;
@@ -207,6 +209,7 @@ impl Session {
             .take()
             .unwrap_or(self.paused);
         self.send(Command::Pause(self.paused));
+        self.restore_calibration_view_if_closed();
     }
 
     pub(crate) fn calibration_lines(&self) -> Vec<Vec<[f64; 2]>> {
@@ -306,10 +309,35 @@ impl Session {
             self.calibration_redraw = true;
         }
     }
+    pub(crate) fn review_calibration_step(&mut self, tool: Tool) -> Result<(), String> {
+        if self.tool != tool && !self.points.is_empty() {
+            return Err(
+                "Apply or cancel the current draft before changing calibration steps".into(),
+            );
+        }
+        self.set_calibration_panel(true);
+        self.tool = tool;
+        self.begin_calibration_step();
+        Ok(())
+    }
+    pub(crate) fn saved_layer_available(&self, tool: Tool) -> bool {
+        let Ok(doc) = self.document() else {
+            return false;
+        };
+        match tool {
+            Tool::Rim => {
+                (doc.get("roi_c").is_some() && doc.get("roi_r").is_some())
+                    || self.saved_mark_count_for(tool) >= 3
+            }
+            Tool::Exclude => true,
+            Tool::Square => doc.get("c2a_r").is_some() || self.saved_mark_count_for(tool) == 4,
+            _ => false,
+        }
+    }
     pub(crate) fn saved_mark_count(&self) -> usize {
         self.saved_mark_count_for(self.tool)
     }
-    fn saved_mark_count_for(&self, tool: Tool) -> usize {
+    pub(crate) fn saved_mark_count_for(&self, tool: Tool) -> usize {
         let Ok(doc) = self.document() else {
             return 0;
         };
@@ -330,8 +358,11 @@ impl Session {
         }
     }
     pub(crate) fn saved_calibration_summary(&self) -> String {
-        let count = self.saved_mark_count();
-        match self.tool {
+        self.saved_calibration_summary_for(self.tool)
+    }
+    pub(crate) fn saved_calibration_summary_for(&self, tool: Tool) -> String {
+        let count = self.saved_mark_count_for(tool);
+        match tool {
             Tool::Rim if count == 0 => "Saved angular sphere geometry; no editable rim clicks were stored. Keep it or redraw new rim points.".into(),
             Tool::Rim => format!("Saved ball outline · {count} rim points"),
             Tool::Exclude => {
@@ -339,12 +370,24 @@ impl Session {
                 format!("{polygons} saved exclusion regions · {count} vertices (optional)")
             }
             Tool::Square if count == 0 => "Saved lab rotation; no editable square corners were stored. Keep it or redraw a square.".into(),
-            Tool::Square => format!("Saved {} lab square · {count} ordered corners", self.plane.to_uppercase()),
+            Tool::Square => {
+                let plane = self.document().ok().and_then(|doc| doc.get("c2a_src").map(str::to_owned)).unwrap_or_else(|| "c2a_cnrs_xy".into());
+                format!("Saved {} lab square · {count} ordered corners", plane.trim_start_matches("c2a_cnrs_").to_uppercase())
+            }
             _ => "Current saved calibration".into(),
         }
     }
     pub(crate) fn choose_calibration_action(&mut self, action: &str) -> Result<(), String> {
         self.validate_calibration_action(self.tool, action)?;
+        match action {
+            "cancel" => {
+                self.cancel_calibration();
+                return Ok(());
+            }
+            "continue" => return self.advance_calibration_step(),
+            "finish" => return self.complete_calibration(),
+            _ => {}
+        }
         if action == "keep" {
             // Keep always means the saved layer, including an empty redraw.
             // A draft must use Continue/Add this region to replace that layer.
@@ -387,18 +430,34 @@ impl Session {
         if action == "keep" {
             return Ok(());
         }
+        if action == "cancel" {
+            return Ok(());
+        }
+        if matches!(action, "continue" | "finish") {
+            if tool != self.tool || tool == Tool::Inspect {
+                return Err("Choose a current calibration step before continuing".into());
+            }
+            self.calibration_draft_document()?;
+            if self.edit_existing {
+                self.validated_calibration_document(self.document()?)?;
+            }
+            return Ok(());
+        }
         if tool == Tool::Inspect {
             return Err("Choose Ball, Exclusions or Lab before editing calibration".into());
         }
         match action {
-            "inspect" | "redraw" => Ok(()),
+            "inspect" | "redraw" | "continue" | "finish" => Ok(()),
             "edit" if self.saved_mark_count_for(tool) > 0 => Ok(()),
             "edit" => {
                 Err("No saved click points exist for this step; choose Redraw instead".into())
             }
             "add" if tool == Tool::Exclude => Ok(()),
             "add" => Err("Adding another region is available only for exclusions".into()),
-            _ => Err("calibration_action must be inspect/edit/redraw/add/keep".into()),
+            _ => Err(
+                "calibration_action must be inspect/edit/redraw/add/keep/continue/finish/cancel"
+                    .into(),
+            ),
         }
     }
     pub(crate) fn calibration_document(
@@ -494,9 +553,7 @@ impl Session {
             if !self.calibration_redraw {
                 return Ok(None);
             }
-            if self.tool != Tool::Exclude {
-                return Err("The replacement draft is empty. Place valid points or cancel the draft to keep the saved calibration".into());
-            }
+            return Err("The replacement draft is empty. Place valid points, choose Use no exclusions explicitly, or cancel to keep the saved calibration".into());
         }
         self.calibration_document(self.tool, &points, &self.plane, self.calibration_redraw)
             .map(Some)
@@ -531,6 +588,7 @@ impl Session {
         Ok(())
     }
     pub(crate) fn advance_calibration_step(&mut self) -> Result<(), String> {
+        let reviewing_saved = self.calibration_review;
         self.apply_calibration_draft()?;
         self.tool = match self.tool {
             Tool::Rim => Tool::Exclude,
@@ -540,7 +598,11 @@ impl Session {
         if self.tool == Tool::Inspect {
             return self.complete_calibration();
         }
-        self.redraw_calibration(self.tool);
+        if reviewing_saved {
+            self.begin_calibration_step();
+        } else {
+            self.redraw_calibration(self.tool);
+        }
         Ok(())
     }
     pub(crate) fn complete_calibration(&mut self) -> Result<(), String> {
@@ -551,11 +613,14 @@ impl Session {
         self.calibration_review = true;
         self.calibration_redraw = false;
         self.edit_existing = false;
-        self.calibration_previous_paused = None;
+        self.paused = self
+            .calibration_previous_paused
+            .take()
+            .unwrap_or(self.paused);
         self.show_overlays = false;
         self.full_image = false;
-        self.paused = false;
-        self.send(Command::Pause(false));
+        self.send(Command::Pause(self.paused));
+        self.restore_calibration_view_if_closed();
         Ok(())
     }
 }

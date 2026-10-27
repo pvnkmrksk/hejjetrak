@@ -9,7 +9,7 @@ use std::{
     collections::VecDeque,
     fs::{self, File, OpenOptions},
     io::{BufWriter, Write},
-    path::PathBuf,
+    path::{Component, Path, PathBuf},
     sync::{
         Arc, Mutex,
         atomic::{AtomicBool, Ordering},
@@ -91,6 +91,172 @@ pub struct Snapshot {
     pub revision: u64,
     pub recording: bool,
     pub recording_directory: Option<PathBuf>,
+    /// Bounded recent history; live Stop/rotation can leave files finalizing.
+    pub recording_finalizations: Vec<RecordingFinalization>,
+}
+#[derive(Clone, serde::Serialize)]
+pub struct RecordingFinalization {
+    pub directory: PathBuf,
+    pub state: &'static str,
+    pub numeric_error: Option<String>,
+    pub media_warnings: Vec<String>,
+    pub media_recording: Option<MediaRecordingStatus>,
+    pub completion_error: Option<String>,
+}
+impl RecordingFinalization {
+    fn queued(directory: PathBuf) -> Self {
+        Self {
+            directory,
+            state: "queued",
+            numeric_error: None,
+            media_warnings: vec![],
+            media_recording: None,
+            completion_error: None,
+        }
+    }
+    fn pending(&self) -> bool {
+        matches!(self.state, "queued" | "finalizing")
+    }
+}
+const FINALIZATION_CAPACITY: usize = 2;
+const FINALIZATION_HISTORY: usize = 16;
+/// A single owned worker, with a bound including both queued and running jobs.
+/// No I/O or joins occur while its short metadata mutex is held.
+struct RecordingFinalizer<T> {
+    tx: Option<SyncSender<(PathBuf, T)>>,
+    states: Arc<Mutex<Vec<RecordingFinalization>>>,
+    handle: Option<thread::JoinHandle<()>>,
+}
+impl<T: Send + 'static> RecordingFinalizer<T> {
+    fn start(finalize: impl Fn(T) -> RecordingFinalization + Send + 'static) -> Result<Self> {
+        let (tx, rx) = mpsc::sync_channel::<(PathBuf, T)>(FINALIZATION_CAPACITY);
+        let states = Arc::new(Mutex::new(Vec::<RecordingFinalization>::new()));
+        let progress = states.clone();
+        let handle = thread::Builder::new()
+            .name("fictrac-recording-finalizer".into())
+            .spawn(move || {
+                for (directory, job) in rx {
+                    {
+                        let mut states = progress
+                            .lock()
+                            .unwrap_or_else(std::sync::PoisonError::into_inner);
+                        if let Some(state) = states.iter_mut().find(|s| s.directory == directory) {
+                            state.state = "finalizing";
+                        }
+                    }
+                    let status = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| finalize(job))) {
+                        Ok(status) => status,
+                        Err(_) => {
+                            let mut status = RecordingFinalization::queued(directory.clone());
+                            status.state = "failed";
+                            status.numeric_error = Some("Recording finalizer failed unexpectedly; retained files may be incomplete".into());
+                            if let Err(error) = save_recording_completion(&status) { status.completion_error = Some(error); }
+                            status
+                        }
+                    };
+                    let mut states = progress
+                        .lock()
+                        .unwrap_or_else(std::sync::PoisonError::into_inner);
+                    if let Some(state) = states.iter_mut().find(|s| s.directory == directory) {
+                        *state = status;
+                    }
+                }
+            })
+            .map_err(|e| format!("Cannot start recording finalizer: {e}"))?;
+        Ok(Self {
+            tx: Some(tx),
+            states,
+            handle: Some(handle),
+        })
+    }
+    fn check_capacity(&self) -> Result<()> {
+        let states = self
+            .states
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        if states.iter().filter(|s| s.pending()).count() >= FINALIZATION_CAPACITY {
+            Err("Recording change rejected: two earlier takes are still finalizing; active recording and tracking continue. Wait for recording_finalizations to complete, then retry.".into())
+        } else {
+            Ok(())
+        }
+    }
+    fn check_destination(&self, directory: &Path) -> Result<()> {
+        let reserved: Vec<_> = self
+            .states
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .iter()
+            .map(|state| state.directory.clone())
+            .collect();
+        let identity = recording_destination(directory)?;
+        reject_reserved_destination(&identity, reserved.iter().map(PathBuf::as_path))
+    }
+    fn submit(&self, directory: PathBuf, job: T) -> std::result::Result<(), (String, T)> {
+        if let Err(error) = self.check_capacity() {
+            return Err((error, job));
+        }
+        if let Err(error) = self.check_destination(&directory) {
+            return Err((error, job));
+        }
+        {
+            let mut states = self
+                .states
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            if states.len() >= FINALIZATION_HISTORY
+                && let Some(index) = states.iter().position(|s| !s.pending())
+            {
+                states.remove(index);
+            }
+            states.push(RecordingFinalization::queued(directory.clone()));
+        }
+        let result = match &self.tx {
+            Some(tx) => tx.try_send((directory.clone(), job)).map_err(|e| match e {
+                mpsc::TrySendError::Full((_, job)) => (
+                    "Recording finalizer queue is full; active recording retained".into(),
+                    job,
+                ),
+                mpsc::TrySendError::Disconnected((_, job)) => (
+                    "Recording finalizer stopped; active recording retained".into(),
+                    job,
+                ),
+            }),
+            None => Err((
+                "Recording finalizer is closed; active recording retained".into(),
+                job,
+            )),
+        };
+        if result.is_err() {
+            self.states
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .retain(|s| s.directory != directory);
+        }
+        result
+    }
+    fn refresh(&self, snapshot: &mut Snapshot) {
+        snapshot.recording_finalizations = self
+            .states
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone();
+        surface_recording_finalizations(snapshot);
+    }
+    fn drain(&mut self) -> Result<()> {
+        self.tx.take();
+        if let Some(handle) = self.handle.take() {
+            handle.join().map_err(|_| "Recording finalizer failed unexpectedly; inspect incomplete recording directories".to_string())?;
+        }
+        Ok(())
+    }
+}
+impl<T> Drop for RecordingFinalizer<T> {
+    fn drop(&mut self) {
+        self.tx.take();
+        if let Some(handle) = self.handle.take() {
+            let _ = handle.join();
+        }
+    }
 }
 #[derive(Clone, Default, serde::Serialize)]
 pub struct WorkerResources {
@@ -352,6 +518,11 @@ fn run(
         SourceSpec::Camera(id) => format!("camera {id}"),
     };
     let mut input = Input::open(source, &doc)?;
+    let mut finalizer = if matches!(input, Input::Camera(_)) {
+        Some(RecordingFinalizer::start(Recorder::complete)?)
+    } else {
+        None
+    };
     let mut engine_state: Option<Engine> = None;
     let mut snapshot = Snapshot {
         source_label,
@@ -429,373 +600,399 @@ fn run(
     let mut previous_debug: Option<DebugViews> = None;
     let mut pending_command = None;
     let mut pending_input = None;
-    'worker: while !stop.load(Ordering::Acquire) {
-        for cmd in pending_command.take().into_iter().chain(rx.try_iter()) {
-            match cmd {
-                Command::Configure(next, revision) => {
-                    // A failed startup has no previously configured handles.
-                    // Reapply even unchanged settings, e.g. after the old Python
-                    // publisher releases the requested port. A disabled sink is
-                    // not evidence that an enabled requested output is healthy.
-                    let output_result = if outputs_unavailable {
-                        OutputSinks::from_config(&next).map(|configured| {
-                            sinks = configured;
-                            outputs_unavailable = false;
-                        })
-                    } else {
-                        sinks.reconfigure(&doc, &next)
-                    };
-                    if let Err(error) = output_result {
-                        let status = sinks.status();
-                        outputs_unavailable = outputs_unavailable
-                            || (!status.udp_enabled
-                                && !status.serial_enabled
-                                && status.zmq.is_none());
-                        snapshot.notice = format!("Configuration rejected: {error}");
-                        snapshot.command_error = Some(snapshot.notice.clone());
-                        continue;
+    let processing_result = (|| -> Result<()> {
+        'worker: while !stop.load(Ordering::Acquire) {
+            for cmd in pending_command.take().into_iter().chain(rx.try_iter()) {
+                match cmd {
+                    Command::Configure(next, revision) => {
+                        // A failed startup has no previously configured handles.
+                        // Reapply even unchanged settings, e.g. after the old Python
+                        // publisher releases the requested port. A disabled sink is
+                        // not evidence that an enabled requested output is healthy.
+                        let output_result = if outputs_unavailable {
+                            OutputSinks::from_config(&next).map(|configured| {
+                                sinks = configured;
+                                outputs_unavailable = false;
+                            })
+                        } else {
+                            sinks.reconfigure(&doc, &next)
+                        };
+                        if let Err(error) = output_result {
+                            let status = sinks.status();
+                            outputs_unavailable = outputs_unavailable
+                                || (!status.udp_enabled
+                                    && !status.serial_enabled
+                                    && status.zmq.is_none());
+                            snapshot.notice = format!("Configuration rejected: {error}");
+                            snapshot.command_error = Some(snapshot.notice.clone());
+                            continue;
+                        }
+                        snapshot.command_error = None;
+                        if doc.number("src_fps", -1.0) != next.number("src_fps", -1.0) {
+                            // A new rate starts pacing from the next emitted frame.
+                            // Keep source/emitted timestamps intact: only the wall
+                            // deadline anchor changes, avoiding stalls/catch-up.
+                            wall_origin = Instant::now();
+                            source_origin = None;
+                            last_completed = None;
+                        }
+                        doc = next;
+                        if let Input::File(video) = &input {
+                            snapshot.source_fps = if doc.number("src_fps", -1.0) > 0.0 {
+                                doc.number("src_fps", -1.0)
+                            } else {
+                                video.info.fps.unwrap_or(0.0)
+                            };
+                        }
+                        snapshot.revision = revision;
+                        needs_config = true;
                     }
-                    snapshot.command_error = None;
-                    if doc.number("src_fps", -1.0) != next.number("src_fps", -1.0) {
-                        // A new rate starts pacing from the next emitted frame.
-                        // Keep source/emitted timestamps intact: only the wall
-                        // deadline anchor changes, avoiding stalls/catch-up.
+                    Command::Pause(p) => {
+                        skip_gap = true;
+                        paused = p;
+                        snapshot.paused = p;
+                        step = false;
+                        step_remaining = 0;
+                        snapshot.advance_remaining = 0;
                         wall_origin = Instant::now();
                         source_origin = None;
                         last_completed = None;
+                        previous_preview = None;
+                        snapshot.preview_fps = 0.0;
                     }
-                    doc = next;
-                    if let Input::File(video) = &input {
-                        snapshot.source_fps = if doc.number("src_fps", -1.0) > 0.0 {
-                            doc.number("src_fps", -1.0)
-                        } else {
-                            video.info.fps.unwrap_or(0.0)
+                    Command::Advance(frames) => {
+                        skip_gap = true;
+                        if !(1..=10000).contains(&frames) {
+                            snapshot.notice = "Advance requires 1..10000 frames".into();
+                            continue;
+                        }
+                        step_remaining = step_remaining
+                            .checked_add(frames)
+                            .filter(|n| *n <= 160000)
+                            .ok_or(
+                                "Too many queued frames; wait for the current advance to finish",
+                            )?;
+                        snapshot.advance_remaining = step_remaining;
+                        step = true;
+                        paused = true;
+                        snapshot.paused = true;
+                        wall_origin = Instant::now();
+                        source_origin = None;
+                    }
+                    Command::Step => {
+                        skip_gap = true;
+                        step_remaining = step_remaining
+                            .checked_add(1)
+                            .filter(|n| *n <= 160000)
+                            .ok_or(
+                                "Too many queued frames; wait for the current advance to finish",
+                            )?;
+                        snapshot.advance_remaining = step_remaining;
+                        step = true;
+                        paused = true;
+                        snapshot.paused = true;
+                        wall_origin = Instant::now();
+                        source_origin = None;
+                    }
+                    Command::Reset => {
+                        snapshot.tracking_ms = 0.0;
+                        snapshot.tracking_samples = 0;
+                        if let Some(engine) = &mut engine_state {
+                            engine.tracker.reset_tracking();
+                        }
+                        path.clear();
+                        contact_trace.clear();
+                        pose_history.clear();
+                        snapshot.path = Arc::new(vec![]);
+                        snapshot.contact_trace = Arc::new(vec![]);
+                        snapshot.pose_history = Arc::new(vec![]);
+                        snapshot.row = None;
+                        snapshot.notice =
+                            "Pose/path reset; source counter and integrated displacement retained"
+                                .into();
+                    }
+                    Command::LoadMap(filename) => {
+                        let result = fictrac_io::load_sphere_map(&filename)
+                            .map_err(|e| e.to_string())
+                            .and_then(|map| {
+                                engine_state
+                                    .as_mut()
+                                    .ok_or("No calibrated tracker".into())
+                                    .and_then(|engine| {
+                                        engine
+                                            .tracker
+                                            .load_sphere_template(map)
+                                            .map_err(|e| e.to_string())
+                                    })
+                            });
+                        snapshot.notice = match result {
+                            Ok(()) => {
+                                path.clear();
+                                contact_trace.clear();
+                                pose_history.clear();
+                                snapshot.path = Arc::new(vec![]);
+                                snapshot.contact_trace = Arc::new(vec![]);
+                                snapshot.pose_history = Arc::new(vec![]);
+                                snapshot.row = None;
+                                "Sphere template loaded; next frame will relocalize if global search is enabled".into()
+                            }
+                            Err(e) => e,
                         };
                     }
-                    snapshot.revision = revision;
-                    needs_config = true;
-                }
-                Command::Pause(p) => {
-                    skip_gap = true;
-                    paused = p;
-                    snapshot.paused = p;
-                    step = false;
-                    step_remaining = 0;
-                    snapshot.advance_remaining = 0;
-                    wall_origin = Instant::now();
-                    source_origin = None;
-                    last_completed = None;
-                    previous_preview = None;
-                    snapshot.preview_fps = 0.0;
-                }
-                Command::Advance(frames) => {
-                    skip_gap = true;
-                    if !(1..=10000).contains(&frames) {
-                        snapshot.notice = "Advance requires 1..10000 frames".into();
-                        continue;
+                    Command::SaveMap(path) => {
+                        let result = engine_state
+                            .as_ref()
+                            .and_then(|e| e.tracker.sphere_template())
+                            .ok_or("No spherical map available".into())
+                            .and_then(|map| {
+                                fictrac_io::save_sphere_map(&path, &map).map_err(|e| e.to_string())
+                            });
+                        snapshot.notice = match result {
+                            Ok(()) => format!("Sphere map saved: {}", path.display()),
+                            Err(e) => e,
+                        };
                     }
-                    step_remaining = step_remaining
-                        .checked_add(frames)
-                        .filter(|n| *n <= 160000)
-                        .ok_or("Too many queued frames; wait for the current advance to finish")?;
-                    snapshot.advance_remaining = step_remaining;
-                    step = true;
-                    paused = true;
-                    snapshot.paused = true;
-                    wall_origin = Instant::now();
-                    source_origin = None;
-                }
-                Command::Step => {
-                    skip_gap = true;
-                    step_remaining = step_remaining
-                        .checked_add(1)
-                        .filter(|n| *n <= 160000)
-                        .ok_or("Too many queued frames; wait for the current advance to finish")?;
-                    snapshot.advance_remaining = step_remaining;
-                    step = true;
-                    paused = true;
-                    snapshot.paused = true;
-                    wall_origin = Instant::now();
-                    source_origin = None;
-                }
-                Command::Reset => {
-                    snapshot.tracking_ms = 0.0;
-                    snapshot.tracking_samples = 0;
-                    if let Some(engine) = &mut engine_state {
-                        engine.tracker.reset_tracking();
+                    Command::CameraRefresh => {
+                        snapshot.notice = match &mut input {
+                            Input::Camera(camera) => match camera.capabilities() {
+                                Ok(c) => {
+                                    snapshot.camera = Some(c);
+                                    "Camera controls refreshed".into()
+                                }
+                                Err(e) => e.to_string(),
+                            },
+                            _ => "Camera controls require a live camera source".into(),
+                        };
                     }
-                    path.clear();
-                    contact_trace.clear();
-                    pose_history.clear();
-                    snapshot.path = Arc::new(vec![]);
-                    snapshot.contact_trace = Arc::new(vec![]);
-                    snapshot.pose_history = Arc::new(vec![]);
-                    snapshot.row = None;
-                    snapshot.notice =
-                        "Pose/path reset; source counter and integrated displacement retained"
-                            .into();
-                }
-                Command::LoadMap(filename) => {
-                    let result = fictrac_io::load_sphere_map(&filename)
-                        .map_err(|e| e.to_string())
-                        .and_then(|map| {
-                            engine_state
-                                .as_mut()
-                                .ok_or("No calibrated tracker".into())
-                                .and_then(|engine| {
-                                    engine
-                                        .tracker
-                                        .load_sphere_template(map)
-                                        .map_err(|e| e.to_string())
-                                })
-                        });
-                    snapshot.notice = match result {
-                        Ok(()) => {
-                            path.clear();
-                            contact_trace.clear();
-                            pose_history.clear();
-                            snapshot.path = Arc::new(vec![]);
-                            snapshot.contact_trace = Arc::new(vec![]);
-                            snapshot.pose_history = Arc::new(vec![]);
-                            snapshot.row = None;
-                            "Sphere template loaded; next frame will relocalize if global search is enabled".into()
+                    Command::CameraControl(request) => {
+                        snapshot.notice = match &mut input {
+                            Input::Camera(camera) => match camera.set_control(request) {
+                                Ok(c) => {
+                                    snapshot.camera = Some(c);
+                                    "Camera setting applied and read back".into()
+                                }
+                                Err(e) => e.to_string(),
+                            },
+                            _ => "Camera controls require a live camera source".into(),
+                        };
+                    }
+                    Command::RecordOptions(dir, options, tuning) => {
+                        let effective = options.recording_document(&doc)?;
+                        if let Err(error) = replace_recording(
+                            &mut recorder,
+                            finalizer.as_ref(),
+                            dir.clone(),
+                            &effective,
+                            source_recording_tuning(&input, tuning),
+                            &mut snapshot,
+                        ) {
+                            recording_rejected(&mut snapshot, error);
+                            continue;
                         }
-                        Err(e) => e,
-                    };
-                }
-                Command::SaveMap(path) => {
-                    let result = engine_state
-                        .as_ref()
-                        .and_then(|e| e.tracker.sphere_template())
-                        .ok_or("No spherical map available".into())
-                        .and_then(|map| {
-                            fictrac_io::save_sphere_map(&path, &map).map_err(|e| e.to_string())
-                        });
-                    snapshot.notice = match result {
-                        Ok(()) => format!("Sphere map saved: {}", path.display()),
-                        Err(e) => e,
-                    };
-                }
-                Command::CameraRefresh => {
-                    snapshot.notice = match &mut input {
-                        Input::Camera(camera) => match camera.capabilities() {
-                            Ok(c) => {
-                                snapshot.camera = Some(c);
-                                "Camera controls refreshed".into()
-                            }
-                            Err(e) => e.to_string(),
-                        },
-                        _ => "Camera controls require a live camera source".into(),
-                    };
-                }
-                Command::CameraControl(request) => {
-                    snapshot.notice = match &mut input {
-                        Input::Camera(camera) => match camera.set_control(request) {
-                            Ok(c) => {
-                                snapshot.camera = Some(c);
-                                "Camera setting applied and read back".into()
-                            }
-                            Err(e) => e.to_string(),
-                        },
-                        _ => "Camera controls require a live camera source".into(),
-                    };
-                }
-                Command::RecordOptions(dir, options, tuning) => {
-                    manual_record_options = Some(options);
-                    let effective = options.recording_document(&doc)?;
-                    if let Some(mut old) = recorder.take() {
-                        old.finish()?;
-                        old.refresh_media(&mut snapshot);
+                        manual_record_options = Some(options);
+                        snapshot.recording = true;
+                        snapshot.record_options = Some(options);
+                        snapshot.media_recording = None;
+                        snapshot.media_warnings.clear();
+                        recording_applied(&mut snapshot, "Recording started");
                     }
-                    snapshot.recording_directory = Some(dir.clone());
-                    recorder = Some(Recorder::new_with_tuning(
-                        dir,
-                        &effective,
-                        source_recording_tuning(&input, tuning),
-                    )?);
-                    snapshot.recording = true;
-                    snapshot.record_options = Some(options);
-                    snapshot.media_recording = None;
-                    snapshot.media_warnings.clear();
-                }
-                Command::Record(dir) => {
-                    manual_record_options = None;
-                    if let Some(mut old) = recorder.take() {
-                        old.finish()?;
+                    Command::Record(dir) => {
+                        if let Err(error) = replace_recording(
+                            &mut recorder,
+                            finalizer.as_ref(),
+                            dir.clone(),
+                            &doc,
+                            source_recording_tuning(&input, MediaRecordingTuning::default()),
+                            &mut snapshot,
+                        ) {
+                            recording_rejected(&mut snapshot, error);
+                            continue;
+                        }
+                        manual_record_options = None;
+                        snapshot.recording = true;
+                        snapshot.record_options =
+                            Some(fictrac_control::RecordOptions::from_document(&doc));
+                        snapshot.media_recording = None;
+                        snapshot.media_warnings.clear();
+                        recording_applied(&mut snapshot, "Recording started");
                     }
-                    snapshot.recording_directory = Some(dir.clone());
-                    recorder = Some(Recorder::new_with_tuning(
-                        dir,
+                    Command::StopRecord => {
+                        if let Err(error) =
+                            retire_recording(&mut recorder, finalizer.as_ref(), &mut snapshot)
+                        {
+                            recording_rejected(&mut snapshot, error);
+                            continue;
+                        }
+                        manual_record_options = None;
+                        snapshot.recording = false;
+                        snapshot.record_options = None;
+                        let notice = if snapshot
+                            .recording_finalizations
+                            .iter()
+                            .any(RecordingFinalization::pending)
+                        {
+                            "Recording stopped; pending takes finish in the background"
+                        } else {
+                            "Recording stopped; files finalized"
+                        };
+                        recording_applied(&mut snapshot, notice);
+                    }
+                    Command::Realtime(r) => {
+                        realtime = r;
+                        wall_origin = Instant::now();
+                        source_origin = None;
+                    }
+                    Command::DisplayFps(fps) => {
+                        if !(1..=60).contains(&fps) {
+                            snapshot.command_error =
+                                Some("Display FPS must be an integer between 1 and 60".into());
+                            continue;
+                        }
+                        snapshot.display_fps = fps;
+                        preview_interval = Duration::from_secs_f64(1.0 / f64::from(fps));
+                        previous_preview = None;
+                        snapshot.preview_fps = 0.0;
+                        last_publish = Instant::now() - preview_interval;
+                    }
+                }
+            }
+            if paused || needs_config {
+                promote_preview(
+                    &mut snapshot,
+                    &mut previous_rgb,
+                    previous_frame.as_ref(),
+                    engine_state.as_ref(),
+                    &mut previous_debug,
+                );
+            }
+            if needs_config && let Some(frame) = &previous_frame {
+                let frame = previous_input.as_ref().unwrap_or(frame);
+                let frame = if let Some(image) = &snapshot.image {
+                    tracking_frame(frame.clone(), &image.rgb, &doc)?
+                } else {
+                    frame.clone()
+                };
+                match engine(&doc, frame.width(), frame.height(), config_path) {
+                    Ok((e, _)) => {
+                        engine_state = Some(e);
+                        snapshot.notice = "Configuration applied; tracking epoch reset".into();
+                    }
+                    Err(e) => {
+                        engine_state = None;
+                        snapshot.notice = format!("Preview only — {e}");
+                        if let Some(image) = &snapshot.image {
+                            let mut image = (**image).clone();
+                            image.debug = None;
+                            snapshot.image = Some(Arc::new(image));
+                        }
+                    }
+                }
+                path.clear();
+                contact_trace.clear();
+                pose_history.clear();
+                snapshot.contact_trace = Arc::new(vec![]);
+                snapshot.pose_history = Arc::new(vec![]);
+                snapshot.path = Arc::new(vec![]);
+                snapshot.row = None;
+                if let Some(r) = &mut recorder {
+                    let effective = manual_record_options
+                        .map(|o| o.recording_document(&doc))
+                        .transpose()?;
+                    r.tuning = source_recording_tuning(&input, r.tuning);
+                    r.epoch(effective.as_ref().unwrap_or(&doc))?;
+                } else if doc.boolean("save_raw") || doc.boolean("save_debug") {
+                    let created = Recorder::automatic(
                         &doc,
                         source_recording_tuning(&input, MediaRecordingTuning::default()),
-                    )?);
+                    )?;
                     snapshot.recording = true;
-                    snapshot.record_options =
-                        Some(fictrac_control::RecordOptions::from_document(&doc));
-                    snapshot.media_recording = None;
-                    snapshot.media_warnings.clear();
+                    snapshot.recording_directory = Some(created.directory.clone());
+                    recorder = Some(created);
                 }
-                Command::StopRecord => {
-                    manual_record_options = None;
-                    if let Some(mut r) = recorder.take() {
-                        r.finish()?;
-                        r.refresh_media(&mut snapshot);
-                    }
-                    snapshot.recording = false;
-                    snapshot.record_options = None;
-                }
-                Command::Realtime(r) => {
-                    realtime = r;
-                    wall_origin = Instant::now();
-                    source_origin = None;
-                }
-                Command::DisplayFps(fps) => {
-                    if !(1..=60).contains(&fps) {
-                        snapshot.command_error =
-                            Some("Display FPS must be an integer between 1 and 60".into());
-                        continue;
-                    }
-                    snapshot.display_fps = fps;
-                    preview_interval = Duration::from_secs_f64(1.0 / f64::from(fps));
-                    previous_preview = None;
-                    snapshot.preview_fps = 0.0;
-                    last_publish = Instant::now() - preview_interval;
-                }
-            }
-        }
-        if paused || needs_config {
-            promote_preview(
-                &mut snapshot,
-                &mut previous_rgb,
-                previous_frame.as_ref(),
-                engine_state.as_ref(),
-                &mut previous_debug,
-            );
-        }
-        if needs_config && let Some(frame) = &previous_frame {
-            let frame = previous_input.as_ref().unwrap_or(frame);
-            let frame = if let Some(image) = &snapshot.image {
-                tracking_frame(frame.clone(), &image.rgb, &doc)?
-            } else {
-                frame.clone()
-            };
-            match engine(&doc, frame.width(), frame.height(), config_path) {
-                Ok((e, _)) => {
-                    engine_state = Some(e);
-                    snapshot.notice = "Configuration applied; tracking epoch reset".into();
-                }
-                Err(e) => {
-                    engine_state = None;
-                    snapshot.notice = format!("Preview only — {e}");
+                needs_config = false;
+                // Re-evaluate a paused image immediately, without advancing the decoder.
+                if let Some(e) = &mut engine_state {
+                    let row = e
+                        .tracker
+                        .process(frame.clone())
+                        .map_err(|e| e.to_string())?;
+                    let debug = e
+                        .tracker
+                        .debug_views()
+                        .cloned()
+                        .unwrap_or_else(|| e.diagnostics.update(&frame, Some(&row)));
                     if let Some(image) = &snapshot.image {
                         let mut image = (**image).clone();
-                        image.debug = None;
+                        image.debug = Some(debug.clone());
+                        if let Some(recorder) = &mut recorder {
+                            recorder.write(&row)?;
+                            recorder
+                                .write_media(&frame, &image.rgb, &debug, &path, &e.config, &row)?;
+                        }
                         snapshot.image = Some(Arc::new(image));
                     }
+                    snapshot.row = Some(row);
                 }
             }
-            path.clear();
-            contact_trace.clear();
-            pose_history.clear();
-            snapshot.contact_trace = Arc::new(vec![]);
-            snapshot.pose_history = Arc::new(vec![]);
-            snapshot.path = Arc::new(vec![]);
-            snapshot.row = None;
-            if let Some(r) = &mut recorder {
-                let effective = manual_record_options
-                    .map(|o| o.recording_document(&doc))
-                    .transpose()?;
-                r.tuning = source_recording_tuning(&input, r.tuning);
-                r.epoch(effective.as_ref().unwrap_or(&doc))?;
-            } else if doc.boolean("save_raw") || doc.boolean("save_debug") {
-                let created = Recorder::automatic(
-                    &doc,
-                    source_recording_tuning(&input, MediaRecordingTuning::default()),
-                )?;
-                snapshot.recording = true;
-                snapshot.recording_directory = Some(created.directory.clone());
-                recorder = Some(created);
-            }
-            needs_config = false;
-            // Re-evaluate a paused image immediately, without advancing the decoder.
-            if let Some(e) = &mut engine_state {
-                let row = e
-                    .tracker
-                    .process(frame.clone())
-                    .map_err(|e| e.to_string())?;
-                let debug = e
-                    .tracker
-                    .debug_views()
-                    .cloned()
-                    .unwrap_or_else(|| e.diagnostics.update(&frame, Some(&row)));
-                if let Some(image) = &snapshot.image {
-                    let mut image = (**image).clone();
-                    image.debug = Some(debug.clone());
-                    if let Some(recorder) = &mut recorder {
-                        recorder.write(&row)?;
-                        recorder.write_media(&frame, &image.rgb, &debug, &path, &e.config, &row)?;
-                    }
-                    snapshot.image = Some(Arc::new(image));
+            if (paused && !step) || ended {
+                if let Some(finalizer) = &finalizer {
+                    finalizer.refresh(&mut snapshot);
                 }
-                snapshot.row = Some(row);
-            }
-        }
-        if (paused && !step) || ended {
-            if let Some(r) = &mut recorder {
-                r.refresh_media(&mut snapshot);
-            }
-            snapshot.path = Arc::new(path.clone());
-            snapshot.contact_trace = Arc::new(contact_trace.iter().copied().collect());
-            snapshot.pose_history = Arc::new(pose_history.iter().copied().collect());
-            snapshot.outputs = Some(sinks.status());
-            snapshot.resources.idle_waits += 1;
-            *shared
-                .lock()
-                .unwrap_or_else(std::sync::PoisonError::into_inner) = snapshot.clone();
-            // Mutating commands and shutdown unpark immediately; the long idle
-            // timeout only refreshes asynchronous output health once a second.
-            thread::park_timeout(Duration::from_secs(1));
-            continue;
-        }
-        let work_tick = Instant::now();
-        let frame = if let Some(frame) = pending_input.take() {
-            Some(frame)
-        } else {
-            input.next()?
-        };
-        let input_wait = if matches!(input, Input::Camera(_)) {
-            work_tick.elapsed()
-        } else {
-            Duration::ZERO
-        };
-        let mut pace_wait = Duration::ZERO;
-        let Some((frame, rgb, sequence)) = frame else {
-            if matches!(input, Input::Camera(_)) {
-                if last_camera_frame.elapsed() > Duration::from_secs(5) {
-                    return Err("No camera frames for five seconds. Check the device and camera permission, then Connect again.".into());
+                if let Some(r) = &mut recorder {
+                    r.refresh_media(&mut snapshot);
                 }
+                snapshot.path = Arc::new(path.clone());
+                snapshot.contact_trace = Arc::new(contact_trace.iter().copied().collect());
+                snapshot.pose_history = Arc::new(pose_history.iter().copied().collect());
+                snapshot.outputs = Some(sinks.status());
+                snapshot.resources.idle_waits += 1;
+                *shared
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner) = snapshot.clone();
+                // Mutating commands and shutdown unpark immediately; the long idle
+                // timeout only refreshes asynchronous output health once a second.
+                thread::park_timeout(Duration::from_secs(1));
                 continue;
             }
-            promote_preview(
-                &mut snapshot,
-                &mut previous_rgb,
-                previous_frame.as_ref(),
-                engine_state.as_ref(),
-                &mut previous_debug,
-            );
-            snapshot.outputs = Some(sinks.status());
-            snapshot.path = Arc::new(path.clone());
-            snapshot.contact_trace = Arc::new(contact_trace.iter().copied().collect());
-            snapshot.pose_history = Arc::new(pose_history.iter().copied().collect());
-            ended = true;
-            snapshot.ended = true;
-            snapshot.preview_fps = 0.0;
-            snapshot.advance_remaining = 0;
-            snapshot.notice = "Video complete · Replay to start another sequence".into();
-            if let Some(r) = &mut recorder {
-                if let Some(map) = engine_state
-                    .as_ref()
-                    .and_then(|e| e.tracker.sphere_template())
+            let work_tick = Instant::now();
+            let frame = if let Some(frame) = pending_input.take() {
+                Some(frame)
+            } else {
+                input.next()?
+            };
+            let input_wait = if matches!(input, Input::Camera(_)) {
+                work_tick.elapsed()
+            } else {
+                Duration::ZERO
+            };
+            let mut pace_wait = Duration::ZERO;
+            let Some((frame, rgb, sequence)) = frame else {
+                if matches!(input, Input::Camera(_)) {
+                    if last_camera_frame.elapsed() > Duration::from_secs(5) {
+                        return Err("No camera frames for five seconds. Check the device and camera permission, then Connect again.".into());
+                    }
+                    continue;
+                }
+                promote_preview(
+                    &mut snapshot,
+                    &mut previous_rgb,
+                    previous_frame.as_ref(),
+                    engine_state.as_ref(),
+                    &mut previous_debug,
+                );
+                snapshot.outputs = Some(sinks.status());
+                snapshot.path = Arc::new(path.clone());
+                snapshot.contact_trace = Arc::new(contact_trace.iter().copied().collect());
+                snapshot.pose_history = Arc::new(pose_history.iter().copied().collect());
+                ended = true;
+                snapshot.ended = true;
+                snapshot.preview_fps = 0.0;
+                snapshot.advance_remaining = 0;
+                snapshot.notice = "Video complete · Replay to start another sequence".into();
+                if let Some(r) = &mut recorder
+                    && let Some(map) = engine_state
+                        .as_ref()
+                        .and_then(|e| e.tracker.sphere_template())
                 {
                     fictrac_io::save_sphere_map(
                         &r.directory.join(format!("epoch-{:04}-map.png", r.index)),
@@ -803,19 +1000,18 @@ fn run(
                     )
                     .map_err(|e| e.to_string())?;
                 }
-                r.finish()?;
-                r.refresh_media(&mut snapshot);
-            }
-            snapshot.recording = false;
-            continue;
-        };
-        let raw_frame = frame.clone();
-        let source_time = frame.timestamp_ms();
-        let file_source = matches!(input, Input::File(_));
-        let override_fps = doc.number("src_fps", -1.0);
-        let frame = if file_source && (override_fps > 0.0 || retimed) {
-            let time =
-                if let (Some(previous), Some(source_prev)) = (&previous_frame, last_source_time) {
+                retire_recording(&mut recorder, None, &mut snapshot)?;
+                snapshot.recording = false;
+                continue;
+            };
+            let raw_frame = frame.clone();
+            let source_time = frame.timestamp_ms();
+            let file_source = matches!(input, Input::File(_));
+            let override_fps = doc.number("src_fps", -1.0);
+            let frame = if file_source && (override_fps > 0.0 || retimed) {
+                let time = if let (Some(previous), Some(source_prev)) =
+                    (&previous_frame, last_source_time)
+                {
                     previous.timestamp_ms()
                         + if override_fps > 0.0 {
                             1000.0 / override_fps
@@ -825,274 +1021,458 @@ fn run(
                 } else {
                     0.0
                 };
-            frame.with_timestamp(time).map_err(|e| e.to_string())?
-        } else {
-            frame
-        };
-        // Explicit paused advancement measures source frames immediately;
-        // emitted timestamps still come from the unchanged source/FPS clock.
-        if realtime && file_source && !step {
-            let pacing_tick = Instant::now();
-            if source_origin.is_none() {
-                playback_origin_frame = snapshot.frames;
-            }
-            let origin = *source_origin.get_or_insert(frame.timestamp_ms());
-            let due = if override_fps > 0.0 {
-                snapshot.frames.saturating_sub(playback_origin_frame) as f64 / override_fps
+                frame.with_timestamp(time).map_err(|e| e.to_string())?
             } else {
-                (frame.timestamp_ms() - origin) / 1000.0
+                frame
             };
-            let due = Duration::try_from_secs_f64(due)
-                .map_err(|_| "Invalid playback deadline; check source timestamps and src_fps")?;
-            let deadline = wall_origin
-                .checked_add(due)
-                .ok_or("Playback deadline exceeds the platform clock range")?;
-            while let Some(remaining) = deadline.checked_duration_since(Instant::now()) {
-                if stop.load(Ordering::Acquire) {
-                    break 'worker;
+            // Explicit paused advancement measures source frames immediately;
+            // emitted timestamps still come from the unchanged source/FPS clock.
+            if realtime && file_source && !step {
+                let pacing_tick = Instant::now();
+                if source_origin.is_none() {
+                    playback_origin_frame = snapshot.frames;
                 }
-                if let Ok(command) = rx.try_recv() {
-                    // Keep the unmodified decoded frame. Commands (including
-                    // pause/config/FPS edits) apply before its measurement; no
-                    // source clock, capture counter or numerical state advanced.
-                    pending_command = Some(command);
-                    pending_input = Some((raw_frame, rgb, sequence));
-                    continue 'worker;
+                let origin = *source_origin.get_or_insert(frame.timestamp_ms());
+                let due = if override_fps > 0.0 {
+                    snapshot.frames.saturating_sub(playback_origin_frame) as f64 / override_fps
+                } else {
+                    (frame.timestamp_ms() - origin) / 1000.0
+                };
+                let due = Duration::try_from_secs_f64(due).map_err(
+                    |_| "Invalid playback deadline; check source timestamps and src_fps",
+                )?;
+                let deadline = wall_origin
+                    .checked_add(due)
+                    .ok_or("Playback deadline exceeds the platform clock range")?;
+                while let Some(remaining) = deadline.checked_duration_since(Instant::now()) {
+                    if stop.load(Ordering::Acquire) {
+                        break 'worker;
+                    }
+                    if let Ok(command) = rx.try_recv() {
+                        // Keep the unmodified decoded frame. Commands (including
+                        // pause/config/FPS edits) apply before its measurement; no
+                        // source clock, capture counter or numerical state advanced.
+                        pending_command = Some(command);
+                        pending_input = Some((raw_frame, rgb, sequence));
+                        continue 'worker;
+                    }
+                    // Check the queue BEFORE parking as decoder channel waits may
+                    // have consumed a prior unpark token while this command waited.
+                    snapshot.resources.pacing_waits += 1;
+                    thread::park_timeout(remaining);
                 }
-                // Check the queue BEFORE parking as decoder channel waits may
-                // have consumed a prior unpark token while this command waited.
-                snapshot.resources.pacing_waits += 1;
-                thread::park_timeout(remaining);
+                pace_wait = pacing_tick.elapsed();
             }
-            pace_wait = pacing_tick.elapsed();
-        }
-        if stop.load(Ordering::Acquire) {
-            break;
-        }
-        if file_source {
-            retimed |= override_fps > 0.0;
-            last_source_time = Some(source_time);
-        }
-        let input_frame = frame.clone();
-        let frame = tracking_frame(frame, &rgb, &doc)?;
-        last_camera_frame = Instant::now();
-        if sequence > 0 {
-            let skipped = sequence.saturating_sub(last_sequence).saturating_sub(1);
-            snapshot.dropped += skipped;
-            if !skip_gap {
-                snapshot.dropped_running += skipped;
+            if stop.load(Ordering::Acquire) {
+                break;
             }
-            skip_gap = false;
-            last_sequence = sequence;
-        }
-        if let Some(previous) = last_timestamp {
-            let interval = frame.timestamp_ms() - previous;
-            if interval > 0.0 && interval < 10_000.0 && snapshot.source_fps <= 0.0 {
-                snapshot.source_fps = 1000.0 / interval;
+            if file_source {
+                retimed |= override_fps > 0.0;
+                last_source_time = Some(source_time);
             }
-        }
-        last_timestamp = Some(frame.timestamp_ms());
-        let tick = Instant::now();
-        if needs_config {
-            snapshot.tracking_ms = 0.0;
-            snapshot.tracking_samples = 0;
-            match engine(&doc, frame.width(), frame.height(), config_path) {
-                Ok((e, _)) => {
-                    snapshot.notice = if e.config.spherical_map.is_some() {
-                        "Tracking · FicTrac spherical map / pure Rust BOBYQA".into()
-                    } else {
-                        "Tracking · photometric alternate; map panels are diagnostics".into()
-                    };
-                    engine_state = Some(e);
+            let input_frame = frame.clone();
+            let frame = tracking_frame(frame, &rgb, &doc)?;
+            last_camera_frame = Instant::now();
+            if sequence > 0 {
+                let skipped = sequence.saturating_sub(last_sequence).saturating_sub(1);
+                snapshot.dropped += skipped;
+                if !skip_gap {
+                    snapshot.dropped_running += skipped;
                 }
-                Err(e) => {
-                    snapshot.notice = format!("Preview only — {e}");
-                    engine_state = None;
+                skip_gap = false;
+                last_sequence = sequence;
+            }
+            if let Some(previous) = last_timestamp {
+                let interval = frame.timestamp_ms() - previous;
+                if interval > 0.0 && interval < 10_000.0 && snapshot.source_fps <= 0.0 {
+                    snapshot.source_fps = 1000.0 / interval;
                 }
             }
-            needs_config = false;
-        }
-        let tracking_tick = Instant::now();
-        let row = if let Some(e) = &mut engine_state {
-            Some(
-                e.tracker
-                    .process(frame.clone())
-                    .map_err(|e| e.to_string())?,
-            )
-        } else {
-            None
-        };
-        let tracking_ms = tracking_tick.elapsed().as_secs_f64() * 1000.0;
-        if row.is_some() {
-            snapshot.tracking_samples += 1;
-            snapshot.tracking_ms +=
-                (tracking_ms - snapshot.tracking_ms) / snapshot.tracking_samples as f64;
-        }
-        snapshot.processing_fps = 1.0 / tick.elapsed().as_secs_f64().max(1e-9);
-        snapshot.frames += 1;
-        snapshot.row = row.clone();
-        let mut output_error = None;
-        if let Some(row) = &row {
-            if row.accepted
-                && let Some(engine) = &engine_state
-            {
-                let lab = glam::DQuat::from_scaled_axis(glam::DVec3::from_array(
-                    engine.config.camera_to_lab,
-                ));
-                let rotation =
-                    glam::DQuat::from_scaled_axis(glam::DVec3::from_array(row.absolute_camera));
-                let material = rotation.inverse() * (lab.inverse() * -glam::DVec3::Z);
-                contact_trace.push_back(material.to_array());
-                pose_history.push_back(row.absolute_camera);
-                if contact_trace.len() > 1000 {
-                    contact_trace.pop_front();
-                    pose_history.pop_front();
+            last_timestamp = Some(frame.timestamp_ms());
+            let tick = Instant::now();
+            if needs_config {
+                snapshot.tracking_ms = 0.0;
+                snapshot.tracking_samples = 0;
+                match engine(&doc, frame.width(), frame.height(), config_path) {
+                    Ok((e, _)) => {
+                        snapshot.notice = if e.config.spherical_map.is_some() {
+                            "Tracking · FicTrac spherical map / pure Rust BOBYQA".into()
+                        } else {
+                            "Tracking · photometric alternate; map panels are diagnostics".into()
+                        };
+                        engine_state = Some(e);
+                    }
+                    Err(e) => {
+                        snapshot.notice = format!("Preview only — {e}");
+                        engine_state = None;
+                    }
                 }
+                needs_config = false;
             }
-            path.push(row.position);
-            if path.len() > 20_000 {
-                path = path.iter().step_by(2).copied().collect();
-            }
-            if let Some(r) = &mut recorder
-                && let Err(error) = r.write(row)
-            {
-                output_error = Some(error);
-            }
-            for error in sinks.write(row) {
-                snapshot.notice = format!("Tracking continues; {error}");
-            }
-        }
-        let publish =
-            last_publish.elapsed() >= preview_interval || step || snapshot.image.is_none();
-        let mut debug = None;
-        if let Some(engine) = &mut engine_state {
-            // Preserve pairwise diagnostic accumulation on every measured frame.
-            // Map mode already retains its numerical views; borrow them for
-            // recording and copy only the image actually published to the GUI.
-            let fallback = if engine.tracker.debug_views().is_none() {
-                Some(engine.diagnostics.update(&frame, row.as_ref()))
+            let tracking_tick = Instant::now();
+            let row = if let Some(e) = &mut engine_state {
+                Some(
+                    e.tracker
+                        .process(frame.clone())
+                        .map_err(|e| e.to_string())?,
+                )
             } else {
                 None
             };
-            let views = engine.tracker.debug_views().or(fallback.as_ref());
-            if let (Some(recorder), Some(views), Some(row)) = (&mut recorder, views, row.as_ref())
-                && output_error.is_none()
-                && let Err(error) =
-                    recorder.write_media(&frame, &rgb, views, &path, &engine.config, row)
-            {
-                output_error = Some(error);
+            let tracking_ms = tracking_tick.elapsed().as_secs_f64() * 1000.0;
+            if row.is_some() {
+                snapshot.tracking_samples += 1;
+                snapshot.tracking_ms +=
+                    (tracking_ms - snapshot.tracking_ms) / snapshot.tracking_samples as f64;
+            }
+            snapshot.processing_fps = 1.0 / tick.elapsed().as_secs_f64().max(1e-9);
+            snapshot.frames += 1;
+            snapshot.row = row.clone();
+            let mut output_error = None;
+            if let Some(row) = &row {
+                if row.accepted
+                    && let Some(engine) = &engine_state
+                {
+                    let lab = glam::DQuat::from_scaled_axis(glam::DVec3::from_array(
+                        engine.config.camera_to_lab,
+                    ));
+                    let rotation =
+                        glam::DQuat::from_scaled_axis(glam::DVec3::from_array(row.absolute_camera));
+                    let material = rotation.inverse() * (lab.inverse() * -glam::DVec3::Z);
+                    contact_trace.push_back(material.to_array());
+                    pose_history.push_back(row.absolute_camera);
+                    if contact_trace.len() > 1000 {
+                        contact_trace.pop_front();
+                        pose_history.pop_front();
+                    }
+                }
+                path.push(row.position);
+                if path.len() > 20_000 {
+                    path = path.iter().step_by(2).copied().collect();
+                }
+                if let Some(r) = &mut recorder
+                    && let Err(error) = r.write(row)
+                {
+                    output_error = Some(error);
+                }
+                for error in sinks.write(row) {
+                    snapshot.notice = format!("Tracking continues; {error}");
+                }
+            }
+            let publish =
+                last_publish.elapsed() >= preview_interval || step || snapshot.image.is_none();
+            let mut debug = None;
+            if let Some(engine) = &mut engine_state {
+                // Preserve pairwise diagnostic accumulation on every measured frame.
+                // Map mode already retains its numerical views; borrow them for
+                // recording and copy only the image actually published to the GUI.
+                let fallback = if engine.tracker.debug_views().is_none() {
+                    Some(engine.diagnostics.update(&frame, row.as_ref()))
+                } else {
+                    None
+                };
+                let views = engine.tracker.debug_views().or(fallback.as_ref());
+                if let (Some(recorder), Some(views), Some(row)) =
+                    (&mut recorder, views, row.as_ref())
+                    && output_error.is_none()
+                    && let Err(error) =
+                        recorder.write_media(&frame, &rgb, views, &path, &engine.config, row)
+                {
+                    output_error = Some(error);
+                }
+                if publish {
+                    debug = views.cloned();
+                } else {
+                    previous_debug = fallback;
+                }
             }
             if publish {
-                debug = views.cloned();
+                snapshot.image = Some(Arc::new(ViewFrame {
+                    width: frame.width(),
+                    height: frame.height(),
+                    rgb,
+                    debug,
+                }));
+                snapshot.resources.preview_updates += 1;
+                previous_rgb = None;
+                previous_debug = None;
             } else {
-                previous_debug = fallback;
+                // Exactly one unpublished RGB frame is retained, so paused edits
+                // use its original pixels without cloning every full-frame image.
+                previous_rgb = Some(rgb);
             }
-        }
-        if publish {
-            snapshot.image = Some(Arc::new(ViewFrame {
-                width: frame.width(),
-                height: frame.height(),
-                rgb,
-                debug,
-            }));
-            snapshot.resources.preview_updates += 1;
-            previous_rgb = None;
-            previous_debug = None;
-        } else {
-            // Exactly one unpublished RGB frame is retained, so paused edits
-            // use its original pixels without cloning every full-frame image.
-            previous_rgb = Some(rgb);
-        }
-        if let Some(error) = output_error {
-            promote_preview(
-                &mut snapshot,
-                &mut previous_rgb,
-                Some(&frame),
-                engine_state.as_ref(),
-                &mut previous_debug,
-            );
-            snapshot.outputs = Some(sinks.status());
-            snapshot.path = Arc::new(path.clone());
-            snapshot.contact_trace = Arc::new(contact_trace.iter().copied().collect());
-            snapshot.pose_history = Arc::new(pose_history.iter().copied().collect());
-            snapshot.notice = format!(
-                "Recording failed after measured frame {}; partial files retained: {error}",
-                snapshot.frames
-            );
-            snapshot.ended = true;
-            *shared
-                .lock()
-                .unwrap_or_else(std::sync::PoisonError::into_inner) = snapshot.clone();
-            return Err(snapshot.notice);
-        }
-        let now = Instant::now();
-        if let Some(previous) = last_completed {
-            let dt = now.duration_since(previous).as_secs_f64();
-            if dt > 0.0 && dt < 2.0 {
-                let fps = 1.0 / dt;
-                snapshot.actual_fps = if snapshot.actual_fps > 0.0 {
-                    snapshot.actual_fps * 0.85 + fps * 0.15
-                } else {
-                    fps
-                };
+            if let Some(error) = output_error {
+                promote_preview(
+                    &mut snapshot,
+                    &mut previous_rgb,
+                    Some(&frame),
+                    engine_state.as_ref(),
+                    &mut previous_debug,
+                );
+                snapshot.outputs = Some(sinks.status());
+                snapshot.path = Arc::new(path.clone());
+                snapshot.contact_trace = Arc::new(contact_trace.iter().copied().collect());
+                snapshot.pose_history = Arc::new(pose_history.iter().copied().collect());
+                snapshot.notice = format!(
+                    "Recording failed after measured frame {}; partial files retained: {error}",
+                    snapshot.frames
+                );
+                snapshot.ended = true;
+                *shared
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner) = snapshot.clone();
+                return Err(snapshot.notice.clone());
             }
-        }
-        last_completed = Some(now);
-        let elapsed = work_tick
-            .elapsed()
-            .saturating_sub(input_wait)
-            .saturating_sub(pace_wait)
-            .as_secs_f64()
-            * 1000.0;
-        snapshot.processing_ms = if snapshot.processing_ms > 0.0 {
-            snapshot.processing_ms * 0.85 + elapsed * 0.15
-        } else {
-            elapsed
-        };
-        snapshot.headroom_percent = if snapshot.source_fps > 0.0 {
-            100.0 * (1.0 - snapshot.processing_ms * snapshot.source_fps / 1000.0)
-        } else {
-            0.0
-        };
-        if publish {
             let now = Instant::now();
-            if let Some(previous) = previous_preview {
-                let elapsed = now.duration_since(previous).as_secs_f64();
-                if elapsed > 0.0 && elapsed < 2.0 {
-                    let fps = 1.0 / elapsed;
-                    snapshot.preview_fps = if snapshot.preview_fps > 0.0 {
-                        snapshot.preview_fps * 0.85 + fps * 0.15
+            if let Some(previous) = last_completed {
+                let dt = now.duration_since(previous).as_secs_f64();
+                if dt > 0.0 && dt < 2.0 {
+                    let fps = 1.0 / dt;
+                    snapshot.actual_fps = if snapshot.actual_fps > 0.0 {
+                        snapshot.actual_fps * 0.85 + fps * 0.15
                     } else {
                         fps
                     };
                 }
             }
-            previous_preview = Some(now);
-            snapshot.path = Arc::new(path.clone());
-            snapshot.contact_trace = Arc::new(contact_trace.iter().copied().collect());
-            snapshot.pose_history = Arc::new(pose_history.iter().copied().collect());
-            last_publish = Instant::now();
-        }
-        // Control/status freshness is independent of image/display cadence.
-        // Reuse immutable image/path Arcs between requested image publications.
-        if publish || last_status_publish.elapsed() >= Duration::from_millis(30) {
-            if let Some(r) = &mut recorder {
-                r.refresh_media(&mut snapshot);
+            last_completed = Some(now);
+            let elapsed = work_tick
+                .elapsed()
+                .saturating_sub(input_wait)
+                .saturating_sub(pace_wait)
+                .as_secs_f64()
+                * 1000.0;
+            snapshot.processing_ms = if snapshot.processing_ms > 0.0 {
+                snapshot.processing_ms * 0.85 + elapsed * 0.15
+            } else {
+                elapsed
+            };
+            snapshot.headroom_percent = if snapshot.source_fps > 0.0 {
+                100.0 * (1.0 - snapshot.processing_ms * snapshot.source_fps / 1000.0)
+            } else {
+                0.0
+            };
+            if publish {
+                let now = Instant::now();
+                if let Some(previous) = previous_preview {
+                    let elapsed = now.duration_since(previous).as_secs_f64();
+                    if elapsed > 0.0 && elapsed < 2.0 {
+                        let fps = 1.0 / elapsed;
+                        snapshot.preview_fps = if snapshot.preview_fps > 0.0 {
+                            snapshot.preview_fps * 0.85 + fps * 0.15
+                        } else {
+                            fps
+                        };
+                    }
+                }
+                previous_preview = Some(now);
+                snapshot.path = Arc::new(path.clone());
+                snapshot.contact_trace = Arc::new(contact_trace.iter().copied().collect());
+                snapshot.pose_history = Arc::new(pose_history.iter().copied().collect());
+                last_publish = Instant::now();
             }
-            snapshot.outputs = Some(sinks.status());
-            *shared
-                .lock()
-                .unwrap_or_else(std::sync::PoisonError::into_inner) = snapshot.clone();
-            last_status_publish = Instant::now();
+            // Control/status freshness is independent of image/display cadence.
+            // Reuse immutable image/path Arcs between requested image publications.
+            if publish || last_status_publish.elapsed() >= Duration::from_millis(30) {
+                if let Some(finalizer) = &finalizer {
+                    finalizer.refresh(&mut snapshot);
+                }
+                if let Some(r) = &mut recorder {
+                    r.refresh_media(&mut snapshot);
+                }
+                snapshot.outputs = Some(sinks.status());
+                *shared
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner) = snapshot.clone();
+                last_status_publish = Instant::now();
+            }
+            previous_frame = Some(frame);
+            previous_input = Some(input_frame);
+            step_remaining = step_remaining.saturating_sub(1);
+            snapshot.advance_remaining = step_remaining;
+            step = step_remaining > 0;
         }
-        previous_frame = Some(frame);
-        previous_input = Some(input_frame);
-        step_remaining = step_remaining.saturating_sub(1);
-        snapshot.advance_remaining = step_remaining;
-        step = step_remaining > 0;
+        Ok(())
+    })();
+    // Acquisition has stopped before any graceful shutdown joins. This path
+    // also runs after a source/output error, preserving all owned recordings.
+    drop(input);
+    let finalizer_result = if let Some(finalizer) = &mut finalizer {
+        let result = finalizer.drain();
+        finalizer.refresh(&mut snapshot);
+        result
+    } else {
+        Ok(())
+    };
+    let active_result = retire_recording(&mut recorder, None, &mut snapshot);
+    snapshot.recording = false;
+    snapshot.record_options = None;
+    *shared
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner) = snapshot;
+    processing_result.and(active_result).and(finalizer_result)
+}
+fn replace_recording(
+    recorder: &mut Option<Recorder>,
+    finalizer: Option<&RecordingFinalizer<Recorder>>,
+    directory: PathBuf,
+    doc: &ConfigDocument,
+    tuning: MediaRecordingTuning,
+    snapshot: &mut Snapshot,
+) -> Result<()> {
+    let identity = recording_destination(&directory)?;
+    reject_reserved_destination(
+        &identity,
+        recorder.iter().map(|active| active.directory.as_path()),
+    )?;
+    reject_reserved_destination(
+        &identity,
+        snapshot
+            .recording_finalizations
+            .iter()
+            .map(|state| state.directory.as_path()),
+    )?;
+    if let Some(finalizer) = finalizer {
+        finalizer.check_destination(&directory)?;
     }
-    if let Some(mut r) = recorder {
-        r.finish()?;
+    if recorder.is_some()
+        && let Some(finalizer) = finalizer
+    {
+        finalizer.check_capacity()?;
+    }
+    // Invalid destinations/options must not stop an existing take.
+    let next = Recorder::new_with_tuning(directory, doc, tuning)?;
+    retire_recording(recorder, finalizer, snapshot)?;
+    snapshot.recording_directory = Some(next.directory.clone());
+    *recorder = Some(next);
+    Ok(())
+}
+fn reject_reserved_destination<'a>(
+    directory: &Path,
+    reserved: impl Iterator<Item = &'a Path>,
+) -> Result<()> {
+    for path in reserved {
+        if path == directory || recording_destination(path)? == directory {
+            return Err(format!(
+                "Recording destination {} is active, still finalizing, or retained in recent completion history. Choose a new unique recording directory, even if the previous directory was removed.",
+                directory.display()
+            ));
+        }
+    }
+    Ok(())
+}
+/// Resolve existing ancestors/symlinks while retaining a stable absolute name
+/// for not-yet-created or externally removed recording directories.
+fn recording_destination(directory: &Path) -> Result<PathBuf> {
+    let absolute = if directory.is_absolute() {
+        directory.to_owned()
+    } else {
+        std::env::current_dir()
+            .map_err(|e| format!("Cannot resolve recording destination: {e}"))?
+            .join(directory)
+    };
+    let mut resolved = PathBuf::new();
+    for component in absolute.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                resolved.pop();
+            }
+            Component::RootDir | Component::Prefix(_) => resolved.push(component.as_os_str()),
+            Component::Normal(name) => {
+                resolved.push(name);
+                match fs::canonicalize(&resolved) {
+                    Ok(existing) => resolved = existing,
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                    Err(error) => {
+                        return Err(format!(
+                            "Cannot resolve recording destination {}: {error}",
+                            resolved.display()
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    Ok(resolved)
+}
+fn recording_rejected(snapshot: &mut Snapshot, error: String) {
+    let message = if error.starts_with("Recording change rejected:") {
+        error
+    } else {
+        format!("Recording change rejected: {error}")
+    };
+    snapshot.command_error = Some(message.clone());
+    snapshot.notice = message;
+}
+fn recording_applied(snapshot: &mut Snapshot, notice: &str) {
+    if snapshot
+        .command_error
+        .as_deref()
+        .is_some_and(|error| error.starts_with("Recording change rejected:"))
+    {
+        snapshot.command_error = None;
+    }
+    snapshot.notice = notice.into();
+    // A retry clears its transient rejection, never an actual failed commit.
+    surface_recording_finalizations(snapshot);
+}
+fn surface_recording_finalizations(snapshot: &mut Snapshot) {
+    for state in &snapshot.recording_finalizations {
+        for warning in &state.media_warnings {
+            retain_media_warning(&mut snapshot.media_warnings, warning);
+        }
+        if let Some(error) = state
+            .numeric_error
+            .as_ref()
+            .or(state.completion_error.as_ref())
+        {
+            let message = format!(
+                "Recording finalization failed for {}: {error}",
+                state.directory.display()
+            );
+            snapshot.command_error = Some(message.clone());
+            snapshot.notice = message;
+        }
+    }
+}
+fn retire_recording(
+    recorder: &mut Option<Recorder>,
+    finalizer: Option<&RecordingFinalizer<Recorder>>,
+    snapshot: &mut Snapshot,
+) -> Result<()> {
+    if recorder.is_some()
+        && let Some(finalizer) = finalizer
+    {
+        finalizer.check_capacity()?;
+    }
+    if let Some(old) = recorder.take() {
+        if let Some(finalizer) = finalizer {
+            if let Err((error, old)) = finalizer.submit(old.directory.clone(), old) {
+                *recorder = Some(old);
+                return Err(error);
+            }
+            snapshot.recording = false;
+            finalizer.refresh(snapshot);
+        } else {
+            let status = old.complete();
+            snapshot.recording = false;
+            snapshot.media_recording = status.media_recording.clone();
+            for warning in &status.media_warnings {
+                retain_media_warning(&mut snapshot.media_warnings, warning);
+            }
+            let error = status
+                .numeric_error
+                .clone()
+                .or(status.completion_error.clone());
+            if snapshot.recording_finalizations.len() >= FINALIZATION_HISTORY {
+                snapshot.recording_finalizations.remove(0);
+            }
+            snapshot.recording_finalizations.push(status);
+            if let Some(error) = error {
+                return Err(error);
+            }
+        }
     }
     Ok(())
 }
@@ -1128,6 +1508,8 @@ struct Recorder {
     media_status: Option<MediaRecordingStatus>,
     media_warnings: Vec<String>,
     media_disabled: bool,
+    numeric_error: Option<String>,
+    completion_attempted: bool,
 }
 impl Recorder {
     fn automatic(doc: &ConfigDocument, tuning: MediaRecordingTuning) -> Result<Self> {
@@ -1179,6 +1561,8 @@ impl Recorder {
             media_status: None,
             media_warnings: vec![],
             media_disabled: false,
+            numeric_error: None,
+            completion_attempted: false,
         };
         result.header()?;
         Ok(result)
@@ -1217,16 +1601,23 @@ impl Recorder {
         self.header()
     }
     fn write(&mut self, row: &TrackRow) -> Result<()> {
-        if row.accepted {
-            write_dat(&mut self.data, row).map_err(|e| e.to_string())?;
+        let result = (|| {
+            if row.accepted {
+                write_dat(&mut self.data, row).map_err(|e| e.to_string())?;
+            }
+            write_dat(&mut self.all, row).map_err(|e| e.to_string())?;
+            writeln!(
+                self.quality,
+                "{},{},{},{},{}",
+                row.frame, row.timestamp_ms, row.accepted, row.status, row.error
+            )
+            .map_err(|e| e.to_string())
+        })();
+        if let Err(error) = &result {
+            self.numeric_error
+                .get_or_insert_with(|| format!("Cannot write numeric recording: {error}"));
         }
-        write_dat(&mut self.all, row).map_err(|e| e.to_string())?;
-        writeln!(
-            self.quality,
-            "{},{},{},{},{}",
-            row.frame, row.timestamp_ms, row.accepted, row.status, row.error
-        )
-        .map_err(|e| e.to_string())
+        result
     }
     fn start_media(&mut self, fps: f64) -> Result<()> {
         if let Some(pending) = self.pending.take() {
@@ -1296,7 +1687,7 @@ impl Recorder {
     }
     fn finish(&mut self) -> Result<()> {
         // Numeric evidence is committed independently of codec/renderer health.
-        let mut first_error = None;
+        let mut first_error = self.numeric_error.clone();
         for (name, result) in [
             ("accepted data flush", self.data.flush()),
             ("all-frame data flush", self.all.flush()),
@@ -1320,32 +1711,91 @@ impl Recorder {
         if let Some(media) = self.media.take() {
             let (status, warnings) = media.finish_with_status();
             self.media_status = Some(status);
-            self.media_warnings.extend(warnings);
+            for warning in warnings {
+                retain_media_warning(&mut self.media_warnings, &warning);
+            }
         }
+        self.numeric_error = first_error.clone();
         first_error.map_or(Ok(()), Err)
+    }
+    fn complete(mut self) -> RecordingFinalization {
+        self.complete_in_place()
+    }
+    fn complete_in_place(&mut self) -> RecordingFinalization {
+        self.completion_attempted = true;
+        let numeric_error = self.finish().err();
+        let mut status = RecordingFinalization {
+            directory: self.directory.clone(),
+            state: if numeric_error.is_some() {
+                "failed"
+            } else {
+                "complete"
+            },
+            numeric_error,
+            media_warnings: self.media_warnings.clone(),
+            media_recording: self.media_status.clone(),
+            completion_error: None,
+        };
+        if let Err(error) = save_recording_completion(&status) {
+            status.state = "failed";
+            status.completion_error = Some(error);
+        }
+        status
     }
     fn stop_media_with_warning(&mut self, error: String) {
         self.media_disabled = true;
         self.pending = None;
-        self.media_warnings.push(format!(
-            "Video is partial: {error}. Numeric data, quality and live outputs continue."
-        ));
+        retain_media_warning(
+            &mut self.media_warnings,
+            &format!("Video is partial: {error}. Numeric data, quality and live outputs continue."),
+        );
     }
     fn refresh_media(&mut self, snapshot: &mut Snapshot) {
         if let Some(media) = &mut self.media {
             self.media_status = Some(media.status());
-            self.media_warnings.extend(media.take_warnings());
-        }
-        snapshot.media_recording = self.media_status.clone();
-        for warning in self.media_warnings.drain(..) {
-            if !snapshot.media_warnings.contains(&warning) {
-                if snapshot.media_warnings.len() >= 16 {
-                    snapshot.media_warnings.remove(0);
-                }
-                snapshot.media_warnings.push(warning);
+            for warning in media.take_warnings() {
+                retain_media_warning(&mut self.media_warnings, &warning);
             }
         }
+        snapshot.media_recording = self.media_status.clone();
+        for warning in &self.media_warnings {
+            retain_media_warning(&mut snapshot.media_warnings, warning);
+        }
     }
+}
+impl Drop for Recorder {
+    fn drop(&mut self) {
+        if !self.completion_attempted {
+            // Last-resort unwind/error cleanup owns the encoder joins too.
+            // Normal paths publish the returned status through the worker.
+            self.complete_in_place();
+        }
+    }
+}
+fn retain_media_warning(warnings: &mut Vec<String>, warning: &str) {
+    if !warnings.iter().any(|existing| existing == warning) {
+        if warnings.len() >= 16 {
+            warnings.remove(0);
+        }
+        warnings.push(warning.into());
+    }
+}
+fn save_recording_completion(status: &RecordingFinalization) -> Result<()> {
+    let temporary = status.directory.join("completion.json.tmp");
+    let destination = status.directory.join("completion.json");
+    let result = (|| -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let bytes = serde_json::to_vec_pretty(status)?;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&temporary)?;
+        file.write_all(&bytes)?;
+        file.sync_all()?;
+        drop(file);
+        fs::rename(&temporary, &destination)?;
+        Ok(())
+    })();
+    result.map_err(|e| format!("Cannot commit {}: {e}", destination.display()))
 }
 fn file(path: &PathBuf) -> Result<BufWriter<File>> {
     OpenOptions::new()
@@ -1366,6 +1816,389 @@ mod tests {
             root.join("examples/upstream-config.txt"),
         )?)?;
         Ok((SourceSpec::Video(root.join("examples/sample.mp4")), doc))
+    }
+    struct UnblockFinalizer(SyncSender<()>);
+    impl Drop for UnblockFinalizer {
+        fn drop(&mut self) {
+            for _ in 0..FINALIZATION_CAPACITY {
+                let _ = self.0.try_send(());
+            }
+        }
+    }
+    #[test]
+    fn removed_recording_destinations_remain_reserved_while_active_pending_or_recent() -> Result<()>
+    {
+        let (_, doc) = fixture().map_err(|e| e.to_string())?;
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|e| e.to_string())?
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("hejjetrac-reserved-destinations-{stamp}"));
+        let mut snapshot = Snapshot::default();
+        let active_directory = root.join("active");
+        let mut active = Some(Recorder::new(active_directory.clone(), &doc)?);
+        fs::remove_dir_all(&active_directory).map_err(|e| e.to_string())?;
+        let active_alias = root.join("missing").join("..").join("active");
+        let error = replace_recording(
+            &mut active,
+            None,
+            active_alias,
+            &doc,
+            MediaRecordingTuning::default(),
+            &mut snapshot,
+        )
+        .err()
+        .ok_or("removed active path was reused")?;
+        assert!(error.contains("new unique recording directory"));
+        assert!(active.is_some());
+        assert!(!active_directory.exists());
+        assert!(
+            !root.join("missing").exists(),
+            "rejection must precede directory creation"
+        );
+        drop(active.take());
+
+        let completed_directory = root.join("completed");
+        let completion = Recorder::new(completed_directory.clone(), &doc)?.complete();
+        assert_eq!(completion.state, "complete");
+        snapshot.recording_finalizations.push(completion);
+        fs::remove_dir_all(&completed_directory).map_err(|e| e.to_string())?;
+        let error = replace_recording(
+            &mut active,
+            None,
+            root.join(".").join("completed"),
+            &doc,
+            MediaRecordingTuning::default(),
+            &mut snapshot,
+        )
+        .err()
+        .ok_or("recent completed path was reused")?;
+        assert!(error.contains("recent completion history"));
+        assert!(!completed_directory.exists());
+        assert_eq!(snapshot.recording_finalizations.len(), 1);
+        assert_eq!(snapshot.recording_finalizations[0].state, "complete");
+        assert!(
+            !snapshot
+                .recording_finalizations
+                .iter()
+                .any(RecordingFinalization::pending)
+        );
+
+        let pending_directory = root.join("pending");
+        let recorder = Recorder::new(pending_directory.clone(), &doc)?;
+        let (release, gate) = mpsc::sync_channel(FINALIZATION_CAPACITY);
+        let (started, observed) = mpsc::sync_channel(1);
+        let mut finalizer = RecordingFinalizer::start(move |recorder: Recorder| {
+            let _ = started.send(());
+            let _ = gate.recv();
+            recorder.complete()
+        })?;
+        let _unblock = UnblockFinalizer(release.clone());
+        finalizer
+            .submit(pending_directory.clone(), recorder)
+            .map_err(|(error, _)| error)?;
+        observed
+            .recv_timeout(Duration::from_secs(2))
+            .map_err(|e| e.to_string())?;
+        fs::remove_dir_all(&pending_directory).map_err(|e| e.to_string())?;
+        // The snapshot deliberately lacks the queued entry: authoritative
+        // finalizer ownership still prevents reuse before another status poll.
+        let error = replace_recording(
+            &mut active,
+            Some(&finalizer),
+            root.join("absent").join("..").join("pending"),
+            &doc,
+            MediaRecordingTuning::default(),
+            &mut snapshot,
+        )
+        .err()
+        .ok_or("removed pending path was reused")?;
+        assert!(error.contains("still finalizing"));
+        assert!(active.is_none());
+        assert!(!pending_directory.exists());
+        assert!(!root.join("absent").exists());
+        finalizer.refresh(&mut snapshot);
+        assert_eq!(snapshot.recording_finalizations.len(), 1);
+        assert!(snapshot.recording_finalizations[0].pending());
+        release.send(()).map_err(|e| e.to_string())?;
+        finalizer.drain()?;
+        finalizer.refresh(&mut snapshot);
+        assert_eq!(snapshot.recording_finalizations.len(), 1);
+        assert_eq!(snapshot.recording_finalizations[0].state, "failed");
+        assert!(
+            snapshot.recording_finalizations[0]
+                .completion_error
+                .is_some()
+        );
+        assert!(!pending_directory.join("completion.json").exists());
+        fs::remove_dir_all(root).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    #[cfg(unix)]
+    #[test]
+    fn recording_destination_identity_resolves_symlink_ancestors_with_missing_suffix() -> Result<()>
+    {
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|e| e.to_string())?
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("hejjetrac-destination-alias-{stamp}"));
+        fs::create_dir_all(root.join("real")).map_err(|e| e.to_string())?;
+        std::os::unix::fs::symlink(root.join("real"), root.join("alias"))
+            .map_err(|e| e.to_string())?;
+        let identity = recording_destination(&root.join("real").join("take"))?;
+        let alias = root.join("alias").join("missing").join("..").join("take");
+        assert_eq!(recording_destination(&alias)?, identity);
+        assert!(reject_reserved_destination(&identity, std::iter::once(alias.as_path())).is_err());
+        assert!(!root.join("real").join("take").exists());
+        fs::remove_dir_all(root).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    #[test]
+    fn live_rotation_keeps_processing_real_frames_with_bounded_fifo_finalization() -> Result<()> {
+        let (SourceSpec::Video(input), mut doc) = fixture().map_err(|e| e.to_string())? else {
+            return Err("video fixture required".into());
+        };
+        doc.set("save_raw", "n").map_err(|e| e.to_string())?;
+        doc.set("save_debug", "n").map_err(|e| e.to_string())?;
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|e| e.to_string())?
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("hejjetrac-async-finalization-{stamp}"));
+        let takes: Vec<_> = (0..4).map(|i| root.join(format!("take-{i}"))).collect();
+        let (release, gate) = mpsc::sync_channel(FINALIZATION_CAPACITY);
+        let (started, observed) = mpsc::sync_channel(FINALIZATION_CAPACITY);
+        let mut finalizer = RecordingFinalizer::start(move |recorder: Recorder| {
+            let _ = started.send(recorder.directory.clone());
+            let _ = gate.recv();
+            recorder.complete()
+        })?;
+        // Always release the artificial I/O gate before the owning finalizer's
+        // Drop joins, including assertion/error exits from this regression.
+        let _unblock = UnblockFinalizer(release.clone());
+        let mut recorder = Some(Recorder::new(takes[0].clone(), &doc)?);
+        let mut snapshot = Snapshot::default();
+        let mut video = VideoSource::open(&input).map_err(|e| e.to_string())?;
+        let mut tracker = engine(&doc, video.info.width, video.info.height, None)?
+            .0
+            .tracker;
+        let mut clocks = vec![];
+        for index in 0..8 {
+            if matches!(index, 2 | 4) {
+                replace_recording(
+                    &mut recorder,
+                    Some(&finalizer),
+                    takes[index / 2].clone(),
+                    &doc,
+                    MediaRecordingTuning::default(),
+                    &mut snapshot,
+                )?;
+                if index == 2 {
+                    assert_eq!(
+                        observed
+                            .recv_timeout(Duration::from_secs(2))
+                            .map_err(|e| e.to_string())?,
+                        takes[0]
+                    );
+                }
+            }
+            if index == 6 {
+                let error = replace_recording(
+                    &mut recorder,
+                    Some(&finalizer),
+                    takes[3].clone(),
+                    &doc,
+                    MediaRecordingTuning::default(),
+                    &mut snapshot,
+                )
+                .err()
+                .ok_or("third pending rotation unexpectedly accepted")?;
+                assert!(error.contains("two earlier takes"));
+                assert!(
+                    !takes[3].exists(),
+                    "capacity rejection must not create files"
+                );
+                assert_eq!(
+                    recorder.as_ref().ok_or("active take lost")?.directory,
+                    takes[2]
+                );
+                assert!(retire_recording(&mut recorder, Some(&finalizer), &mut snapshot).is_err());
+                assert_eq!(
+                    recorder
+                        .as_ref()
+                        .ok_or("active take lost on Stop")?
+                        .directory,
+                    takes[2]
+                );
+            }
+            let frame = video
+                .next_frame()
+                .map_err(|e| e.to_string())?
+                .ok_or("fixture ended")?;
+            let row = tracker.process(frame).map_err(|e| e.to_string())?;
+            clocks.push(row.timestamp_ms);
+            recorder.as_mut().ok_or("active take lost")?.write(&row)?;
+        }
+        assert!(clocks.windows(2).all(|pair| pair[1] > pair[0]));
+        assert!(!takes[0].join("completion.json").exists());
+        finalizer.refresh(&mut snapshot);
+        assert_eq!(
+            snapshot.recording_finalizations.len(),
+            FINALIZATION_CAPACITY
+        );
+        assert!(
+            snapshot
+                .recording_finalizations
+                .iter()
+                .all(RecordingFinalization::pending)
+        );
+        // Eight real decoded/tracked frames and two rotations completed while
+        // the first finalization was deterministically blocked, with no join.
+        release.send(()).map_err(|e| e.to_string())?;
+        assert_eq!(
+            observed
+                .recv_timeout(Duration::from_secs(2))
+                .map_err(|e| e.to_string())?,
+            takes[1]
+        );
+        assert!(
+            takes[0].join("completion.json").exists(),
+            "FIFO finalization order"
+        );
+        release.send(()).map_err(|e| e.to_string())?;
+        finalizer.drain()?;
+        finalizer.refresh(&mut snapshot);
+        assert!(
+            snapshot
+                .recording_finalizations
+                .iter()
+                .all(|s| s.state == "complete")
+        );
+        retire_recording(&mut recorder, None, &mut snapshot)?;
+        let mut identities = vec![];
+        for (directory, count) in takes[..3].iter().zip([2, 2, 4]) {
+            let text = fs::read_to_string(directory.join("epoch-0000-all-frames.dat"))
+                .map_err(|e| e.to_string())?;
+            let rows: Vec<_> = text.lines().collect();
+            assert_eq!(rows.len(), count);
+            for row in rows {
+                identities.push(
+                    row.split(',')
+                        .next()
+                        .ok_or("missing frame identity")?
+                        .trim()
+                        .parse::<u64>()
+                        .map_err(|e| e.to_string())?,
+                );
+            }
+            assert_eq!(
+                fs::read_to_string(directory.join("epoch-0000-quality.csv"))
+                    .map_err(|e| e.to_string())?
+                    .lines()
+                    .count(),
+                count + 1
+            );
+            let marker: serde_json::Value = serde_json::from_slice(
+                &fs::read(directory.join("completion.json")).map_err(|e| e.to_string())?,
+            )
+            .map_err(|e| e.to_string())?;
+            assert_eq!(marker["state"], "complete");
+            assert!(marker["numeric_error"].is_null());
+            assert!(!directory.join("completion.json.tmp").exists());
+        }
+        assert!(identities.windows(2).all(|pair| pair[1] == pair[0] + 1));
+        fs::remove_dir_all(root).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    #[test]
+    fn completion_reports_numeric_and_marker_failures_and_retains_reported_warnings() -> Result<()>
+    {
+        let (_, doc) = fixture().map_err(|e| e.to_string())?;
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|e| e.to_string())?
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("hejjetrac-finalization-errors-{stamp}"));
+        let directory = root.join("numeric");
+        let mut recorder = Recorder::new(directory.clone(), &doc)?;
+        recorder.numeric_error = Some("injected earlier numeric write failure".into());
+        recorder.stop_media_with_warning("injected media failure".into());
+        recorder.refresh_media(&mut Snapshot::default());
+        let status = recorder.complete();
+        assert_eq!(status.state, "failed");
+        assert!(status.numeric_error.is_some());
+        assert_eq!(
+            status.media_warnings.len(),
+            1,
+            "polling must not consume completion evidence"
+        );
+        let marker: serde_json::Value = serde_json::from_slice(
+            &fs::read(directory.join("completion.json")).map_err(|e| e.to_string())?,
+        )
+        .map_err(|e| e.to_string())?;
+        assert_eq!(marker["state"], "failed");
+        assert_eq!(
+            marker["media_warnings"]
+                .as_array()
+                .ok_or("missing warnings")?
+                .len(),
+            1
+        );
+        let directory = root.join("marker");
+        let recorder = Recorder::new(directory.clone(), &doc)?;
+        fs::create_dir(directory.join("completion.json.tmp")).map_err(|e| e.to_string())?;
+        let status = recorder.complete();
+        assert_eq!(status.state, "failed");
+        assert!(status.numeric_error.is_none());
+        assert!(
+            status
+                .completion_error
+                .as_deref()
+                .is_some_and(|e| e.contains("Cannot commit"))
+        );
+        assert!(!directory.join("completion.json").exists());
+        let directory = root.join("media-warning");
+        let mut recorder = Recorder::new(directory.clone(), &doc)?;
+        recorder.stop_media_with_warning("optional stream stopped".into());
+        let status = recorder.complete();
+        assert_eq!(
+            status.state, "complete",
+            "numeric completion is independent of optional media health"
+        );
+        assert!(status.numeric_error.is_none());
+        assert_eq!(status.media_warnings.len(), 1);
+        fs::remove_dir_all(root).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    #[test]
+    fn finalizer_drop_drains_owned_recorders_and_commits_completion_markers() -> Result<()> {
+        let (_, doc) = fixture().map_err(|e| e.to_string())?;
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|e| e.to_string())?
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("hejjetrac-finalizer-drop-{stamp}"));
+        let finalizer = RecordingFinalizer::start(Recorder::complete)?;
+        for index in 0..2 {
+            let directory = root.join(format!("take-{index}"));
+            let recorder = Recorder::new(directory.clone(), &doc)?;
+            finalizer
+                .submit(directory, recorder)
+                .map_err(|(error, _)| error)?;
+        }
+        drop(finalizer);
+        for index in 0..2 {
+            let directory = root.join(format!("take-{index}"));
+            let marker: serde_json::Value = serde_json::from_slice(
+                &fs::read(directory.join("completion.json")).map_err(|e| e.to_string())?,
+            )
+            .map_err(|e| e.to_string())?;
+            assert_eq!(marker["state"], "complete");
+            assert!(!directory.join("completion.json.tmp").exists());
+        }
+        fs::remove_dir_all(root).map_err(|e| e.to_string())?;
+        Ok(())
     }
     fn wait_for(worker: &Worker, test: impl Fn(&Snapshot) -> bool) -> Result<Snapshot> {
         wait_for_timeout(worker, Duration::from_secs(15), test)
@@ -1416,6 +2249,133 @@ mod tests {
             }
             thread::sleep(Duration::from_millis(10));
         }
+    }
+    #[test]
+    fn recording_retry_clears_rejection_but_preserves_failed_completion_evidence() -> Result<()> {
+        let (source, mut doc) = fixture().map_err(|e| e.to_string())?;
+        doc.set("save_raw", "n").map_err(|e| e.to_string())?;
+        doc.set("save_debug", "n").map_err(|e| e.to_string())?;
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|e| e.to_string())?
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("hejjetrac-recording-retry-{stamp}"));
+        let occupied = root.join("existing");
+        fs::create_dir_all(&occupied).map_err(|e| e.to_string())?;
+        let worker = Worker::start(source, doc, true)?;
+        wait_for(&worker, |s| s.frames >= 2)?;
+        worker.send(Command::Pause(true))?;
+        let before = wait_for(&worker, |s| s.paused)?;
+        worker.send(Command::Record(occupied.clone()))?;
+        let rejected = wait_for(&worker, |s| {
+            s.command_error
+                .as_deref()
+                .is_some_and(|e| e.starts_with("Recording change rejected:"))
+        })?;
+        assert_eq!(rejected.frames, before.frames);
+        assert!(!rejected.recording);
+        let first = root.join("first");
+        worker.send(Command::Record(first.clone()))?;
+        let started = wait_for(&worker, |s| {
+            s.recording && s.recording_directory.as_ref() == Some(&first)
+        })?;
+        assert!(started.command_error.is_none());
+        worker.send(Command::Advance(3))?;
+        let advanced = wait_for(&worker, |s| {
+            s.frames == before.frames + 3 && s.advance_remaining == 0
+        })?;
+        worker.send(Command::RecordOptions(
+            occupied.clone(),
+            fictrac_control::RecordOptions {
+                raw: false,
+                debug: false,
+            },
+            MediaRecordingTuning::default(),
+        ))?;
+        let rejected = wait_for(&worker, |s| {
+            s.command_error
+                .as_deref()
+                .is_some_and(|e| e.starts_with("Recording change rejected:"))
+        })?;
+        assert_eq!(rejected.frames, advanced.frames);
+        assert!(rejected.recording);
+        assert_eq!(rejected.recording_directory.as_ref(), Some(&first));
+        worker.send(Command::StopRecord)?;
+        let stopped = wait_for(&worker, |s| !s.recording && s.command_error.is_none())?;
+        assert_eq!(stopped.frames, advanced.frames);
+        assert_eq!(
+            fs::read_to_string(first.join("epoch-0000-all-frames.dat"))
+                .map_err(|e| e.to_string())?
+                .lines()
+                .count(),
+            3
+        );
+        assert_eq!(
+            fs::read_to_string(first.join("epoch-0000-quality.csv"))
+                .map_err(|e| e.to_string())?
+                .lines()
+                .count(),
+            4
+        );
+        assert!(first.join("completion.json").exists());
+
+        // A later RecordOptions retry clears an earlier Record rejection too.
+        worker.send(Command::Record(occupied))?;
+        wait_for(&worker, |s| {
+            s.command_error
+                .as_deref()
+                .is_some_and(|e| e.starts_with("Recording change rejected:"))
+        })?;
+        let second = root.join("second");
+        worker.send(Command::RecordOptions(
+            second.clone(),
+            fictrac_control::RecordOptions {
+                raw: false,
+                debug: false,
+            },
+            MediaRecordingTuning::default(),
+        ))?;
+        let started = wait_for(&worker, |s| {
+            s.recording && s.recording_directory.as_ref() == Some(&second)
+        })?;
+        assert!(started.command_error.is_none());
+        worker.send(Command::Advance(2))?;
+        wait_for(&worker, |s| {
+            s.frames == before.frames + 5 && s.advance_remaining == 0
+        })?;
+        // A real marker-write failure must survive a successful later start.
+        fs::create_dir(second.join("completion.json.tmp")).map_err(|e| e.to_string())?;
+        worker.send(Command::StopRecord)?;
+        wait_for(&worker, |s| {
+            !s.recording
+                && s.recording_finalizations
+                    .iter()
+                    .any(|f| f.directory == second && f.state == "failed")
+        })?;
+        let third = root.join("third");
+        worker.send(Command::Record(third.clone()))?;
+        let restarted = wait_for(&worker, |s| {
+            s.recording && s.recording_directory.as_ref() == Some(&third)
+        })?;
+        assert!(
+            restarted
+                .command_error
+                .as_deref()
+                .is_some_and(|e| e.starts_with("Recording finalization failed for "))
+        );
+        assert!(
+            restarted
+                .recording_finalizations
+                .iter()
+                .any(|f| f.directory == second && f.completion_error.is_some())
+        );
+        worker.send(Command::StopRecord)?;
+        wait_for(&worker, |s| {
+            !s.recording && third.join("completion.json").exists()
+        })?;
+        drop(worker);
+        fs::remove_dir_all(root).map_err(|e| e.to_string())?;
+        Ok(())
     }
     #[test]
     fn pause_step_reconfigure_and_diagnostics_are_independent() -> Result<()> {
@@ -1608,7 +2568,22 @@ mod tests {
                 &row,
             )?;
         }
-        recorder.finish()?;
+        let finalized = recorder.complete();
+        assert_eq!(finalized.state, "complete");
+        let media = finalized
+            .media_recording
+            .as_ref()
+            .ok_or("missing finalized media status")?;
+        assert!(media.raw.container_finalized && media.debug.container_finalized);
+        assert_eq!(media.raw.encoded_frames, 3);
+        assert_eq!(media.debug.encoded_frames, 3);
+        let marker: serde_json::Value = serde_json::from_slice(
+            &fs::read(directory.join("completion.json")).map_err(|e| e.to_string())?,
+        )
+        .map_err(|e| e.to_string())?;
+        assert_eq!(marker["state"], "complete");
+        assert_eq!(marker["media_recording"]["raw"]["encoded_frames"], 3);
+        assert_eq!(marker["media_recording"]["debug"]["encoded_frames"], 3);
         for (name, width, height) in [("raw.avi", 384, 288), ("debug.avi", 640, 480)] {
             let mut result = VideoSource::open(&directory.join("epoch-0000-media").join(name))
                 .map_err(|e| e.to_string())?;

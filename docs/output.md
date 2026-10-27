@@ -76,6 +76,23 @@ numeric/submitted/encoded counts, queue limits, source-frame/timestamp endpoints
 the applied overflow policy, container finalization and warnings. Inspect them alongside all-frame data;
 camera delivered counters alone do not establish sensor-level completeness.
 
+For live native Stop/rotation, numeric flush/fsync and encoder drains run in a
+single owned background finalizer per camera. The bound is two retired takes
+(queued plus running) and the active take; a capacity rejection retains the
+active take without creating a new directory or resetting tracking. Files are
+ready for verification only after that take's atomic `completion.json`, rather
+than a changed active-directory acknowledgment or `recording=false`. The marker
+records `directory`, terminal `state`, `numeric_error`, `media_recording`,
+`media_warnings` and `completion_error`. `complete` means numeric commit and
+finalization finished; optional media can remain explicitly partial/failed.
+Inspect its stream states and encoded counts before treating video as complete.
+A numeric finalization failure produces a `failed` marker; inability to commit
+the marker is exposed in native `recording_finalizations` status. Its recent
+history is bounded to 16 entries. Graceful shutdown drains owned jobs after
+acquisition stops. File replay finalization and configuration-epoch changes
+remain synchronous. Abrupt process termination/power loss can leave a take
+without a completion marker.
+
 On Linux, live video workers check available output-filesystem space before
 their first frame and at most every 100 ms. Below 512 MiB, or if the check fails,
 that optional stream stops as a failed partial prefix, preserving space for

@@ -9,36 +9,11 @@ use fictrac_core::Config;
 use fictrac_io::{load_config_text, parameter_description};
 use glam::{DQuat, DVec3};
 const YELLOW: Color32 = Color32::from_rgb(230, 235, 35);
-const ACCENT: Color32 = Color32::from_rgb(64, 205, 184);
 
 pub(crate) fn configure_appearance(ctx: &egui::Context) {
     ctx.set_theme(egui::ThemePreference::System);
     ctx.all_styles_mut(|style| {
         style.spacing.button_padding = egui::vec2(10.0, 6.0);
-        style.visuals.selection.bg_fill = if style.visuals.dark_mode {
-            Color32::from_rgb(22, 104, 98)
-        } else {
-            Color32::from_rgb(182, 233, 225)
-        };
-        style.visuals.hyperlink_color = if style.visuals.dark_mode {
-            ACCENT
-        } else {
-            Color32::from_rgb(0, 109, 107)
-        };
-        style.visuals.warn_fg_color = if style.visuals.dark_mode {
-            Color32::from_rgb(238, 180, 80)
-        } else {
-            Color32::from_rgb(145, 85, 12)
-        };
-        style.visuals.error_fg_color = if style.visuals.dark_mode {
-            Color32::from_rgb(245, 110, 120)
-        } else {
-            Color32::from_rgb(185, 35, 55)
-        };
-        if style.visuals.dark_mode {
-            style.visuals.panel_fill = Color32::from_rgb(22, 29, 39);
-            style.visuals.window_fill = Color32::from_rgb(26, 34, 45);
-        }
     });
 }
 #[derive(Clone, Copy)]
@@ -178,6 +153,7 @@ impl Session {
                 if self.tool != Tool::Inspect {
                     self.cancel_calibration();
                 }
+                self.set_calibration_panel(false);
                 self.show_settings = false;
             }
         }
@@ -221,9 +197,6 @@ impl Session {
         if self.tool != Tool::Inspect {
             egui::TopBottomPanel::top(egui::Id::new(("calibration-guide", self.id)))
                 .show(ctx, |ui| self.calibration_banner(ui));
-        } else if self.show_diagnostics && chrome.toolbar {
-            egui::TopBottomPanel::top(egui::Id::new(("diagnostic-calibration", self.id)))
-                .show(ctx, |ui| self.diagnostic_calibration_controls(ui));
         }
         self.refresh_textures(ctx);
         egui::CentralPanel::default()
@@ -256,7 +229,15 @@ impl Session {
                 .map(|(_, inner)| inner)
                 .unwrap_or(egui::vec2(440.0, 640.0));
             let mut builder = egui::ViewportBuilder::default()
-                .with_title(format!("HejjéTrac · {} configuration", self.display_name()))
+                .with_title(format!(
+                    "HejjéTrac · {} {}",
+                    self.display_name(),
+                    if self.show_calibration {
+                        "calibration"
+                    } else {
+                        "configuration"
+                    }
+                ))
                 .with_inner_size(inner)
                 .with_max_inner_size(self.max_window_inner_size)
                 .with_min_inner_size([340.0_f32.min(inner.x), 360.0_f32.min(inner.y)]);
@@ -272,7 +253,13 @@ impl Session {
                         close = true;
                     }
                     egui::CentralPanel::default().show(ctx, |ui| {
-                        egui::ScrollArea::vertical().show(ui, |ui| self.settings(ui));
+                        egui::ScrollArea::vertical().show(ui, |ui| {
+                            if self.show_calibration {
+                                self.calibration_panel(ui);
+                            } else {
+                                self.settings(ui);
+                            }
+                        });
                     });
                     if !ctx.wants_keyboard_input() {
                         if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::F))
@@ -292,6 +279,7 @@ impl Session {
                 },
             );
             if close {
+                self.set_calibration_panel(false);
                 self.show_settings = false;
             }
         }
@@ -328,11 +316,8 @@ impl Session {
     }
     fn toolbar_row(&mut self, ui: &mut egui::Ui) {
         ui.spacing_mut().item_spacing.x = 3.0;
+        ui.spacing_mut().button_padding = egui::vec2(6.0, 6.0);
         let width = ui.available_width();
-        if width > 620.0 {
-            ui.strong(self.display_name());
-            ui.separator();
-        }
         if icons::button(
             ui,
             Icon::Reset,
@@ -361,62 +346,74 @@ impl Session {
                 self.begin_recording();
             }
         }
-        if width < 270.0 {
-            return;
-        }
-        if width > 400.0 {
-            let record_menu = icons::menu(ui, Icon::ChevronDown, "Recording options", |ui| {
-                self.recording_menu(ui)
-            })
-            .response;
-            record_menu.on_hover_text("Choose raw video, processed video, both, or data only");
-            icons::menu(ui, Icon::Camera, "Select camera or video", |ui| {
+        let full_row = width >= 290.0;
+        if full_row {
+            icons::menu(ui, Icon::Camera, "Choose camera or video", |ui| {
                 self.source_controls(ui)
-            })
-            .response
-            .on_hover_text("Select a camera or video; playback controls");
-        }
-        if icons::button(
-            ui,
-            Icon::Crop,
-            !self.full_image,
-            "Switch full source / cropped ball view; preserve pixel aspect ratio",
-        )
-        .clicked()
-        {
-            self.full_image = !self.full_image;
-        }
-        if width > 400.0
-            && icons::button(
+            });
+            if icons::button(
+                ui,
+                Icon::Crop,
+                !self.full_image,
+                "Full source / focused ball view; source pixels and tracking stay unchanged",
+            )
+            .clicked()
+            {
+                self.full_image = !self.full_image;
+            }
+            if icons::button(
                 ui,
                 Icon::Diagnostics,
                 self.show_diagnostics,
-                "Toggle the six FicTrac diagnostic panels",
+                "Full debug / normal view",
             )
             .clicked()
-        {
-            self.show_diagnostics = !self.show_diagnostics;
-        }
-        if icons::button(
-            ui,
-            Icon::Settings,
-            self.show_settings,
-            "Edit configuration and calibrate one step at a time",
-        )
-        .clicked()
-        {
-            self.show_settings = !self.show_settings;
-        }
-        icons::menu(ui, Icon::More, "More actions", |ui| {
-            if width <= 400.0 {
-                ui.menu_button("Source", |ui| self.source_controls(ui));
-                ui.menu_button("Recording mode", |ui| self.recording_menu(ui));
-                ui.checkbox(&mut self.show_diagnostics, "Diagnostic panels");
+            {
+                self.show_diagnostics = !self.show_diagnostics;
             }
+        }
+        if width >= 210.0 {
+            if icons::button(
+                ui,
+                Icon::Calibration,
+                self.show_calibration,
+                "Check saved calibration; review or recalibrate just the step you need",
+            )
+            .clicked()
+            {
+                self.set_calibration_panel(!self.show_calibration);
+            }
+            if icons::button(
+                ui,
+                Icon::Settings,
+                self.show_settings && !self.show_calibration,
+                "Configure this rig",
+            )
+            .clicked()
+            {
+                self.set_settings_panel(!self.show_settings || self.show_calibration);
+            }
+        }
+        icons::menu(ui, Icon::More, "Recording, view and window options", |ui| {
+            ui.menu_button("Recording", |ui| self.recording_menu(ui));
+            if !full_row {
+                ui.menu_button("Camera or video", |ui| self.source_controls(ui));
+                ui.checkbox(&mut self.full_image, "Full source image");
+                ui.checkbox(&mut self.show_diagnostics, "Full debug view");
+            }
+            if width < 210.0 {
+                if ui.button("Check calibration…").clicked() {
+                    self.set_calibration_panel(true);
+                    ui.close();
+                }
+                if ui.button("Configure rig…").clicked() {
+                    self.set_settings_panel(true);
+                    ui.close();
+                }
+            }
+            ui.separator();
             self.window_menu(ui);
-        })
-        .response
-        .on_hover_text("Window, view and configuration actions");
+        });
     }
     fn status_bar(&mut self, ui: &mut egui::Ui) {
         let quality = self.snapshot.row.as_ref().is_some_and(|r| r.accepted);
@@ -519,6 +516,21 @@ impl Session {
                         .map(|p| p.display().to_string())
                         .unwrap_or_default(),
                 );
+            }
+            let pending = self
+                .snapshot
+                .recording_finalizations
+                .iter()
+                .filter(|take| matches!(take.state, "queued" | "finalizing"))
+                .count();
+            if pending > 0 {
+                let detail = "Recording capture has stopped for these takes. Files are still saving in the background; tracking continues. Normal app closure waits for saving to finish.";
+                if ui.available_width() >= 65.0 {
+                    ui.small(format!("Saving {pending}")).on_hover_text(detail);
+                } else {
+                    ui.add(egui::Spinner::new().size(10.0))
+                        .on_hover_text(format!("Saving {pending} recordings. {detail}"));
+                }
             }
             if self.history.text != self.saved {
                 ui.small("•").on_hover_text("Unsaved configuration changes");
@@ -673,13 +685,15 @@ impl Session {
                 self.points.len() >= if self.tool == Tool::Square { 4 } else { 3 }
                 && progress.is_ok()
             );
-            let label = if self.tool == Tool::Square { "Finish & resume" } else { "Continue" };
+            let label = if self.calibration_review {
+                if self.tool == Tool::Square { "Keep saved & finish" } else { "Keep saved / skip" }
+            } else if self.tool == Tool::Square { "Finish calibration" } else { "Use fit & continue" };
             if ui.add_enabled(ready, egui::Button::new(label)).on_hover_text("Use the current valid fit and go to the next step. Save configuration afterward to keep it for future launches.").clicked() {
                 let result = self.advance_calibration_step();
                 self.report(result);
             }
-            if ui.small_button("Settings").clicked() {
-                self.show_settings = true;
+            if ui.small_button("Calibration").clicked() {
+                self.set_calibration_panel(true);
             }
             if ui.small_button("Cancel").on_hover_text("Discard this draft and restore the previous playback state.").clicked() {
                 self.cancel_calibration();
@@ -721,46 +735,79 @@ impl Session {
             });
         }
     }
-    fn diagnostic_calibration_controls(&mut self, ui: &mut egui::Ui) {
-        ui.horizontal_wrapped(|ui| {
-            ui.label("Saved calibration");
-            for (label, tool) in [
-                ("Redraw ball", Tool::Rim),
-                ("Redraw exclusions", Tool::Exclude),
-                ("Redraw lab", Tool::Square),
-            ] {
-                if ui.button(label).on_hover_text("Pause the source and replace just this layer. The saved setup stays intact until Continue.").clicked() {
-                    self.redraw_calibration(tool);
+    fn calibration_panel(&mut self, ui: &mut egui::Ui) {
+        ui.heading("Check calibration");
+        ui.label("Compare the saved outlines and axes with the live image before your run. Alignment needs a visual check; the saved setup alone cannot detect a bumped camera or holder.");
+        self.camera_geometry_help(ui);
+        if ui.add_enabled(self.history.text != self.saved, egui::Button::new("Save calibration")).on_hover_text("Save this rig's configuration after a calibrated change (same as Save configuration).").clicked() {
+            let result = self.save(false); self.report(result);
+        }
+        if self.history.text != self.saved {
+            ui.colored_label(ui.visuals().warn_fg_color, "Unsaved calibration changes");
+        }
+        ui.add_space(6.0);
+        if self.tool == Tool::Inspect {
+            self.calibration_overview(ui);
+            ui.add_space(6.0);
+            ui.horizontal(|ui| {
+                if ui.button("Done checking").clicked() {
+                    self.set_calibration_panel(false);
                 }
+                if ui.button("Configure rig…").clicked() {
+                    self.set_settings_panel(true);
+                }
+            });
+        } else {
+            self.calibration_settings(ui);
+            ui.separator();
+            if ui
+                .button("Cancel this draft / return to saved setup")
+                .clicked()
+            {
+                self.cancel_calibration();
             }
-            if ui.button("Full configuration…").clicked() {
-                self.show_config_text = true;
-                self.show_settings = true;
-            }
+        }
+    }
+    fn calibration_overview(&mut self, ui: &mut egui::Ui) {
+        for (number, title, short, tool) in [
+            (1, "Ball outline", "ball", Tool::Rim),
+            (2, "Excluded regions", "exclusions", Tool::Exclude),
+            (3, "Lab orientation", "lab", Tool::Square),
+        ] {
+            egui::Frame::group(ui.style()).show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    ui.strong(format!("{number} · {title}"));
+                    let available = self.saved_layer_available(tool);
+                    ui.colored_label(if available { ui.visuals().hyperlink_color } else { ui.visuals().warn_fg_color }, if available { "Saved" } else { "Not configured" });
+                });
+                ui.label(self.saved_calibration_summary_for(tool));
+                ui.horizontal(|ui| {
+                    if ui.button(format!("Review {short}")).on_hover_text("Pause and inspect this saved layer without changing any configuration fields.").clicked() {
+                        let result = self.review_calibration_step(tool); self.report(result);
+                    }
+                    if ui.button(format!("Redraw {short}")).on_hover_text("Replace only this step. Other saved calibration layers remain intact.").clicked() {
+                        self.redraw_calibration(tool);
+                    }
+                });
+            });
+            ui.add_space(5.0);
+        }
+        ui.horizontal(|ui| {
+            if ui.button("Calibrate again…").on_hover_text("Start the guided Ball → Exclusions → Lab pipeline. Keep saved / skip is available at every step.").clicked() { self.redraw_calibration(Tool::Rim); }
+            if ui.button("Full configuration…").clicked() { self.set_settings_panel(true); self.show_config_text = true; }
         });
+        ui.checkbox(&mut self.show_overlays, "Show saved outlines and axes");
+        ui.small("Keep any layer that already lines up. Save after recalibration to use the new setup next time.");
+    }
+    #[cfg(test)]
+    fn diagnostic_calibration_controls(&mut self, ui: &mut egui::Ui) {
+        self.calibration_overview(ui);
     }
     fn calibration_settings(&mut self, ui: &mut egui::Ui) {
         ui.heading("Calibration");
         self.camera_geometry_help(ui);
         if self.tool == Tool::Inspect {
-            ui.label("Redraw the ball outline, excluded regions and lab orientation in the preview. Keep any saved layer that is already correct.");
-            if ui.button("Calibrate again…").on_hover_text("Pause this source and immediately place new ball-edge marks. Continue applies each valid layer.").clicked() {
-                self.redraw_calibration(Tool::Rim);
-            }
-            ui.horizontal_wrapped(|ui| {
-                for (label, tool) in [
-                    ("Redraw exclusions", Tool::Exclude),
-                    ("Redraw lab", Tool::Square),
-                ] {
-                    if ui.button(label).clicked() {
-                        self.redraw_calibration(tool);
-                    }
-                }
-            });
-            ui.checkbox(&mut self.show_overlays, "Inspect all saved outlines")
-                .on_hover_text(
-                    "Show the current rim, exclusions and lab axes without editing them.",
-                );
+            self.calibration_overview(ui);
         } else {
             let before = self.tool;
             ui.horizontal_wrapped(|ui| self.calibration_tools(ui));
@@ -833,7 +880,7 @@ impl Session {
                     }
                     ui.horizontal_wrapped(|ui| {
                         let valid = !self.points.is_empty() && self.calibration_draft_document().is_ok();
-                        if ui.add_enabled(valid, egui::Button::new(if self.tool == Tool::Square { "Finish & resume" } else { "Continue" })).on_hover_text("Use the automatic fit and continue. This step becomes one undoable edit.").clicked() { let result = self.advance_calibration_step(); self.report(result); }
+                        if ui.add_enabled(valid, egui::Button::new(if self.tool == Tool::Square { "Finish calibration" } else { "Continue" })).on_hover_text("Use the automatic fit and continue. This step becomes one undoable edit.").clicked() { let result = self.advance_calibration_step(); self.report(result); }
                         if self.tool == Tool::Exclude && ui.add_enabled(valid, egui::Button::new("Add this region")).on_hover_text("Use this polygon and immediately draw another region.").clicked() { let result = self.finish_points().and_then(|_| self.choose_calibration_action("add")); self.report(result); }
                         if ui.button("Clear draft points").clicked() { self.points.clear(); self.square_slots = None; }
                         if self.tool == Tool::Exclude && self.calibration_redraw && self.points.is_empty() && ui.button("Use no exclusions").on_hover_text("Remove all exclusion polygons as one undoable edit; keep the ball and lab calibration.").clicked() {
@@ -865,7 +912,7 @@ impl Session {
                 });
                 if ui.add_enabled(!self.calibration_review && !self.calibration_redraw, egui::Button::new("Alternate fitted orientation  F")).on_hover_text("Choose Edit saved marks to refit the alternate pose branch without changing corner order.").clicked() { let result = self.cycle_square(); self.report(result); }
             }
-            if ui.button("Finish calibration / resume").on_hover_text("Apply any valid current draft and resume tracking. Save configuration preserves changes across launches.").clicked() {
+            if ui.button("Finish calibration").on_hover_text("Apply any valid current draft and restore the prior playback state. Save configuration preserves changes across launches.").clicked() {
                 let result = self.complete_calibration(); self.report(result);
             }
         }
@@ -1052,9 +1099,14 @@ impl Session {
         ui.small("Video plays at source speed.");
     }
     fn settings(&mut self, ui: &mut egui::Ui) {
+        ui.heading("Configure rig");
+        if let Some(path) = &self.path {
+            ui.small(path.file_name().unwrap_or_default().to_string_lossy())
+                .on_hover_text(path.display().to_string());
+        }
         ui.horizontal(|ui| {
             if ui
-                .button("Save")
+                .button("Save configuration")
                 .on_hover_text("Save exact config text (⌘/Ctrl+S)")
                 .clicked()
             {
@@ -1115,11 +1167,11 @@ impl Session {
         egui::CollapsingHeader::new("Recording")
             .default_open(true)
             .show(ui, |ui| self.recording_menu(ui));
-        egui::CollapsingHeader::new("Graphical calibration")
-            .default_open(true)
-            .show(ui, |ui| {
-                self.calibration_settings(ui);
-            });
+        egui::CollapsingHeader::new("Graphical calibration").show(ui, |ui| {
+            if ui.button("Check saved calibration…").clicked() {
+                self.set_calibration_panel(true);
+            }
+        });
         let fields = self.document().map(|d| {
             d.fields()
                 .map(|(k, v)| (k.to_owned(), v.to_owned()))
@@ -1883,13 +1935,17 @@ value}
                     ui.close();
                 }
                 if ui.button("Settings…").clicked() {
-                    self.show_settings = true;
+                    self.set_settings_panel(true);
                     ui.close();
                 }
-                if ui.button("Calibrate again…").clicked() {
-                    self.redraw_calibration(Tool::Rim);
+                if ui.button("Check calibration…").clicked() {
+                    self.set_calibration_panel(true);
                     ui.close();
                 }
+                ui.menu_button("Camera or video", |ui| self.source_controls(ui));
+                ui.menu_button("Recording options", |ui| self.recording_menu(ui));
+                ui.checkbox(&mut self.full_image, "Full source image");
+                ui.checkbox(&mut self.show_diagnostics, "Full debug view");
             });
         }
         if self.tool != Tool::Inspect && !self.calibration_review {
@@ -2647,6 +2703,68 @@ mod tests {
             debug: None,
         }));
         Ok(session)
+    }
+    #[test]
+    fn daily_toolbar_stays_on_one_line_and_record_action_is_red_in_both_themes()
+    -> Result<(), String> {
+        for dark in [false, true] {
+            for recording in [false, true] {
+                for (width, long_name) in [160.0_f32, 240.0, 320.0, 520.0, 620.0, 621.0, 700.0]
+                    .into_iter()
+                    .flat_map(|width| [(width, false), (width, true)])
+                {
+                    let ctx = egui::Context::default();
+                    ctx.set_visuals(if dark {
+                        egui::Visuals::dark()
+                    } else {
+                        egui::Visuals::light()
+                    });
+                    let red = ctx.style().visuals.error_fg_color;
+                    let mut session = session()?;
+                    if long_name {
+                        session.fields(&[("rust_instance_name", "W".repeat(64))])?;
+                    }
+                    session.snapshot.recording = recording;
+                    let mut bounds = Rect::NOTHING;
+                    let output = ctx.run(
+                        egui::RawInput {
+                            screen_rect: Some(Rect::from_min_size(
+                                Pos2::ZERO,
+                                Vec2::new(width, 80.0),
+                            )),
+                            ..Default::default()
+                        },
+                        |ctx| {
+                            egui::CentralPanel::default().show(ctx, |ui| {
+                                ui.horizontal(|ui| {
+                                    session.toolbar_row(ui);
+                                    bounds = ui.min_rect();
+                                });
+                            });
+                        },
+                    );
+                    assert!(
+                        bounds.right() <= width - 7.0,
+                        "toolbar overflow: {width}, long_name={long_name}, {bounds:?}"
+                    );
+                    assert!(
+                        bounds.height() <= 32.0,
+                        "toolbar wrapped: {width}, long_name={long_name}, {bounds:?}"
+                    );
+                    let primitive = ctx.tessellate(output.shapes, output.pixels_per_point);
+                    assert!(primitive.iter().any(|item| matches!(&item.primitive,
+                        egui::epaint::Primitive::Mesh(mesh) if mesh.vertices.iter().any(|vertex| vertex.color == red)
+                    )), "record action lost its semantic red color");
+                    let icon = if recording { "square" } else { "circle-dot" };
+                    assert!(
+                        ctx.data(|data| data
+                            .get_temp::<egui::TextureHandle>(egui::Id::new(("lucide", icon))))
+                            .is_some()
+                    );
+                }
+            }
+        }
+        Ok(())
     }
     #[test]
     fn saved_calibration_review_is_read_only_and_keep_advances_without_rewriting()

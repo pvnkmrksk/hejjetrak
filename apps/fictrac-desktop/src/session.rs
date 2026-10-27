@@ -25,6 +25,8 @@ pub struct Session {
     pub error: String,
     pub source_edit: String,
     pub show_settings: bool,
+    pub show_calibration: bool,
+    pub calibration_previous_view: Option<(bool, bool)>,
     pub show_config_text: bool,
     pub show_about: bool,
     pub show_rigs: bool,
@@ -95,6 +97,8 @@ impl Session {
             error: String::new(),
             source_edit,
             show_settings: false,
+            show_calibration: false,
+            calibration_previous_view: None,
             show_config_text: false,
             show_about: false,
             show_rigs: false,
@@ -216,6 +220,43 @@ impl Session {
         }
         self.display_fps = fps;
         Ok(())
+    }
+    /// Daily calibration inspection changes only transient preview state.
+    pub(crate) fn set_calibration_panel(&mut self, show: bool) {
+        if show {
+            if !self.show_calibration {
+                self.calibration_previous_view = Some((self.full_image, self.show_overlays));
+            }
+            self.show_calibration = true;
+            self.show_settings = true;
+            self.show_config_text = false;
+            if self.tool == Tool::Inspect {
+                self.full_image = true;
+                self.show_overlays = true;
+            }
+        } else {
+            if self.show_calibration {
+                self.show_settings = false;
+            }
+            self.show_calibration = false;
+            if self.tool == Tool::Inspect
+                && let Some((full_image, overlays)) = self.calibration_previous_view.take()
+            {
+                self.full_image = full_image;
+                self.show_overlays = overlays;
+            }
+        }
+    }
+    pub(crate) fn set_settings_panel(&mut self, show: bool) {
+        if self.show_calibration {
+            self.set_calibration_panel(false);
+        }
+        self.show_settings = show;
+    }
+    pub(crate) fn restore_calibration_view_if_closed(&mut self) {
+        if !self.show_calibration && self.tool == Tool::Inspect {
+            self.set_calibration_panel(false);
+        }
     }
     pub fn begin_recording(&mut self) {
         let stamp = std::time::SystemTime::now()
@@ -461,6 +502,17 @@ impl Session {
         self.disk_conflict = false;
         self.source_edit = doc.get("src_fn").unwrap_or("").into();
         self.points.clear();
+        self.square_slots = None;
+        self.pending_drag = None;
+        self.tool = Tool::Inspect;
+        self.calibration_review = true;
+        self.calibration_redraw = false;
+        self.edit_existing = false;
+        self.paused = self
+            .calibration_previous_paused
+            .take()
+            .unwrap_or(self.paused);
+        self.set_calibration_panel(false);
         self.start()
     }
     pub fn video(&mut self, path: PathBuf) -> Result<(), String> {

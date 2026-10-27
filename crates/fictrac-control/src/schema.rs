@@ -111,7 +111,7 @@ pub fn request_schema() -> Value {
         object(json!({"kind":{"const":"square"},"plane":{"enum":["xy","yz","xz"]},"points":points(4,4)}),&["kind","plane","points"])
     ]});
     variants.push(descriptor("calibrate", calibration));
-    variants.push(descriptor("view",object(json!({"settings":{"type":"boolean"},"diagnostics":{"type":"boolean"},"overlays":{"type":"boolean"},"full_image":{"type":"boolean"},"display_fps":{"type":"integer","minimum":1,"maximum":60},"calibration_step":{"enum":["view","ball","exclude","lab"]},"calibration_action":{"enum":["inspect","edit","redraw","add","keep"]},"edit_marks":{"type":"boolean"},"magnifier":{"type":"boolean"},"window_size":{"type":"array","minItems":2,"maxItems":2,"items":{"type":"number","minimum":96,"maximum":8192}}}),&[])));
+    variants.push(descriptor("view",object(json!({"settings":{"type":"boolean"},"calibration":{"type":"boolean"},"diagnostics":{"type":"boolean"},"overlays":{"type":"boolean"},"full_image":{"type":"boolean"},"display_fps":{"type":"integer","minimum":1,"maximum":60},"calibration_step":{"enum":["view","ball","exclude","lab"]},"calibration_action":{"enum":["inspect","edit","redraw","add","keep","continue","finish","cancel"]},"edit_marks":{"type":"boolean"},"magnifier":{"type":"boolean"},"window_size":{"type":"array","minItems":2,"maxItems":2,"items":{"type":"number","minimum":96,"maximum":8192}}}),&[])));
     variants.push(descriptor("camera_status", none()));
     variants.push(descriptor("camera_format",object(json!({"width":{"type":"integer","minimum":16,"maximum":8192},"height":{"type":"integer","minimum":16,"maximum":8192},"fps":{"type":["number","null"],"minimum":0.1,"maximum":1000}}),&["width","height"])));
     variants.push(descriptor("camera_set",json!({"oneOf":[object(json!({"control":{"const":"exposure_mode"},"mode":{"enum":["automatic","locked"]}}),&["control","mode"]),object(json!({"control":{"enum":["exposure","gain"]},"value":{"type":"number"}}),&["control","value"])]})));
@@ -134,6 +134,7 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
         "snapshot" | "export" => &["directory"],
         "view" => &[
             "settings",
+            "calibration",
             "diagnostics",
             "overlays",
             "full_image",
@@ -167,6 +168,7 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
         "discard",
         "enabled",
         "settings",
+        "calibration",
         "diagnostics",
         "overlays",
         "full_image",
@@ -208,11 +210,17 @@ pub(crate) fn validate_arguments(command: &str, args: &Value) -> super::Result<(
     }
     if command == "view"
         && let Some(action) = object.get("calibration_action")
-        && !action
-            .as_str()
-            .is_some_and(|s| matches!(s, "inspect" | "edit" | "redraw" | "add" | "keep"))
+        && !action.as_str().is_some_and(|s| {
+            matches!(
+                s,
+                "inspect" | "edit" | "redraw" | "add" | "keep" | "continue" | "finish" | "cancel"
+            )
+        })
     {
-        return Err("args.calibration_action must be inspect/edit/redraw/add/keep".into());
+        return Err(
+            "args.calibration_action must be inspect/edit/redraw/add/keep/continue/finish/cancel"
+                .into(),
+        );
     }
     if command == "calibrate" {
         for key in ["width", "height"] {
