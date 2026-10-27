@@ -94,7 +94,7 @@ def probe_video(path):
         "ffprobe", "-v", "error", "-count_frames", "-select_streams", "v:0",
         "-show_entries", "stream=codec_name,width,height,r_frame_rate,nb_read_frames",
         "-of", "json", str(path),
-    ], capture_output=True, text=True, check=True)
+    ], capture_output=True, text=True, check=True, timeout=120)
     if probe.stderr.strip():
         raise RuntimeError(f"independent media decode reported errors for {path}: {probe.stderr}")
     streams = json.loads(probe.stdout)["streams"]
@@ -225,7 +225,7 @@ def verify_recording(directory, options, *, allow_partial=False, discard_verifie
             command = ["ffmpeg", "-v", "error", "-i", str(path), "-vf",
                        f"select='eq(n,0)+eq(n,{count-1})'", "-vsync", "0", "-frames:v", "2",
                        str(excerpts / f"{kind}-%02d.png")]
-            subprocess.run(command, capture_output=True, text=True, check=True)
+            subprocess.run(command, capture_output=True, text=True, check=True, timeout=120)
             media[-1]["retained_first_and_last_image_excerpts"] = [str(p) for p in sorted(excerpts.glob(f"{kind}-*.png"))]
             (excerpts / f"{kind}-verification.json").write_text(json.dumps({
                 "all_frame_numeric_rows": len(rows), "quality_rows": len(quality),
