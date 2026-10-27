@@ -88,6 +88,7 @@ jobs:
       - name: Package and development-tool regressions
         run: |
           python -m unittest discover -s scripts -p test_package.py
+          python -m unittest discover -s scripts -p test_linux_package_helpers.py
           python -m unittest discover -s scripts -p test_overnight_soak.py
           python -m unittest discover -s scripts -p test_bridged_launcher.py
       - name: Notice collector regressions

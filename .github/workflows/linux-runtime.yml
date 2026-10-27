@@ -10,6 +10,10 @@ on:
         description: Exact source tag or commit used to build that artifact
         type: string
         required: true
+      normalize_debian:
+        description: Normalize older PAX Debian archives (disable to test artifacts byte-for-byte)
+        type: boolean
+        default: true
 permissions:
   contents: read
   actions: read
@@ -17,7 +21,7 @@ env:
   PYTHONUTF8: '1'
 jobs:
   repack:
-    name: Normalize Debian container and verify unchanged payload
+    name: Verify Linux artifact source and prepare runtime inputs
     runs-on: ubuntu-latest
     container: ubuntu:22.04
     steps:
@@ -42,9 +46,10 @@ jobs:
           path: packages
           run-id: ${{ inputs.artifact_run_id }}
           github-token: ${{ github.token }}
-      - name: Verify source and normalize only the Debian container
+      - name: Verify source and prepare the Debian runtime input
         env:
           PACKAGING_TOOL_REVISION: ${{ github.sha }}
+          NORMALIZE_DEBIAN: ${{ inputs.normalize_debian }}
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           source_commit=$(git rev-parse HEAD)
@@ -64,8 +69,39 @@ jobs:
           if build['source_commit'] != sys.argv[1] or build['version'] != sys.argv[2]:
               raise RuntimeError('Portable archive differs from the requested immutable source')
           PYCODE
-          python3 .runtime-tools/scripts/repack_deb.py --input packages/hejjetrac-linux-amd64.deb --output packages/normalized.deb --report packages/deb-repack-report.json --source-commit "$source_commit" --version "$version" --tool-revision "$PACKAGING_TOOL_REVISION"
-          mv packages/normalized.deb packages/hejjetrac-linux-amd64.deb
+          if [ "$NORMALIZE_DEBIAN" = true ]; then
+            python3 .runtime-tools/scripts/repack_deb.py --input packages/hejjetrac-linux-amd64.deb --output packages/normalized.deb --report packages/deb-repack-report.json --source-commit "$source_commit" --version "$version" --tool-revision "$PACKAGING_TOOL_REVISION"
+            mv packages/normalized.deb packages/hejjetrac-linux-amd64.deb
+          else
+            python3 - "$source_commit" "$version" <<'PYCODE'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+          import tempfile
+          package = Path('packages/hejjetrac-linux-amd64.deb')
+          before = hashlib.sha256(package.read_bytes()).hexdigest()
+          with tempfile.TemporaryDirectory() as directory:
+              subprocess.run(['dpkg-deb', '--extract', str(package), directory], check=True)
+              root = Path(directory) / 'usr/lib/hejjetrak'
+              build = json.loads((root / 'BUILD.json').read_text())
+              if build['source_commit'] != sys.argv[1] or build['version'] != sys.argv[2]:
+                  raise RuntimeError('Debian package differs from the requested immutable source')
+              for binary in build['binaries']:
+                  if hashlib.sha256((root / binary['name']).read_bytes()).hexdigest() != binary['compiled_sha256']:
+                      raise RuntimeError('Debian binary differs from its recorded build hash')
+          after = hashlib.sha256(package.read_bytes()).hexdigest()
+          if before != after:
+              raise RuntimeError('Byte-for-byte validation changed the Debian package')
+          Path('packages/deb-repack-report.json').write_text(json.dumps({
+              'mode': 'unchanged_artifact', 'source_commit': sys.argv[1],
+              'version': sys.argv[2], 'packaging_tool_revision': os.environ['PACKAGING_TOOL_REVISION'],
+              'input_sha256': before, 'output_sha256': after,
+          }, indent=2) + '\n')
+          PYCODE
+          fi
           dpkg-deb --info packages/hejjetrac-linux-amd64.deb
       - uses: actions/upload-artifact@v4
         with:
@@ -91,9 +127,12 @@ jobs:
         run: |
           apt-get update
           apt-get install -y tzdata ca-certificates git python3 dpkg desktop-file-utils xvfb xauth mesa-vulkan-drivers libgl1-mesa-dri
+      # Application identity was checked above; QA follows this workflow revision.
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.source_ref }}
+          ref: ${{ github.sha }}
+      - name: Runtime harness regressions
+        run: python3 -m unittest discover -s scripts -p test_linux_package_helpers.py
       - uses: actions/download-artifact@v4
         with:
           name: verified-linux-packages

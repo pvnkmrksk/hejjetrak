@@ -149,12 +149,21 @@ def graphics_environment_evidence(env):
         '__EGL_VENDOR_LIBRARY_FILENAMES', 'VK_ICD_FILENAMES', 'VK_DRIVER_FILES')}
 
 
-def graphics_adapter(stderr):
-    matches = re.findall(r'^Graphics: (.+) \((Gl|Vulkan), ([^)\r\n]+)\)\s*$',
-                         stderr, re.MULTILINE)
-    if len(matches) != 1:
+def graphics_adapter(stdout, stderr=''):
+    # Linux and macOS may put startup diagnostics on different streams. Match
+    # whole individual lines so malformed multi-line names cannot be accepted.
+    fallback_notice = ('Graphics: no matching OpenGL adapter supports this window surface; '
+                       'using the compatible Vulkan adapter')
+    lines = [line for stream in (stdout, stderr) for line in stream.splitlines()
+             if line.startswith('Graphics:') and line != fallback_notice]
+    if len(lines) != 1:
         raise RuntimeError('Expected exactly one actual Gl/Vulkan adapter initialization log')
-    name, backend, device_type = matches[0]
+    match = re.fullmatch(
+        r'Graphics: (.+) \((Gl|Vulkan), (Other|IntegratedGpu|DiscreteGpu|VirtualGpu|Cpu)\)[ \t]*',
+        lines[0])
+    if match is None or not match[1].strip():
+        raise RuntimeError('Malformed actual Gl/Vulkan adapter initialization log')
+    name, backend, device_type = match.groups()
     return {'name': name, 'backend': backend, 'device_type': device_type}
 
 
@@ -191,7 +200,8 @@ def gui(binary, directory, label, *, config_path=None, expect_fallback=False,
     env = graphics_environment(runtime, env_overrides)
     arguments = gui_arguments(binary, state, screenshot, config_path)
     result = run(arguments, directory, label, env=env, timeout=45)
-    adapter = graphics_adapter((directory / (label + '.stderr')).read_text())
+    adapter = graphics_adapter((directory / (label + '.stdout')).read_text(),
+                               (directory / (label + '.stderr')).read_text())
     if adapter['backend'] != expected_backend:
         raise RuntimeError(f'{label}: expected {expected_backend}, selected {adapter}')
     value = json.loads(state.read_text())
@@ -235,9 +245,12 @@ def automatic_graphics_fallback(binary, directory, config_path):
                    label, env=env, timeout=45, allow_failure=True)
     if negative['exit_code'] not in (1, 2):
         raise RuntimeError(f'Forced-GL control did not fail cleanly: {negative}')
+    stdout = (directory / (label + '.stdout')).read_text()
     stderr = (directory / (label + '.stderr')).read_text()
-    failure = graphics_failure(stderr)
-    if state.exists() or screenshot.exists() or re.search(r'^Graphics:', stderr, re.MULTILINE):
+    logs = stdout + '\n' + stderr
+    failure = graphics_failure(logs)
+    if state.exists() or screenshot.exists() or any(
+            line.startswith('Graphics:') for line in logs.splitlines()):
         raise RuntimeError('Forced-GL control unexpectedly initialized a rendered GUI')
     negative.update({'expected_graphics_failure': failure, 'no_rendered_gui': True,
                      'graphics_environment': graphics_environment_evidence(env)})
