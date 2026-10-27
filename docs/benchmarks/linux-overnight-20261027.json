@@ -1,0 +1,1362 @@
+{
+  "source": "Existing per-segment verification JSON plus streaming bounded-memory telemetry aggregation; no video decode or numeric-file reprocessing.",
+  "analysis_utc": "2026-10-27T08:16:43.128230+00:00",
+  "binary_sha256": "5eeca211a8179021cd9284b71f12ed5e7c83591ae5ce94fec7dbd28828dbbea1",
+  "state": "completed_with_warnings",
+  "started_utc": "2026-10-27T01:48:27.821345+00:00",
+  "finished_utc": "2026-10-27T08:00:16.292385+00:00",
+  "stop_reason": "deadline",
+  "application_exit_code": 0,
+  "segments": 365,
+  "native_reset_during_rotation": false,
+  "limitations": [
+    "Processed counter continuity does not establish sensor zero loss.",
+    "Velocities use tracked relative measurements only; rejections and absolute relocalizations are unmeasured motion, not measured zero.",
+    "Optional diagnostic overload and two deliberate data-only intervals are reported separately from complete requested source videos.",
+    "Whole-process CPU includes native capture, numerics, GUI, media and transports, but not external development verifier CPU."
+  ],
+  "numeric_quality_rows": 8998214,
+  "quality_rows_from_recording_audit": 8998214,
+  "all_group_verifications_pass": true,
+  "all_numeric_quality_audits_pass": true,
+  "all_accepted_wire_bytes_exact": true,
+  "completion_records": {
+    "count": 1460,
+    "all_terminal_complete": true
+  },
+  "movies": {
+    "requested": 1480,
+    "complete": 1476,
+    "requested_source_mjpeg": 1424,
+    "complete_source_mjpeg": 1424,
+    "raw_debug_requested": 56,
+    "raw_debug_complete": 52
+  },
+  "partial_movies": [
+    {
+      "segment": 14,
+      "phase": "debug_probe",
+      "rig": 3,
+      "kind": "debug",
+      "encoded_frames": 221,
+      "processed_rows": 303,
+      "encoder_mean_ms": 12.670730176470586,
+      "state": "stopped_overload",
+      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000014/session-3/epoch-0000-media/debug.avi.partial",
+      "retained_exists": true,
+      "bytes": 205778220
+    },
+    {
+      "segment": 196,
+      "phase": "debug_probe",
+      "rig": 1,
+      "kind": "debug",
+      "encoded_frames": 186,
+      "processed_rows": 305,
+      "encoder_mean_ms": 14.605126413978502,
+      "state": "stopped_overload",
+      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000196/session-1/epoch-0000-media/debug.avi.partial",
+      "retained_exists": true,
+      "bytes": 173521100
+    },
+    {
+      "segment": 196,
+      "phase": "debug_probe",
+      "rig": 3,
+      "kind": "debug",
+      "encoded_frames": 242,
+      "processed_rows": 296,
+      "encoder_mean_ms": 12.673393859504133,
+      "state": "stopped_overload",
+      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000196/session-3/epoch-0000-media/debug.avi.partial",
+      "retained_exists": true,
+      "bytes": 225132492
+    },
+    {
+      "segment": 196,
+      "phase": "debug_probe",
+      "rig": 4,
+      "kind": "debug",
+      "encoded_frames": 200,
+      "processed_rows": 279,
+      "encoder_mean_ms": 14.192439459999997,
+      "state": "stopped_overload",
+      "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000196/session-4/epoch-0000-media/debug.avi.partial",
+      "retained_exists": true,
+      "bytes": 186423948
+    }
+  ],
+  "data_only_intervals": [
+    {
+      "segment": 254,
+      "hour": "20261027T07",
+      "rows": 26251,
+      "rigs": [
+        {
+          "rig": 1,
+          "rows": 6563,
+          "source_clock_span_seconds": 65.0203600039985
+        },
+        {
+          "rig": 2,
+          "rows": 6563,
+          "source_clock_span_seconds": 65.02036499799975
+        },
+        {
+          "rig": 3,
+          "rows": 6562,
+          "source_clock_span_seconds": 65.00836000700109
+        },
+        {
+          "rig": 4,
+          "rows": 6563,
+          "source_clock_span_seconds": 65.02036500299909
+        }
+      ]
+    },
+    {
+      "segment": 311,
+      "hour": "20261027T08",
+      "rows": 26263,
+      "rigs": [
+        {
+          "rig": 1,
+          "rows": 6565,
+          "source_clock_span_seconds": 65.04042200500146
+        },
+        {
+          "rig": 2,
+          "rows": 6566,
+          "source_clock_span_seconds": 65.04839900799841
+        },
+        {
+          "rig": 3,
+          "rows": 6566,
+          "source_clock_span_seconds": 65.04835900899768
+        },
+        {
+          "rig": 4,
+          "rows": 6566,
+          "source_clock_span_seconds": 65.04836299999803
+        }
+      ]
+    }
+  ],
+  "retained_clips": [
+    {
+      "segment": 0,
+      "hour": "20261027T02",
+      "movies": [
+        {
+          "rig": 1,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000000/session-1/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6075,
+          "bytes": 71954354
+        },
+        {
+          "rig": 2,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000000/session-2/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6074,
+          "bytes": 70676772
+        },
+        {
+          "rig": 3,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000000/session-3/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6075,
+          "bytes": 71012542
+        },
+        {
+          "rig": 4,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000000/session-4/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6072,
+          "bytes": 71848330
+        }
+      ]
+    },
+    {
+      "segment": 13,
+      "hour": "20261027T03",
+      "movies": [
+        {
+          "rig": 1,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000013/session-1/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6084,
+          "bytes": 72051046
+        },
+        {
+          "rig": 2,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000013/session-2/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6084,
+          "bytes": 70962416
+        },
+        {
+          "rig": 3,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000013/session-3/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6085,
+          "bytes": 71450054
+        },
+        {
+          "rig": 4,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000013/session-4/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6085,
+          "bytes": 72440090
+        }
+      ]
+    },
+    {
+      "segment": 74,
+      "hour": "20261027T04",
+      "movies": [
+        {
+          "rig": 1,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000074/session-1/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6081,
+          "bytes": 71892924
+        },
+        {
+          "rig": 2,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000074/session-2/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6081,
+          "bytes": 70931284
+        },
+        {
+          "rig": 3,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000074/session-3/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6081,
+          "bytes": 71344632
+        },
+        {
+          "rig": 4,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000074/session-4/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6079,
+          "bytes": 72275832
+        }
+      ]
+    },
+    {
+      "segment": 134,
+      "hour": "20261027T05",
+      "movies": [
+        {
+          "rig": 1,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000134/session-1/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6089,
+          "bytes": 71968148
+        },
+        {
+          "rig": 2,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000134/session-2/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6089,
+          "bytes": 70941118
+        },
+        {
+          "rig": 3,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000134/session-3/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6089,
+          "bytes": 71334566
+        },
+        {
+          "rig": 4,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000134/session-4/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6088,
+          "bytes": 72296526
+        }
+      ]
+    },
+    {
+      "segment": 195,
+      "hour": "20261027T06",
+      "movies": [
+        {
+          "rig": 1,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000195/session-1/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6080,
+          "bytes": 71850162
+        },
+        {
+          "rig": 2,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000195/session-2/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6081,
+          "bytes": 70913198
+        },
+        {
+          "rig": 3,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000195/session-3/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6082,
+          "bytes": 71301442
+        },
+        {
+          "rig": 4,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000195/session-4/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6082,
+          "bytes": 72233766
+        }
+      ]
+    },
+    {
+      "segment": 252,
+      "hour": "20261027T07",
+      "movies": [
+        {
+          "rig": 1,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000252/session-1/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6566,
+          "bytes": 77382626
+        },
+        {
+          "rig": 2,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000252/session-2/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6567,
+          "bytes": 76387062
+        },
+        {
+          "rig": 3,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000252/session-3/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6567,
+          "bytes": 76783120
+        },
+        {
+          "rig": 4,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000252/session-4/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6567,
+          "bytes": 77793452
+        }
+      ]
+    },
+    {
+      "segment": 309,
+      "hour": "20261027T08",
+      "movies": [
+        {
+          "rig": 1,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000309/session-1/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6568,
+          "bytes": 77409040
+        },
+        {
+          "rig": 2,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000309/session-2/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6567,
+          "bytes": 76366680
+        },
+        {
+          "rig": 3,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000309/session-3/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6567,
+          "bytes": 76782756
+        },
+        {
+          "rig": 4,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000309/session-4/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 6568,
+          "bytes": 77779896
+        }
+      ]
+    },
+    {
+      "segment": 364,
+      "hour": "20261027T08",
+      "movies": [
+        {
+          "rig": 1,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000364/session-1/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 1920,
+          "bytes": 24128792
+        },
+        {
+          "rig": 2,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000364/session-2/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 1920,
+          "bytes": 23804650
+        },
+        {
+          "rig": 3,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000364/session-3/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 1920,
+          "bytes": 23932432
+        },
+        {
+          "rig": 4,
+          "kind": "raw",
+          "path": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/segments/000364/session-4/epoch-0000-media/raw.avi",
+          "exists": true,
+          "frames": 1919,
+          "bytes": 24221696
+        }
+      ]
+    }
+  ],
+  "capture_intervals_above_50ms": [
+    {
+      "segment": 7,
+      "phase": "source",
+      "rig": 1,
+      "count": 1,
+      "maximum_ms": 52.00300000002608,
+      "rotation_ms": 8.001993000041693
+    },
+    {
+      "segment": 7,
+      "phase": "source",
+      "rig": 2,
+      "count": 1,
+      "maximum_ms": 51.99700199998915,
+      "rotation_ms": 7.994007999950554
+    },
+    {
+      "segment": 14,
+      "phase": "debug_probe",
+      "rig": 3,
+      "count": 2,
+      "maximum_ms": 60.00600100005977,
+      "rotation_ms": 11.996997000067495
+    },
+    {
+      "segment": 49,
+      "phase": "source",
+      "rig": 1,
+      "count": 1,
+      "maximum_ms": 71.9839960001409,
+      "rotation_ms": 11.9960020002909
+    },
+    {
+      "segment": 75,
+      "phase": "debug_probe",
+      "rig": 1,
+      "count": 1,
+      "maximum_ms": 68.00899400003254,
+      "rotation_ms": 11.99299900047481
+    },
+    {
+      "segment": 76,
+      "phase": "source",
+      "rig": 3,
+      "count": 1,
+      "maximum_ms": 51.99799099937081,
+      "rotation_ms": 8.000000999309123
+    },
+    {
+      "segment": 143,
+      "phase": "source",
+      "rig": 1,
+      "count": 1,
+      "maximum_ms": 60.00399800017476,
+      "rotation_ms": 7.976991001516581
+    },
+    {
+      "segment": 196,
+      "phase": "debug_probe",
+      "rig": 4,
+      "count": 3,
+      "maximum_ms": 79.99900200031698,
+      "rotation_ms": 11.990001002326608
+    }
+  ],
+  "capture_intervals_above_50ms_count": 11,
+  "debug_probes": [
+    {
+      "segment": 1,
+      "hour": "20261027T02",
+      "rigs": [
+        {
+          "rig": 1,
+          "rows": 329,
+          "source_clock_span_seconds": 3.299993017000008,
+          "capture_rows_per_source_second": 99.39414971798385,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 20.00300300001254,
+          "nominal_missing_interval_estimate_diagnostic_only": 5,
+          "debug_encoder_ms": 8.916997677811551
+        },
+        {
+          "rig": 2,
+          "rows": 336,
+          "source_clock_span_seconds": 3.3200080069999967,
+          "capture_rows_per_source_second": 100.9033711044301,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 12.079336999995576,
+          "nominal_missing_interval_estimate_diagnostic_only": 0,
+          "debug_encoder_ms": 9.435689589285719
+        },
+        {
+          "rig": 3,
+          "rows": 331,
+          "source_clock_span_seconds": 3.312009008000008,
+          "capture_rows_per_source_second": 99.63741016491801,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 28.008992999995826,
+          "nominal_missing_interval_estimate_diagnostic_only": 4,
+          "debug_encoder_ms": 8.76331790030211
+        },
+        {
+          "rig": 4,
+          "rows": 332,
+          "source_clock_span_seconds": 3.3280160130000076,
+          "capture_rows_per_source_second": 99.45865606025833,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 39.991989999994985,
+          "nominal_missing_interval_estimate_diagnostic_only": 5,
+          "debug_encoder_ms": 9.017882737951812
+        }
+      ]
+    },
+    {
+      "segment": 14,
+      "hour": "20261027T03",
+      "rigs": [
+        {
+          "rig": 1,
+          "rows": 309,
+          "source_clock_span_seconds": 3.132000994000002,
+          "capture_rows_per_source_second": 98.33968781939659,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 39.99200099997688,
+          "nominal_missing_interval_estimate_diagnostic_only": 8,
+          "debug_encoder_ms": 10.002031737864089
+        },
+        {
+          "rig": 2,
+          "rows": 313,
+          "source_clock_span_seconds": 3.1600019969999558,
+          "capture_rows_per_source_second": 98.73411481898009,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 39.98099900002126,
+          "nominal_missing_interval_estimate_diagnostic_only": 7,
+          "debug_encoder_ms": 9.535129600638978
+        },
+        {
+          "rig": 3,
+          "rows": 303,
+          "source_clock_span_seconds": 3.192021001000074,
+          "capture_rows_per_source_second": 94.61090635223957,
+          "all_requested_video_complete": false,
+          "source_interval_max_ms": 60.00600100005977,
+          "nominal_missing_interval_estimate_diagnostic_only": 20,
+          "debug_encoder_ms": 12.670730176470586
+        },
+        {
+          "rig": 4,
+          "rows": 323,
+          "source_clock_span_seconds": 3.200009005,
+          "capture_rows_per_source_second": 100.62471683575778,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 20.003007999970578,
+          "nominal_missing_interval_estimate_diagnostic_only": 1,
+          "debug_encoder_ms": 10.01934052321982
+        }
+      ]
+    },
+    {
+      "segment": 75,
+      "hour": "20261027T04",
+      "rigs": [
+        {
+          "rig": 1,
+          "rows": 326,
+          "source_clock_span_seconds": 3.3280229969993234,
+          "capture_rows_per_source_second": 97.65557518473665,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 68.00899400003254,
+          "nominal_missing_interval_estimate_diagnostic_only": 11,
+          "debug_encoder_ms": 9.114579886503059
+        },
+        {
+          "rig": 2,
+          "rows": 330,
+          "source_clock_span_seconds": 3.3280140020009132,
+          "capture_rows_per_source_second": 98.85775714951747,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 39.99899899959564,
+          "nominal_missing_interval_estimate_diagnostic_only": 7,
+          "debug_encoder_ms": 9.140579978787873
+        },
+        {
+          "rig": 3,
+          "rows": 331,
+          "source_clock_span_seconds": 3.348020002000034,
+          "capture_rows_per_source_second": 98.56571938126571,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 48.0009970003739,
+          "nominal_missing_interval_estimate_diagnostic_only": 8,
+          "debug_encoder_ms": 9.43799957401812
+        },
+        {
+          "rig": 4,
+          "rows": 336,
+          "source_clock_span_seconds": 3.3400018830001352,
+          "capture_rows_per_source_second": 100.29934465159295,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 20.019999001175165,
+          "nominal_missing_interval_estimate_diagnostic_only": 2,
+          "debug_encoder_ms": 9.74769823214285
+        }
+      ]
+    },
+    {
+      "segment": 135,
+      "hour": "20261027T05",
+      "rigs": [
+        {
+          "rig": 1,
+          "rows": 330,
+          "source_clock_span_seconds": 3.3600109970001504,
+          "capture_rows_per_source_second": 97.91634619462089,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 39.994997000321746,
+          "nominal_missing_interval_estimate_diagnostic_only": 10,
+          "debug_encoder_ms": 9.56696036060606
+        },
+        {
+          "rig": 2,
+          "rows": 332,
+          "source_clock_span_seconds": 3.3320080000003798,
+          "capture_rows_per_source_second": 99.33949738414861,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 31.983005999587476,
+          "nominal_missing_interval_estimate_diagnostic_only": 5,
+          "debug_encoder_ms": 9.667474855421684
+        },
+        {
+          "rig": 3,
+          "rows": 333,
+          "source_clock_span_seconds": 3.3960200049998237,
+          "capture_rows_per_source_second": 97.76149713818226,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 39.99600499961525,
+          "nominal_missing_interval_estimate_diagnostic_only": 11,
+          "debug_encoder_ms": 10.255804405405403
+        },
+        {
+          "rig": 4,
+          "rows": 342,
+          "source_clock_span_seconds": 3.4120029999995602,
+          "capture_rows_per_source_second": 99.94129547953034,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 32.0000050002709,
+          "nominal_missing_interval_estimate_diagnostic_only": 3,
+          "debug_encoder_ms": 10.013285020467835
+        }
+      ]
+    },
+    {
+      "segment": 196,
+      "hour": "20261027T06",
+      "rigs": [
+        {
+          "rig": 1,
+          "rows": 305,
+          "source_clock_span_seconds": 3.2600429999995977,
+          "capture_rows_per_source_second": 93.25030375367365,
+          "all_requested_video_complete": false,
+          "source_interval_max_ms": 36.01000300049782,
+          "nominal_missing_interval_estimate_diagnostic_only": 25,
+          "debug_encoder_ms": 14.605126413978502
+        },
+        {
+          "rig": 2,
+          "rows": 299,
+          "source_clock_span_seconds": 3.260006997998804,
+          "capture_rows_per_source_second": 91.41084671993988,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 39.99499800056219,
+          "nominal_missing_interval_estimate_diagnostic_only": 31,
+          "debug_encoder_ms": 10.817835866220728
+        },
+        {
+          "rig": 3,
+          "rows": 296,
+          "source_clock_span_seconds": 3.26001400099881,
+          "capture_rows_per_source_second": 90.4904089091695,
+          "all_requested_video_complete": false,
+          "source_interval_max_ms": 47.99999799951911,
+          "nominal_missing_interval_estimate_diagnostic_only": 34,
+          "debug_encoder_ms": 12.673393859504133
+        },
+        {
+          "rig": 4,
+          "rows": 279,
+          "source_clock_span_seconds": 3.2480234829988333,
+          "capture_rows_per_source_second": 85.59051418659335,
+          "all_requested_video_complete": false,
+          "source_interval_max_ms": 79.99900200031698,
+          "nominal_missing_interval_estimate_diagnostic_only": 50,
+          "debug_encoder_ms": 14.192439459999997
+        }
+      ]
+    },
+    {
+      "segment": 253,
+      "hour": "20261027T07",
+      "rigs": [
+        {
+          "rig": 1,
+          "rows": 808,
+          "source_clock_span_seconds": 7.996039982998743,
+          "capture_rows_per_source_second": 100.9249580687254,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 12.23500500060618,
+          "nominal_missing_interval_estimate_diagnostic_only": 0,
+          "debug_encoder_ms": 5.751473806930694
+        },
+        {
+          "rig": 2,
+          "rows": 808,
+          "source_clock_span_seconds": 7.996036015998572,
+          "capture_rows_per_source_second": 100.92500813970122,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 12.197006000205874,
+          "nominal_missing_interval_estimate_diagnostic_only": 0,
+          "debug_encoder_ms": 5.665742258663366
+        },
+        {
+          "rig": 3,
+          "rows": 808,
+          "source_clock_span_seconds": 7.996034003000706,
+          "capture_rows_per_source_second": 100.92503354752539,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 12.161999998614192,
+          "nominal_missing_interval_estimate_diagnostic_only": 0,
+          "debug_encoder_ms": 6.355750438118813
+        },
+        {
+          "rig": 4,
+          "rows": 808,
+          "source_clock_span_seconds": 7.996040998000652,
+          "capture_rows_per_source_second": 100.92494525750732,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 12.034996999427676,
+          "nominal_missing_interval_estimate_diagnostic_only": 0,
+          "debug_encoder_ms": 6.935031704207919
+        }
+      ]
+    },
+    {
+      "segment": 310,
+      "hour": "20261027T08",
+      "rigs": [
+        {
+          "rig": 1,
+          "rows": 810,
+          "source_clock_span_seconds": 8.01603700600192,
+          "capture_rows_per_source_second": 100.9226877812902,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 12.423021998256445,
+          "nominal_missing_interval_estimate_diagnostic_only": 0,
+          "debug_encoder_ms": 5.895020332098768
+        },
+        {
+          "rig": 2,
+          "rows": 810,
+          "source_clock_span_seconds": 8.01605001199618,
+          "capture_rows_per_source_second": 100.92252403481955,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 12.372001003473997,
+          "nominal_missing_interval_estimate_diagnostic_only": 0,
+          "debug_encoder_ms": 5.888411309876543
+        },
+        {
+          "rig": 3,
+          "rows": 810,
+          "source_clock_span_seconds": 8.016069995000958,
+          "capture_rows_per_source_second": 100.92227244828385,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 12.03100299835205,
+          "nominal_missing_interval_estimate_diagnostic_only": 0,
+          "debug_encoder_ms": 6.644067827160497
+        },
+        {
+          "rig": 4,
+          "rows": 809,
+          "source_clock_span_seconds": 8.008026001997292,
+          "capture_rows_per_source_second": 100.89877328051578,
+          "all_requested_video_complete": true,
+          "source_interval_max_ms": 12.999013002961874,
+          "nominal_missing_interval_estimate_diagnostic_only": 0,
+          "debug_encoder_ms": 7.446494605686039
+        }
+      ]
+    }
+  ],
+  "rigs": [
+    {
+      "rig": 1,
+      "rows": 2249349,
+      "accepted_rows": 2248809,
+      "quality_states": {
+        "tracked": 2248269,
+        "rejected": 540,
+        "relocalized": 540
+      },
+      "accepted_percent": 99.9759930539903,
+      "relative_measured_percent": 99.95198610798057,
+      "first_frame": 117,
+      "last_frame": 2249465,
+      "frame_range_matches_rows": true,
+      "all_take_boundaries_id_continuous": true,
+      "source_clock_span_seconds": 22290.588818009,
+      "rows_per_source_clock_second": 100.91021006061123,
+      "source_interval_max_ms": 71.9839960001409,
+      "longest_unaccepted_run": 1,
+      "first_30min_source": {
+        "segments": 30,
+        "rows": 182305,
+        "statuses": {
+          "tracked": 182229,
+          "rejected": 38,
+          "relocalized": 38
+        },
+        "accepted_percent": 99.97915581031788,
+        "relative_measured_percent": 99.95831162063575,
+        "fit_error_median_first_last": [
+          1209.057293783015,
+          1241.8427468508737
+        ],
+        "fit_error_median_range": [
+          1209.057293783015,
+          1506.0646078829743
+        ],
+        "latest_p95_fit_error": 2087.352702153596,
+        "longest_unaccepted_run": 1,
+        "angular_speed_max_rad_s": 5.193999667315231,
+        "body_speed_max_sphere_rad_s": 5.115911605193246
+      },
+      "last_30min_source": {
+        "segments": 29,
+        "rows": 185794,
+        "statuses": {
+          "tracked": 185700,
+          "rejected": 47,
+          "relocalized": 47
+        },
+        "accepted_percent": 99.97470316587187,
+        "relative_measured_percent": 99.94940633174376,
+        "fit_error_median_first_last": [
+          1268.2649329540836,
+          1241.8427468508737
+        ],
+        "fit_error_median_range": [
+          1215.4205607476636,
+          1426.798049573344
+        ],
+        "latest_p95_fit_error": 2219.4636326696464,
+        "longest_unaccepted_run": 1,
+        "angular_speed_max_rad_s": 5.188463542371861,
+        "body_speed_max_sphere_rad_s": 4.990034420467742
+      },
+      "all_config_files_retained": true,
+      "all_numeric_quality_files_retained": true
+    },
+    {
+      "rig": 2,
+      "rows": 2249532,
+      "accepted_rows": 2243856,
+      "quality_states": {
+        "tracked": 2238182,
+        "rejected": 5674,
+        "relocalized": 5674,
+        "recovering": 2
+      },
+      "accepted_percent": 99.74768085095033,
+      "relative_measured_percent": 99.49545060928229,
+      "first_frame": 86,
+      "last_frame": 2249617,
+      "frame_range_matches_rows": true,
+      "all_take_boundaries_id_continuous": true,
+      "source_clock_span_seconds": 22291.576863,
+      "rows_per_source_clock_second": 100.91394672638957,
+      "source_interval_max_ms": 51.99700199998915,
+      "longest_unaccepted_run": 2,
+      "first_30min_source": {
+        "segments": 30,
+        "rows": 182341,
+        "statuses": {
+          "tracked": 180837,
+          "rejected": 752,
+          "relocalized": 752
+        },
+        "accepted_percent": 99.58758589675388,
+        "relative_measured_percent": 99.17517179350777,
+        "fit_error_median_first_last": [
+          1181.4604286892004,
+          2037.0568837592746
+        ],
+        "fit_error_median_range": [
+          1181.4604286892004,
+          2117.4670239076668
+        ],
+        "latest_p95_fit_error": 3135.995465787304,
+        "longest_unaccepted_run": 1,
+        "angular_speed_max_rad_s": 5.836410920456718,
+        "body_speed_max_sphere_rad_s": 5.772722807351876
+      },
+      "last_30min_source": {
+        "segments": 29,
+        "rows": 185795,
+        "statuses": {
+          "tracked": 185415,
+          "rejected": 190,
+          "relocalized": 190
+        },
+        "accepted_percent": 99.89773675287279,
+        "relative_measured_percent": 99.79547350574558,
+        "fit_error_median_first_last": [
+          2171.0737840065954,
+          2117.4670239076668
+        ],
+        "fit_error_median_range": [
+          2010.2535037098103,
+          2197.8771640560594
+        ],
+        "latest_p95_fit_error": 2921.568425391591,
+        "longest_unaccepted_run": 1,
+        "angular_speed_max_rad_s": 5.701668214885309,
+        "body_speed_max_sphere_rad_s": 5.610997052189694
+      },
+      "all_config_files_retained": true,
+      "all_numeric_quality_files_retained": true
+    },
+    {
+      "rig": 3,
+      "rows": 2249579,
+      "accepted_rows": 2249579,
+      "quality_states": {
+        "tracked": 2249579
+      },
+      "accepted_percent": 100.0,
+      "relative_measured_percent": 100.0,
+      "first_frame": 55,
+      "last_frame": 2249633,
+      "frame_range_matches_rows": true,
+      "all_take_boundaries_id_continuous": true,
+      "source_clock_span_seconds": 22292.572864973,
+      "rows_per_source_clock_second": 100.91154635338789,
+      "source_interval_max_ms": 60.00600100005977,
+      "longest_unaccepted_run": 0,
+      "first_30min_source": {
+        "segments": 30,
+        "rows": 182312,
+        "statuses": {
+          "tracked": 182312
+        },
+        "accepted_percent": 100.0,
+        "relative_measured_percent": 100.0,
+        "fit_error_median_first_last": [
+          3427.0811570912015,
+          3500.743270389715
+        ],
+        "fit_error_median_range": [
+          3427.0811570912015,
+          3500.743270389715
+        ],
+        "latest_p95_fit_error": 4415.116512655685,
+        "longest_unaccepted_run": 0,
+        "angular_speed_max_rad_s": 7.492845754694311,
+        "body_speed_max_sphere_rad_s": 4.397131349167829
+      },
+      "last_30min_source": {
+        "segments": 29,
+        "rows": 185797,
+        "statuses": {
+          "tracked": 185797
+        },
+        "accepted_percent": 100.0,
+        "relative_measured_percent": 100.0,
+        "fit_error_median_first_last": [
+          3500.743270389715,
+          3474.618320610687
+        ],
+        "fit_error_median_range": [
+          3448.4933708316594,
+          3526.8682201687425
+        ],
+        "latest_p95_fit_error": 4415.116512655685,
+        "longest_unaccepted_run": 0,
+        "angular_speed_max_rad_s": 7.611684044545261,
+        "body_speed_max_sphere_rad_s": 4.268318576061372
+      },
+      "all_config_files_retained": true,
+      "all_numeric_quality_files_retained": true
+    },
+    {
+      "rig": 4,
+      "rows": 2249754,
+      "accepted_rows": 2249754,
+      "quality_states": {
+        "tracked": 2249754
+      },
+      "accepted_percent": 100.0,
+      "relative_measured_percent": 100.0,
+      "first_frame": 25,
+      "last_frame": 2249778,
+      "frame_range_matches_rows": true,
+      "all_take_boundaries_id_continuous": true,
+      "source_clock_span_seconds": 22293.540858003995,
+      "rows_per_source_clock_second": 100.91501454746596,
+      "source_interval_max_ms": 79.99900200031698,
+      "longest_unaccepted_run": 0,
+      "first_30min_source": {
+        "segments": 30,
+        "rows": 182361,
+        "statuses": {
+          "tracked": 182361
+        },
+        "accepted_percent": 100.0,
+        "relative_measured_percent": 100.0,
+        "fit_error_median_first_last": [
+          1208.0793445450624,
+          2103.007761966365
+        ],
+        "fit_error_median_range": [
+          1208.0793445450624,
+          2103.007761966365
+        ],
+        "latest_p95_fit_error": 2495.569210866753,
+        "longest_unaccepted_run": 0,
+        "angular_speed_max_rad_s": 4.336839840696898,
+        "body_speed_max_sphere_rad_s": 3.5952594731728897
+      },
+      "last_30min_source": {
+        "segments": 29,
+        "rows": 185796,
+        "statuses": {
+          "tracked": 185796
+        },
+        "accepted_percent": 100.0,
+        "relative_measured_percent": 100.0,
+        "fit_error_median_first_last": [
+          2131.04786545925,
+          2131.04786545925
+        ],
+        "fit_error_median_range": [
+          2103.007761966365,
+          2159.0879689521344
+        ],
+        "latest_p95_fit_error": 2467.529107373868,
+        "longest_unaccepted_run": 0,
+        "angular_speed_max_rad_s": 4.1823958530526,
+        "body_speed_max_sphere_rad_s": 3.702174679601171
+      },
+      "all_config_files_retained": true,
+      "all_numeric_quality_files_retained": true
+    }
+  ],
+  "configuration_hash_audits": [
+    {
+      "original": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/VR1.txt",
+      "original_sha256": "e585dd2bef89214a060d55de8f4d222cbc266c182e30ac87f5c0283a05d0b56e",
+      "effective": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/configs/VR1/config.txt",
+      "effective_sha256": "023853ad39b8e3f627299ecf4f324180332ecb30a1e607d9360d6386adf7ff60",
+      "original_hash_unchanged": true,
+      "effective_hash_unchanged": true
+    },
+    {
+      "original": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/VR2.txt",
+      "original_sha256": "2f37677967701c63556d08462f73f90488ff44b12afe9665a7754ecf047c3fc1",
+      "effective": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/configs/VR2/config.txt",
+      "effective_sha256": "f32087e787dc757a509c2fad6aeeaf7cad295d90c878f55b2a01a547692b119c",
+      "original_hash_unchanged": true,
+      "effective_hash_unchanged": true
+    },
+    {
+      "original": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/VR3.txt",
+      "original_sha256": "9043afd70570f560e47cef2e965dfe83eb017fb091e223a2e73f300e4e8fb446",
+      "effective": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/configs/VR3/config.txt",
+      "effective_sha256": "667e9cb3313d40a6caa3c565e3bc86c4777c9837fc8579ea1014ed0cd91b8fdf",
+      "original_hash_unchanged": true,
+      "effective_hash_unchanged": true
+    },
+    {
+      "original": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/VR4.txt",
+      "original_sha256": "64d4b23616ec1ca63aa1488a0c66050a1e26ca109faa0d66a7331c744758fed5",
+      "effective": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/configs/VR4/config.txt",
+      "effective_sha256": "487cdd81b67031aa1843a69574bf80a07ccf45ce96b88a728430165dde2c54f6",
+      "original_hash_unchanged": true,
+      "effective_hash_unchanged": true
+    }
+  ],
+  "telemetry": {
+    "samples": 2149,
+    "first_sample_utc": "2026-10-27T01:48:30.617018+00:00",
+    "last_sample_utc": "2026-10-27T07:59:56.896341+00:00",
+    "wall_interval_seconds": 22286.599600039423,
+    "native_cpu_seconds_difference": 65577.58,
+    "native_cpu_percent_one_core_interval_mean": 294.2466826562631,
+    "native_cpu_percent_eight_logical_total_interval_mean": 36.780835332032886,
+    "native_cpu_percent_one_core_polled_median": 321.5750426175994,
+    "native_cpu_percent_one_core_polled_range": [
+      136.815333557902,
+      436.30690316446174
+    ],
+    "rss_MiB_first_last_min_max": [
+      109.98046875,
+      197.23046875,
+      109.98046875,
+      214.859375
+    ],
+    "rss_MiB_last_30min_range": [
+      197.2109375,
+      197.23046875
+    ],
+    "thread_counts_observed": [
+      17,
+      21,
+      24,
+      25,
+      27,
+      28,
+      29
+    ],
+    "minimum_sampled_free_GiB": 2.2580947875976562,
+    "final_sampled_free_GiB": 4.203285217285156,
+    "max_verification_backlog": 2,
+    "final_verification_backlog": 0,
+    "scope": "Mean uses cumulative native-process CPU differences and corresponding supervisor elapsed-time differences between first/last telemetry samples; excludes first startup and final post-sample shutdown. Polled maxima/medians are interval samples, not instantaneous peaks. External verifier CPU is excluded."
+  },
+  "final_status_storage": {
+    "free_bytes": 4513243136,
+    "remaining_numeric_budget_bytes": 1431142,
+    "fixed_reserve_bytes": 2147483648,
+    "probe_budget_bytes": 1520640001,
+    "raw_probe_allowed": true,
+    "source_video_allowed": true,
+    "numerics_at_risk": false,
+    "boundary": "Measured numerical byte rate with1KiB/frame floor and15% margin;2GiB reserve. Video retention is bounded separately. Other writers/quotas remain outside this projection."
+  },
+  "wire_final": {
+    "pyzmq": "25.1.1",
+    "libzmq": "4.3.4",
+    "healthy_subscribers": 4,
+    "undrained_subscribers": 4,
+    "incomplete_greeting_reconnect_interval_seconds": 2,
+    "received_packets": {
+      "21971": 2250462,
+      "21972": 2245369,
+      "21973": 2250953,
+      "21974": 2250991
+    },
+    "incomplete_tcp_connections": {
+      "21971": 11134,
+      "21972": 11134,
+      "21973": 11134,
+      "21974": 11134
+    }
+  },
+  "boundaries": {
+    "raw_numeric_files_loaded": false,
+    "videos_decoded_again": false,
+    "telemetry_memory": "Only scalar compact samples retained, input processed line by line.",
+    "reports_sha256_boundary": "Hash over sorted verification report filename and SHA256 pairs.",
+    "telemetry_file_bytes": 291120362
+  },
+  "verification_report_manifest_sha256": "22d087cf96b484735b85673401a9d8597bbe246ba35041b789b16a03a0224db3",
+  "supervisor_wall_seconds": 22308.47104,
+  "quality_window_scope": "First/last 30-minute windows select source-take verification timestamps relative to the first/last source verification. Entire take summaries are included; these are approximate report windows, not re-cut raw-frame intervals.",
+  "unaccepted_run_scope": "Maximum reported unaccepted run within any single take. Cross-take run lengths were not recomputed from raw quality files.",
+  "quality_states_total": {
+    "tracked": 8985784,
+    "rejected": 6214,
+    "relocalized": 6214,
+    "recovering": 2,
+    "initializing": 0
+  },
+  "accepted_rows_total": 8991998,
+  "retained_complete_clip_count": 32,
+  "retained_complete_clip_bytes": 2144451404,
+  "retained_partial_bytes": 790855760,
+  "data_only_rows_total": 52514,
+  "tracking_cost_snapshot": {
+    "snapshot_utc": "2026-10-27T07:59:56.896341+00:00",
+    "scope": "Last sampled native session metadata before shutdown, not a post-exit live status. tracking_ms is cumulative arithmetic Tracker::process wall-time mean over tracking_samples; processing_ms is a different post-acquisition worker EMA that excludes input acquisition/decode and pacing. Do not subtract these different statistics as component costs. Cumulative means include startup frames outside recorded takes.",
+    "rigs": [
+      {
+        "rig": 1,
+        "tracking_samples": 2249061,
+        "tracker_arithmetic_mean_ms": 3.0119580322661403,
+        "post_acquisition_worker_ema_ms": 3.0357966250154678,
+        "preview_publication_fps_ema": 14.386922374771729,
+        "preview_target_fps": 15
+      },
+      {
+        "rig": 2,
+        "tracking_samples": 2249110,
+        "tracker_arithmetic_mean_ms": 3.066259121692671,
+        "post_acquisition_worker_ema_ms": 2.9323583002675746,
+        "preview_publication_fps_ema": 14.3766170586765,
+        "preview_target_fps": 15
+      },
+      {
+        "rig": 3,
+        "tracking_samples": 2249025,
+        "tracker_arithmetic_mean_ms": 3.1230446582122062,
+        "post_acquisition_worker_ema_ms": 2.9903840841323874,
+        "preview_publication_fps_ema": 14.29242750193638,
+        "preview_target_fps": 15
+      },
+      {
+        "rig": 4,
+        "tracking_samples": 2249069,
+        "tracker_arithmetic_mean_ms": 2.8951679588532415,
+        "post_acquisition_worker_ema_ms": 2.780841396024477,
+        "preview_publication_fps_ema": 14.492691823942401,
+        "preview_target_fps": 15
+      }
+    ]
+  },
+  "numeric_evidence_bytes_reported": 7849223460,
+  "final_process_exit_and_inhibition_audit": "Parent independently verified native exit0, own runner/app/sleep-guard PIDs gone and own systemd/GNOME inhibitors released; see parent terminal review.",
+  "experiment_command": [
+    "gnome-session-inhibit",
+    "--inhibit",
+    "idle:suspend",
+    "--app-id",
+    "org.hejjetrac.Overnight",
+    "--reason",
+    "Uninterrupted overnight camera tracking validation",
+    "python3",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/scripts/overnight_soak.py",
+    "run",
+    "--binary",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/dist/hejjetrac-linux-x86_64/hejjetrac",
+    "--configs",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/VR1.txt",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/VR2.txt",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/VR3.txt",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/VR4.txt",
+    "--until",
+    "2026-10-27T09:00:00+01:00",
+    "--segment-seconds",
+    "60",
+    "--debug-probe-seconds",
+    "3",
+    "--poll-seconds",
+    "10",
+    "--display-fps",
+    "15",
+    "--output",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027"
+  ],
+  "experiment_launcher_metadata": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027.launcher.json",
+  "status_audit_command": [
+    "python3",
+    "scripts/overnight_soak.py",
+    "status",
+    "--output",
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027",
+    "--summary",
+    "--write-check"
+  ],
+  "aggregation_inputs": {
+    "segment_reports": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/verifications/segment-*.json",
+    "source_report_count": 365,
+    "telemetry": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/telemetry.jsonl",
+    "status": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/overnight-20261027/status.json",
+    "effective_config_hashes": "Four original/effective files only; per-take config existence checked, source/calibration files not rewritten."
+  },
+  "final_completion_audit": {
+    "checked_utc": "2026-10-27T08:11:45.676423+00:00",
+    "state": "completed_with_warnings",
+    "elapsed_seconds": 22308.47104,
+    "application_exit_code": 0,
+    "stop_reason": "deadline",
+    "verification_reports": 365,
+    "expected_recording_directories": 1460,
+    "unique_recording_directories": 1460,
+    "completion_states": {
+      "complete": 1460
+    },
+    "completion_errors": [],
+    "missing_evidence_files": [],
+    "remaining_partial_files": [
+      "segments/000014/session-3/epoch-0000-media/debug.avi.partial",
+      "segments/000196/session-1/epoch-0000-media/debug.avi.partial",
+      "segments/000196/session-3/epoch-0000-media/debug.avi.partial",
+      "segments/000196/session-4/epoch-0000-media/debug.avi.partial"
+    ],
+    "final_verification_backlog": 0,
+    "native_supervisor_and_guard_confirmed_exited": true,
+    "temporary_systemd_and_gnome_inhibitors_confirmed_released": true
+  },
+  "hourly_monitor": {
+    "id": "monitor-overnight-hejj-trac-validation",
+    "state": "deleted after actual terminal audit"
+  },
+  "performance_followup": {
+    "id": "investigate-latest-hejj-trac-replay-performance",
+    "state": "ACTIVE",
+    "scheduled_local": "2026-10-29T10:00:00+01:00"
+  },
+  "final_visual_review": {
+    "source": "Existing retained last-frame excerpts from source segment363, no new decode",
+    "rigs": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "observation": "All four near-shutdown full-frame inputs show unoccluded textured balls, no blank camera or gross source corruption."
+  },
+  "package_source_commit": "01180ef8dad1a9007bffa0eb791461d7d7b6830c",
+  "portable_archive_sha256": "dfc333a1fa15ada0253f6a9917f2b66e8d17460c6ea19b09e303a082be64815f"
+}

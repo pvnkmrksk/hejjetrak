@@ -1,5 +1,19 @@
 # Linux camera recording measurements — 26–27 October 2026
 
+The completed queue-32 **6 h 12 min** four-camera soak has **1,424/1,424 complete
+requested source MJPEG movies**, a clean native exit and 8,998,214 aligned
+processed rows. It also exposes limits absent from the short preflight:
+**four debug movies are partial**, one heavy probe briefly lowers capture to
+85.6–93.3 rows/s, and later control delays stretch three-second probes to about
+eight seconds. Their additional storage/verification load causes two declared
+approximately 65-second data-only groups. Normal source recording resumes,
+all processed numerics remain, and the four partials are preserved. This is
+not unrestricted diagnostic recording or continuous all-night source video.
+[Full actual-run results](benchmarks/linux-overnight-20261027.json) retain these
+failures separately from ordinary full-source throughput. Control-independent
+probe timing, conservative volume projection and diagnostic rendering/encoding
+cost still require work.
+
 The earlier queue-eight release preserves near-100-FPS numeric processing during optional
 video overload. Its fastest uncompressed setting completes every requested
 raw/debug video on one and four cameras: **20/20 complete videos**, independently

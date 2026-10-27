@@ -168,3 +168,33 @@ All 24 finalization markers completed, all accepted wire bytes matched and the
 native process exited with status zero. The largest whole-capture source-clock
 interval was 31.994 ms; no interval exceeded 50 ms. These are measured operational
 preflight gates, not a sensor-level zero-loss or live physical-ground-truth claim.
+
+## Completed main campaign
+
+The actual main run subsequently finished at **09:00:16 Europe/Berlin** after
+**6 h 11 min 48.471 s**, with native exit **0** and stop reason `deadline`.
+All 365 groups and 1,460 numeric completion markers were audited. The run retains
+**8,998,214** aligned processed numeric/quality rows, continuous processed IDs,
+exact accepted FT bytes, and all effective configuration files. All owned
+processes exited and the temporary systemd/GNOME inhibitors were released.
+
+The outcome is **completed with warnings**: all 1,424 requested source MJPEG
+movies complete, but four debug movies are retained partials. Data-only groups
+254 and 311 preserve 52,514 rows while omitting approximately 65 seconds of
+source video each. Normal recording resumes and verification catches up afterward;
+all four rigs have verified retained clips for hours 02–08 and the final take.
+Those fallbacks must not be reported as continuous all-night video.
+
+The heaviest short debug probe briefly reduces capture to 85.6–93.3 rows/s;
+normal whole-run source-clock rates remain 100.910–100.915. Eleven capture-clock
+gaps exceed 50 ms, maximum 80 ms. Later approximately one-second control
+acknowledgments stretch requested three-second probes to about eight seconds,
+exceeding the short-probe storage estimate and triggering the two capacity
+fallbacks. Control-independent duration and conservative volume projection
+remain follow-up work. No tracker reset or hidden data reconstruction is used.
+
+The final verification backlog is zero, final sampled free disk is 4.20 GiB and
+all partial media remain. The completed hourly monitor was removed; the separate
+October 29 performance follow-up stays active.
+[Exact terminal analysis](benchmarks/linux-overnight-20261027.json) and
+`runs/overnight-20261027/final-completion-audit.json` retain the complete scope.

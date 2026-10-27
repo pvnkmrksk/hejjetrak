@@ -1,5 +1,65 @@
 # HejjéTrac validation evidence
 
+## Completed four-camera overnight run — 2026-10-27
+
+The packaged Linux build from `01180ef8dad1a9007bffa0eb791461d7d7b6830c`
+ran from **02:48:27 to 09:00:16 Europe/Berlin**, a supervisor wall interval of
+**6 h 11 min 48.471 s**. Native exit is **0**, the stop reason is the scheduled
+deadline, all owned processes exited and both temporary sleep inhibitors were
+released. No tracker reset/restart was used. The actual terminal classification
+is **completed with warnings**, not unrestricted recording success.
+
+All **8,998,214** processed numeric rows have aligned quality evidence. Per-rig
+counts are **2,249,349 / 2,249,532 / 2,249,579 / 2,249,754**. Processed IDs are
+continuous across all 365 recording groups, accepted FT bytes match independent
+subscribers exactly, and all **1,460** recording directories have committed
+completion markers without numeric/marker errors. Configuration hashes remain
+unchanged. Four healthy subscribers, four undrained subscribers and repeated
+incomplete greetings exercised the publishers throughout the run.
+
+All **1,424 requested full-source MJPEG movies** independently decode and match
+their processed rows. Across source and debug probes, **1,476/1,480** requested
+movies complete. Four diagnostic movies remain explicit retained partials.
+Two capacity-protection groups, **254 and 311**, intentionally save data without
+video for about **65 seconds each**; all **52,514** rows from those intervals
+remain. This is not continuous all-night video. Thirty-two full-source clips
+remain on disk: all four rigs for each wall-clock hour 02–08 plus the final
+short clips. Other successful test movies were pruned only after independent
+verification, hashes and full-frame excerpts; partial movies were not deleted.
+
+Whole-run source-clock rates are **100.910–100.915 rows/s per rig**. Under one
+roughly 3.26-second simultaneous uncompressed source/debug probe, rates briefly
+fell to **85.6–93.3 rows/s**, returning promptly to approximately 101 afterward.
+Eleven capture-clock intervals exceed 50 ms; the maximum is **80 ms**. Thus
+processed-row continuity does not prove zero sensor loss or uninterrupted
+100-FPS capture under every diagnostic load. Later requested three-second
+probes stretched to approximately eight seconds with approximately one-second
+control acknowledgments, producing more video than the supervisor's short-probe
+storage estimate. That timing and budget limitation remains unresolved.
+
+Full-run relative-motion measurement fractions are **99.952% / 99.495% / 100% /
+100%**. Relocalization/rejection is retained as unmeasured relative motion rather
+than measured zero. VR2 acceptance improved from **99.588%** in the initial
+source window to **99.898%** in the final one; its late fit-error distribution
+remained stable. These are operational quality observations without physical
+ground truth, not a new scientific-parity claim.
+
+Native-process CPU averaged **36.781%** of this eight-logical-CPU machine over
+the sampled interval, excluding the external verifier. This is a loaded soak,
+not the isolated one/four-camera CPU benchmark. Arithmetic engine means are
+**3.012 / 3.066 / 3.123 / 2.895 ms/frame**; camera acquisition/decode, pacing and
+the rest of the process have different timing scopes. RSS peaks at **214.86 MiB**
+and finishes at **197.23 MiB**, essentially flat over the final 30 minutes.
+Final free space is **4.20 GiB**, the verification backlog is zero, and every
+final recording commit was independently checked.
+
+[Exact final analysis and limitations](benchmarks/linux-overnight-20261027.json)
+retain per-rig quality, probe failures, control timing, storage fallback, CPU
+boundaries, configuration hashes and a hash manifest of all verification reports.
+The tested archive retains its original build commit; this later documentation
+does not imply a rebuilt executable. The completed hourly monitor was removed;
+the separate October 29 performance follow-up remains active.
+
 ## Daily controls, motion structure and sustained CPU — 2026-10-27
 
 The final daily-control/async-finalization source passes formatting, strict

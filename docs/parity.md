@@ -46,6 +46,15 @@ multi-second gaps in the earlier rotation preflight. The
 [overnight protocol and actual run reports](overnight-validation.md) distinguish
 that failed preflight, the revised live test and any eventual long run.
 
+The completed **6 h 12 min** four-camera soak exits cleanly with **8,998,214**
+aligned processed rows and exact accepted wire data. All requested source MJPEG
+movies complete, but four debug probes remain partial and two approximately
+65-second storage/verification fallbacks intentionally omit video while keeping
+data. A heavy debug probe briefly reduces capture throughput; delayed control
+acknowledgments can extend requested probe duration. Those remaining recording
+and scheduling limits prevent an unrestricted 100-FPS recording claim.
+[Final overnight evidence](benchmarks/linux-overnight-20261027.json).
+
 The separate 300-frame sample also passes its original gates with the selected
 complete-ROI policy: path RMS 0.044807 sphere rad, heading RMS 0.013185 rad and
 component RMS .008761/.008292/.014211 rad. The 0.025594 sample path result in
