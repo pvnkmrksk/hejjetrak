@@ -16,8 +16,68 @@ permissions:
 env:
   PYTHONUTF8: '1'
 jobs:
+  repack:
+    name: Normalize Debian container and verify unchanged payload
+    runs-on: ubuntu-latest
+    container: ubuntu:22.04
+    steps:
+      - name: Packaging tools
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y ca-certificates git python3 dpkg
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: .runtime-tools
+          sparse-checkout: scripts/repack_deb.py
+          sparse-checkout-cone-mode: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: hejjetrac-Linux-X64
+          path: packages
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ github.token }}
+      - name: Verify source and normalize only the Debian container
+        env:
+          PACKAGING_TOOL_REVISION: ${{ github.sha }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          source_commit=$(git rev-parse HEAD)
+          version=$(python3 -c 'from pathlib import Path; import re; print(re.search(r"(?m)^version = \"([^\"]+)\"", Path("Cargo.toml").read_text())[1])')
+          python3 - "$source_commit" "$version" <<'PYCODE'
+          import json
+          import sys
+          import tarfile
+          with tarfile.open('packages/hejjetrac-linux-x86_64.tar.gz') as archive:
+              source = archive.extractfile('hejjetrac-linux-x86_64/BUILD.json')
+              if source is None:
+                  raise RuntimeError('Portable archive lacks its build identity')
+              data = source.read(65537)
+          if len(data) > 65536:
+              raise RuntimeError('Build identity exceeds its size bound')
+          build = json.loads(data)
+          if build['source_commit'] != sys.argv[1] or build['version'] != sys.argv[2]:
+              raise RuntimeError('Portable archive differs from the requested immutable source')
+          PYCODE
+          python3 .runtime-tools/scripts/repack_deb.py --input packages/hejjetrac-linux-amd64.deb --output packages/normalized.deb --report packages/deb-repack-report.json --source-commit "$source_commit" --version "$version" --tool-revision "$PACKAGING_TOOL_REVISION"
+          mv packages/normalized.deb packages/hejjetrac-linux-amd64.deb
+          dpkg-deb --info packages/hejjetrac-linux-amd64.deb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-linux-packages
+          path: |
+            packages/hejjetrac-linux-amd64.deb
+            packages/hejjetrac-linux-x86_64.tar.gz
+            packages/deb-repack-report.json
+          if-no-files-found: error
   runtime:
     name: Installed and portable Ubuntu ${{ matrix.ubuntu }}
+    needs: repack
     runs-on: ubuntu-latest
     container: ubuntu:${{ matrix.ubuntu }}
     strategy:
@@ -36,31 +96,9 @@ jobs:
           ref: ${{ inputs.source_ref }}
       - uses: actions/download-artifact@v4
         with:
-          name: hejjetrac-Linux-X64
+          name: verified-linux-packages
           path: packages
-          run-id: ${{ inputs.artifact_run_id }}
-          github-token: ${{ github.token }}
-      - name: Match artifact identity to the checked-out source
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          import re
-          import subprocess
-          import tarfile
-          expected = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
-          version = re.search(r'(?m)^version = "([^"]+)"', Path('Cargo.toml').read_text())[1]
-          with tarfile.open('packages/hejjetrac-linux-x86_64.tar.gz') as archive:
-              source = archive.extractfile('hejjetrac-linux-x86_64/BUILD.json')
-              if source is None:
-                  raise RuntimeError('Portable archive lacks its build identity')
-              build = json.load(source)
-          if build['source_commit'] != expected or build['version'] != version:
-              raise RuntimeError('Artifact does not match the requested immutable source')
-          print(json.dumps({'source_commit': expected, 'version': version}))
-          PY
-      - name: Install and test actual Debian and portable packages
+      - name: Install and test the same Debian and portable packages
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
@@ -70,5 +108,7 @@ jobs:
         if: always()
         with:
           name: linux-runtime-ubuntu-${{ matrix.ubuntu }}
-          path: linux-package-runtime/
+          path: |
+            linux-package-runtime/
+            packages/deb-repack-report.json
           if-no-files-found: warn

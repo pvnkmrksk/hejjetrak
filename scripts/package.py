@@ -152,10 +152,12 @@ def linux_abi_requirements(stage):
 
 
 def tar_gz_tree(directory, destination, epoch):
-    # Fixed root ownership/modes: packaging never needs root or maintainer scripts.
+    # dpkg accepts GNU long-name headers, but rejects PAX x/g extensions.
+    # Full dependency notices can exceed the ordinary 100-byte name field.
+    # Fixed root ownership/modes need no root or maintainer scripts.
     with destination.open('xb') as raw:
         with gzip.GzipFile(fileobj=raw, mode='wb', filename='', mtime=epoch) as compressed:
-            with tarfile.open(fileobj=compressed, mode='w', format=tarfile.PAX_FORMAT) as archive:
+            with tarfile.open(fileobj=compressed, mode='w', format=tarfile.GNU_FORMAT) as archive:
                 for path in sorted(directory.rglob('*')):
                     info = archive.gettarinfo(str(path), str(path.relative_to(directory)))
                     info.uid = info.gid = 0

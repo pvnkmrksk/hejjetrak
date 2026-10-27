@@ -3,10 +3,20 @@ use fictrac_io::{ConfigDocument, OutputSinks, load_config_text, write_dat};
 use std::{
     io::{Read, Write},
     net::{TcpListener, TcpStream, UdpSocket},
+    sync::{Mutex, MutexGuard},
     time::{Duration, Instant},
 };
 use zeromq::{Socket, SocketRecv};
 type TestResult = Result<(), Box<dyn std::error::Error>>;
+// Port probes release their temporary listener before the publisher binds.
+// Serialize this binary's socket fixtures so another test cannot take that
+// port in between, including as an outgoing subscriber's ephemeral port.
+static SOCKET_TESTS: Mutex<()> = Mutex::new(());
+fn socket_test() -> Result<MutexGuard<'static, ()>, Box<dyn std::error::Error>> {
+    SOCKET_TESTS
+        .lock()
+        .map_err(|_| "socket test lock poisoned".into())
+}
 fn port() -> Result<u16, Box<dyn std::error::Error>> {
     let socket = TcpListener::bind("127.0.0.1:0")?;
     Ok(socket.local_addr()?.port())
@@ -34,6 +44,7 @@ fn row() -> TrackRow {
 }
 #[test]
 fn real_rust_subscriber_and_udp_receive_identical_full_rows() -> TestResult {
+    let _socket_test = socket_test()?;
     let zmq_port = port()?;
     let udp = UdpSocket::bind("127.0.0.1:0")?;
     udp.set_read_timeout(Some(Duration::from_millis(100)))?;
@@ -102,6 +113,7 @@ fn real_rust_subscriber_and_udp_receive_identical_full_rows() -> TestResult {
 #[test]
 fn explicit_wildcard_bind_serves_modern_and_legacy_subscribers_with_unchanged_bytes() -> TestResult
 {
+    let _socket_test = socket_test()?;
     for (host, mode, prefix) in [
         ("0.0.0.0", "native_ft", "FT, "),
         ("*", "legacy_matrex_vr", "{"),
@@ -237,6 +249,7 @@ fn receive_published(
 
 #[test]
 fn fragmented_zmtp2_greeting_and_reconnect_receive_native_ft_unchanged() -> TestResult {
+    let _socket_test = socket_test()?;
     let port = port()?;
     let doc = ConfigDocument::parse(format!("zmq_port:{port}\n"))?;
     let mut sinks = OutputSinks::from_config(&doc)?;
@@ -255,6 +268,7 @@ fn fragmented_zmtp2_greeting_and_reconnect_receive_native_ft_unchanged() -> Test
 
 #[test]
 fn zmtp2_multipart_is_atomic_and_prefix_filters_the_topic() -> TestResult {
+    let _socket_test = socket_test()?;
     let port = port()?;
     let doc = ConfigDocument::parse(format!(
         "zmq_port:{port}\nzmq_output_mode:legacy_matrex_vr\nzmq_framing:topic_json\nzmq_topic:legacy/test\n"
@@ -276,6 +290,7 @@ fn zmtp2_multipart_is_atomic_and_prefix_filters_the_topic() -> TestResult {
 
 #[test]
 fn oversized_peer_control_is_observable_and_other_subscribers_continue() -> TestResult {
+    let _socket_test = socket_test()?;
     let port = port()?;
     let doc = ConfigDocument::parse(format!("zmq_port:{port}\n"))?;
     let mut sinks = OutputSinks::from_config(&doc)?;
@@ -338,6 +353,7 @@ fn no_frame(socket: &mut TcpStream) -> TestResult {
 
 #[test]
 fn no_measurements_replay_after_handshake_or_empty_prefix_resubscribe() -> TestResult {
+    let _socket_test = socket_test()?;
     let port = port()?;
     let doc = ConfigDocument::parse(format!("zmq_port:{port}\n"))?;
     let mut sinks = OutputSinks::from_config(&doc)?;
@@ -372,6 +388,7 @@ fn no_measurements_replay_after_handshake_or_empty_prefix_resubscribe() -> TestR
 }
 #[test]
 fn occupied_pub_port_is_actionable_and_disabled_pub_opens_no_socket() -> TestResult {
+    let _socket_test = socket_test()?;
     let occupied = TcpListener::bind("127.0.0.1:0")?;
     let port = occupied.local_addr()?.port();
     let doc = ConfigDocument::parse(format!("zmq_port:{port}\n"))?;
@@ -389,6 +406,7 @@ fn occupied_pub_port_is_actionable_and_disabled_pub_opens_no_socket() -> TestRes
 }
 #[test]
 fn reconfigure_reuses_healthy_outputs_and_restores_previous_pub_after_busy_port() -> TestResult {
+    let _socket_test = socket_test()?;
     let old_port = port()?;
     let mut old = ConfigDocument::parse(format!("zmq_port:{old_port}\n"))?;
     let mut sinks = OutputSinks::from_config(&old)?;

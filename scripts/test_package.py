@@ -1,4 +1,5 @@
 """Build-time Debian payload/format checks; no installed package or root required."""
+import gzip
 import importlib.util
 import io
 from pathlib import Path
@@ -34,6 +35,22 @@ def members(path):
             if length % 2 and source.read(1) != b'\n':
                 raise ValueError('Invalid ar padding')
     return result
+
+
+def tar_typeflags(compressed):
+    """Read physical headers, including extensions hidden by tarfile's reader."""
+    raw = gzip.decompress(compressed)
+    offset, flags = 0, []
+    while raw[offset:offset + 512] != bytes(512):
+        header = raw[offset:offset + 512]
+        if len(header) != 512:
+            raise ValueError('Truncated tar header')
+        size = int(header[124:136].rstrip(b'\0 ') or b'0', 8)
+        flags.append(header[156:157])
+        offset += 512 + ((size + 511) // 512) * 512
+    if raw[offset:].strip(b'\0'):
+        raise ValueError('Nonzero tar end padding')
+    return flags
 
 
 class DebianPackageTests(unittest.TestCase):
@@ -84,6 +101,40 @@ class DebianPackageTests(unittest.TestCase):
             self.assertIn('control.tar.gz', listing)
             with self.assertRaises(FileExistsError):
                 PACKAGE.build_deb(stage, output, '0.1.4', 'libc6', assets)
+
+    def test_long_dependency_notice_paths_use_dpkg_supported_headers(self):
+        with tempfile.TemporaryDirectory(prefix='hejjetrak-deb-long-name-') as directory:
+            directory = Path(directory)
+            stage = directory / 'stage'
+            stage.mkdir()
+            for name in ('hejjetrac', 'hejjetrac-cli', 'LICENSE'):
+                (stage / name).write_bytes(b'package fixture')
+            for name in ('hejjetrak', 'hejjetrak-cli'):
+                (stage / name).symlink_to(name.replace('hejjetrak', 'hejjetrac'))
+            relative = ('DependencyLicenses/epaint_default_fonts-0.33.3/'
+                        'LICENSE-FONT-emoji-icon-font-mit-license.txt')
+            notice = stage / relative
+            notice.parent.mkdir(parents=True)
+            notice.write_bytes(b'font license test fixture\n')
+            installed_name = 'usr/lib/hejjetrak/' + relative
+            self.assertGreater(len(installed_name.encode()), 100)
+            assets = Path(__file__).resolve().parent.parent / 'assets'
+            output = PACKAGE.build_deb(stage, directory / 'long-name.deb', '0.3.1',
+                                       'libc6 (>= 2.35)', assets)
+            archive = members(output)
+            for name in ('control.tar.gz', 'data.tar.gz'):
+                flags = tar_typeflags(archive[name])
+                self.assertNotIn(b'x', flags, 'dpkg rejects extended PAX headers')
+                self.assertNotIn(b'g', flags, 'dpkg rejects global PAX headers')
+            self.assertIn(b'L', tar_typeflags(archive['data.tar.gz']))
+            with tarfile.open(fileobj=io.BytesIO(archive['data.tar.gz'])) as data:
+                self.assertEqual(data.extractfile(installed_name).read(), notice.read_bytes())
+                self.assertEqual(data.getmember(installed_name).mode, 0o644)
+                self.assertFalse(data.getmember(installed_name).pax_headers)
+            with tarfile.open(fileobj=io.BytesIO(archive['control.tar.gz'])) as control:
+                metadata = control.extractfile('control').read()
+                self.assertIn(b'Version: 0.3.1\n', metadata)
+                self.assertIn(b'Depends: libc6 (>= 2.35)\n', metadata)
 
     def test_workspace_version_is_read_from_workspace_package_only(self):
         with tempfile.TemporaryDirectory() as directory:
