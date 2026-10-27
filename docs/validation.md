@@ -1,5 +1,66 @@
 # HejjéTrac validation evidence
 
+## v0.3.1 published release — 2026-10-27
+
+Published [v0.3.1](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.1)
+contains all five platform downloads, from application source
+`99d4f5711584dd211f8b8c16e52bbbd357119a2f`. The user's `cf567ba` improvements
+are preserved on main under Pavan Kumar Kaushik's author identity.
+
+Native release checks pass **270 workspace tests on each Mac**, **275 on Linux**
+and **269 on Windows**, with zero failures/ignored tests. Each platform passes
+**1,353 decoder tests**, the fixed 120-image synthetic gate and package version/
+source checks; Linux additionally passes three camera-adapter tests. Windows
+static-CRT/dumpbin validation and both Mac strict ad hoc signatures pass.
+The [final portability run](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40517340009)
+passes on Ubuntu 22.04/24.04, Windows and Mac ARM. Windows packaging explicitly
+uses Python UTF-8 mode; Python is a build/test tool, not an application runtime.
+
+The official Apple Silicon ZIP is **23,826,657 bytes**, SHA-256
+`cd24d617dbafaa03b96b56f26fdbfdd3873baccc27f564361fee276a7b28216b`.
+Its signature, source/version, aliases, complete 300-image sample comparison and
+**174-frame native preview** pass. Actual main, diagnostic and calibration
+views were reviewed during the candidate checks, and 20 native recording takes
+were independently decoded. Both Intel/Windows archives have independent binary,
+alias and notice-hash audits. All **474 notice groups** contain text, including
+all four font terms; **838 provenance hashes** verify.
+
+Actual `dpkg` installation exposed unsupported PAX long-path headers in the
+draft installer. The published Debian container uses GNU headers; its **1,899
+regular files, 580 directories and six symlinks**, including both binaries,
+remain identical in bytes, permissions, ownership and targets. The independent
+[container repair and runtime run](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40522916906)
+records application source separately from packaging tool revision `870beea`.
+The final Debian SHA-256 is
+`3dd22253a8bd46e2f227e2954cb890b8ce882f8e00911a7ff2fc0bf261a44d14`.
+The portable archive is unchanged, SHA-256
+`3dae3648770a9f868f41860df27393eab269d9aac44a3f2e10443668a98e2d8a`.
+
+The **same corrected installer** runs under Ubuntu **22.04.5** and **24.04.5**,
+as does the same portable archive. Both CLIs process all 300 sample images,
+reject none and pass the original .075 path/.025 heading/.020 component limits.
+Installed/portable/no-camera-fallback native previews process **238/237/238**
+frames on 22.04 and **234/234/234** on 24.04. All six screenshots were visually
+reviewed: the patterned ball, trace, path and toolbar are visible, with empty
+error status. Fallback keeps `/github/home/.config/hejjetrac/VR1.txt` outside
+the installed application. Both executables require at most **GLIBC_2.35**;
+the actual runtime glibc versions are 2.35 and 2.39. These are Xvfb/Mesa
+executions, not final-build physical V4L camera, hardware GPU or Wayland tests.
+
+A subsequent Linux fixture rerun hit a probe/bind ephemeral-port race before
+protocol exercise. Main now serializes that binary's socket fixtures; all ten
+focused tests and a fresh full **270-test** Mac workspace run pass without
+skipping tests, weakening assertions or changing application code. Formatting
+and strict locked all-target Clippy also pass. Eight packaging tests include
+a long-path regression that fails the original PAX writer; five Debian-repair
+tests verify unchanged payloads and invalid-input/atomic-output behavior.
+
+[Complete release/archive evidence](benchmarks/release-v031-20261027.json),
+[Ubuntu runtime evidence](benchmarks/release-v031-linux-20261027.json) and
+[final local checks](benchmarks/local-v031-20261027.json) retain exact commands,
+hashes and scope. The v0.3.0 draft remains unpublished.
+
+
 ## v0.3.0 merged-source checks — 2026-10-27
 
 The release candidate merges the user's `cf567ba` four-camera branch with

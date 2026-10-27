@@ -32,6 +32,13 @@ your equipment; calibration is specific to its optics and geometry.
 
 ## Validation and limits
 
+Native package checks pass on Windows, Apple Silicon, Intel Mac and Linux.
+The actual Debian installer and portable Linux archive pass full-sample tracking,
+visible native preview and startup-fallback checks on Ubuntu 22.04 and 24.04.
+Both Linux executables require at most glibc 2.35. The installer retains the same
+application payload after its Debian-container correction.
+
+
 This final tag also includes the corrected release-build tooling: timezone data
 for development tests, versioned dependency staging and complete dependency/font
 notices with exact archive/source provenance. The earlier v0.3.0 candidate

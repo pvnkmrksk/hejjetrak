@@ -1,0 +1,307 @@
+{
+  "version": "0.3.1",
+  "application_source_commit": "99d4f5711584dd211f8b8c16e52bbbd357119a2f",
+  "post_tag_scope": "Main adds packaging/test infrastructure only; production Rust source is unchanged. Socket fixtures serialize probe/bind lifetimes without changing assertions.",
+  "fmt": true,
+  "strict_locked_all_target_clippy": true,
+  "workspace_tests": {
+    "passed": 270,
+    "suites_including_doc_tests": 27,
+    "failed": 0,
+    "ignored": 0
+  },
+  "focused_socket_tests": 10,
+  "notice_collector_tests": 12,
+  "package_tests": 8,
+  "debian_repack_tests": 5,
+  "release_fixtures": {
+    "version": "0.3.1",
+    "source_commit": "99d4f5711584dd211f8b8c16e52bbbd357119a2f",
+    "user_source": "cf567baf96252ef1346ddf1b6aa48a3ccb839666",
+    "previous_main": "e652450398e6fbbd45f57501b695cb64a9010040",
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "machine": "arm64",
+    "sample_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+    "binary_sha256": "7b1770d17bbbc091db6b3b1c5dfd1e3abf72c58a04ed76d516b23eaa570acad8",
+    "scope": "Serial release fixture checks, including normal numeric/quality output and finalization. External times include process startup. No physical-camera or generalized throughput claim.",
+    "runs": [
+      {
+        "label": "demo",
+        "command": [
+          "/private/tmp/hejjetrac-fix-target/release/fictrac",
+          "demo",
+          "--output",
+          "/private/tmp/hejjetrac-v031-validation/serial/demo",
+          "--frames",
+          "120"
+        ],
+        "external_seconds": 0.586397834,
+        "exit_code": 0
+      },
+      {
+        "label": "sample",
+        "command": [
+          "/private/tmp/hejjetrac-fix-target/release/fictrac",
+          "track",
+          "--config",
+          "examples/benchmark/config.txt",
+          "--input",
+          "examples/sample.mp4",
+          "--output",
+          "/private/tmp/hejjetrac-v031-validation/serial/sample"
+        ],
+        "external_seconds": 0.7504793750000001,
+        "exit_code": 0
+      },
+      {
+        "label": "comparison",
+        "command": [
+          "/private/tmp/hejjetrac-fix-target/release/fictrac",
+          "compare",
+          "--reference",
+          "examples/benchmark/upstream.dat",
+          "--candidate",
+          "/private/tmp/hejjetrac-v031-validation/serial/sample/tracking.dat",
+          "--report",
+          "/private/tmp/hejjetrac-v031-validation/serial/sample/comparison.json"
+        ],
+        "external_seconds": 0.005450583000000009,
+        "exit_code": 0
+      }
+    ],
+    "demo": {
+      "version": "0.3.1",
+      "input": "/private/tmp/hejjetrac-v031-validation/serial/demo/sphere.y4m",
+      "video": {
+        "width": 160,
+        "height": 160,
+        "fps": 60.0,
+        "codec": "y4m/mono",
+        "duration_ms": null
+      },
+      "effective_config": {
+        "spherical_map": null,
+        "width": 160,
+        "height": 160,
+        "vfov_deg": 45.0,
+        "fisheye": false,
+        "sphere": {
+          "centre": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "angular_radius": 0.29
+        },
+        "camera_to_lab": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "legacy_roi_coordinates": false,
+        "ignore_polygons": [],
+        "max_rotation": 0.35,
+        "max_error": 0.16,
+        "sample_stride": 2,
+        "iterations": 20,
+        "source": "sphere.y4m"
+      },
+      "frames": 120,
+      "tracked": 119,
+      "relocalized": 0,
+      "rejected": 0,
+      "initializing": 1,
+      "mean_error": 0.016496092142655572,
+      "max_error": 0.017650473980493932,
+      "wall_seconds": 0.223590667,
+      "end_to_end_fps": 536.6950311928717,
+      "tracking_fps": 605.8536978431915,
+      "input_duration_ms": 1983.3333333333333,
+      "final_position": [
+        -1.185437068437707,
+        -0.39796415863396967
+      ],
+      "final_heading": 5.7576452643299385,
+      "estimator": "perspective pairwise robust photometric SO(3)",
+      "error_metric": "normalized luma RMSE (0..1)",
+      "warnings": []
+    },
+    "demo_oracle": {
+      "expected_delta": [
+        0.006,
+        -0.009,
+        0.004
+      ],
+      "passed": true,
+      "rotation_component_rmse_rad": 0.0003040496948914138,
+      "tolerance_rad": 0.003
+    },
+    "sample": {
+      "version": "0.3.1",
+      "input": "/private/tmp/hejjetrac-user-release-20261027/examples/sample.mp4",
+      "video": {
+        "width": 384,
+        "height": 288,
+        "fps": null,
+        "codec": "h264 (pure Rust)",
+        "duration_ms": 10000.0
+      },
+      "effective_config": {
+        "spherical_map": {
+          "resilient": true,
+          "global_search": false,
+          "max_bad_frames": -1,
+          "global_evaluations": 100000,
+          "channel": null,
+          "quality": 6,
+          "threshold_ratio": 1.25,
+          "threshold_window": 0.25,
+          "max_evaluations": 50,
+          "tolerance": 0.001,
+          "max_error": -1.0
+        },
+        "width": 384,
+        "height": 288,
+        "vfov_deg": 45.0,
+        "fisheye": false,
+        "sphere": {
+          "centre": [
+            -0.22938965658632982,
+            0.0999680947095317,
+            0.9681873607372448
+          ],
+          "angular_radius": 0.12481674439688986
+        },
+        "camera_to_lab": [
+          0.722445,
+          -0.131314,
+          -0.460878
+        ],
+        "legacy_roi_coordinates": true,
+        "ignore_polygons": [
+          [
+            [
+              96.0,
+              156.0
+            ],
+            [
+              113.0,
+              147.0
+            ],
+            [
+              106.0,
+              128.0
+            ],
+            [
+              82.0,
+              130.0
+            ],
+            [
+              81.0,
+              150.0
+            ]
+          ],
+          [
+            [
+              71.0,
+              213.0
+            ],
+            [
+              90.0,
+              219.0
+            ],
+            [
+              114.0,
+              218.0
+            ],
+            [
+              135.0,
+              211.0
+            ],
+            [
+              154.0,
+              196.0
+            ],
+            [
+              150.0,
+              217.0
+            ],
+            [
+              121.0,
+              228.0
+            ],
+            [
+              99.0,
+              234.0
+            ],
+            [
+              75.0,
+              225.0
+            ]
+          ]
+        ],
+        "max_rotation": 0.35,
+        "max_error": 0.16,
+        "sample_stride": 2,
+        "iterations": 20,
+        "source": "sample.mp4"
+      },
+      "frames": 300,
+      "tracked": 299,
+      "relocalized": 0,
+      "rejected": 0,
+      "initializing": 1,
+      "mean_error": 6424.500252392103,
+      "max_error": 8268.539271610356,
+      "wall_seconds": 0.745366875,
+      "end_to_end_fps": 402.4863594857231,
+      "tracking_fps": 1176.4100284923775,
+      "input_duration_ms": 9966.666666666666,
+      "final_position": [
+        3.6200534616363367,
+        -2.62729631571117
+      ],
+      "final_heading": 6.177704995564474,
+      "estimator": "accumulated spherical map / pure Rust BOBYQA",
+      "error_metric": "mean squared binary intensity (0..65025)",
+      "warnings": []
+    },
+    "comparison": {
+      "comparison": {
+        "candidate_final_position": [
+          3.620053461636,
+          -2.627296315711
+        ],
+        "endpoint_error_sphere_rad": 0.054525318251027806,
+        "frames": 300,
+        "heading_rmse_rad": 0.013184810790688728,
+        "path_point_rmse_sphere_rad": 0.04480675139756663,
+        "reference_final_position": [
+          3.674266189723,
+          -2.6214661833162
+        ],
+        "rotation_component_rmse_rad": [
+          0.008760804755303081,
+          0.008292135984256042,
+          0.014210731643506284
+        ],
+        "timestamp_max_error_ms": 3.456079866737127e-11
+      },
+      "limits": {
+        "heading_rmse_rad": 0.025,
+        "path_rmse_sphere_rad": 0.075,
+        "rotation_component_rmse_rad": 0.02
+      },
+      "passed": true
+    },
+    "v030_candidate_numeric_unchanged": {
+      "all-frames.dat": true,
+      "quality.csv": true
+    }
+  },
+  "final_log_sha256": {
+    "final-fmt.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "final-clippy.log": "e777b28b3583383d9eedf15280033c725d318199201b4ece5a5db81870b0fc67",
+    "final-tests.log": "617ed6a73f0211372269ce8c7f8dc99755a1c94fb037d9a8b78649730768a664"
+  }
+}

@@ -1,0 +1,1737 @@
+{
+  "source_commit": "99d4f5711584dd211f8b8c16e52bbbd357119a2f",
+  "release_tag": "v0.3.1",
+  "status": "passed",
+  "runtime": [
+    {
+      "distribution": {
+        "NAME": "Ubuntu",
+        "ID": "ubuntu",
+        "PRETTY_NAME": "Ubuntu 22.04.5 LTS",
+        "VERSION_ID": "22.04",
+        "VERSION": "22.04.5 LTS (Jammy Jellyfish)",
+        "VERSION_CODENAME": "jammy",
+        "ID_LIKE": "debian",
+        "HOME_URL": "https://www.ubuntu.com/",
+        "SUPPORT_URL": "https://help.ubuntu.com/",
+        "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
+        "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
+        "UBUNTU_CODENAME": "jammy"
+      },
+      "runtime_glibc": [
+        "glibc",
+        "2.35"
+      ],
+      "checks": [
+        {
+          "kind": "installed",
+          "source_commit": "99d4f5711584dd211f8b8c16e52bbbd357119a2f",
+          "version": "0.3.1",
+          "glibc": {
+            "target_baseline": "Ubuntu 22.04 / glibc 2.35",
+            "glibc_ceiling": "2.35",
+            "binaries": [
+              {
+                "binary": "hejjetrac",
+                "required_glibc_versions": [
+                  "2.2.5",
+                  "2.3",
+                  "2.3.2",
+                  "2.3.4",
+                  "2.4",
+                  "2.7",
+                  "2.9",
+                  "2.10",
+                  "2.14",
+                  "2.15",
+                  "2.16",
+                  "2.17",
+                  "2.18",
+                  "2.25",
+                  "2.27",
+                  "2.28",
+                  "2.29",
+                  "2.30",
+                  "2.32",
+                  "2.33",
+                  "2.34",
+                  "2.35"
+                ],
+                "maximum_required_glibc": "2.35"
+              },
+              {
+                "binary": "hejjetrac-cli",
+                "required_glibc_versions": [
+                  "2.2.5",
+                  "2.3",
+                  "2.3.2",
+                  "2.3.4",
+                  "2.4",
+                  "2.7",
+                  "2.9",
+                  "2.10",
+                  "2.14",
+                  "2.16",
+                  "2.17",
+                  "2.18",
+                  "2.25",
+                  "2.28",
+                  "2.29",
+                  "2.30",
+                  "2.32",
+                  "2.33",
+                  "2.34",
+                  "2.35"
+                ],
+                "maximum_required_glibc": "2.35"
+              }
+            ]
+          },
+          "depends": "libc6 (>= 2.35), libgcc-s1 (>= 4.2), libudev1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libegl1, libgles2, libvulkan1",
+          "notice_packages": 474,
+          "sample": {
+            "version": "0.3.1",
+            "input": "/usr/lib/hejjetrak/examples/sample.mp4",
+            "video": {
+              "width": 384,
+              "height": 288,
+              "fps": null,
+              "codec": "h264 (pure Rust)",
+              "duration_ms": 10000.0
+            },
+            "effective_config": {
+              "spherical_map": {
+                "resilient": true,
+                "global_search": false,
+                "max_bad_frames": -1,
+                "global_evaluations": 100000,
+                "channel": null,
+                "quality": 6,
+                "threshold_ratio": 1.25,
+                "threshold_window": 0.25,
+                "max_evaluations": 50,
+                "tolerance": 0.001,
+                "max_error": -1.0
+              },
+              "width": 384,
+              "height": 288,
+              "vfov_deg": 45.0,
+              "fisheye": false,
+              "sphere": {
+                "centre": [
+                  -0.22938965658632302,
+                  0.09996809470952124,
+                  0.9681873607372475
+                ],
+                "angular_radius": 0.12481674439688094
+              },
+              "camera_to_lab": [
+                0.722445,
+                -0.131314,
+                -0.460878
+              ],
+              "legacy_roi_coordinates": true,
+              "ignore_polygons": [
+                [
+                  [
+                    96.0,
+                    156.0
+                  ],
+                  [
+                    113.0,
+                    147.0
+                  ],
+                  [
+                    106.0,
+                    128.0
+                  ],
+                  [
+                    82.0,
+                    130.0
+                  ],
+                  [
+                    81.0,
+                    150.0
+                  ]
+                ],
+                [
+                  [
+                    71.0,
+                    213.0
+                  ],
+                  [
+                    90.0,
+                    219.0
+                  ],
+                  [
+                    114.0,
+                    218.0
+                  ],
+                  [
+                    135.0,
+                    211.0
+                  ],
+                  [
+                    154.0,
+                    196.0
+                  ],
+                  [
+                    150.0,
+                    217.0
+                  ],
+                  [
+                    121.0,
+                    228.0
+                  ],
+                  [
+                    99.0,
+                    234.0
+                  ],
+                  [
+                    75.0,
+                    225.0
+                  ]
+                ]
+              ],
+              "max_rotation": 0.35,
+              "max_error": 0.16,
+              "sample_stride": 2,
+              "iterations": 20,
+              "source": "/usr/lib/hejjetrak/examples/sample.mp4"
+            },
+            "frames": 300,
+            "tracked": 299,
+            "relocalized": 0,
+            "rejected": 0,
+            "initializing": 1,
+            "mean_error": 6424.500252392103,
+            "max_error": 8268.539271610356,
+            "wall_seconds": 1.244559212,
+            "end_to_end_fps": 241.0491980674038,
+            "tracking_fps": 542.1906896005181,
+            "input_duration_ms": 9966.666666666666,
+            "final_position": [
+              3.620053461636342,
+              -2.6272963157111424
+            ],
+            "final_heading": 6.177704995564479,
+            "estimator": "accumulated spherical map / pure Rust BOBYQA",
+            "error_metric": "mean squared binary intensity (0..65025)",
+            "warnings": []
+          },
+          "comparison": {
+            "comparison": {
+              "candidate_final_position": [
+                3.620053461636,
+                -2.627296315711
+              ],
+              "endpoint_error_sphere_rad": 0.054525318251027806,
+              "frames": 300,
+              "heading_rmse_rad": 0.01318481079068964,
+              "path_point_rmse_sphere_rad": 0.04480675139755788,
+              "reference_final_position": [
+                3.674266189723,
+                -2.6214661833162
+              ],
+              "rotation_component_rmse_rad": [
+                0.008760804755303081,
+                0.008292135984256042,
+                0.014210731643506284
+              ],
+              "timestamp_max_error_ms": 3.456079866737127e-11
+            },
+            "limits": {
+              "heading_rmse_rad": 0.025,
+              "path_rmse_sphere_rad": 0.075,
+              "rotation_component_rmse_rad": 0.02
+            },
+            "passed": true
+          }
+        },
+        {
+          "kind": "portable",
+          "source_commit": "99d4f5711584dd211f8b8c16e52bbbd357119a2f",
+          "version": "0.3.1",
+          "glibc": {
+            "target_baseline": "Ubuntu 22.04 / glibc 2.35",
+            "glibc_ceiling": "2.35",
+            "binaries": [
+              {
+                "binary": "hejjetrac",
+                "required_glibc_versions": [
+                  "2.2.5",
+                  "2.3",
+                  "2.3.2",
+                  "2.3.4",
+                  "2.4",
+                  "2.7",
+                  "2.9",
+                  "2.10",
+                  "2.14",
+                  "2.15",
+                  "2.16",
+                  "2.17",
+                  "2.18",
+                  "2.25",
+                  "2.27",
+                  "2.28",
+                  "2.29",
+                  "2.30",
+                  "2.32",
+                  "2.33",
+                  "2.34",
+                  "2.35"
+                ],
+                "maximum_required_glibc": "2.35"
+              },
+              {
+                "binary": "hejjetrac-cli",
+                "required_glibc_versions": [
+                  "2.2.5",
+                  "2.3",
+                  "2.3.2",
+                  "2.3.4",
+                  "2.4",
+                  "2.7",
+                  "2.9",
+                  "2.10",
+                  "2.14",
+                  "2.16",
+                  "2.17",
+                  "2.18",
+                  "2.25",
+                  "2.28",
+                  "2.29",
+                  "2.30",
+                  "2.32",
+                  "2.33",
+                  "2.34",
+                  "2.35"
+                ],
+                "maximum_required_glibc": "2.35"
+              }
+            ]
+          },
+          "depends": "libc6 (>= 2.35), libgcc-s1 (>= 4.2), libudev1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libegl1, libgles2, libvulkan1",
+          "notice_packages": 474,
+          "sample": {
+            "version": "0.3.1",
+            "input": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+            "video": {
+              "width": 384,
+              "height": 288,
+              "fps": null,
+              "codec": "h264 (pure Rust)",
+              "duration_ms": 10000.0
+            },
+            "effective_config": {
+              "spherical_map": {
+                "resilient": true,
+                "global_search": false,
+                "max_bad_frames": -1,
+                "global_evaluations": 100000,
+                "channel": null,
+                "quality": 6,
+                "threshold_ratio": 1.25,
+                "threshold_window": 0.25,
+                "max_evaluations": 50,
+                "tolerance": 0.001,
+                "max_error": -1.0
+              },
+              "width": 384,
+              "height": 288,
+              "vfov_deg": 45.0,
+              "fisheye": false,
+              "sphere": {
+                "centre": [
+                  -0.22938965658632302,
+                  0.09996809470952124,
+                  0.9681873607372475
+                ],
+                "angular_radius": 0.12481674439688094
+              },
+              "camera_to_lab": [
+                0.722445,
+                -0.131314,
+                -0.460878
+              ],
+              "legacy_roi_coordinates": true,
+              "ignore_polygons": [
+                [
+                  [
+                    96.0,
+                    156.0
+                  ],
+                  [
+                    113.0,
+                    147.0
+                  ],
+                  [
+                    106.0,
+                    128.0
+                  ],
+                  [
+                    82.0,
+                    130.0
+                  ],
+                  [
+                    81.0,
+                    150.0
+                  ]
+                ],
+                [
+                  [
+                    71.0,
+                    213.0
+                  ],
+                  [
+                    90.0,
+                    219.0
+                  ],
+                  [
+                    114.0,
+                    218.0
+                  ],
+                  [
+                    135.0,
+                    211.0
+                  ],
+                  [
+                    154.0,
+                    196.0
+                  ],
+                  [
+                    150.0,
+                    217.0
+                  ],
+                  [
+                    121.0,
+                    228.0
+                  ],
+                  [
+                    99.0,
+                    234.0
+                  ],
+                  [
+                    75.0,
+                    225.0
+                  ]
+                ]
+              ],
+              "max_rotation": 0.35,
+              "max_error": 0.16,
+              "sample_stride": 2,
+              "iterations": 20,
+              "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4"
+            },
+            "frames": 300,
+            "tracked": 299,
+            "relocalized": 0,
+            "rejected": 0,
+            "initializing": 1,
+            "mean_error": 6424.500252392103,
+            "max_error": 8268.539271610356,
+            "wall_seconds": 1.34121807,
+            "end_to_end_fps": 223.67727270480333,
+            "tracking_fps": 548.2636279820313,
+            "input_duration_ms": 9966.666666666666,
+            "final_position": [
+              3.620053461636342,
+              -2.6272963157111424
+            ],
+            "final_heading": 6.177704995564479,
+            "estimator": "accumulated spherical map / pure Rust BOBYQA",
+            "error_metric": "mean squared binary intensity (0..65025)",
+            "warnings": []
+          },
+          "comparison": {
+            "comparison": {
+              "candidate_final_position": [
+                3.620053461636,
+                -2.627296315711
+              ],
+              "endpoint_error_sphere_rad": 0.054525318251027806,
+              "frames": 300,
+              "heading_rmse_rad": 0.01318481079068964,
+              "path_point_rmse_sphere_rad": 0.04480675139755788,
+              "reference_final_position": [
+                3.674266189723,
+                -2.6214661833162
+              ],
+              "rotation_component_rmse_rad": [
+                0.008760804755303081,
+                0.008292135984256042,
+                0.014210731643506284
+              ],
+              "timestamp_max_error_ms": 3.456079866737127e-11
+            },
+            "limits": {
+              "heading_rmse_rad": 0.025,
+              "path_rmse_sphere_rad": 0.075,
+              "rotation_component_rmse_rad": 0.02
+            },
+            "passed": true
+          }
+        }
+      ],
+      "native_checks": [
+        {
+          "kind": "installed",
+          "frames": 238,
+          "screenshot": "/private/tmp/hejjetrac-v031-linux-audit/ubuntu-22.04/linux-package-runtime/installed/native-video.png",
+          "screenshot_sha256": "b929dfdadb3029fa0948712dc2a3ed8a545c9c7791961ccca3618e8592a4dbe9",
+          "pattern": {
+            "dark_fraction": 0.3441796875,
+            "light_fraction": 0.5358984375
+          }
+        },
+        {
+          "kind": "portable",
+          "frames": 237,
+          "screenshot": "/private/tmp/hejjetrac-v031-linux-audit/ubuntu-22.04/linux-package-runtime/portable/native-video.png",
+          "screenshot_sha256": "002e640d2072d8aacc1bc75299841175079056a34c8e90a30644dfbe361b7961",
+          "pattern": {
+            "dark_fraction": 0.3440234375,
+            "light_fraction": 0.5351171875
+          }
+        },
+        {
+          "kind": "fallback",
+          "frames": 238,
+          "screenshot": "/private/tmp/hejjetrac-v031-linux-audit/ubuntu-22.04/linux-package-runtime/default-startup/native-fallback.png",
+          "screenshot_sha256": "af49b28a64967a9feb1ca350a359cbb085fa967e84fb6b74b2f5421ada9b8771",
+          "pattern": {
+            "dark_fraction": 0.3440234375,
+            "light_fraction": 0.5351171875
+          }
+        }
+      ],
+      "harness_sha256": "6413631587a50031dad4e404ba1e44d6c2d412dd405bf30ffc18acacd2cdb28f",
+      "reported_startup_user_config": "/github/home/.config/hejjetrac/VR1.txt"
+    },
+    {
+      "distribution": {
+        "NAME": "Ubuntu",
+        "ID": "ubuntu",
+        "PRETTY_NAME": "Ubuntu 24.04.5 LTS",
+        "VERSION_ID": "24.04",
+        "VERSION": "24.04.5 LTS (Noble Numbat)",
+        "VERSION_CODENAME": "noble",
+        "ID_LIKE": "debian",
+        "HOME_URL": "https://www.ubuntu.com/",
+        "SUPPORT_URL": "https://help.ubuntu.com/",
+        "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
+        "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
+        "UBUNTU_CODENAME": "noble",
+        "LOGO": "ubuntu-logo"
+      },
+      "runtime_glibc": [
+        "glibc",
+        "2.39"
+      ],
+      "checks": [
+        {
+          "kind": "installed",
+          "source_commit": "99d4f5711584dd211f8b8c16e52bbbd357119a2f",
+          "version": "0.3.1",
+          "glibc": {
+            "target_baseline": "Ubuntu 22.04 / glibc 2.35",
+            "glibc_ceiling": "2.35",
+            "binaries": [
+              {
+                "binary": "hejjetrac",
+                "required_glibc_versions": [
+                  "2.2.5",
+                  "2.3",
+                  "2.3.2",
+                  "2.3.4",
+                  "2.4",
+                  "2.7",
+                  "2.9",
+                  "2.10",
+                  "2.14",
+                  "2.15",
+                  "2.16",
+                  "2.17",
+                  "2.18",
+                  "2.25",
+                  "2.27",
+                  "2.28",
+                  "2.29",
+                  "2.30",
+                  "2.32",
+                  "2.33",
+                  "2.34",
+                  "2.35"
+                ],
+                "maximum_required_glibc": "2.35"
+              },
+              {
+                "binary": "hejjetrac-cli",
+                "required_glibc_versions": [
+                  "2.2.5",
+                  "2.3",
+                  "2.3.2",
+                  "2.3.4",
+                  "2.4",
+                  "2.7",
+                  "2.9",
+                  "2.10",
+                  "2.14",
+                  "2.16",
+                  "2.17",
+                  "2.18",
+                  "2.25",
+                  "2.28",
+                  "2.29",
+                  "2.30",
+                  "2.32",
+                  "2.33",
+                  "2.34",
+                  "2.35"
+                ],
+                "maximum_required_glibc": "2.35"
+              }
+            ]
+          },
+          "depends": "libc6 (>= 2.35), libgcc-s1 (>= 4.2), libudev1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libegl1, libgles2, libvulkan1",
+          "notice_packages": 474,
+          "sample": {
+            "version": "0.3.1",
+            "input": "/usr/lib/hejjetrak/examples/sample.mp4",
+            "video": {
+              "width": 384,
+              "height": 288,
+              "fps": null,
+              "codec": "h264 (pure Rust)",
+              "duration_ms": 10000.0
+            },
+            "effective_config": {
+              "spherical_map": {
+                "resilient": true,
+                "global_search": false,
+                "max_bad_frames": -1,
+                "global_evaluations": 100000,
+                "channel": null,
+                "quality": 6,
+                "threshold_ratio": 1.25,
+                "threshold_window": 0.25,
+                "max_evaluations": 50,
+                "tolerance": 0.001,
+                "max_error": -1.0
+              },
+              "width": 384,
+              "height": 288,
+              "vfov_deg": 45.0,
+              "fisheye": false,
+              "sphere": {
+                "centre": [
+                  -0.22938965658632302,
+                  0.09996809470952124,
+                  0.9681873607372475
+                ],
+                "angular_radius": 0.12481674439688094
+              },
+              "camera_to_lab": [
+                0.722445,
+                -0.131314,
+                -0.460878
+              ],
+              "legacy_roi_coordinates": true,
+              "ignore_polygons": [
+                [
+                  [
+                    96.0,
+                    156.0
+                  ],
+                  [
+                    113.0,
+                    147.0
+                  ],
+                  [
+                    106.0,
+                    128.0
+                  ],
+                  [
+                    82.0,
+                    130.0
+                  ],
+                  [
+                    81.0,
+                    150.0
+                  ]
+                ],
+                [
+                  [
+                    71.0,
+                    213.0
+                  ],
+                  [
+                    90.0,
+                    219.0
+                  ],
+                  [
+                    114.0,
+                    218.0
+                  ],
+                  [
+                    135.0,
+                    211.0
+                  ],
+                  [
+                    154.0,
+                    196.0
+                  ],
+                  [
+                    150.0,
+                    217.0
+                  ],
+                  [
+                    121.0,
+                    228.0
+                  ],
+                  [
+                    99.0,
+                    234.0
+                  ],
+                  [
+                    75.0,
+                    225.0
+                  ]
+                ]
+              ],
+              "max_rotation": 0.35,
+              "max_error": 0.16,
+              "sample_stride": 2,
+              "iterations": 20,
+              "source": "/usr/lib/hejjetrak/examples/sample.mp4"
+            },
+            "frames": 300,
+            "tracked": 299,
+            "relocalized": 0,
+            "rejected": 0,
+            "initializing": 1,
+            "mean_error": 6424.500252392103,
+            "max_error": 8268.539271610356,
+            "wall_seconds": 0.952117289,
+            "end_to_end_fps": 315.0872308127996,
+            "tracking_fps": 647.9741320950775,
+            "input_duration_ms": 9966.666666666666,
+            "final_position": [
+              3.620053461636342,
+              -2.6272963157111424
+            ],
+            "final_heading": 6.177704995564479,
+            "estimator": "accumulated spherical map / pure Rust BOBYQA",
+            "error_metric": "mean squared binary intensity (0..65025)",
+            "warnings": []
+          },
+          "comparison": {
+            "comparison": {
+              "candidate_final_position": [
+                3.620053461636,
+                -2.627296315711
+              ],
+              "endpoint_error_sphere_rad": 0.054525318251027806,
+              "frames": 300,
+              "heading_rmse_rad": 0.01318481079068964,
+              "path_point_rmse_sphere_rad": 0.04480675139755788,
+              "reference_final_position": [
+                3.674266189723,
+                -2.6214661833162
+              ],
+              "rotation_component_rmse_rad": [
+                0.008760804755303081,
+                0.008292135984256042,
+                0.014210731643506284
+              ],
+              "timestamp_max_error_ms": 3.456079866737127e-11
+            },
+            "limits": {
+              "heading_rmse_rad": 0.025,
+              "path_rmse_sphere_rad": 0.075,
+              "rotation_component_rmse_rad": 0.02
+            },
+            "passed": true
+          }
+        },
+        {
+          "kind": "portable",
+          "source_commit": "99d4f5711584dd211f8b8c16e52bbbd357119a2f",
+          "version": "0.3.1",
+          "glibc": {
+            "target_baseline": "Ubuntu 22.04 / glibc 2.35",
+            "glibc_ceiling": "2.35",
+            "binaries": [
+              {
+                "binary": "hejjetrac",
+                "required_glibc_versions": [
+                  "2.2.5",
+                  "2.3",
+                  "2.3.2",
+                  "2.3.4",
+                  "2.4",
+                  "2.7",
+                  "2.9",
+                  "2.10",
+                  "2.14",
+                  "2.15",
+                  "2.16",
+                  "2.17",
+                  "2.18",
+                  "2.25",
+                  "2.27",
+                  "2.28",
+                  "2.29",
+                  "2.30",
+                  "2.32",
+                  "2.33",
+                  "2.34",
+                  "2.35"
+                ],
+                "maximum_required_glibc": "2.35"
+              },
+              {
+                "binary": "hejjetrac-cli",
+                "required_glibc_versions": [
+                  "2.2.5",
+                  "2.3",
+                  "2.3.2",
+                  "2.3.4",
+                  "2.4",
+                  "2.7",
+                  "2.9",
+                  "2.10",
+                  "2.14",
+                  "2.16",
+                  "2.17",
+                  "2.18",
+                  "2.25",
+                  "2.28",
+                  "2.29",
+                  "2.30",
+                  "2.32",
+                  "2.33",
+                  "2.34",
+                  "2.35"
+                ],
+                "maximum_required_glibc": "2.35"
+              }
+            ]
+          },
+          "depends": "libc6 (>= 2.35), libgcc-s1 (>= 4.2), libudev1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libegl1, libgles2, libvulkan1",
+          "notice_packages": 474,
+          "sample": {
+            "version": "0.3.1",
+            "input": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+            "video": {
+              "width": 384,
+              "height": 288,
+              "fps": null,
+              "codec": "h264 (pure Rust)",
+              "duration_ms": 10000.0
+            },
+            "effective_config": {
+              "spherical_map": {
+                "resilient": true,
+                "global_search": false,
+                "max_bad_frames": -1,
+                "global_evaluations": 100000,
+                "channel": null,
+                "quality": 6,
+                "threshold_ratio": 1.25,
+                "threshold_window": 0.25,
+                "max_evaluations": 50,
+                "tolerance": 0.001,
+                "max_error": -1.0
+              },
+              "width": 384,
+              "height": 288,
+              "vfov_deg": 45.0,
+              "fisheye": false,
+              "sphere": {
+                "centre": [
+                  -0.22938965658632302,
+                  0.09996809470952124,
+                  0.9681873607372475
+                ],
+                "angular_radius": 0.12481674439688094
+              },
+              "camera_to_lab": [
+                0.722445,
+                -0.131314,
+                -0.460878
+              ],
+              "legacy_roi_coordinates": true,
+              "ignore_polygons": [
+                [
+                  [
+                    96.0,
+                    156.0
+                  ],
+                  [
+                    113.0,
+                    147.0
+                  ],
+                  [
+                    106.0,
+                    128.0
+                  ],
+                  [
+                    82.0,
+                    130.0
+                  ],
+                  [
+                    81.0,
+                    150.0
+                  ]
+                ],
+                [
+                  [
+                    71.0,
+                    213.0
+                  ],
+                  [
+                    90.0,
+                    219.0
+                  ],
+                  [
+                    114.0,
+                    218.0
+                  ],
+                  [
+                    135.0,
+                    211.0
+                  ],
+                  [
+                    154.0,
+                    196.0
+                  ],
+                  [
+                    150.0,
+                    217.0
+                  ],
+                  [
+                    121.0,
+                    228.0
+                  ],
+                  [
+                    99.0,
+                    234.0
+                  ],
+                  [
+                    75.0,
+                    225.0
+                  ]
+                ]
+              ],
+              "max_rotation": 0.35,
+              "max_error": 0.16,
+              "sample_stride": 2,
+              "iterations": 20,
+              "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4"
+            },
+            "frames": 300,
+            "tracked": 299,
+            "relocalized": 0,
+            "rejected": 0,
+            "initializing": 1,
+            "mean_error": 6424.500252392103,
+            "max_error": 8268.539271610356,
+            "wall_seconds": 0.943560353,
+            "end_to_end_fps": 317.9446858339967,
+            "tracking_fps": 670.4354600108545,
+            "input_duration_ms": 9966.666666666666,
+            "final_position": [
+              3.620053461636342,
+              -2.6272963157111424
+            ],
+            "final_heading": 6.177704995564479,
+            "estimator": "accumulated spherical map / pure Rust BOBYQA",
+            "error_metric": "mean squared binary intensity (0..65025)",
+            "warnings": []
+          },
+          "comparison": {
+            "comparison": {
+              "candidate_final_position": [
+                3.620053461636,
+                -2.627296315711
+              ],
+              "endpoint_error_sphere_rad": 0.054525318251027806,
+              "frames": 300,
+              "heading_rmse_rad": 0.01318481079068964,
+              "path_point_rmse_sphere_rad": 0.04480675139755788,
+              "reference_final_position": [
+                3.674266189723,
+                -2.6214661833162
+              ],
+              "rotation_component_rmse_rad": [
+                0.008760804755303081,
+                0.008292135984256042,
+                0.014210731643506284
+              ],
+              "timestamp_max_error_ms": 3.456079866737127e-11
+            },
+            "limits": {
+              "heading_rmse_rad": 0.025,
+              "path_rmse_sphere_rad": 0.075,
+              "rotation_component_rmse_rad": 0.02
+            },
+            "passed": true
+          }
+        }
+      ],
+      "native_checks": [
+        {
+          "kind": "installed",
+          "frames": 234,
+          "screenshot": "/private/tmp/hejjetrac-v031-linux-audit/ubuntu-24.04/linux-package-runtime/installed/native-video.png",
+          "screenshot_sha256": "e038c084dc65ac9fce7d1b52efe56ac57834668896dbb953d90a230266c3b132",
+          "pattern": {
+            "dark_fraction": 0.3440234375,
+            "light_fraction": 0.5351171875
+          }
+        },
+        {
+          "kind": "portable",
+          "frames": 234,
+          "screenshot": "/private/tmp/hejjetrac-v031-linux-audit/ubuntu-24.04/linux-package-runtime/portable/native-video.png",
+          "screenshot_sha256": "6bf9b20d4932e1a70fc50cf8754bb6bdd0ddf2acbf0ea6414720228f0d85ef23",
+          "pattern": {
+            "dark_fraction": 0.3440234375,
+            "light_fraction": 0.5351171875
+          }
+        },
+        {
+          "kind": "fallback",
+          "frames": 234,
+          "screenshot": "/private/tmp/hejjetrac-v031-linux-audit/ubuntu-24.04/linux-package-runtime/default-startup/native-fallback.png",
+          "screenshot_sha256": "f235cb1032e3a169992faefdaaf41b63a13b5c76c3f6f732a110914b04434981",
+          "pattern": {
+            "dark_fraction": 0.3440234375,
+            "light_fraction": 0.5351171875
+          }
+        }
+      ],
+      "harness_sha256": "6413631587a50031dad4e404ba1e44d6c2d412dd405bf30ffc18acacd2cdb28f",
+      "reported_startup_user_config": "/github/home/.config/hejjetrac/VR1.txt"
+    }
+  ],
+  "archive_sha256": "3dae3648770a9f868f41860df27393eab269d9aac44a3f2e10443668a98e2d8a",
+  "debian_repack": {
+    "schema_version": 1,
+    "application_source_commit": "99d4f5711584dd211f8b8c16e52bbbd357119a2f",
+    "version": "0.3.1",
+    "packaging_tool_revision": "870beeaee555b5ad33b0f0a1f005f81c656adc47",
+    "packaging_tool_sha256": "ce8184e01ecd320307bd0a17f0efa9f3dcb2d1fd853bfec07eee8ef8d510c58c",
+    "input_sha256": "038494ae19b431a5df93e6e27bc5523e84193c66cdc9ad6fe7f5dd19684c12e9",
+    "output_sha256": "3dd22253a8bd46e2f227e2954cb890b8ce882f8e00911a7ff2fc0bf261a44d14",
+    "input_bytes": 24363076,
+    "output_bytes": 24363066,
+    "input_format": "Debian ar with gzip tar streams",
+    "output_tar_format": "GNU",
+    "deterministic_gzip_mtime": 0,
+    "deterministic_ar_metadata": true,
+    "control": {
+      "members": 1,
+      "regular_files": 1,
+      "directories": 0,
+      "symlinks": 0,
+      "hardlinks": 0,
+      "file_content_bytes": 746,
+      "input_pax_fields": {},
+      "output_pax_fields": {},
+      "fractional_mtime_normalizations": [],
+      "input_payload_manifest_sha256": "d47babaff605ee803aaba019d08c176155c6018975c8cc29c58b12527561188b",
+      "output_payload_manifest_sha256": "d47babaff605ee803aaba019d08c176155c6018975c8cc29c58b12527561188b",
+      "all_file_bytes_permissions_ownership_links_equal": true
+    },
+    "data": {
+      "members": 2485,
+      "regular_files": 1899,
+      "directories": 580,
+      "symlinks": 6,
+      "hardlinks": 0,
+      "file_content_bytes": 60503132,
+      "input_pax_fields": {
+        "path": 15
+      },
+      "output_pax_fields": {},
+      "fractional_mtime_normalizations": [],
+      "input_payload_manifest_sha256": "cfef95c1b8b6972c37727f7ae0c2dc5e2bbdf8d7ec32b4fa8217d9f2939e6a94",
+      "output_payload_manifest_sha256": "cfef95c1b8b6972c37727f7ae0c2dc5e2bbdf8d7ec32b4fa8217d9f2939e6a94",
+      "all_file_bytes_permissions_ownership_links_equal": true
+    },
+    "verified_build_binary_hashes": [
+      "hejjetrac",
+      "hejjetrac-cli"
+    ],
+    "application_payload_unchanged": true,
+    "scope": "Tar header/format normalization only; no executable, config, notice or documentation bytes rebuilt or edited."
+  },
+  "limitations": [
+    "Xvfb/Mesa software-rendered GUI; no physical V4L camera, hardware GPU or Wayland test in these package jobs."
+  ],
+  "visual_review": {
+    "status": "passed",
+    "review": "Six native screenshots visually inspected: centered textured sample ball, cyan motion trace, path inset, toolbar and FPS/tracking status visible; no blank feed or error overlay.",
+    "scope": "Xvfb/Mesa software-rendered native windows; no physical camera, hardware GPU or Wayland exercise.",
+    "screenshots": [
+      {
+        "ubuntu": "22.04",
+        "kind": "installed",
+        "path": "/private/tmp/hejjetrac-v031-linux-audit/ubuntu-22.04/linux-package-runtime/installed/native-video.png",
+        "sha256": "b929dfdadb3029fa0948712dc2a3ed8a545c9c7791961ccca3618e8592a4dbe9",
+        "passed": true
+      },
+      {
+        "ubuntu": "22.04",
+        "kind": "portable",
+        "path": "/private/tmp/hejjetrac-v031-linux-audit/ubuntu-22.04/linux-package-runtime/portable/native-video.png",
+        "sha256": "002e640d2072d8aacc1bc75299841175079056a34c8e90a30644dfbe361b7961",
+        "passed": true
+      },
+      {
+        "ubuntu": "22.04",
+        "kind": "fallback",
+        "path": "/private/tmp/hejjetrac-v031-linux-audit/ubuntu-22.04/linux-package-runtime/default-startup/native-fallback.png",
+        "sha256": "af49b28a64967a9feb1ca350a359cbb085fa967e84fb6b74b2f5421ada9b8771",
+        "passed": true
+      },
+      {
+        "ubuntu": "24.04",
+        "kind": "installed",
+        "path": "/private/tmp/hejjetrac-v031-linux-audit/ubuntu-24.04/linux-package-runtime/installed/native-video.png",
+        "sha256": "e038c084dc65ac9fce7d1b52efe56ac57834668896dbb953d90a230266c3b132",
+        "passed": true
+      },
+      {
+        "ubuntu": "24.04",
+        "kind": "portable",
+        "path": "/private/tmp/hejjetrac-v031-linux-audit/ubuntu-24.04/linux-package-runtime/portable/native-video.png",
+        "sha256": "6bf9b20d4932e1a70fc50cf8754bb6bdd0ddf2acbf0ea6414720228f0d85ef23",
+        "passed": true
+      },
+      {
+        "ubuntu": "24.04",
+        "kind": "fallback",
+        "path": "/private/tmp/hejjetrac-v031-linux-audit/ubuntu-24.04/linux-package-runtime/default-startup/native-fallback.png",
+        "sha256": "f235cb1032e3a169992faefdaaf41b63a13b5c76c3f6f732a110914b04434981",
+        "passed": true
+      }
+    ]
+  },
+  "original_native_linux_build": {
+    "run_id": 40514144205,
+    "job_id": 122223519799,
+    "application_source_commit": "99d4f5711584dd211f8b8c16e52bbbd357119a2f",
+    "status": "success",
+    "counts": {
+      "cargo test --workspace --locked": {
+        "passed": 275,
+        "failed": 0,
+        "ignored": 0,
+        "suites": 27
+      },
+      "cargo test -p nokhwa-bindings-linux --lib --locked": {
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0,
+        "suites": 1
+      },
+      "cargo test --manifest-path vendor/oxideav-h264/Cargo.toml --lib --locked": {
+        "passed": 1353,
+        "failed": 0,
+        "ignored": 0,
+        "suites": 1
+      }
+    }
+  },
+  "runtime_workflow": {
+    "conclusion": "success",
+    "headSha": "870beeaee555b5ad33b0f0a1f005f81c656adc47",
+    "jobs": [
+      {
+        "completedAt": "2026-10-27T14:38:16Z",
+        "conclusion": "success",
+        "databaseId": 122254565849,
+        "name": "Normalize Debian container and verify unchanged payload",
+        "startedAt": "2026-10-27T14:37:41Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-10-27T14:37:43Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-10-27T14:37:42Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:37:48Z",
+            "conclusion": "success",
+            "name": "Initialize containers",
+            "number": 2,
+            "startedAt": "2026-10-27T14:37:43Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:37:59Z",
+            "conclusion": "success",
+            "name": "Packaging tools",
+            "number": 3,
+            "startedAt": "2026-10-27T14:37:48Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:38:00Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@v4",
+            "number": 4,
+            "startedAt": "2026-10-27T14:37:59Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:38:01Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@v4",
+            "number": 5,
+            "startedAt": "2026-10-27T14:38:00Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:38:03Z",
+            "conclusion": "success",
+            "name": "Run actions/download-artifact@v4",
+            "number": 6,
+            "startedAt": "2026-10-27T14:38:01Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:38:11Z",
+            "conclusion": "success",
+            "name": "Verify source and normalize only the Debian container",
+            "number": 7,
+            "startedAt": "2026-10-27T14:38:03Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:38:13Z",
+            "conclusion": "success",
+            "name": "Run actions/upload-artifact@v4",
+            "number": 8,
+            "startedAt": "2026-10-27T14:38:11Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:38:14Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@v4",
+            "number": 14,
+            "startedAt": "2026-10-27T14:38:13Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:38:14Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@v4",
+            "number": 15,
+            "startedAt": "2026-10-27T14:38:14Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:38:15Z",
+            "conclusion": "success",
+            "name": "Stop containers",
+            "number": 16,
+            "startedAt": "2026-10-27T14:38:14Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:38:15Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 17,
+            "startedAt": "2026-10-27T14:38:15Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40522916906/job/122254565849"
+      },
+      {
+        "completedAt": "2026-10-27T14:39:57Z",
+        "conclusion": "success",
+        "databaseId": 122254925587,
+        "name": "Installed and portable Ubuntu 24.04",
+        "startedAt": "2026-10-27T14:38:18Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-10-27T14:38:20Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-10-27T14:38:19Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:38:28Z",
+            "conclusion": "success",
+            "name": "Initialize containers",
+            "number": 2,
+            "startedAt": "2026-10-27T14:38:20Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:38:45Z",
+            "conclusion": "success",
+            "name": "Native runtime and software graphics tools",
+            "number": 3,
+            "startedAt": "2026-10-27T14:38:28Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:38:47Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@v4",
+            "number": 4,
+            "startedAt": "2026-10-27T14:38:45Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:38:50Z",
+            "conclusion": "success",
+            "name": "Run actions/download-artifact@v4",
+            "number": 5,
+            "startedAt": "2026-10-27T14:38:47Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:39:50Z",
+            "conclusion": "success",
+            "name": "Install and test the same Debian and portable packages",
+            "number": 6,
+            "startedAt": "2026-10-27T14:38:50Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:39:52Z",
+            "conclusion": "success",
+            "name": "Run actions/upload-artifact@v4",
+            "number": 7,
+            "startedAt": "2026-10-27T14:39:50Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:39:52Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@v4",
+            "number": 13,
+            "startedAt": "2026-10-27T14:39:52Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:39:55Z",
+            "conclusion": "success",
+            "name": "Stop containers",
+            "number": 14,
+            "startedAt": "2026-10-27T14:39:52Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:39:55Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 15,
+            "startedAt": "2026-10-27T14:39:55Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40522916906/job/122254925587"
+      },
+      {
+        "completedAt": "2026-10-27T14:40:05Z",
+        "conclusion": "success",
+        "databaseId": 122254925848,
+        "name": "Installed and portable Ubuntu 22.04",
+        "startedAt": "2026-10-27T14:38:19Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-10-27T14:38:21Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-10-27T14:38:19Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:38:33Z",
+            "conclusion": "success",
+            "name": "Initialize containers",
+            "number": 2,
+            "startedAt": "2026-10-27T14:38:21Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:38:57Z",
+            "conclusion": "success",
+            "name": "Native runtime and software graphics tools",
+            "number": 3,
+            "startedAt": "2026-10-27T14:38:33Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:38:59Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@v4",
+            "number": 4,
+            "startedAt": "2026-10-27T14:38:57Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:39:05Z",
+            "conclusion": "success",
+            "name": "Run actions/download-artifact@v4",
+            "number": 5,
+            "startedAt": "2026-10-27T14:38:59Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:39:59Z",
+            "conclusion": "success",
+            "name": "Install and test the same Debian and portable packages",
+            "number": 6,
+            "startedAt": "2026-10-27T14:39:05Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:40:01Z",
+            "conclusion": "success",
+            "name": "Run actions/upload-artifact@v4",
+            "number": 7,
+            "startedAt": "2026-10-27T14:39:59Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:40:01Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@v4",
+            "number": 13,
+            "startedAt": "2026-10-27T14:40:01Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:40:04Z",
+            "conclusion": "success",
+            "name": "Stop containers",
+            "number": 14,
+            "startedAt": "2026-10-27T14:40:01Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-27T14:40:04Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 15,
+            "startedAt": "2026-10-27T14:40:04Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40522916906/job/122254925848"
+      }
+    ],
+    "status": "completed",
+    "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40522916906"
+  },
+  "runtime_artifacts": [
+    {
+      "digest": "sha256:b0d4648ea0fbfff0940e7950cf493d36b0544c2378c41fe490c25e51f6a6b45d",
+      "expired": false,
+      "id": 12741824041,
+      "name": "linux-runtime-ubuntu-24.04",
+      "size_in_bytes": 847700
+    },
+    {
+      "digest": "sha256:fb276407b4255e3fbd1f2a4418ba747df105947549357464f3fa32c30ee8582b",
+      "expired": false,
+      "id": 12741289055,
+      "name": "linux-runtime-ubuntu-22.04",
+      "size_in_bytes": 848257
+    },
+    {
+      "digest": "sha256:ba48f8e1aa901a4571b743c0dfa9d98e00c550bdfd5eecba4ed5da8f6f1034b1",
+      "expired": false,
+      "id": 12740704414,
+      "name": "verified-linux-packages",
+      "size_in_bytes": 48677441
+    }
+  ],
+  "package_audit": {
+    "status": "passed",
+    "release_tag": "v0.3.1",
+    "source_commit": "99d4f5711584dd211f8b8c16e52bbbd357119a2f",
+    "archive_sha256": "3dae3648770a9f868f41860df27393eab269d9aac44a3f2e10443668a98e2d8a",
+    "archive_bytes": 24446758,
+    "build": {
+      "name": "Hejj\u00e9Trac",
+      "version": "0.3.1",
+      "platform": "linux",
+      "architecture": "x86_64",
+      "source_commit": "99d4f5711584dd211f8b8c16e52bbbd357119a2f",
+      "source_url": "https://github.com/pvnkmrksk/hejjetrak",
+      "binary_hash_boundary": "compiled binaries before application signing",
+      "binaries": [
+        {
+          "name": "hejjetrac",
+          "compiled_sha256": "79604ed4bf129c339f48c5f5c5e367cab0c7c1f027a721257567ccae04db4020"
+        },
+        {
+          "name": "hejjetrac-cli",
+          "compiled_sha256": "4c66f56c091973653920b5e7ff71f300bba1a6b6be4bf550e813492a427bb93c"
+        }
+      ],
+      "linux_abi": {
+        "target_baseline": "Ubuntu 22.04 / glibc 2.35",
+        "glibc_ceiling": "2.35",
+        "binaries": [
+          {
+            "binary": "hejjetrac",
+            "required_glibc_versions": [
+              "2.2.5",
+              "2.3",
+              "2.3.2",
+              "2.3.4",
+              "2.4",
+              "2.7",
+              "2.9",
+              "2.10",
+              "2.14",
+              "2.15",
+              "2.16",
+              "2.17",
+              "2.18",
+              "2.25",
+              "2.27",
+              "2.28",
+              "2.29",
+              "2.30",
+              "2.32",
+              "2.33",
+              "2.34",
+              "2.35"
+            ],
+            "maximum_required_glibc": "2.35"
+          },
+          {
+            "binary": "hejjetrac-cli",
+            "required_glibc_versions": [
+              "2.2.5",
+              "2.3",
+              "2.3.2",
+              "2.3.4",
+              "2.4",
+              "2.7",
+              "2.9",
+              "2.10",
+              "2.14",
+              "2.16",
+              "2.17",
+              "2.18",
+              "2.25",
+              "2.28",
+              "2.29",
+              "2.30",
+              "2.32",
+              "2.33",
+              "2.34",
+              "2.35"
+            ],
+            "maximum_required_glibc": "2.35"
+          }
+        ]
+      },
+      "linux_depends": "libc6 (>= 2.35), libgcc-s1 (>= 4.2), libudev1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libegl1, libgles2, libvulkan1"
+    },
+    "binaries": [
+      {
+        "name": "hejjetrac",
+        "sha256": "79604ed4bf129c339f48c5f5c5e367cab0c7c1f027a721257567ccae04db4020",
+        "elf_requirements": {
+          "required_glibc_versions": [
+            "2.2.5",
+            "2.3",
+            "2.3.2",
+            "2.3.4",
+            "2.4",
+            "2.7",
+            "2.9",
+            "2.10",
+            "2.14",
+            "2.15",
+            "2.16",
+            "2.17",
+            "2.18",
+            "2.25",
+            "2.27",
+            "2.28",
+            "2.29",
+            "2.30",
+            "2.32",
+            "2.33",
+            "2.34",
+            "2.35"
+          ],
+          "maximum_required_glibc": "2.35"
+        }
+      },
+      {
+        "name": "hejjetrac-cli",
+        "sha256": "4c66f56c091973653920b5e7ff71f300bba1a6b6be4bf550e813492a427bb93c",
+        "elf_requirements": {
+          "required_glibc_versions": [
+            "2.2.5",
+            "2.3",
+            "2.3.2",
+            "2.3.4",
+            "2.4",
+            "2.7",
+            "2.9",
+            "2.10",
+            "2.14",
+            "2.16",
+            "2.17",
+            "2.18",
+            "2.25",
+            "2.28",
+            "2.29",
+            "2.30",
+            "2.32",
+            "2.33",
+            "2.34",
+            "2.35"
+          ],
+          "maximum_required_glibc": "2.35"
+        }
+      }
+    ],
+    "sample_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+    "dependency_notice_packages": 474,
+    "verified_provenance_entries": 838,
+    "font_notices": {
+      "package": "epaint_default_fonts-0.33.3",
+      "notice_files": [
+        "LICENSE-FONT-UFL.txt",
+        "LICENSE-FONT-emoji-icon-font-mit-license.txt",
+        "LICENSE-UPSTREAM-PROVENANCE.json",
+        "LICENSE-FONT-Hack-Regular.txt",
+        "LICENSE-METADATA.json",
+        "LICENSE-FONT-OFL.txt",
+        "LICENSE-UPSTREAM/LICENSE-MIT",
+        "LICENSE-UPSTREAM/LICENSE-APACHE"
+      ]
+    },
+    "debian_installer": {
+      "sha256": "3dd22253a8bd46e2f227e2954cb890b8ce882f8e00911a7ff2fc0bf261a44d14",
+      "bytes": 24363066,
+      "control": "Package: hejjetrak\nVersion: 0.3.1\nArchitecture: amd64\nSection: science\nPriority: optional\nMaintainer: Pavan Kumar Kaushik <noreply@github.com>\nInstalled-Size: 59086\nDepends: libc6 (>= 2.35), libgcc-s1 (>= 4.2), libudev1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libegl1, libgles2, libvulkan1\nRecommends: xdg-desktop-portal, xdg-desktop-portal-gtk | xdg-desktop-portal-kde\nHomepage: https://github.com/pvnkmrksk/hejjetrak\nDescription: Native spherical motion tracking compatible with FicTrac\n Pure Rust numerical engine, native desktop and command-line/agent interfaces.\n Includes sample video, calibration examples and dependency notices.\n",
+      "manifest_and_binary_identity_with_portable": true
+    }
+  },
+  "runtime_summary": [
+    {
+      "ubuntu": "Ubuntu 22.04.5 LTS",
+      "runtime_glibc": [
+        "glibc",
+        "2.35"
+      ],
+      "native": [
+        {
+          "kind": "installed",
+          "frames": 238,
+          "source": "/usr/lib/hejjetrak/examples/sample.mp4",
+          "error": "",
+          "version": "0.3.1",
+          "source_commit": "99d4f5711584dd211f8b8c16e52bbbd357119a2f",
+          "maximum_required_glibc": [
+            "2.35",
+            "2.35"
+          ]
+        },
+        {
+          "kind": "portable",
+          "frames": 237,
+          "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+          "error": "",
+          "version": "0.3.1",
+          "source_commit": "99d4f5711584dd211f8b8c16e52bbbd357119a2f",
+          "maximum_required_glibc": [
+            "2.35",
+            "2.35"
+          ]
+        },
+        {
+          "kind": "fallback",
+          "frames": 238,
+          "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/default-startup/app/examples/sample.mp4",
+          "error": ""
+        }
+      ],
+      "full_sample_frames_per_install": [
+        300,
+        300
+      ],
+      "full_sample_rejected_per_install": [
+        0,
+        0
+      ]
+    },
+    {
+      "ubuntu": "Ubuntu 24.04.5 LTS",
+      "runtime_glibc": [
+        "glibc",
+        "2.39"
+      ],
+      "native": [
+        {
+          "kind": "installed",
+          "frames": 234,
+          "source": "/usr/lib/hejjetrak/examples/sample.mp4",
+          "error": "",
+          "version": "0.3.1",
+          "source_commit": "99d4f5711584dd211f8b8c16e52bbbd357119a2f",
+          "maximum_required_glibc": [
+            "2.35",
+            "2.35"
+          ]
+        },
+        {
+          "kind": "portable",
+          "frames": 234,
+          "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+          "error": "",
+          "version": "0.3.1",
+          "source_commit": "99d4f5711584dd211f8b8c16e52bbbd357119a2f",
+          "maximum_required_glibc": [
+            "2.35",
+            "2.35"
+          ]
+        },
+        {
+          "kind": "fallback",
+          "frames": 234,
+          "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/default-startup/app/examples/sample.mp4",
+          "error": ""
+        }
+      ],
+      "full_sample_frames_per_install": [
+        300,
+        300
+      ],
+      "full_sample_rejected_per_install": [
+        0,
+        0
+      ]
+    }
+  ]
+}

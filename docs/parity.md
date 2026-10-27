@@ -1,9 +1,22 @@
 # Behavioral parity assessment
 
+## Published v0.3.1 baseline
+
+[v0.3.1](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.1), source
+`99d4f5711584dd211f8b8c16e52bbbd357119a2f`, publishes the Linux four-camera
+improvements together with the v0.2.3 recording-clock and saved-default fixes.
+All four native package builds pass; the official archives and the same actual
+Debian/portable packages pass source, numeric and visible-preview checks on
+Ubuntu 22.04 and 24.04. The Debian-container correction preserves every installed
+file and binary. [Published validation](validation.md#v031-published-release--2026-10-27)
+separates application source, packaging tools, fixture checks and physical-hardware
+boundaries. Historical assessments below retain their original version scope.
+
+
 ## Linux rig improvements — 2026-10-26–27
 
 The `codex/robust-multicamera` branch was based on the
-`codex/ubuntu22-compat-ci` source and is merged for v0.3.0. Its supplied VR3 recording has 5,157 images.
+`codex/ubuntu22-compat-ci` source and is included in v0.3.1. Its supplied VR3 recording has 5,157 images.
 The revised resilient fitter accepts all 4,678 clear pre-hand images and all
 410 images in the selected fast section. Increment RMS against the original
 live data is 0.006677/0.006547/0.009413 rad; all rolling 100-image component

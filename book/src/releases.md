@@ -4,7 +4,13 @@
 
 The landing page resolves GitHub's latest published release at download time and shows the platform archive, release tag and available SHA-256 digest. Manual OS/chip choices remain available; browser architecture detection is not treated as infallible. If the release API is unavailable or an archive has not uploaded yet, use the visible GitHub release link rather than a guessed download.
 
-## v0.3.1
+## v0.3.1 — 27 October 2026
+
+[v0.3.1](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.1) is published
+with all five platform packages. Native platform checks, official archive audits
+and actual installed/portable Ubuntu 22.04/24.04 tracking/preview checks pass.
+[Validation](validation.md#v031-published-release--2026-10-27) records source,
+package hashes and the separately verified Debian-container correction.
 
 This release combines the four-camera Linux improvements with v0.2.3's saved
 user configuration and recording-clock fixes.
