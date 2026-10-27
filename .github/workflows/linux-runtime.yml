@@ -1,0 +1,74 @@
+name: Linux package runtime validation
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_run_id:
+        description: Run containing the verified hejjetrac-Linux-X64 artifact
+        type: string
+        required: true
+      source_ref:
+        description: Exact source tag or commit used to build that artifact
+        type: string
+        required: true
+permissions:
+  contents: read
+  actions: read
+env:
+  PYTHONUTF8: '1'
+jobs:
+  runtime:
+    name: Installed and portable Ubuntu ${{ matrix.ubuntu }}
+    runs-on: ubuntu-latest
+    container: ubuntu:${{ matrix.ubuntu }}
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu: ['22.04', '24.04']
+    steps:
+      - name: Native runtime and software graphics tools
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y tzdata ca-certificates git python3 dpkg desktop-file-utils xvfb xauth mesa-vulkan-drivers libgl1-mesa-dri
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: hejjetrac-Linux-X64
+          path: packages
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ github.token }}
+      - name: Match artifact identity to the checked-out source
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          import re
+          import subprocess
+          import tarfile
+          expected = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          version = re.search(r'(?m)^version = "([^"]+)"', Path('Cargo.toml').read_text())[1]
+          with tarfile.open('packages/hejjetrac-linux-x86_64.tar.gz') as archive:
+              source = archive.extractfile('hejjetrac-linux-x86_64/BUILD.json')
+              if source is None:
+                  raise RuntimeError('Portable archive lacks its build identity')
+              build = json.load(source)
+          if build['source_commit'] != expected or build['version'] != version:
+              raise RuntimeError('Artifact does not match the requested immutable source')
+          print(json.dumps({'source_commit': expected, 'version': version}))
+          PY
+      - name: Install and test actual Debian and portable packages
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get install -y ./packages/hejjetrac-linux-amd64.deb
+          python3 scripts/test_linux_package.py --archive packages/hejjetrac-linux-x86_64.tar.gz --output linux-package-runtime
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-runtime-ubuntu-${{ matrix.ubuntu }}
+          path: linux-package-runtime/
+          if-no-files-found: warn
