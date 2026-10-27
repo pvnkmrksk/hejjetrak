@@ -1,0 +1,35 @@
+{
+  "source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+  "version": "0.3.2",
+  "scope": "Local Mac ARM compile/test snapshot for application source93; subsequent native package and Ubuntu runtime results are recorded in release-v032-20261027.json.",
+  "fmt": true,
+  "strict_all_target_clippy": true,
+  "workspace_tests": {
+    "passed": 277,
+    "failed": 0,
+    "ignored": 0,
+    "suites": 27
+  },
+  "graphics_policy_tests": 7,
+  "release_build": true,
+  "log_sha256": {
+    "fmt.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "clippy.log": "67b54454c64ea07c7decf041068fac40ba6f3c6a3ca4199ad5e757afbf8b2b6c",
+    "tests.log": "289275fd8def4f83f95531dcaa7839c086acfa9013b99332eb3d25d04fa1bbf9",
+    "release.log": "8f0df05bd9d07ae08fe757231c4032c5137daf50a5b35d2bed76c77b4795e668"
+  },
+  "physical_user_observation": {
+    "released_version": "0.3.1",
+    "platform": "Linux X11/XWayland",
+    "GPU": "NVIDIA RTX4070",
+    "explicit_backend": "vulkan",
+    "window_and_feed": "user confirmed opens and works; reported after resize/maximize question"
+  },
+  "qa_tooling": {
+    "source_commit": "60b0aedd0d679177ee722f4b1c383646bd422933",
+    "graphics_log_regressions": 6,
+    "package_regressions": 8,
+    "debian_repack_regressions": 5,
+    "actionlint": "passed"
+  }
+}

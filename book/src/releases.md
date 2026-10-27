@@ -4,6 +4,20 @@
 
 The landing page resolves GitHub's latest published release at download time and shows the platform archive, release tag and available SHA-256 digest. Manual OS/chip choices remain available; browser architecture detection is not treated as infallible. If the release API is unavailable or an archive has not uploaded yet, use the visible GitHub release link rather than a guessed download.
 
+## v0.3.2 — 27 October 2026
+
+[v0.3.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.2) is published
+with all five packages. Linux X11/XWayland startup prefers compatible OpenGL and
+automatically uses Vulkan when OpenGL cannot present to the window. Ordinary
+startup needs no backend override. Explicit graphics choices remain respected;
+tracking and camera settings are unchanged.
+
+All native build/test jobs pass. The same installed and portable packages pass
+normal GL and automatic Vulkan rendering on Ubuntu 22.04/24.04, including four
+forced-GL failure controls and ten inspected previews. These are Xvfb/Mesa
+software-graphics checks. [Validation](validation.md#v032-published-release--2026-10-27)
+records hashes, source revisions and remaining platform limits.
+
 ## v0.3.1 — 27 October 2026
 
 [v0.3.1](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.1) is published

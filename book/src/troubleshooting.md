@@ -6,6 +6,9 @@ Use the platform **binary archive**, extract it fully and follow [installation](
 
 ## Linux: no suitable graphics adapter
 
+[Upgrade to v0.3.2 or newer](releases.md): X11/XWayland startup checks the window
+surface and automatically uses compatible Vulkan when OpenGL is unavailable.
+
 In v0.3.1, X11/XWayland startup forces OpenGL to avoid a driver problem observed
 on a particular hybrid-GPU system. Some systems cannot present OpenGL to the
 window surface even though Vulkan works. For that release, try:
@@ -16,7 +19,7 @@ WGPU_BACKEND=vulkan hejjetrac
 WGPU_BACKEND=vulkan ./hejjetrac
 ```
 
-Current source prefers a surface-compatible OpenGL adapter and automatically
+v0.3.2 prefers a surface-compatible OpenGL adapter and automatically
 falls back to compatible Vulkan, including software adapters when installed.
 Explicit `WGPU_BACKEND` choices are respected. The terminal reports the actual
 selected GPU/backend; a failure lists available adapters and their window-surface

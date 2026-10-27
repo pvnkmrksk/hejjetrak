@@ -1,0 +1,1276 @@
+{
+  "version": "0.3.2",
+  "application_source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+  "qa_tooling_commit": "60b0aedd0d679177ee722f4b1c383646bd422933",
+  "publication": {
+    "id": 425678622,
+    "tag_name": "v0.3.2",
+    "draft": false,
+    "prerelease": false,
+    "published_at": "2026-10-27T15:57:58Z",
+    "html_url": "https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.2"
+  },
+  "assets": [
+    {
+      "name": "hejjetrac-linux-amd64.deb",
+      "size": 24380674,
+      "sha256": "0e8bf58bb7f85db7d72e93e0a3eeae2019914d0dbc4a8ce37fdab307064cc850"
+    },
+    {
+      "name": "hejjetrac-linux-x86_64.tar.gz",
+      "size": 24470803,
+      "sha256": "2125ce1e64ec7d667335989bfa49d42bf1a8d296fe52dc4804d24103e0052551"
+    },
+    {
+      "name": "hejjetrac-macos-arm64.zip",
+      "size": 23848165,
+      "sha256": "26072da06436829cc5cccce0bbad921b9f47f22eb08eaeb370e59cd36616c832"
+    },
+    {
+      "name": "hejjetrac-macos-x86_64.zip",
+      "size": 24671993,
+      "sha256": "14c43556776e6082b6f35780871bb19b379bde02b732597502d622793208abec"
+    },
+    {
+      "name": "hejjetrac-windows-amd64.zip",
+      "size": 34081361,
+      "sha256": "df769e9f3ae42b7c52512bd6575c7af4a9c64e15dc04adc9984d9d1fa78f14d8"
+    }
+  ],
+  "native_mac_windows": {
+    "schema_version": 1,
+    "version": "0.3.2",
+    "source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+    "run_id": 40530185839,
+    "workflow_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+    "event": "workflow_dispatch",
+    "run_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40530185839",
+    "checked_at_utc": "2026-10-27T15:45:59.633078+00:00",
+    "run_status": "completed",
+    "run_conclusion": "failure",
+    "execution_scope": "Native Mac ARM, Mac Intel and Windows release jobs. Does not establish physical camera or interactive GUI execution on those runners.",
+    "jobs": {
+      "macos_arm64": {
+        "source_run_id": 40530185839,
+        "workflow_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+        "job_id": 122280552983,
+        "job_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40530185839/job/122280552983",
+        "name": "package (macos-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-27T15:21:43Z",
+        "completed_at": "2026-10-27T15:31:47Z",
+        "active_steps": [],
+        "failed_steps": [],
+        "steps": {
+          "Set up job": "success",
+          "Ubuntu 22.04 build tools and native desktop libraries": "skipped",
+          "Run actions/checkout@v4": "success",
+          "Check out versioned packaging tools": "success",
+          "Trust the checked-out workspace inside Linux containers": "skipped",
+          "Verify release tag matches the packaged source": "skipped",
+          "Record packaged source revision": "success",
+          "Run dtolnay/rust-toolchain@stable": "success",
+          "Portable Windows runtime linkage": "skipped",
+          "Timezone data for Windows development-tool tests": "skipped",
+          "Package and development-tool regressions": "success",
+          "Notice collector regressions": "success",
+          "Run cargo fmt --all -- --check": "success",
+          "Run cargo clippy --workspace --all-targets --locked -- -D warnings": "success",
+          "Run cargo test --workspace --locked": "success",
+          "Patched Linux camera adapter regression": "skipped",
+          "Patched Rust decoder regression suite": "success",
+          "Run cargo build --workspace --release --locked": "success",
+          "Run cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120": "success",
+          "Verify Windows redistributable independence": "skipped",
+          "Run cargo vendor --locked --versioned-dirs third-party-source": "success",
+          "Collect exact dependency notices": "success",
+          "Run python scripts/package.py": "success",
+          "Verify Linux installer metadata and extracted payload": "skipped",
+          "Run actions/upload-artifact@v4": "success",
+          "Attach platform archive to release": "skipped",
+          "Post Check out versioned packaging tools": "success",
+          "Post Run actions/checkout@v4": "success",
+          "Complete job": "success"
+        },
+        "log_path": "/private/tmp/hejjetrac-v032-platform-logs/40530185839-macos_arm64.log",
+        "rust_test_results": {
+          "workspace": {
+            "passed": 277,
+            "failed": 0,
+            "ignored": 0,
+            "suites": 27,
+            "nonempty_suites": 22
+          },
+          "decoder": [
+            {
+              "passed": 1353,
+              "failed": 0,
+              "ignored": 0,
+              "measured": 0,
+              "filtered_out": 0
+            }
+          ]
+        },
+        "synthetic_demo": {
+          "frames": 120,
+          "rotation_component_rmse_rad": 0.0003040496948914138,
+          "step": "success"
+        },
+        "source_check": {
+          "step": "skipped",
+          "source_commit_in_log": true,
+          "version_match_in_log": true,
+          "candidate_tag_check_expected_to_skip": true
+        },
+        "license_notice_checks": {
+          "vendoring": "success",
+          "prepare_pinned_notices": "success",
+          "package_and_tool_regressions": "success",
+          "package_creation": "success"
+        },
+        "notice_collection": {
+          "fixture_step": "success",
+          "twelve_fixtures_in_log": true,
+          "collection_step": "success",
+          "all_471_notices_in_log": true,
+          "actual_package_font_provenance_inspection": "passed; workflow ZIP metadata/838 provenance hashes/original font and AUTHORS bytes checked"
+        },
+        "workflow_artifact_upload_step": "success",
+        "published_asset_attachment_step": "skipped",
+        "mac_signature": {
+          "kind": "ad hoc",
+          "strict_verification": "codesign --verify --deep --strict is required by successful package.py execution",
+          "package_step": "success",
+          "developer_id_notarized": false
+        },
+        "independent_archive_audit": {
+          "workflow_run_id": 40530185839,
+          "workflow_artifact_name": "hejjetrac-macOS-ARM64",
+          "filename": "hejjetrac-macos-arm64.zip",
+          "bytes": 23848165,
+          "sha256": "26072da06436829cc5cccce0bbad921b9f47f22eb08eaeb370e59cd36616c832",
+          "build": {
+            "name": "Hejj\u00e9Trac",
+            "version": "0.3.2",
+            "platform": "macos",
+            "architecture": "arm64",
+            "source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+            "source_url": "https://github.com/pvnkmrksk/hejjetrak",
+            "binary_hash_boundary": "compiled binaries before application signing",
+            "binaries": [
+              {
+                "name": "hejjetrac",
+                "compiled_sha256": "ec3eb717f2d35d779fc4a526559bfab676b6c93a925d9910f594d549f845d17a"
+              },
+              {
+                "name": "hejjetrac-cli",
+                "compiled_sha256": "54b1dfb1e5055e18e1fae386bac52738e6ad93a4af9d147cbacf474ffc15d396"
+              }
+            ]
+          },
+          "notice_groups": 474,
+          "provenance_groups": 471,
+          "verified_notice_hashes": 838,
+          "missing_notice_files": [],
+          "hash_mismatches": [],
+          "four_font_terms_match_original_bytes": true,
+          "both_r_efi_authors_licenses_match_original_bytes": true,
+          "explicit_declared_mit_packages": [
+            "block-0.1.6",
+            "dispatch-0.2.0",
+            "malloc_buf-0.0.6"
+          ],
+          "selected_notice_files": {
+            "block-0.1.6": [
+              "LICENSE-UPSTREAM-MANIFEST.toml",
+              "LICENSE-UPSTREAM-PROVENANCE.json",
+              "LICENSE-METADATA.json",
+              "LICENSE-DECLARED-MIT.txt"
+            ],
+            "dispatch-0.2.0": [
+              "LICENSE-UPSTREAM-MANIFEST.toml",
+              "LICENSE-UPSTREAM-PROVENANCE.json",
+              "LICENSE-METADATA.json",
+              "LICENSE-DECLARED-MIT.txt"
+            ],
+            "epaint_default_fonts-0.33.3": [
+              "LICENSE-UPSTREAM-PROVENANCE.json",
+              "LICENSE-METADATA.json",
+              "LICENSE-FONT-UFL.txt",
+              "LICENSE-FONT-emoji-icon-font-mit-license.txt",
+              "LICENSE-FONT-OFL.txt",
+              "LICENSE-FONT-Hack-Regular.txt",
+              "LICENSE-UPSTREAM/LICENSE-APACHE",
+              "LICENSE-UPSTREAM/LICENSE-MIT"
+            ],
+            "malloc_buf-0.0.6": [
+              "LICENSE-UPSTREAM-MANIFEST.toml",
+              "LICENSE-UPSTREAM-PROVENANCE.json",
+              "LICENSE-METADATA.json",
+              "LICENSE-DECLARED-MIT.txt"
+            ],
+            "r-efi-5.3.0": [
+              "LICENSE-AUTHORS",
+              "LICENSE-UPSTREAM-PROVENANCE.json",
+              "LICENSE-METADATA.json"
+            ],
+            "r-efi-6.0.0": [
+              "LICENSE-AUTHORS",
+              "LICENSE-UPSTREAM-PROVENANCE.json",
+              "LICENSE-METADATA.json"
+            ]
+          },
+          "execution_scope": "Archive contents and native signatures only; no Intel/Windows app execution on this Mac.",
+          "strict_ad_hoc_signature_verified": true,
+          "signature_details": "Executable=/private/tmp/hejjetrac-v032-platform-packages/macos_arm64-extracted/hejjetrac-macos-arm64/hejjetrac.app/Contents/MacOS/hejjetrac\nIdentifier=org.fictrac.rust.desktop\nFormat=app bundle with Mach-O thin (arm64)\nCodeDirectory v=20400 size=32145 flags=0x2(adhoc) hashes=998+3 location=embedded\nSignature=adhoc\nInfo.plist entries=12\nTeamIdentifier=not set\nSealed Resources version=2 rules=13 files=1901\nInternal requirements count=0 size=12\nTotal signatures=1\nChosen signature=1\n",
+          "native_architecture": "Non-fat file: /private/tmp/hejjetrac-v032-platform-packages/macos_arm64-extracted/hejjetrac-macos-arm64/hejjetrac.app/Contents/MacOS/hejjetrac is architecture: arm64\n",
+          "passed": true,
+          "exact_tested_archive_path": "/private/tmp/hejjetrac-v032-official/download/hejjetrac-macos-arm64.zip"
+        }
+      },
+      "windows_amd64": {
+        "source_run_id": 40530185839,
+        "workflow_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+        "job_id": 122280553002,
+        "job_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40530185839/job/122280553002",
+        "name": "package (windows-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-27T15:21:43Z",
+        "completed_at": "2026-10-27T15:38:23Z",
+        "active_steps": [],
+        "failed_steps": [],
+        "steps": {
+          "Set up job": "success",
+          "Ubuntu 22.04 build tools and native desktop libraries": "skipped",
+          "Run actions/checkout@v4": "success",
+          "Check out versioned packaging tools": "success",
+          "Trust the checked-out workspace inside Linux containers": "skipped",
+          "Verify release tag matches the packaged source": "skipped",
+          "Record packaged source revision": "success",
+          "Run dtolnay/rust-toolchain@stable": "success",
+          "Portable Windows runtime linkage": "success",
+          "Timezone data for Windows development-tool tests": "success",
+          "Package and development-tool regressions": "success",
+          "Notice collector regressions": "success",
+          "Run cargo fmt --all -- --check": "success",
+          "Run cargo clippy --workspace --all-targets --locked -- -D warnings": "success",
+          "Run cargo test --workspace --locked": "success",
+          "Patched Linux camera adapter regression": "skipped",
+          "Patched Rust decoder regression suite": "success",
+          "Run cargo build --workspace --release --locked": "success",
+          "Run cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120": "success",
+          "Verify Windows redistributable independence": "success",
+          "Run cargo vendor --locked --versioned-dirs third-party-source": "success",
+          "Collect exact dependency notices": "success",
+          "Run python scripts/package.py": "success",
+          "Verify Linux installer metadata and extracted payload": "skipped",
+          "Run actions/upload-artifact@v4": "success",
+          "Attach platform archive to release": "skipped",
+          "Post Check out versioned packaging tools": "success",
+          "Post Run actions/checkout@v4": "success",
+          "Complete job": "success"
+        },
+        "log_path": "/private/tmp/hejjetrac-v032-platform-logs/40530185839-windows_amd64.log",
+        "rust_test_results": {
+          "workspace": {
+            "passed": 276,
+            "failed": 0,
+            "ignored": 0,
+            "suites": 27,
+            "nonempty_suites": 22
+          },
+          "decoder": [
+            {
+              "passed": 1353,
+              "failed": 0,
+              "ignored": 0,
+              "measured": 0,
+              "filtered_out": 0
+            }
+          ]
+        },
+        "synthetic_demo": {
+          "frames": 120,
+          "rotation_component_rmse_rad": 0.0003040496948914138,
+          "step": "success"
+        },
+        "source_check": {
+          "step": "skipped",
+          "source_commit_in_log": true,
+          "version_match_in_log": true,
+          "candidate_tag_check_expected_to_skip": true
+        },
+        "license_notice_checks": {
+          "vendoring": "success",
+          "prepare_pinned_notices": "success",
+          "package_and_tool_regressions": "success",
+          "package_creation": "success"
+        },
+        "notice_collection": {
+          "fixture_step": "success",
+          "twelve_fixtures_in_log": true,
+          "collection_step": "success",
+          "all_471_notices_in_log": true,
+          "actual_package_font_provenance_inspection": "passed; workflow ZIP metadata/838 provenance hashes/original font and AUTHORS bytes checked"
+        },
+        "workflow_artifact_upload_step": "success",
+        "published_asset_attachment_step": "skipped",
+        "windows_runtime": {
+          "static_crt_env_step": "success",
+          "dumpbin_no_separate_vc_runtime_step": "success",
+          "authenticode_signed": false,
+          "python_utf8_environment_verified_in_log": true
+        },
+        "independent_archive_audit": {
+          "workflow_run_id": 40530185839,
+          "workflow_artifact_name": "hejjetrac-Windows-X64",
+          "filename": "hejjetrac-windows-amd64.zip",
+          "bytes": 34081361,
+          "sha256": "df769e9f3ae42b7c52512bd6575c7af4a9c64e15dc04adc9984d9d1fa78f14d8",
+          "build": {
+            "name": "Hejj\u00e9Trac",
+            "version": "0.3.2",
+            "platform": "windows",
+            "architecture": "amd64",
+            "source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+            "source_url": "https://github.com/pvnkmrksk/hejjetrak",
+            "binary_hash_boundary": "compiled binaries before application signing",
+            "binaries": [
+              {
+                "name": "hejjetrac.exe",
+                "compiled_sha256": "b36f7a511632fe6f783507ca635e45a3e1c380378b1ba972930000aed6d60000"
+              },
+              {
+                "name": "hejjetrac-cli.exe",
+                "compiled_sha256": "7c58512b74205c1d071adc4c6a2ebd29ad35fd6010fffd551d833b1d721f2e1d"
+              }
+            ]
+          },
+          "notice_groups": 474,
+          "provenance_groups": 471,
+          "verified_notice_hashes": 838,
+          "missing_notice_files": [],
+          "hash_mismatches": [],
+          "four_font_terms_match_original_bytes": true,
+          "both_r_efi_authors_licenses_match_original_bytes": true,
+          "explicit_declared_mit_packages": [
+            "block-0.1.6",
+            "dispatch-0.2.0",
+            "malloc_buf-0.0.6"
+          ],
+          "selected_notice_files": {
+            "block-0.1.6": [
+              "LICENSE-DECLARED-MIT.txt",
+              "LICENSE-METADATA.json",
+              "LICENSE-UPSTREAM-MANIFEST.toml",
+              "LICENSE-UPSTREAM-PROVENANCE.json"
+            ],
+            "dispatch-0.2.0": [
+              "LICENSE-DECLARED-MIT.txt",
+              "LICENSE-METADATA.json",
+              "LICENSE-UPSTREAM-MANIFEST.toml",
+              "LICENSE-UPSTREAM-PROVENANCE.json"
+            ],
+            "epaint_default_fonts-0.33.3": [
+              "LICENSE-FONT-emoji-icon-font-mit-license.txt",
+              "LICENSE-FONT-Hack-Regular.txt",
+              "LICENSE-FONT-OFL.txt",
+              "LICENSE-FONT-UFL.txt",
+              "LICENSE-METADATA.json",
+              "LICENSE-UPSTREAM-PROVENANCE.json",
+              "LICENSE-UPSTREAM\\LICENSE-APACHE",
+              "LICENSE-UPSTREAM\\LICENSE-MIT"
+            ],
+            "malloc_buf-0.0.6": [
+              "LICENSE-DECLARED-MIT.txt",
+              "LICENSE-METADATA.json",
+              "LICENSE-UPSTREAM-MANIFEST.toml",
+              "LICENSE-UPSTREAM-PROVENANCE.json"
+            ],
+            "r-efi-5.3.0": [
+              "LICENSE-AUTHORS",
+              "LICENSE-METADATA.json",
+              "LICENSE-UPSTREAM-PROVENANCE.json"
+            ],
+            "r-efi-6.0.0": [
+              "LICENSE-AUTHORS",
+              "LICENSE-METADATA.json",
+              "LICENSE-UPSTREAM-PROVENANCE.json"
+            ]
+          },
+          "execution_scope": "Archive contents and native signatures only; no Intel/Windows app execution on this Mac.",
+          "compiled_binary_hashes_verified": true,
+          "compatibility_aliases_identical": true,
+          "passed": true,
+          "exact_tested_archive_path": "/private/tmp/hejjetrac-v032-platform-packages/hejjetrac-windows-amd64.zip"
+        }
+      },
+      "macos_x86_64": {
+        "source_run_id": 40530185839,
+        "workflow_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+        "job_id": 122280553095,
+        "job_url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40530185839/job/122280553095",
+        "name": "package (macos-15-intel)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-27T15:21:43Z",
+        "completed_at": "2026-10-27T15:44:20Z",
+        "active_steps": [],
+        "failed_steps": [],
+        "steps": {
+          "Set up job": "success",
+          "Ubuntu 22.04 build tools and native desktop libraries": "skipped",
+          "Run actions/checkout@v4": "success",
+          "Check out versioned packaging tools": "success",
+          "Trust the checked-out workspace inside Linux containers": "skipped",
+          "Verify release tag matches the packaged source": "skipped",
+          "Record packaged source revision": "success",
+          "Run dtolnay/rust-toolchain@stable": "success",
+          "Portable Windows runtime linkage": "skipped",
+          "Timezone data for Windows development-tool tests": "skipped",
+          "Package and development-tool regressions": "success",
+          "Notice collector regressions": "success",
+          "Run cargo fmt --all -- --check": "success",
+          "Run cargo clippy --workspace --all-targets --locked -- -D warnings": "success",
+          "Run cargo test --workspace --locked": "success",
+          "Patched Linux camera adapter regression": "skipped",
+          "Patched Rust decoder regression suite": "success",
+          "Run cargo build --workspace --release --locked": "success",
+          "Run cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120": "success",
+          "Verify Windows redistributable independence": "skipped",
+          "Run cargo vendor --locked --versioned-dirs third-party-source": "success",
+          "Collect exact dependency notices": "success",
+          "Run python scripts/package.py": "success",
+          "Verify Linux installer metadata and extracted payload": "skipped",
+          "Run actions/upload-artifact@v4": "success",
+          "Attach platform archive to release": "skipped",
+          "Post Check out versioned packaging tools": "success",
+          "Post Run actions/checkout@v4": "success",
+          "Complete job": "success"
+        },
+        "log_path": "/private/tmp/hejjetrac-v032-platform-logs/40530185839-macos_x86_64.log",
+        "rust_test_results": {
+          "workspace": {
+            "passed": 277,
+            "failed": 0,
+            "ignored": 0,
+            "suites": 27,
+            "nonempty_suites": 22
+          },
+          "decoder": [
+            {
+              "passed": 1353,
+              "failed": 0,
+              "ignored": 0,
+              "measured": 0,
+              "filtered_out": 0
+            }
+          ]
+        },
+        "synthetic_demo": {
+          "frames": 120,
+          "rotation_component_rmse_rad": 0.0003040496948914138,
+          "step": "success"
+        },
+        "source_check": {
+          "step": "skipped",
+          "source_commit_in_log": true,
+          "version_match_in_log": true,
+          "candidate_tag_check_expected_to_skip": true
+        },
+        "license_notice_checks": {
+          "vendoring": "success",
+          "prepare_pinned_notices": "success",
+          "package_and_tool_regressions": "success",
+          "package_creation": "success"
+        },
+        "notice_collection": {
+          "fixture_step": "success",
+          "twelve_fixtures_in_log": true,
+          "collection_step": "success",
+          "all_471_notices_in_log": true,
+          "actual_package_font_provenance_inspection": "passed; workflow ZIP metadata/838 provenance hashes/original font and AUTHORS bytes checked"
+        },
+        "workflow_artifact_upload_step": "success",
+        "published_asset_attachment_step": "skipped",
+        "mac_signature": {
+          "kind": "ad hoc",
+          "strict_verification": "codesign --verify --deep --strict is required by successful package.py execution",
+          "package_step": "success",
+          "developer_id_notarized": false
+        },
+        "independent_archive_audit": {
+          "workflow_run_id": 40530185839,
+          "workflow_artifact_name": "hejjetrac-macOS-X64",
+          "filename": "hejjetrac-macos-x86_64.zip",
+          "bytes": 24671993,
+          "sha256": "14c43556776e6082b6f35780871bb19b379bde02b732597502d622793208abec",
+          "build": {
+            "name": "Hejj\u00e9Trac",
+            "version": "0.3.2",
+            "platform": "macos",
+            "architecture": "x86_64",
+            "source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+            "source_url": "https://github.com/pvnkmrksk/hejjetrak",
+            "binary_hash_boundary": "compiled binaries before application signing",
+            "binaries": [
+              {
+                "name": "hejjetrac",
+                "compiled_sha256": "9dab1b035c1f34ea312cbc95ebef42010e4c51138b4f968a1b80f5c6d214e3aa"
+              },
+              {
+                "name": "hejjetrac-cli",
+                "compiled_sha256": "ccd94fbdb40a3674d5a79b5c64cc4a47681f42699fd5496644326f07a04e8b9c"
+              }
+            ]
+          },
+          "notice_groups": 474,
+          "provenance_groups": 471,
+          "verified_notice_hashes": 838,
+          "missing_notice_files": [],
+          "hash_mismatches": [],
+          "four_font_terms_match_original_bytes": true,
+          "both_r_efi_authors_licenses_match_original_bytes": true,
+          "explicit_declared_mit_packages": [
+            "block-0.1.6",
+            "dispatch-0.2.0",
+            "malloc_buf-0.0.6"
+          ],
+          "selected_notice_files": {
+            "block-0.1.6": [
+              "LICENSE-UPSTREAM-MANIFEST.toml",
+              "LICENSE-UPSTREAM-PROVENANCE.json",
+              "LICENSE-METADATA.json",
+              "LICENSE-DECLARED-MIT.txt"
+            ],
+            "dispatch-0.2.0": [
+              "LICENSE-UPSTREAM-MANIFEST.toml",
+              "LICENSE-UPSTREAM-PROVENANCE.json",
+              "LICENSE-METADATA.json",
+              "LICENSE-DECLARED-MIT.txt"
+            ],
+            "epaint_default_fonts-0.33.3": [
+              "LICENSE-UPSTREAM-PROVENANCE.json",
+              "LICENSE-METADATA.json",
+              "LICENSE-FONT-UFL.txt",
+              "LICENSE-FONT-emoji-icon-font-mit-license.txt",
+              "LICENSE-FONT-OFL.txt",
+              "LICENSE-FONT-Hack-Regular.txt",
+              "LICENSE-UPSTREAM/LICENSE-APACHE",
+              "LICENSE-UPSTREAM/LICENSE-MIT"
+            ],
+            "malloc_buf-0.0.6": [
+              "LICENSE-UPSTREAM-MANIFEST.toml",
+              "LICENSE-UPSTREAM-PROVENANCE.json",
+              "LICENSE-METADATA.json",
+              "LICENSE-DECLARED-MIT.txt"
+            ],
+            "r-efi-5.3.0": [
+              "LICENSE-AUTHORS",
+              "LICENSE-UPSTREAM-PROVENANCE.json",
+              "LICENSE-METADATA.json"
+            ],
+            "r-efi-6.0.0": [
+              "LICENSE-AUTHORS",
+              "LICENSE-UPSTREAM-PROVENANCE.json",
+              "LICENSE-METADATA.json"
+            ]
+          },
+          "execution_scope": "Archive contents and native signatures only; no Intel/Windows app execution on this Mac.",
+          "strict_ad_hoc_signature_verified": true,
+          "signature_details": "Executable=/private/tmp/hejjetrac-v032-platform-packages/macos_x86_64-extracted/hejjetrac-macos-x86_64/hejjetrac.app/Contents/MacOS/hejjetrac\nIdentifier=org.fictrac.rust.desktop\nFormat=app bundle with Mach-O thin (x86_64)\nCodeDirectory v=20400 size=136849 flags=0x2(adhoc) hashes=4270+3 location=embedded\nSignature=adhoc\nInfo.plist entries=12\nTeamIdentifier=not set\nSealed Resources version=2 rules=13 files=1901\nInternal requirements count=0 size=12\nTotal signatures=1\nChosen signature=1\n",
+          "native_architecture": "Non-fat file: /private/tmp/hejjetrac-v032-platform-packages/macos_x86_64-extracted/hejjetrac-macos-x86_64/hejjetrac.app/Contents/MacOS/hejjetrac is architecture: x86_64\n",
+          "passed": true,
+          "exact_tested_archive_path": "/private/tmp/hejjetrac-v032-platform-packages/hejjetrac-macos-x86_64.zip"
+        }
+      }
+    },
+    "all_selected_jobs_passed": true,
+    "independent_archive_audit_path": "/private/tmp/hejjetrac-v032-platform-package-audit.json",
+    "all_selected_archives_passed": true,
+    "original_run_runtime_failure": {
+      "scope": "Linux runtime test harness only",
+      "reason": "The actual Graphics initialization record was written to stdout while the original harness read stderr only. Native package builds and archive validations passed.",
+      "application_artifact_source_unchanged": "93f973b1b1dc6c582f52f076dede0e272ebc9784"
+    },
+    "runtime_recheck": {
+      "run_id": 40535209814,
+      "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40535209814",
+      "tooling_commit": "60b0aedd0d679177ee722f4b1c383646bd422933",
+      "application_source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+      "original_artifact_run_id": 40530185839,
+      "normalize_debian": false,
+      "scope": "Tests the exact original Debian and portable artifact bytes using the corrected graphics-log harness.",
+      "status_at_reference_recording": "in_progress",
+      "helper_fixture_tests": 6
+    }
+  },
+  "native_linux": {
+    "cargo test --workspace --locked": {
+      "passed": 282,
+      "failed": 0,
+      "ignored": 0,
+      "suites": 27
+    },
+    "cargo test -p nokhwa-bindings-linux --lib --locked": {
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "suites": 1
+    },
+    "cargo test --manifest-path vendor/oxideav-h264/Cargo.toml --lib --locked": {
+      "passed": 1353,
+      "failed": 0,
+      "ignored": 0,
+      "suites": 1
+    }
+  },
+  "linux_package_audit": {
+    "status": "passed",
+    "release_tag": "v0.3.2",
+    "source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+    "archive_sha256": "2125ce1e64ec7d667335989bfa49d42bf1a8d296fe52dc4804d24103e0052551",
+    "archive_bytes": 24470803,
+    "build": {
+      "name": "Hejj\u00e9Trac",
+      "version": "0.3.2",
+      "platform": "linux",
+      "architecture": "x86_64",
+      "source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+      "source_url": "https://github.com/pvnkmrksk/hejjetrak",
+      "binary_hash_boundary": "compiled binaries before application signing",
+      "binaries": [
+        {
+          "name": "hejjetrac",
+          "compiled_sha256": "312ed82e497d32a22ab721b1028c3de9f7061744d0914f6f6c2b39f38ecf3ae3"
+        },
+        {
+          "name": "hejjetrac-cli",
+          "compiled_sha256": "900a2378eb3e1d05abf95f541c3afb419db4a4acfaaef36e08e3e9ebcbfaaffa"
+        }
+      ],
+      "linux_abi": {
+        "target_baseline": "Ubuntu 22.04 / glibc 2.35",
+        "glibc_ceiling": "2.35",
+        "binaries": [
+          {
+            "binary": "hejjetrac",
+            "required_glibc_versions": [
+              "2.2.5",
+              "2.3",
+              "2.3.2",
+              "2.3.4",
+              "2.4",
+              "2.7",
+              "2.9",
+              "2.10",
+              "2.14",
+              "2.15",
+              "2.16",
+              "2.17",
+              "2.18",
+              "2.25",
+              "2.27",
+              "2.28",
+              "2.29",
+              "2.30",
+              "2.32",
+              "2.33",
+              "2.34",
+              "2.35"
+            ],
+            "maximum_required_glibc": "2.35"
+          },
+          {
+            "binary": "hejjetrac-cli",
+            "required_glibc_versions": [
+              "2.2.5",
+              "2.3",
+              "2.3.2",
+              "2.3.4",
+              "2.4",
+              "2.7",
+              "2.9",
+              "2.10",
+              "2.14",
+              "2.16",
+              "2.17",
+              "2.18",
+              "2.25",
+              "2.28",
+              "2.29",
+              "2.30",
+              "2.32",
+              "2.33",
+              "2.34",
+              "2.35"
+            ],
+            "maximum_required_glibc": "2.35"
+          }
+        ]
+      },
+      "linux_depends": "libc6 (>= 2.35), libgcc-s1 (>= 4.2), libudev1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libegl1, libgles2, libvulkan1"
+    },
+    "binaries": [
+      {
+        "name": "hejjetrac",
+        "sha256": "312ed82e497d32a22ab721b1028c3de9f7061744d0914f6f6c2b39f38ecf3ae3",
+        "elf_requirements": {
+          "required_glibc_versions": [
+            "2.2.5",
+            "2.3",
+            "2.3.2",
+            "2.3.4",
+            "2.4",
+            "2.7",
+            "2.9",
+            "2.10",
+            "2.14",
+            "2.15",
+            "2.16",
+            "2.17",
+            "2.18",
+            "2.25",
+            "2.27",
+            "2.28",
+            "2.29",
+            "2.30",
+            "2.32",
+            "2.33",
+            "2.34",
+            "2.35"
+          ],
+          "maximum_required_glibc": "2.35"
+        }
+      },
+      {
+        "name": "hejjetrac-cli",
+        "sha256": "900a2378eb3e1d05abf95f541c3afb419db4a4acfaaef36e08e3e9ebcbfaaffa",
+        "elf_requirements": {
+          "required_glibc_versions": [
+            "2.2.5",
+            "2.3",
+            "2.3.2",
+            "2.3.4",
+            "2.4",
+            "2.7",
+            "2.9",
+            "2.10",
+            "2.14",
+            "2.16",
+            "2.17",
+            "2.18",
+            "2.25",
+            "2.28",
+            "2.29",
+            "2.30",
+            "2.32",
+            "2.33",
+            "2.34",
+            "2.35"
+          ],
+          "maximum_required_glibc": "2.35"
+        }
+      }
+    ],
+    "sample_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+    "dependency_notice_packages": 474,
+    "verified_provenance_entries": 838,
+    "font_notices": {
+      "package": "epaint_default_fonts-0.33.3",
+      "notice_files": [
+        "LICENSE-FONT-UFL.txt",
+        "LICENSE-FONT-emoji-icon-font-mit-license.txt",
+        "LICENSE-UPSTREAM-PROVENANCE.json",
+        "LICENSE-FONT-Hack-Regular.txt",
+        "LICENSE-METADATA.json",
+        "LICENSE-FONT-OFL.txt",
+        "LICENSE-UPSTREAM/LICENSE-MIT",
+        "LICENSE-UPSTREAM/LICENSE-APACHE"
+      ]
+    },
+    "debian_installer": {
+      "sha256": "0e8bf58bb7f85db7d72e93e0a3eeae2019914d0dbc4a8ce37fdab307064cc850",
+      "bytes": 24380674,
+      "control": "Package: hejjetrak\nVersion: 0.3.2\nArchitecture: amd64\nSection: science\nPriority: optional\nMaintainer: Pavan Kumar Kaushik <noreply@github.com>\nInstalled-Size: 59208\nDepends: libc6 (>= 2.35), libgcc-s1 (>= 4.2), libudev1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libegl1, libgles2, libvulkan1\nRecommends: xdg-desktop-portal, xdg-desktop-portal-gtk | xdg-desktop-portal-kde\nHomepage: https://github.com/pvnkmrksk/hejjetrak\nDescription: Native spherical motion tracking compatible with FicTrac\n Pure Rust numerical engine, native desktop and command-line/agent interfaces.\n Includes sample video, calibration examples and dependency notices.\n",
+      "manifest_and_binary_identity_with_portable": true
+    }
+  },
+  "mac_windows_archive_audit": {
+    "version": "0.3.2",
+    "source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+    "packages": {
+      "macos_arm64": {
+        "workflow_run_id": 40530185839,
+        "workflow_artifact_name": "hejjetrac-macOS-ARM64",
+        "filename": "hejjetrac-macos-arm64.zip",
+        "bytes": 23848165,
+        "sha256": "26072da06436829cc5cccce0bbad921b9f47f22eb08eaeb370e59cd36616c832",
+        "build": {
+          "name": "Hejj\u00e9Trac",
+          "version": "0.3.2",
+          "platform": "macos",
+          "architecture": "arm64",
+          "source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+          "source_url": "https://github.com/pvnkmrksk/hejjetrak",
+          "binary_hash_boundary": "compiled binaries before application signing",
+          "binaries": [
+            {
+              "name": "hejjetrac",
+              "compiled_sha256": "ec3eb717f2d35d779fc4a526559bfab676b6c93a925d9910f594d549f845d17a"
+            },
+            {
+              "name": "hejjetrac-cli",
+              "compiled_sha256": "54b1dfb1e5055e18e1fae386bac52738e6ad93a4af9d147cbacf474ffc15d396"
+            }
+          ]
+        },
+        "notice_groups": 474,
+        "provenance_groups": 471,
+        "verified_notice_hashes": 838,
+        "missing_notice_files": [],
+        "hash_mismatches": [],
+        "four_font_terms_match_original_bytes": true,
+        "both_r_efi_authors_licenses_match_original_bytes": true,
+        "explicit_declared_mit_packages": [
+          "block-0.1.6",
+          "dispatch-0.2.0",
+          "malloc_buf-0.0.6"
+        ],
+        "selected_notice_files": {
+          "block-0.1.6": [
+            "LICENSE-UPSTREAM-MANIFEST.toml",
+            "LICENSE-UPSTREAM-PROVENANCE.json",
+            "LICENSE-METADATA.json",
+            "LICENSE-DECLARED-MIT.txt"
+          ],
+          "dispatch-0.2.0": [
+            "LICENSE-UPSTREAM-MANIFEST.toml",
+            "LICENSE-UPSTREAM-PROVENANCE.json",
+            "LICENSE-METADATA.json",
+            "LICENSE-DECLARED-MIT.txt"
+          ],
+          "epaint_default_fonts-0.33.3": [
+            "LICENSE-UPSTREAM-PROVENANCE.json",
+            "LICENSE-METADATA.json",
+            "LICENSE-FONT-UFL.txt",
+            "LICENSE-FONT-emoji-icon-font-mit-license.txt",
+            "LICENSE-FONT-OFL.txt",
+            "LICENSE-FONT-Hack-Regular.txt",
+            "LICENSE-UPSTREAM/LICENSE-APACHE",
+            "LICENSE-UPSTREAM/LICENSE-MIT"
+          ],
+          "malloc_buf-0.0.6": [
+            "LICENSE-UPSTREAM-MANIFEST.toml",
+            "LICENSE-UPSTREAM-PROVENANCE.json",
+            "LICENSE-METADATA.json",
+            "LICENSE-DECLARED-MIT.txt"
+          ],
+          "r-efi-5.3.0": [
+            "LICENSE-AUTHORS",
+            "LICENSE-UPSTREAM-PROVENANCE.json",
+            "LICENSE-METADATA.json"
+          ],
+          "r-efi-6.0.0": [
+            "LICENSE-AUTHORS",
+            "LICENSE-UPSTREAM-PROVENANCE.json",
+            "LICENSE-METADATA.json"
+          ]
+        },
+        "execution_scope": "Archive contents and native signatures only; no Intel/Windows app execution on this Mac.",
+        "strict_ad_hoc_signature_verified": true,
+        "signature_details": "Executable=/private/tmp/hejjetrac-v032-platform-packages/macos_arm64-extracted/hejjetrac-macos-arm64/hejjetrac.app/Contents/MacOS/hejjetrac\nIdentifier=org.fictrac.rust.desktop\nFormat=app bundle with Mach-O thin (arm64)\nCodeDirectory v=20400 size=32145 flags=0x2(adhoc) hashes=998+3 location=embedded\nSignature=adhoc\nInfo.plist entries=12\nTeamIdentifier=not set\nSealed Resources version=2 rules=13 files=1901\nInternal requirements count=0 size=12\nTotal signatures=1\nChosen signature=1\n",
+        "native_architecture": "Non-fat file: /private/tmp/hejjetrac-v032-platform-packages/macos_arm64-extracted/hejjetrac-macos-arm64/hejjetrac.app/Contents/MacOS/hejjetrac is architecture: arm64\n",
+        "passed": true,
+        "exact_tested_archive_path": "/private/tmp/hejjetrac-v032-official/download/hejjetrac-macos-arm64.zip"
+      },
+      "windows_amd64": {
+        "workflow_run_id": 40530185839,
+        "workflow_artifact_name": "hejjetrac-Windows-X64",
+        "filename": "hejjetrac-windows-amd64.zip",
+        "bytes": 34081361,
+        "sha256": "df769e9f3ae42b7c52512bd6575c7af4a9c64e15dc04adc9984d9d1fa78f14d8",
+        "build": {
+          "name": "Hejj\u00e9Trac",
+          "version": "0.3.2",
+          "platform": "windows",
+          "architecture": "amd64",
+          "source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+          "source_url": "https://github.com/pvnkmrksk/hejjetrak",
+          "binary_hash_boundary": "compiled binaries before application signing",
+          "binaries": [
+            {
+              "name": "hejjetrac.exe",
+              "compiled_sha256": "b36f7a511632fe6f783507ca635e45a3e1c380378b1ba972930000aed6d60000"
+            },
+            {
+              "name": "hejjetrac-cli.exe",
+              "compiled_sha256": "7c58512b74205c1d071adc4c6a2ebd29ad35fd6010fffd551d833b1d721f2e1d"
+            }
+          ]
+        },
+        "notice_groups": 474,
+        "provenance_groups": 471,
+        "verified_notice_hashes": 838,
+        "missing_notice_files": [],
+        "hash_mismatches": [],
+        "four_font_terms_match_original_bytes": true,
+        "both_r_efi_authors_licenses_match_original_bytes": true,
+        "explicit_declared_mit_packages": [
+          "block-0.1.6",
+          "dispatch-0.2.0",
+          "malloc_buf-0.0.6"
+        ],
+        "selected_notice_files": {
+          "block-0.1.6": [
+            "LICENSE-DECLARED-MIT.txt",
+            "LICENSE-METADATA.json",
+            "LICENSE-UPSTREAM-MANIFEST.toml",
+            "LICENSE-UPSTREAM-PROVENANCE.json"
+          ],
+          "dispatch-0.2.0": [
+            "LICENSE-DECLARED-MIT.txt",
+            "LICENSE-METADATA.json",
+            "LICENSE-UPSTREAM-MANIFEST.toml",
+            "LICENSE-UPSTREAM-PROVENANCE.json"
+          ],
+          "epaint_default_fonts-0.33.3": [
+            "LICENSE-FONT-emoji-icon-font-mit-license.txt",
+            "LICENSE-FONT-Hack-Regular.txt",
+            "LICENSE-FONT-OFL.txt",
+            "LICENSE-FONT-UFL.txt",
+            "LICENSE-METADATA.json",
+            "LICENSE-UPSTREAM-PROVENANCE.json",
+            "LICENSE-UPSTREAM\\LICENSE-APACHE",
+            "LICENSE-UPSTREAM\\LICENSE-MIT"
+          ],
+          "malloc_buf-0.0.6": [
+            "LICENSE-DECLARED-MIT.txt",
+            "LICENSE-METADATA.json",
+            "LICENSE-UPSTREAM-MANIFEST.toml",
+            "LICENSE-UPSTREAM-PROVENANCE.json"
+          ],
+          "r-efi-5.3.0": [
+            "LICENSE-AUTHORS",
+            "LICENSE-METADATA.json",
+            "LICENSE-UPSTREAM-PROVENANCE.json"
+          ],
+          "r-efi-6.0.0": [
+            "LICENSE-AUTHORS",
+            "LICENSE-METADATA.json",
+            "LICENSE-UPSTREAM-PROVENANCE.json"
+          ]
+        },
+        "execution_scope": "Archive contents and native signatures only; no Intel/Windows app execution on this Mac.",
+        "compiled_binary_hashes_verified": true,
+        "compatibility_aliases_identical": true,
+        "passed": true,
+        "exact_tested_archive_path": "/private/tmp/hejjetrac-v032-platform-packages/hejjetrac-windows-amd64.zip"
+      },
+      "macos_x86_64": {
+        "workflow_run_id": 40530185839,
+        "workflow_artifact_name": "hejjetrac-macOS-X64",
+        "filename": "hejjetrac-macos-x86_64.zip",
+        "bytes": 24671993,
+        "sha256": "14c43556776e6082b6f35780871bb19b379bde02b732597502d622793208abec",
+        "build": {
+          "name": "Hejj\u00e9Trac",
+          "version": "0.3.2",
+          "platform": "macos",
+          "architecture": "x86_64",
+          "source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+          "source_url": "https://github.com/pvnkmrksk/hejjetrak",
+          "binary_hash_boundary": "compiled binaries before application signing",
+          "binaries": [
+            {
+              "name": "hejjetrac",
+              "compiled_sha256": "9dab1b035c1f34ea312cbc95ebef42010e4c51138b4f968a1b80f5c6d214e3aa"
+            },
+            {
+              "name": "hejjetrac-cli",
+              "compiled_sha256": "ccd94fbdb40a3674d5a79b5c64cc4a47681f42699fd5496644326f07a04e8b9c"
+            }
+          ]
+        },
+        "notice_groups": 474,
+        "provenance_groups": 471,
+        "verified_notice_hashes": 838,
+        "missing_notice_files": [],
+        "hash_mismatches": [],
+        "four_font_terms_match_original_bytes": true,
+        "both_r_efi_authors_licenses_match_original_bytes": true,
+        "explicit_declared_mit_packages": [
+          "block-0.1.6",
+          "dispatch-0.2.0",
+          "malloc_buf-0.0.6"
+        ],
+        "selected_notice_files": {
+          "block-0.1.6": [
+            "LICENSE-UPSTREAM-MANIFEST.toml",
+            "LICENSE-UPSTREAM-PROVENANCE.json",
+            "LICENSE-METADATA.json",
+            "LICENSE-DECLARED-MIT.txt"
+          ],
+          "dispatch-0.2.0": [
+            "LICENSE-UPSTREAM-MANIFEST.toml",
+            "LICENSE-UPSTREAM-PROVENANCE.json",
+            "LICENSE-METADATA.json",
+            "LICENSE-DECLARED-MIT.txt"
+          ],
+          "epaint_default_fonts-0.33.3": [
+            "LICENSE-UPSTREAM-PROVENANCE.json",
+            "LICENSE-METADATA.json",
+            "LICENSE-FONT-UFL.txt",
+            "LICENSE-FONT-emoji-icon-font-mit-license.txt",
+            "LICENSE-FONT-OFL.txt",
+            "LICENSE-FONT-Hack-Regular.txt",
+            "LICENSE-UPSTREAM/LICENSE-APACHE",
+            "LICENSE-UPSTREAM/LICENSE-MIT"
+          ],
+          "malloc_buf-0.0.6": [
+            "LICENSE-UPSTREAM-MANIFEST.toml",
+            "LICENSE-UPSTREAM-PROVENANCE.json",
+            "LICENSE-METADATA.json",
+            "LICENSE-DECLARED-MIT.txt"
+          ],
+          "r-efi-5.3.0": [
+            "LICENSE-AUTHORS",
+            "LICENSE-UPSTREAM-PROVENANCE.json",
+            "LICENSE-METADATA.json"
+          ],
+          "r-efi-6.0.0": [
+            "LICENSE-AUTHORS",
+            "LICENSE-UPSTREAM-PROVENANCE.json",
+            "LICENSE-METADATA.json"
+          ]
+        },
+        "execution_scope": "Archive contents and native signatures only; no Intel/Windows app execution on this Mac.",
+        "strict_ad_hoc_signature_verified": true,
+        "signature_details": "Executable=/private/tmp/hejjetrac-v032-platform-packages/macos_x86_64-extracted/hejjetrac-macos-x86_64/hejjetrac.app/Contents/MacOS/hejjetrac\nIdentifier=org.fictrac.rust.desktop\nFormat=app bundle with Mach-O thin (x86_64)\nCodeDirectory v=20400 size=136849 flags=0x2(adhoc) hashes=4270+3 location=embedded\nSignature=adhoc\nInfo.plist entries=12\nTeamIdentifier=not set\nSealed Resources version=2 rules=13 files=1901\nInternal requirements count=0 size=12\nTotal signatures=1\nChosen signature=1\n",
+        "native_architecture": "Non-fat file: /private/tmp/hejjetrac-v032-platform-packages/macos_x86_64-extracted/hejjetrac-macos-x86_64/hejjetrac.app/Contents/MacOS/hejjetrac is architecture: x86_64\n",
+        "passed": true,
+        "exact_tested_archive_path": "/private/tmp/hejjetrac-v032-platform-packages/hejjetrac-macos-x86_64.zip"
+      }
+    },
+    "checked_at_utc": "2026-10-27T15:45:58.125399+00:00",
+    "all_selected_archives_passed": true
+  },
+  "official_mac_arm64": {
+    "version": "0.3.2",
+    "source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+    "artifact_run": 40530185839,
+    "build": {
+      "name": "Hejj\u00e9Trac",
+      "version": "0.3.2",
+      "platform": "macos",
+      "architecture": "arm64",
+      "source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+      "source_url": "https://github.com/pvnkmrksk/hejjetrak",
+      "binary_hash_boundary": "compiled binaries before application signing",
+      "binaries": [
+        {
+          "name": "hejjetrac",
+          "compiled_sha256": "ec3eb717f2d35d779fc4a526559bfab676b6c93a925d9910f594d549f845d17a"
+        },
+        {
+          "name": "hejjetrac-cli",
+          "compiled_sha256": "54b1dfb1e5055e18e1fae386bac52738e6ad93a4af9d147cbacf474ffc15d396"
+        }
+      ]
+    },
+    "asset": {
+      "name": "hejjetrac-macos-arm64.zip",
+      "size": 23848165,
+      "sha256": "26072da06436829cc5cccce0bbad921b9f47f22eb08eaeb370e59cd36616c832"
+    },
+    "cli_version": "hejjetrac-cli 0.3.2",
+    "sample": {
+      "version": "0.3.2",
+      "input": "/private/tmp/hejjetrac-v032-official/extracted/hejjetrac-macos-arm64/hejjetrac.app/Contents/Resources/examples/sample.mp4",
+      "video": {
+        "width": 384,
+        "height": 288,
+        "fps": null,
+        "codec": "h264 (pure Rust)",
+        "duration_ms": 10000.0
+      },
+      "effective_config": {
+        "spherical_map": {
+          "resilient": true,
+          "global_search": false,
+          "max_bad_frames": -1,
+          "global_evaluations": 100000,
+          "channel": null,
+          "quality": 6,
+          "threshold_ratio": 1.25,
+          "threshold_window": 0.25,
+          "max_evaluations": 50,
+          "tolerance": 0.001,
+          "max_error": -1.0
+        },
+        "width": 384,
+        "height": 288,
+        "vfov_deg": 45.0,
+        "fisheye": false,
+        "sphere": {
+          "centre": [
+            -0.22938965658632982,
+            0.0999680947095317,
+            0.9681873607372448
+          ],
+          "angular_radius": 0.12481674439688986
+        },
+        "camera_to_lab": [
+          0.722445,
+          -0.131314,
+          -0.460878
+        ],
+        "legacy_roi_coordinates": true,
+        "ignore_polygons": [
+          [
+            [
+              96.0,
+              156.0
+            ],
+            [
+              113.0,
+              147.0
+            ],
+            [
+              106.0,
+              128.0
+            ],
+            [
+              82.0,
+              130.0
+            ],
+            [
+              81.0,
+              150.0
+            ]
+          ],
+          [
+            [
+              71.0,
+              213.0
+            ],
+            [
+              90.0,
+              219.0
+            ],
+            [
+              114.0,
+              218.0
+            ],
+            [
+              135.0,
+              211.0
+            ],
+            [
+              154.0,
+              196.0
+            ],
+            [
+              150.0,
+              217.0
+            ],
+            [
+              121.0,
+              228.0
+            ],
+            [
+              99.0,
+              234.0
+            ],
+            [
+              75.0,
+              225.0
+            ]
+          ]
+        ],
+        "max_rotation": 0.35,
+        "max_error": 0.16,
+        "sample_stride": 2,
+        "iterations": 20,
+        "source": "sample.mp4"
+      },
+      "frames": 300,
+      "tracked": 299,
+      "relocalized": 0,
+      "rejected": 0,
+      "initializing": 1,
+      "mean_error": 6424.500252392103,
+      "max_error": 8268.539271610356,
+      "wall_seconds": 0.726495875,
+      "end_to_end_fps": 412.9410920605709,
+      "tracking_fps": 1236.5233891902556,
+      "input_duration_ms": 9966.666666666666,
+      "final_position": [
+        3.6200534616363367,
+        -2.62729631571117
+      ],
+      "final_heading": 6.177704995564474,
+      "estimator": "accumulated spherical map / pure Rust BOBYQA",
+      "error_metric": "mean squared binary intensity (0..65025)",
+      "warnings": []
+    },
+    "comparison": {
+      "comparison": {
+        "candidate_final_position": [
+          3.620053461636,
+          -2.627296315711
+        ],
+        "endpoint_error_sphere_rad": 0.054525318251027806,
+        "frames": 300,
+        "heading_rmse_rad": 0.013184810790688728,
+        "path_point_rmse_sphere_rad": 0.04480675139756663,
+        "reference_final_position": [
+          3.674266189723,
+          -2.6214661833162
+        ],
+        "rotation_component_rmse_rad": [
+          0.008760804755303081,
+          0.008292135984256042,
+          0.014210731643506284
+        ],
+        "timestamp_max_error_ms": 3.456079866737127e-11
+      },
+      "limits": {
+        "heading_rmse_rad": 0.025,
+        "path_rmse_sphere_rad": 0.075,
+        "rotation_component_rmse_rad": 0.02
+      },
+      "passed": true
+    },
+    "signature": {
+      "command": "codesign --verify --deep --strict",
+      "exit_code": 0
+    },
+    "native_gui": {
+      "frames": 176,
+      "error": "",
+      "source": "/private/tmp/hejjetrac-v032-official/extracted/hejjetrac-macos-arm64/hejjetrac.app/Contents/Resources/examples/sample.mp4",
+      "screenshot_sha256": "b0950f9bc6e98e0a1a64be40d04725044132c8dc648ef338af11763483bb3691",
+      "graphics": "Graphics: Apple M2 Pro (Metal, IntegratedGpu)",
+      "visual_inspection": "Passed: patterned ball preview, cyan trace, white path inset, toolbar and live FPS/processing status are visible; no blank or failed view."
+    },
+    "scope": "Exact candidate workflow Apple Silicon archive and bundled recorded sample. Native preview requires WindowServer access; initial sandbox-restricted attempt aborted, then the same command passed with authorized GUI access. No physical high-speed camera accuracy or other-platform hardware claim."
+  },
+  "initial_runtime_harness_failure": "The initial runtime harness read only stderr. Native adapter diagnostics were in stdout. The corrected harness reads both streams and retains all renderer, numerical, negative-control and image gates. No application or package bytes changed.",
+  "corrected_runtime_run_id": 40535209814,
+  "scope": "Graphics startup patch only. Exact source and original package bytes are retained. Ubuntu rendering uses Xvfb/Mesa; no new physical camera, hybrid GPU or Wayland test and no walking-speed tracking change.",
+  "public_debian_download": {
+    "anonymous": true,
+    "url": "https://github.com/pvnkmrksk/hejjetrak/releases/download/v0.3.2/hejjetrac-linux-amd64.deb",
+    "bytes": 24380674,
+    "sha256": "0e8bf58bb7f85db7d72e93e0a3eeae2019914d0dbc4a8ce37fdab307064cc850",
+    "matches_exact_tested_package": true
+  },
+  "website_checks": {
+    "internal_references": 2078,
+    "html_pages": 43,
+    "download_controller": "passed"
+  }
+}

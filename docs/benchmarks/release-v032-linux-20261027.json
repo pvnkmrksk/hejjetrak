@@ -1,0 +1,1979 @@
+{
+  "release_tag": "v0.3.2",
+  "source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+  "status": "passed",
+  "runtime": [
+    {
+      "distribution": {
+        "NAME": "Ubuntu",
+        "ID": "ubuntu",
+        "PRETTY_NAME": "Ubuntu 22.04.5 LTS",
+        "VERSION_ID": "22.04",
+        "VERSION": "22.04.5 LTS (Jammy Jellyfish)",
+        "VERSION_CODENAME": "jammy",
+        "ID_LIKE": "debian",
+        "HOME_URL": "https://www.ubuntu.com/",
+        "SUPPORT_URL": "https://help.ubuntu.com/",
+        "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
+        "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
+        "UBUNTU_CODENAME": "jammy"
+      },
+      "runtime_libc": [
+        "glibc",
+        "2.35"
+      ],
+      "checks": [
+        {
+          "kind": "installed",
+          "build": {
+            "name": "Hejj\u00e9Trac",
+            "version": "0.3.2",
+            "platform": "linux",
+            "architecture": "x86_64",
+            "source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+            "source_url": "https://github.com/pvnkmrksk/hejjetrak",
+            "binary_hash_boundary": "compiled binaries before application signing",
+            "binaries": [
+              {
+                "name": "hejjetrac",
+                "compiled_sha256": "312ed82e497d32a22ab721b1028c3de9f7061744d0914f6f6c2b39f38ecf3ae3"
+              },
+              {
+                "name": "hejjetrac-cli",
+                "compiled_sha256": "900a2378eb3e1d05abf95f541c3afb419db4a4acfaaef36e08e3e9ebcbfaaffa"
+              }
+            ],
+            "linux_abi": {
+              "target_baseline": "Ubuntu 22.04 / glibc 2.35",
+              "glibc_ceiling": "2.35",
+              "binaries": [
+                {
+                  "binary": "hejjetrac",
+                  "required_glibc_versions": [
+                    "2.2.5",
+                    "2.3",
+                    "2.3.2",
+                    "2.3.4",
+                    "2.4",
+                    "2.7",
+                    "2.9",
+                    "2.10",
+                    "2.14",
+                    "2.15",
+                    "2.16",
+                    "2.17",
+                    "2.18",
+                    "2.25",
+                    "2.27",
+                    "2.28",
+                    "2.29",
+                    "2.30",
+                    "2.32",
+                    "2.33",
+                    "2.34",
+                    "2.35"
+                  ],
+                  "maximum_required_glibc": "2.35"
+                },
+                {
+                  "binary": "hejjetrac-cli",
+                  "required_glibc_versions": [
+                    "2.2.5",
+                    "2.3",
+                    "2.3.2",
+                    "2.3.4",
+                    "2.4",
+                    "2.7",
+                    "2.9",
+                    "2.10",
+                    "2.14",
+                    "2.16",
+                    "2.17",
+                    "2.18",
+                    "2.25",
+                    "2.28",
+                    "2.29",
+                    "2.30",
+                    "2.32",
+                    "2.33",
+                    "2.34",
+                    "2.35"
+                  ],
+                  "maximum_required_glibc": "2.35"
+                }
+              ]
+            },
+            "linux_depends": "libc6 (>= 2.35), libgcc-s1 (>= 4.2), libudev1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libegl1, libgles2, libvulkan1"
+          },
+          "sample": {
+            "version": "0.3.2",
+            "input": "/usr/lib/hejjetrak/examples/sample.mp4",
+            "video": {
+              "width": 384,
+              "height": 288,
+              "fps": null,
+              "codec": "h264 (pure Rust)",
+              "duration_ms": 10000.0
+            },
+            "effective_config": {
+              "spherical_map": {
+                "resilient": true,
+                "global_search": false,
+                "max_bad_frames": -1,
+                "global_evaluations": 100000,
+                "channel": null,
+                "quality": 6,
+                "threshold_ratio": 1.25,
+                "threshold_window": 0.25,
+                "max_evaluations": 50,
+                "tolerance": 0.001,
+                "max_error": -1.0
+              },
+              "width": 384,
+              "height": 288,
+              "vfov_deg": 45.0,
+              "fisheye": false,
+              "sphere": {
+                "centre": [
+                  -0.22938965658632302,
+                  0.09996809470952124,
+                  0.9681873607372475
+                ],
+                "angular_radius": 0.12481674439688094
+              },
+              "camera_to_lab": [
+                0.722445,
+                -0.131314,
+                -0.460878
+              ],
+              "legacy_roi_coordinates": true,
+              "ignore_polygons": [
+                [
+                  [
+                    96.0,
+                    156.0
+                  ],
+                  [
+                    113.0,
+                    147.0
+                  ],
+                  [
+                    106.0,
+                    128.0
+                  ],
+                  [
+                    82.0,
+                    130.0
+                  ],
+                  [
+                    81.0,
+                    150.0
+                  ]
+                ],
+                [
+                  [
+                    71.0,
+                    213.0
+                  ],
+                  [
+                    90.0,
+                    219.0
+                  ],
+                  [
+                    114.0,
+                    218.0
+                  ],
+                  [
+                    135.0,
+                    211.0
+                  ],
+                  [
+                    154.0,
+                    196.0
+                  ],
+                  [
+                    150.0,
+                    217.0
+                  ],
+                  [
+                    121.0,
+                    228.0
+                  ],
+                  [
+                    99.0,
+                    234.0
+                  ],
+                  [
+                    75.0,
+                    225.0
+                  ]
+                ]
+              ],
+              "max_rotation": 0.35,
+              "max_error": 0.16,
+              "sample_stride": 2,
+              "iterations": 20,
+              "source": "/usr/lib/hejjetrak/examples/sample.mp4"
+            },
+            "frames": 300,
+            "tracked": 299,
+            "relocalized": 0,
+            "rejected": 0,
+            "initializing": 1,
+            "mean_error": 6424.500252392103,
+            "max_error": 8268.539271610356,
+            "wall_seconds": 1.478912225,
+            "end_to_end_fps": 202.85179534573123,
+            "tracking_fps": 425.58393573852817,
+            "input_duration_ms": 9966.666666666666,
+            "final_position": [
+              3.620053461636342,
+              -2.6272963157111424
+            ],
+            "final_heading": 6.177704995564479,
+            "estimator": "accumulated spherical map / pure Rust BOBYQA",
+            "error_metric": "mean squared binary intensity (0..65025)",
+            "warnings": []
+          },
+          "comparison": {
+            "comparison": {
+              "candidate_final_position": [
+                3.620053461636,
+                -2.627296315711
+              ],
+              "endpoint_error_sphere_rad": 0.054525318251027806,
+              "frames": 300,
+              "heading_rmse_rad": 0.01318481079068964,
+              "path_point_rmse_sphere_rad": 0.04480675139755788,
+              "reference_final_position": [
+                3.674266189723,
+                -2.6214661833162
+              ],
+              "rotation_component_rmse_rad": [
+                0.008760804755303081,
+                0.008292135984256042,
+                0.014210731643506284
+              ],
+              "timestamp_max_error_ms": 3.456079866737127e-11
+            },
+            "limits": {
+              "heading_rmse_rad": 0.025,
+              "path_rmse_sphere_rad": 0.075,
+              "rotation_component_rmse_rad": 0.02
+            },
+            "passed": true
+          },
+          "notice_packages": 474,
+          "default_preview": {
+            "ubuntu": "22.04",
+            "kind": "installed-default",
+            "frames": 238,
+            "source": "/usr/lib/hejjetrak/examples/sample.mp4",
+            "error": "",
+            "graphics_adapter": {
+              "name": "llvmpipe (LLVM 15.0.7, 256 bits)",
+              "backend": "Gl",
+              "device_type": "Cpu"
+            },
+            "environment": {
+              "WGPU_BACKEND": null,
+              "WGPU_ADAPTER_NAME": null,
+              "WGPU_POWER_PREF": null,
+              "WINIT_UNIX_BACKEND": "x11",
+              "LIBGL_ALWAYS_SOFTWARE": "1",
+              "__EGL_VENDOR_LIBRARY_FILENAMES": null,
+              "VK_ICD_FILENAMES": null,
+              "VK_DRIVER_FILES": null
+            },
+            "pattern": {
+              "dark_fraction": 0.3440234375,
+              "light_fraction": 0.5351171875
+            },
+            "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-22.04/linux-package-runtime/installed/native-video.png",
+            "sha256": "33fff2f92908b93dd057aab204b55a1a71c0fb81df64f0f17fff478de3967e48"
+          },
+          "automatic_preview": {
+            "ubuntu": "22.04",
+            "kind": "installed-automatic-vulkan",
+            "frames": 237,
+            "source": "/usr/lib/hejjetrak/examples/sample.mp4",
+            "error": "",
+            "graphics_adapter": {
+              "name": "llvmpipe (LLVM 15.0.7, 256 bits)",
+              "backend": "Vulkan",
+              "device_type": "Cpu"
+            },
+            "environment": {
+              "WGPU_BACKEND": null,
+              "WGPU_ADAPTER_NAME": null,
+              "WGPU_POWER_PREF": null,
+              "WINIT_UNIX_BACKEND": "x11",
+              "LIBGL_ALWAYS_SOFTWARE": "1",
+              "__EGL_VENDOR_LIBRARY_FILENAMES": "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/nonexistent-egl-vendor.json",
+              "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json",
+              "VK_DRIVER_FILES": "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
+            },
+            "pattern": {
+              "dark_fraction": 0.3440234375,
+              "light_fraction": 0.5351171875
+            },
+            "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-22.04/linux-package-runtime/installed/native-automatic-vulkan-fallback.png",
+            "sha256": "3eb28a5aaa72db554eecb3434458eee3ae9946dff08797fe0128434eb0c5248b"
+          },
+          "negative_control": {
+            "command": [
+              "xvfb-run",
+              "-a",
+              "-s",
+              "-screen 0 1280x800x24",
+              "/usr/lib/hejjetrak/hejjetrac",
+              "--window-size",
+              "640x480",
+              "--exit-after",
+              "8",
+              "--state-output",
+              "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/graphics-forced-gl-negative.json",
+              "--screenshot",
+              "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/graphics-forced-gl-negative.png",
+              "--screenshot-after",
+              "3",
+              "--config",
+              "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/config.txt"
+            ],
+            "seconds": 0.0821253950000056,
+            "exit_code": 1,
+            "expected_graphics_failure": "hejjetrac: WGPU error: Failed to create surface for any enabled backend: {}",
+            "no_rendered_gui": true,
+            "graphics_environment": {
+              "WGPU_BACKEND": "gl",
+              "WGPU_ADAPTER_NAME": null,
+              "WGPU_POWER_PREF": null,
+              "WINIT_UNIX_BACKEND": "x11",
+              "LIBGL_ALWAYS_SOFTWARE": "1",
+              "__EGL_VENDOR_LIBRARY_FILENAMES": "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/nonexistent-egl-vendor.json",
+              "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json",
+              "VK_DRIVER_FILES": "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
+            }
+          },
+          "lavapipe_icd_sha256": "25a8b4697f38966821971f7eed2db2196217e965f8d40179425bc08f54f661d2"
+        },
+        {
+          "kind": "portable",
+          "build": {
+            "name": "Hejj\u00e9Trac",
+            "version": "0.3.2",
+            "platform": "linux",
+            "architecture": "x86_64",
+            "source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+            "source_url": "https://github.com/pvnkmrksk/hejjetrak",
+            "binary_hash_boundary": "compiled binaries before application signing",
+            "binaries": [
+              {
+                "name": "hejjetrac",
+                "compiled_sha256": "312ed82e497d32a22ab721b1028c3de9f7061744d0914f6f6c2b39f38ecf3ae3"
+              },
+              {
+                "name": "hejjetrac-cli",
+                "compiled_sha256": "900a2378eb3e1d05abf95f541c3afb419db4a4acfaaef36e08e3e9ebcbfaaffa"
+              }
+            ],
+            "linux_abi": {
+              "target_baseline": "Ubuntu 22.04 / glibc 2.35",
+              "glibc_ceiling": "2.35",
+              "binaries": [
+                {
+                  "binary": "hejjetrac",
+                  "required_glibc_versions": [
+                    "2.2.5",
+                    "2.3",
+                    "2.3.2",
+                    "2.3.4",
+                    "2.4",
+                    "2.7",
+                    "2.9",
+                    "2.10",
+                    "2.14",
+                    "2.15",
+                    "2.16",
+                    "2.17",
+                    "2.18",
+                    "2.25",
+                    "2.27",
+                    "2.28",
+                    "2.29",
+                    "2.30",
+                    "2.32",
+                    "2.33",
+                    "2.34",
+                    "2.35"
+                  ],
+                  "maximum_required_glibc": "2.35"
+                },
+                {
+                  "binary": "hejjetrac-cli",
+                  "required_glibc_versions": [
+                    "2.2.5",
+                    "2.3",
+                    "2.3.2",
+                    "2.3.4",
+                    "2.4",
+                    "2.7",
+                    "2.9",
+                    "2.10",
+                    "2.14",
+                    "2.16",
+                    "2.17",
+                    "2.18",
+                    "2.25",
+                    "2.28",
+                    "2.29",
+                    "2.30",
+                    "2.32",
+                    "2.33",
+                    "2.34",
+                    "2.35"
+                  ],
+                  "maximum_required_glibc": "2.35"
+                }
+              ]
+            },
+            "linux_depends": "libc6 (>= 2.35), libgcc-s1 (>= 4.2), libudev1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libegl1, libgles2, libvulkan1"
+          },
+          "sample": {
+            "version": "0.3.2",
+            "input": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+            "video": {
+              "width": 384,
+              "height": 288,
+              "fps": null,
+              "codec": "h264 (pure Rust)",
+              "duration_ms": 10000.0
+            },
+            "effective_config": {
+              "spherical_map": {
+                "resilient": true,
+                "global_search": false,
+                "max_bad_frames": -1,
+                "global_evaluations": 100000,
+                "channel": null,
+                "quality": 6,
+                "threshold_ratio": 1.25,
+                "threshold_window": 0.25,
+                "max_evaluations": 50,
+                "tolerance": 0.001,
+                "max_error": -1.0
+              },
+              "width": 384,
+              "height": 288,
+              "vfov_deg": 45.0,
+              "fisheye": false,
+              "sphere": {
+                "centre": [
+                  -0.22938965658632302,
+                  0.09996809470952124,
+                  0.9681873607372475
+                ],
+                "angular_radius": 0.12481674439688094
+              },
+              "camera_to_lab": [
+                0.722445,
+                -0.131314,
+                -0.460878
+              ],
+              "legacy_roi_coordinates": true,
+              "ignore_polygons": [
+                [
+                  [
+                    96.0,
+                    156.0
+                  ],
+                  [
+                    113.0,
+                    147.0
+                  ],
+                  [
+                    106.0,
+                    128.0
+                  ],
+                  [
+                    82.0,
+                    130.0
+                  ],
+                  [
+                    81.0,
+                    150.0
+                  ]
+                ],
+                [
+                  [
+                    71.0,
+                    213.0
+                  ],
+                  [
+                    90.0,
+                    219.0
+                  ],
+                  [
+                    114.0,
+                    218.0
+                  ],
+                  [
+                    135.0,
+                    211.0
+                  ],
+                  [
+                    154.0,
+                    196.0
+                  ],
+                  [
+                    150.0,
+                    217.0
+                  ],
+                  [
+                    121.0,
+                    228.0
+                  ],
+                  [
+                    99.0,
+                    234.0
+                  ],
+                  [
+                    75.0,
+                    225.0
+                  ]
+                ]
+              ],
+              "max_rotation": 0.35,
+              "max_error": 0.16,
+              "sample_stride": 2,
+              "iterations": 20,
+              "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4"
+            },
+            "frames": 300,
+            "tracked": 299,
+            "relocalized": 0,
+            "rejected": 0,
+            "initializing": 1,
+            "mean_error": 6424.500252392103,
+            "max_error": 8268.539271610356,
+            "wall_seconds": 1.52446459,
+            "end_to_end_fps": 196.79040232741647,
+            "tracking_fps": 415.98098556461395,
+            "input_duration_ms": 9966.666666666666,
+            "final_position": [
+              3.620053461636342,
+              -2.6272963157111424
+            ],
+            "final_heading": 6.177704995564479,
+            "estimator": "accumulated spherical map / pure Rust BOBYQA",
+            "error_metric": "mean squared binary intensity (0..65025)",
+            "warnings": []
+          },
+          "comparison": {
+            "comparison": {
+              "candidate_final_position": [
+                3.620053461636,
+                -2.627296315711
+              ],
+              "endpoint_error_sphere_rad": 0.054525318251027806,
+              "frames": 300,
+              "heading_rmse_rad": 0.01318481079068964,
+              "path_point_rmse_sphere_rad": 0.04480675139755788,
+              "reference_final_position": [
+                3.674266189723,
+                -2.6214661833162
+              ],
+              "rotation_component_rmse_rad": [
+                0.008760804755303081,
+                0.008292135984256042,
+                0.014210731643506284
+              ],
+              "timestamp_max_error_ms": 3.456079866737127e-11
+            },
+            "limits": {
+              "heading_rmse_rad": 0.025,
+              "path_rmse_sphere_rad": 0.075,
+              "rotation_component_rmse_rad": 0.02
+            },
+            "passed": true
+          },
+          "notice_packages": 474,
+          "default_preview": {
+            "ubuntu": "22.04",
+            "kind": "portable-default",
+            "frames": 237,
+            "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+            "error": "",
+            "graphics_adapter": {
+              "name": "llvmpipe (LLVM 15.0.7, 256 bits)",
+              "backend": "Gl",
+              "device_type": "Cpu"
+            },
+            "environment": {
+              "WGPU_BACKEND": null,
+              "WGPU_ADAPTER_NAME": null,
+              "WGPU_POWER_PREF": null,
+              "WINIT_UNIX_BACKEND": "x11",
+              "LIBGL_ALWAYS_SOFTWARE": "1",
+              "__EGL_VENDOR_LIBRARY_FILENAMES": null,
+              "VK_ICD_FILENAMES": null,
+              "VK_DRIVER_FILES": null
+            },
+            "pattern": {
+              "dark_fraction": 0.3441796875,
+              "light_fraction": 0.5358984375
+            },
+            "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-22.04/linux-package-runtime/portable/native-video.png",
+            "sha256": "d9ecdc98faa5b3e2a4b506d0ca031ca57c0838ca883808c12481843114fab023"
+          },
+          "automatic_preview": {
+            "ubuntu": "22.04",
+            "kind": "portable-automatic-vulkan",
+            "frames": 237,
+            "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+            "error": "",
+            "graphics_adapter": {
+              "name": "llvmpipe (LLVM 15.0.7, 256 bits)",
+              "backend": "Vulkan",
+              "device_type": "Cpu"
+            },
+            "environment": {
+              "WGPU_BACKEND": null,
+              "WGPU_ADAPTER_NAME": null,
+              "WGPU_POWER_PREF": null,
+              "WINIT_UNIX_BACKEND": "x11",
+              "LIBGL_ALWAYS_SOFTWARE": "1",
+              "__EGL_VENDOR_LIBRARY_FILENAMES": "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/nonexistent-egl-vendor.json",
+              "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json",
+              "VK_DRIVER_FILES": "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
+            },
+            "pattern": {
+              "dark_fraction": 0.3441796875,
+              "light_fraction": 0.5358984375
+            },
+            "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-22.04/linux-package-runtime/portable/native-automatic-vulkan-fallback.png",
+            "sha256": "e31fe779661be9539034daef971eebcea6aba90def744b22af595bf2713b1b11"
+          },
+          "negative_control": {
+            "command": [
+              "xvfb-run",
+              "-a",
+              "-s",
+              "-screen 0 1280x800x24",
+              "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/hejjetrac",
+              "--window-size",
+              "640x480",
+              "--exit-after",
+              "8",
+              "--state-output",
+              "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/graphics-forced-gl-negative.json",
+              "--screenshot",
+              "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/graphics-forced-gl-negative.png",
+              "--screenshot-after",
+              "3",
+              "--config",
+              "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/config.txt"
+            ],
+            "seconds": 0.08102135699999735,
+            "exit_code": 1,
+            "expected_graphics_failure": "hejjetrac: WGPU error: Failed to create surface for any enabled backend: {}",
+            "no_rendered_gui": true,
+            "graphics_environment": {
+              "WGPU_BACKEND": "gl",
+              "WGPU_ADAPTER_NAME": null,
+              "WGPU_POWER_PREF": null,
+              "WINIT_UNIX_BACKEND": "x11",
+              "LIBGL_ALWAYS_SOFTWARE": "1",
+              "__EGL_VENDOR_LIBRARY_FILENAMES": "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/nonexistent-egl-vendor.json",
+              "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json",
+              "VK_DRIVER_FILES": "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
+            }
+          },
+          "lavapipe_icd_sha256": "25a8b4697f38966821971f7eed2db2196217e965f8d40179425bc08f54f661d2"
+        }
+      ],
+      "no_camera_startup": {
+        "ubuntu": "22.04",
+        "kind": "no-camera-startup",
+        "frames": 237,
+        "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/default-startup/app/examples/sample.mp4",
+        "error": "",
+        "graphics_adapter": {
+          "name": "llvmpipe (LLVM 15.0.7, 256 bits)",
+          "backend": "Gl",
+          "device_type": "Cpu"
+        },
+        "environment": {
+          "WGPU_BACKEND": null,
+          "WGPU_ADAPTER_NAME": null,
+          "WGPU_POWER_PREF": null,
+          "WINIT_UNIX_BACKEND": "x11",
+          "LIBGL_ALWAYS_SOFTWARE": "1",
+          "__EGL_VENDOR_LIBRARY_FILENAMES": null,
+          "VK_ICD_FILENAMES": null,
+          "VK_DRIVER_FILES": null
+        },
+        "pattern": {
+          "dark_fraction": 0.3440234375,
+          "light_fraction": 0.5351171875
+        },
+        "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-22.04/linux-package-runtime/default-startup/native-fallback.png",
+        "sha256": "534b412b183664a7de910864bef2885eb2b45a1994c7ead5e583ad80f8615ff6"
+      },
+      "reported_startup_user_configuration": "/github/home/.config/hejjetrac/VR1.txt",
+      "harness_sha256": "cc550ad8482aaada1d8ceebb5746baff4e661564180dc4aef447e8634c21ae79"
+    },
+    {
+      "distribution": {
+        "NAME": "Ubuntu",
+        "ID": "ubuntu",
+        "PRETTY_NAME": "Ubuntu 24.04.5 LTS",
+        "VERSION_ID": "24.04",
+        "VERSION": "24.04.5 LTS (Noble Numbat)",
+        "VERSION_CODENAME": "noble",
+        "ID_LIKE": "debian",
+        "HOME_URL": "https://www.ubuntu.com/",
+        "SUPPORT_URL": "https://help.ubuntu.com/",
+        "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
+        "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
+        "UBUNTU_CODENAME": "noble",
+        "LOGO": "ubuntu-logo"
+      },
+      "runtime_libc": [
+        "glibc",
+        "2.39"
+      ],
+      "checks": [
+        {
+          "kind": "installed",
+          "build": {
+            "name": "Hejj\u00e9Trac",
+            "version": "0.3.2",
+            "platform": "linux",
+            "architecture": "x86_64",
+            "source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+            "source_url": "https://github.com/pvnkmrksk/hejjetrak",
+            "binary_hash_boundary": "compiled binaries before application signing",
+            "binaries": [
+              {
+                "name": "hejjetrac",
+                "compiled_sha256": "312ed82e497d32a22ab721b1028c3de9f7061744d0914f6f6c2b39f38ecf3ae3"
+              },
+              {
+                "name": "hejjetrac-cli",
+                "compiled_sha256": "900a2378eb3e1d05abf95f541c3afb419db4a4acfaaef36e08e3e9ebcbfaaffa"
+              }
+            ],
+            "linux_abi": {
+              "target_baseline": "Ubuntu 22.04 / glibc 2.35",
+              "glibc_ceiling": "2.35",
+              "binaries": [
+                {
+                  "binary": "hejjetrac",
+                  "required_glibc_versions": [
+                    "2.2.5",
+                    "2.3",
+                    "2.3.2",
+                    "2.3.4",
+                    "2.4",
+                    "2.7",
+                    "2.9",
+                    "2.10",
+                    "2.14",
+                    "2.15",
+                    "2.16",
+                    "2.17",
+                    "2.18",
+                    "2.25",
+                    "2.27",
+                    "2.28",
+                    "2.29",
+                    "2.30",
+                    "2.32",
+                    "2.33",
+                    "2.34",
+                    "2.35"
+                  ],
+                  "maximum_required_glibc": "2.35"
+                },
+                {
+                  "binary": "hejjetrac-cli",
+                  "required_glibc_versions": [
+                    "2.2.5",
+                    "2.3",
+                    "2.3.2",
+                    "2.3.4",
+                    "2.4",
+                    "2.7",
+                    "2.9",
+                    "2.10",
+                    "2.14",
+                    "2.16",
+                    "2.17",
+                    "2.18",
+                    "2.25",
+                    "2.28",
+                    "2.29",
+                    "2.30",
+                    "2.32",
+                    "2.33",
+                    "2.34",
+                    "2.35"
+                  ],
+                  "maximum_required_glibc": "2.35"
+                }
+              ]
+            },
+            "linux_depends": "libc6 (>= 2.35), libgcc-s1 (>= 4.2), libudev1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libegl1, libgles2, libvulkan1"
+          },
+          "sample": {
+            "version": "0.3.2",
+            "input": "/usr/lib/hejjetrak/examples/sample.mp4",
+            "video": {
+              "width": 384,
+              "height": 288,
+              "fps": null,
+              "codec": "h264 (pure Rust)",
+              "duration_ms": 10000.0
+            },
+            "effective_config": {
+              "spherical_map": {
+                "resilient": true,
+                "global_search": false,
+                "max_bad_frames": -1,
+                "global_evaluations": 100000,
+                "channel": null,
+                "quality": 6,
+                "threshold_ratio": 1.25,
+                "threshold_window": 0.25,
+                "max_evaluations": 50,
+                "tolerance": 0.001,
+                "max_error": -1.0
+              },
+              "width": 384,
+              "height": 288,
+              "vfov_deg": 45.0,
+              "fisheye": false,
+              "sphere": {
+                "centre": [
+                  -0.22938965658632302,
+                  0.09996809470952124,
+                  0.9681873607372475
+                ],
+                "angular_radius": 0.12481674439688094
+              },
+              "camera_to_lab": [
+                0.722445,
+                -0.131314,
+                -0.460878
+              ],
+              "legacy_roi_coordinates": true,
+              "ignore_polygons": [
+                [
+                  [
+                    96.0,
+                    156.0
+                  ],
+                  [
+                    113.0,
+                    147.0
+                  ],
+                  [
+                    106.0,
+                    128.0
+                  ],
+                  [
+                    82.0,
+                    130.0
+                  ],
+                  [
+                    81.0,
+                    150.0
+                  ]
+                ],
+                [
+                  [
+                    71.0,
+                    213.0
+                  ],
+                  [
+                    90.0,
+                    219.0
+                  ],
+                  [
+                    114.0,
+                    218.0
+                  ],
+                  [
+                    135.0,
+                    211.0
+                  ],
+                  [
+                    154.0,
+                    196.0
+                  ],
+                  [
+                    150.0,
+                    217.0
+                  ],
+                  [
+                    121.0,
+                    228.0
+                  ],
+                  [
+                    99.0,
+                    234.0
+                  ],
+                  [
+                    75.0,
+                    225.0
+                  ]
+                ]
+              ],
+              "max_rotation": 0.35,
+              "max_error": 0.16,
+              "sample_stride": 2,
+              "iterations": 20,
+              "source": "/usr/lib/hejjetrak/examples/sample.mp4"
+            },
+            "frames": 300,
+            "tracked": 299,
+            "relocalized": 0,
+            "rejected": 0,
+            "initializing": 1,
+            "mean_error": 6424.500252392103,
+            "max_error": 8268.539271610356,
+            "wall_seconds": 1.484147124,
+            "end_to_end_fps": 202.13629440688794,
+            "tracking_fps": 417.9037569765061,
+            "input_duration_ms": 9966.666666666666,
+            "final_position": [
+              3.620053461636342,
+              -2.6272963157111424
+            ],
+            "final_heading": 6.177704995564479,
+            "estimator": "accumulated spherical map / pure Rust BOBYQA",
+            "error_metric": "mean squared binary intensity (0..65025)",
+            "warnings": []
+          },
+          "comparison": {
+            "comparison": {
+              "candidate_final_position": [
+                3.620053461636,
+                -2.627296315711
+              ],
+              "endpoint_error_sphere_rad": 0.054525318251027806,
+              "frames": 300,
+              "heading_rmse_rad": 0.01318481079068964,
+              "path_point_rmse_sphere_rad": 0.04480675139755788,
+              "reference_final_position": [
+                3.674266189723,
+                -2.6214661833162
+              ],
+              "rotation_component_rmse_rad": [
+                0.008760804755303081,
+                0.008292135984256042,
+                0.014210731643506284
+              ],
+              "timestamp_max_error_ms": 3.456079866737127e-11
+            },
+            "limits": {
+              "heading_rmse_rad": 0.025,
+              "path_rmse_sphere_rad": 0.075,
+              "rotation_component_rmse_rad": 0.02
+            },
+            "passed": true
+          },
+          "notice_packages": 474,
+          "default_preview": {
+            "ubuntu": "24.04",
+            "kind": "installed-default",
+            "frames": 237,
+            "source": "/usr/lib/hejjetrak/examples/sample.mp4",
+            "error": "",
+            "graphics_adapter": {
+              "name": "llvmpipe (LLVM 20.1.2, 256 bits)",
+              "backend": "Gl",
+              "device_type": "Cpu"
+            },
+            "environment": {
+              "WGPU_BACKEND": null,
+              "WGPU_ADAPTER_NAME": null,
+              "WGPU_POWER_PREF": null,
+              "WINIT_UNIX_BACKEND": "x11",
+              "LIBGL_ALWAYS_SOFTWARE": "1",
+              "__EGL_VENDOR_LIBRARY_FILENAMES": null,
+              "VK_ICD_FILENAMES": null,
+              "VK_DRIVER_FILES": null
+            },
+            "pattern": {
+              "dark_fraction": 0.3440234375,
+              "light_fraction": 0.5351171875
+            },
+            "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-24.04/linux-package-runtime/installed/native-video.png",
+            "sha256": "027f448ef46145ca9563f9a29e163b5c950d1bc2d70752e8cca2d8724d7d9ee8"
+          },
+          "automatic_preview": {
+            "ubuntu": "24.04",
+            "kind": "installed-automatic-vulkan",
+            "frames": 236,
+            "source": "/usr/lib/hejjetrak/examples/sample.mp4",
+            "error": "",
+            "graphics_adapter": {
+              "name": "llvmpipe (LLVM 20.1.2, 256 bits)",
+              "backend": "Vulkan",
+              "device_type": "Cpu"
+            },
+            "environment": {
+              "WGPU_BACKEND": null,
+              "WGPU_ADAPTER_NAME": null,
+              "WGPU_POWER_PREF": null,
+              "WINIT_UNIX_BACKEND": "x11",
+              "LIBGL_ALWAYS_SOFTWARE": "1",
+              "__EGL_VENDOR_LIBRARY_FILENAMES": "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/nonexistent-egl-vendor.json",
+              "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/lvp_icd.json",
+              "VK_DRIVER_FILES": "/usr/share/vulkan/icd.d/lvp_icd.json"
+            },
+            "pattern": {
+              "dark_fraction": 0.3440234375,
+              "light_fraction": 0.5351171875
+            },
+            "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-24.04/linux-package-runtime/installed/native-automatic-vulkan-fallback.png",
+            "sha256": "02ca928a56ed414efe7a62da64f3c9c123a1e2bf91ede62bc9b633df00f763ae"
+          },
+          "negative_control": {
+            "command": [
+              "xvfb-run",
+              "-a",
+              "-s",
+              "-screen 0 1280x800x24",
+              "/usr/lib/hejjetrak/hejjetrac",
+              "--window-size",
+              "640x480",
+              "--exit-after",
+              "8",
+              "--state-output",
+              "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/graphics-forced-gl-negative.json",
+              "--screenshot",
+              "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/graphics-forced-gl-negative.png",
+              "--screenshot-after",
+              "3",
+              "--config",
+              "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/config.txt"
+            ],
+            "seconds": 0.05828481499999327,
+            "exit_code": 1,
+            "expected_graphics_failure": "hejjetrac: WGPU error: Failed to create surface for any enabled backend: {}",
+            "no_rendered_gui": true,
+            "graphics_environment": {
+              "WGPU_BACKEND": "gl",
+              "WGPU_ADAPTER_NAME": null,
+              "WGPU_POWER_PREF": null,
+              "WINIT_UNIX_BACKEND": "x11",
+              "LIBGL_ALWAYS_SOFTWARE": "1",
+              "__EGL_VENDOR_LIBRARY_FILENAMES": "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/nonexistent-egl-vendor.json",
+              "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/lvp_icd.json",
+              "VK_DRIVER_FILES": "/usr/share/vulkan/icd.d/lvp_icd.json"
+            }
+          },
+          "lavapipe_icd_sha256": "70d49f7fd41a7593a4e283543ed4855c139c700e5c1b31792f56e9576ede2398"
+        },
+        {
+          "kind": "portable",
+          "build": {
+            "name": "Hejj\u00e9Trac",
+            "version": "0.3.2",
+            "platform": "linux",
+            "architecture": "x86_64",
+            "source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+            "source_url": "https://github.com/pvnkmrksk/hejjetrak",
+            "binary_hash_boundary": "compiled binaries before application signing",
+            "binaries": [
+              {
+                "name": "hejjetrac",
+                "compiled_sha256": "312ed82e497d32a22ab721b1028c3de9f7061744d0914f6f6c2b39f38ecf3ae3"
+              },
+              {
+                "name": "hejjetrac-cli",
+                "compiled_sha256": "900a2378eb3e1d05abf95f541c3afb419db4a4acfaaef36e08e3e9ebcbfaaffa"
+              }
+            ],
+            "linux_abi": {
+              "target_baseline": "Ubuntu 22.04 / glibc 2.35",
+              "glibc_ceiling": "2.35",
+              "binaries": [
+                {
+                  "binary": "hejjetrac",
+                  "required_glibc_versions": [
+                    "2.2.5",
+                    "2.3",
+                    "2.3.2",
+                    "2.3.4",
+                    "2.4",
+                    "2.7",
+                    "2.9",
+                    "2.10",
+                    "2.14",
+                    "2.15",
+                    "2.16",
+                    "2.17",
+                    "2.18",
+                    "2.25",
+                    "2.27",
+                    "2.28",
+                    "2.29",
+                    "2.30",
+                    "2.32",
+                    "2.33",
+                    "2.34",
+                    "2.35"
+                  ],
+                  "maximum_required_glibc": "2.35"
+                },
+                {
+                  "binary": "hejjetrac-cli",
+                  "required_glibc_versions": [
+                    "2.2.5",
+                    "2.3",
+                    "2.3.2",
+                    "2.3.4",
+                    "2.4",
+                    "2.7",
+                    "2.9",
+                    "2.10",
+                    "2.14",
+                    "2.16",
+                    "2.17",
+                    "2.18",
+                    "2.25",
+                    "2.28",
+                    "2.29",
+                    "2.30",
+                    "2.32",
+                    "2.33",
+                    "2.34",
+                    "2.35"
+                  ],
+                  "maximum_required_glibc": "2.35"
+                }
+              ]
+            },
+            "linux_depends": "libc6 (>= 2.35), libgcc-s1 (>= 4.2), libudev1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libegl1, libgles2, libvulkan1"
+          },
+          "sample": {
+            "version": "0.3.2",
+            "input": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+            "video": {
+              "width": 384,
+              "height": 288,
+              "fps": null,
+              "codec": "h264 (pure Rust)",
+              "duration_ms": 10000.0
+            },
+            "effective_config": {
+              "spherical_map": {
+                "resilient": true,
+                "global_search": false,
+                "max_bad_frames": -1,
+                "global_evaluations": 100000,
+                "channel": null,
+                "quality": 6,
+                "threshold_ratio": 1.25,
+                "threshold_window": 0.25,
+                "max_evaluations": 50,
+                "tolerance": 0.001,
+                "max_error": -1.0
+              },
+              "width": 384,
+              "height": 288,
+              "vfov_deg": 45.0,
+              "fisheye": false,
+              "sphere": {
+                "centre": [
+                  -0.22938965658632302,
+                  0.09996809470952124,
+                  0.9681873607372475
+                ],
+                "angular_radius": 0.12481674439688094
+              },
+              "camera_to_lab": [
+                0.722445,
+                -0.131314,
+                -0.460878
+              ],
+              "legacy_roi_coordinates": true,
+              "ignore_polygons": [
+                [
+                  [
+                    96.0,
+                    156.0
+                  ],
+                  [
+                    113.0,
+                    147.0
+                  ],
+                  [
+                    106.0,
+                    128.0
+                  ],
+                  [
+                    82.0,
+                    130.0
+                  ],
+                  [
+                    81.0,
+                    150.0
+                  ]
+                ],
+                [
+                  [
+                    71.0,
+                    213.0
+                  ],
+                  [
+                    90.0,
+                    219.0
+                  ],
+                  [
+                    114.0,
+                    218.0
+                  ],
+                  [
+                    135.0,
+                    211.0
+                  ],
+                  [
+                    154.0,
+                    196.0
+                  ],
+                  [
+                    150.0,
+                    217.0
+                  ],
+                  [
+                    121.0,
+                    228.0
+                  ],
+                  [
+                    99.0,
+                    234.0
+                  ],
+                  [
+                    75.0,
+                    225.0
+                  ]
+                ]
+              ],
+              "max_rotation": 0.35,
+              "max_error": 0.16,
+              "sample_stride": 2,
+              "iterations": 20,
+              "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4"
+            },
+            "frames": 300,
+            "tracked": 299,
+            "relocalized": 0,
+            "rejected": 0,
+            "initializing": 1,
+            "mean_error": 6424.500252392103,
+            "max_error": 8268.539271610356,
+            "wall_seconds": 1.457451576,
+            "end_to_end_fps": 205.83874273432465,
+            "tracking_fps": 430.790101599706,
+            "input_duration_ms": 9966.666666666666,
+            "final_position": [
+              3.620053461636342,
+              -2.6272963157111424
+            ],
+            "final_heading": 6.177704995564479,
+            "estimator": "accumulated spherical map / pure Rust BOBYQA",
+            "error_metric": "mean squared binary intensity (0..65025)",
+            "warnings": []
+          },
+          "comparison": {
+            "comparison": {
+              "candidate_final_position": [
+                3.620053461636,
+                -2.627296315711
+              ],
+              "endpoint_error_sphere_rad": 0.054525318251027806,
+              "frames": 300,
+              "heading_rmse_rad": 0.01318481079068964,
+              "path_point_rmse_sphere_rad": 0.04480675139755788,
+              "reference_final_position": [
+                3.674266189723,
+                -2.6214661833162
+              ],
+              "rotation_component_rmse_rad": [
+                0.008760804755303081,
+                0.008292135984256042,
+                0.014210731643506284
+              ],
+              "timestamp_max_error_ms": 3.456079866737127e-11
+            },
+            "limits": {
+              "heading_rmse_rad": 0.025,
+              "path_rmse_sphere_rad": 0.075,
+              "rotation_component_rmse_rad": 0.02
+            },
+            "passed": true
+          },
+          "notice_packages": 474,
+          "default_preview": {
+            "ubuntu": "24.04",
+            "kind": "portable-default",
+            "frames": 236,
+            "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+            "error": "",
+            "graphics_adapter": {
+              "name": "llvmpipe (LLVM 20.1.2, 256 bits)",
+              "backend": "Gl",
+              "device_type": "Cpu"
+            },
+            "environment": {
+              "WGPU_BACKEND": null,
+              "WGPU_ADAPTER_NAME": null,
+              "WGPU_POWER_PREF": null,
+              "WINIT_UNIX_BACKEND": "x11",
+              "LIBGL_ALWAYS_SOFTWARE": "1",
+              "__EGL_VENDOR_LIBRARY_FILENAMES": null,
+              "VK_ICD_FILENAMES": null,
+              "VK_DRIVER_FILES": null
+            },
+            "pattern": {
+              "dark_fraction": 0.3440234375,
+              "light_fraction": 0.5351171875
+            },
+            "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-24.04/linux-package-runtime/portable/native-video.png",
+            "sha256": "9a76ffddd4d26f278f11a59abf32a5f82e8f6a772e699acf9c8a949b99fe27e5"
+          },
+          "automatic_preview": {
+            "ubuntu": "24.04",
+            "kind": "portable-automatic-vulkan",
+            "frames": 237,
+            "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+            "error": "",
+            "graphics_adapter": {
+              "name": "llvmpipe (LLVM 20.1.2, 256 bits)",
+              "backend": "Vulkan",
+              "device_type": "Cpu"
+            },
+            "environment": {
+              "WGPU_BACKEND": null,
+              "WGPU_ADAPTER_NAME": null,
+              "WGPU_POWER_PREF": null,
+              "WINIT_UNIX_BACKEND": "x11",
+              "LIBGL_ALWAYS_SOFTWARE": "1",
+              "__EGL_VENDOR_LIBRARY_FILENAMES": "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/nonexistent-egl-vendor.json",
+              "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/lvp_icd.json",
+              "VK_DRIVER_FILES": "/usr/share/vulkan/icd.d/lvp_icd.json"
+            },
+            "pattern": {
+              "dark_fraction": 0.3440234375,
+              "light_fraction": 0.5351171875
+            },
+            "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-24.04/linux-package-runtime/portable/native-automatic-vulkan-fallback.png",
+            "sha256": "ff3f5f5ed3a577c3daff5ad5e1a71ce261c1ed7fc1e1b4c037b84778abb8ae9f"
+          },
+          "negative_control": {
+            "command": [
+              "xvfb-run",
+              "-a",
+              "-s",
+              "-screen 0 1280x800x24",
+              "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/hejjetrac",
+              "--window-size",
+              "640x480",
+              "--exit-after",
+              "8",
+              "--state-output",
+              "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/graphics-forced-gl-negative.json",
+              "--screenshot",
+              "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/graphics-forced-gl-negative.png",
+              "--screenshot-after",
+              "3",
+              "--config",
+              "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/config.txt"
+            ],
+            "seconds": 0.058855804000003786,
+            "exit_code": 1,
+            "expected_graphics_failure": "hejjetrac: WGPU error: Failed to create surface for any enabled backend: {}",
+            "no_rendered_gui": true,
+            "graphics_environment": {
+              "WGPU_BACKEND": "gl",
+              "WGPU_ADAPTER_NAME": null,
+              "WGPU_POWER_PREF": null,
+              "WINIT_UNIX_BACKEND": "x11",
+              "LIBGL_ALWAYS_SOFTWARE": "1",
+              "__EGL_VENDOR_LIBRARY_FILENAMES": "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/nonexistent-egl-vendor.json",
+              "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/lvp_icd.json",
+              "VK_DRIVER_FILES": "/usr/share/vulkan/icd.d/lvp_icd.json"
+            }
+          },
+          "lavapipe_icd_sha256": "70d49f7fd41a7593a4e283543ed4855c139c700e5c1b31792f56e9576ede2398"
+        }
+      ],
+      "no_camera_startup": {
+        "ubuntu": "24.04",
+        "kind": "no-camera-startup",
+        "frames": 236,
+        "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/default-startup/app/examples/sample.mp4",
+        "error": "",
+        "graphics_adapter": {
+          "name": "llvmpipe (LLVM 20.1.2, 256 bits)",
+          "backend": "Gl",
+          "device_type": "Cpu"
+        },
+        "environment": {
+          "WGPU_BACKEND": null,
+          "WGPU_ADAPTER_NAME": null,
+          "WGPU_POWER_PREF": null,
+          "WINIT_UNIX_BACKEND": "x11",
+          "LIBGL_ALWAYS_SOFTWARE": "1",
+          "__EGL_VENDOR_LIBRARY_FILENAMES": null,
+          "VK_ICD_FILENAMES": null,
+          "VK_DRIVER_FILES": null
+        },
+        "pattern": {
+          "dark_fraction": 0.3441796875,
+          "light_fraction": 0.5358984375
+        },
+        "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-24.04/linux-package-runtime/default-startup/native-fallback.png",
+        "sha256": "2864b0338ce75e426c08d9099dcd51c5bbdf81c2a64d26de2eda0a41fb827ca3"
+      },
+      "reported_startup_user_configuration": "/github/home/.config/hejjetrac/VR1.txt",
+      "harness_sha256": "cc550ad8482aaada1d8ceebb5746baff4e661564180dc4aef447e8634c21ae79"
+    }
+  ],
+  "screenshots": [
+    {
+      "ubuntu": "22.04",
+      "kind": "installed-default",
+      "frames": 238,
+      "source": "/usr/lib/hejjetrak/examples/sample.mp4",
+      "error": "",
+      "graphics_adapter": {
+        "name": "llvmpipe (LLVM 15.0.7, 256 bits)",
+        "backend": "Gl",
+        "device_type": "Cpu"
+      },
+      "environment": {
+        "WGPU_BACKEND": null,
+        "WGPU_ADAPTER_NAME": null,
+        "WGPU_POWER_PREF": null,
+        "WINIT_UNIX_BACKEND": "x11",
+        "LIBGL_ALWAYS_SOFTWARE": "1",
+        "__EGL_VENDOR_LIBRARY_FILENAMES": null,
+        "VK_ICD_FILENAMES": null,
+        "VK_DRIVER_FILES": null
+      },
+      "pattern": {
+        "dark_fraction": 0.3440234375,
+        "light_fraction": 0.5351171875
+      },
+      "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-22.04/linux-package-runtime/installed/native-video.png",
+      "sha256": "33fff2f92908b93dd057aab204b55a1a71c0fb81df64f0f17fff478de3967e48"
+    },
+    {
+      "ubuntu": "22.04",
+      "kind": "installed-automatic-vulkan",
+      "frames": 237,
+      "source": "/usr/lib/hejjetrak/examples/sample.mp4",
+      "error": "",
+      "graphics_adapter": {
+        "name": "llvmpipe (LLVM 15.0.7, 256 bits)",
+        "backend": "Vulkan",
+        "device_type": "Cpu"
+      },
+      "environment": {
+        "WGPU_BACKEND": null,
+        "WGPU_ADAPTER_NAME": null,
+        "WGPU_POWER_PREF": null,
+        "WINIT_UNIX_BACKEND": "x11",
+        "LIBGL_ALWAYS_SOFTWARE": "1",
+        "__EGL_VENDOR_LIBRARY_FILENAMES": "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/nonexistent-egl-vendor.json",
+        "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json",
+        "VK_DRIVER_FILES": "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
+      },
+      "pattern": {
+        "dark_fraction": 0.3440234375,
+        "light_fraction": 0.5351171875
+      },
+      "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-22.04/linux-package-runtime/installed/native-automatic-vulkan-fallback.png",
+      "sha256": "3eb28a5aaa72db554eecb3434458eee3ae9946dff08797fe0128434eb0c5248b"
+    },
+    {
+      "ubuntu": "22.04",
+      "kind": "portable-default",
+      "frames": 237,
+      "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+      "error": "",
+      "graphics_adapter": {
+        "name": "llvmpipe (LLVM 15.0.7, 256 bits)",
+        "backend": "Gl",
+        "device_type": "Cpu"
+      },
+      "environment": {
+        "WGPU_BACKEND": null,
+        "WGPU_ADAPTER_NAME": null,
+        "WGPU_POWER_PREF": null,
+        "WINIT_UNIX_BACKEND": "x11",
+        "LIBGL_ALWAYS_SOFTWARE": "1",
+        "__EGL_VENDOR_LIBRARY_FILENAMES": null,
+        "VK_ICD_FILENAMES": null,
+        "VK_DRIVER_FILES": null
+      },
+      "pattern": {
+        "dark_fraction": 0.3441796875,
+        "light_fraction": 0.5358984375
+      },
+      "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-22.04/linux-package-runtime/portable/native-video.png",
+      "sha256": "d9ecdc98faa5b3e2a4b506d0ca031ca57c0838ca883808c12481843114fab023"
+    },
+    {
+      "ubuntu": "22.04",
+      "kind": "portable-automatic-vulkan",
+      "frames": 237,
+      "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+      "error": "",
+      "graphics_adapter": {
+        "name": "llvmpipe (LLVM 15.0.7, 256 bits)",
+        "backend": "Vulkan",
+        "device_type": "Cpu"
+      },
+      "environment": {
+        "WGPU_BACKEND": null,
+        "WGPU_ADAPTER_NAME": null,
+        "WGPU_POWER_PREF": null,
+        "WINIT_UNIX_BACKEND": "x11",
+        "LIBGL_ALWAYS_SOFTWARE": "1",
+        "__EGL_VENDOR_LIBRARY_FILENAMES": "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/nonexistent-egl-vendor.json",
+        "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json",
+        "VK_DRIVER_FILES": "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
+      },
+      "pattern": {
+        "dark_fraction": 0.3441796875,
+        "light_fraction": 0.5358984375
+      },
+      "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-22.04/linux-package-runtime/portable/native-automatic-vulkan-fallback.png",
+      "sha256": "e31fe779661be9539034daef971eebcea6aba90def744b22af595bf2713b1b11"
+    },
+    {
+      "ubuntu": "22.04",
+      "kind": "no-camera-startup",
+      "frames": 237,
+      "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/default-startup/app/examples/sample.mp4",
+      "error": "",
+      "graphics_adapter": {
+        "name": "llvmpipe (LLVM 15.0.7, 256 bits)",
+        "backend": "Gl",
+        "device_type": "Cpu"
+      },
+      "environment": {
+        "WGPU_BACKEND": null,
+        "WGPU_ADAPTER_NAME": null,
+        "WGPU_POWER_PREF": null,
+        "WINIT_UNIX_BACKEND": "x11",
+        "LIBGL_ALWAYS_SOFTWARE": "1",
+        "__EGL_VENDOR_LIBRARY_FILENAMES": null,
+        "VK_ICD_FILENAMES": null,
+        "VK_DRIVER_FILES": null
+      },
+      "pattern": {
+        "dark_fraction": 0.3440234375,
+        "light_fraction": 0.5351171875
+      },
+      "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-22.04/linux-package-runtime/default-startup/native-fallback.png",
+      "sha256": "534b412b183664a7de910864bef2885eb2b45a1994c7ead5e583ad80f8615ff6"
+    },
+    {
+      "ubuntu": "24.04",
+      "kind": "installed-default",
+      "frames": 237,
+      "source": "/usr/lib/hejjetrak/examples/sample.mp4",
+      "error": "",
+      "graphics_adapter": {
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)",
+        "backend": "Gl",
+        "device_type": "Cpu"
+      },
+      "environment": {
+        "WGPU_BACKEND": null,
+        "WGPU_ADAPTER_NAME": null,
+        "WGPU_POWER_PREF": null,
+        "WINIT_UNIX_BACKEND": "x11",
+        "LIBGL_ALWAYS_SOFTWARE": "1",
+        "__EGL_VENDOR_LIBRARY_FILENAMES": null,
+        "VK_ICD_FILENAMES": null,
+        "VK_DRIVER_FILES": null
+      },
+      "pattern": {
+        "dark_fraction": 0.3440234375,
+        "light_fraction": 0.5351171875
+      },
+      "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-24.04/linux-package-runtime/installed/native-video.png",
+      "sha256": "027f448ef46145ca9563f9a29e163b5c950d1bc2d70752e8cca2d8724d7d9ee8"
+    },
+    {
+      "ubuntu": "24.04",
+      "kind": "installed-automatic-vulkan",
+      "frames": 236,
+      "source": "/usr/lib/hejjetrak/examples/sample.mp4",
+      "error": "",
+      "graphics_adapter": {
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)",
+        "backend": "Vulkan",
+        "device_type": "Cpu"
+      },
+      "environment": {
+        "WGPU_BACKEND": null,
+        "WGPU_ADAPTER_NAME": null,
+        "WGPU_POWER_PREF": null,
+        "WINIT_UNIX_BACKEND": "x11",
+        "LIBGL_ALWAYS_SOFTWARE": "1",
+        "__EGL_VENDOR_LIBRARY_FILENAMES": "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/nonexistent-egl-vendor.json",
+        "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/lvp_icd.json",
+        "VK_DRIVER_FILES": "/usr/share/vulkan/icd.d/lvp_icd.json"
+      },
+      "pattern": {
+        "dark_fraction": 0.3440234375,
+        "light_fraction": 0.5351171875
+      },
+      "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-24.04/linux-package-runtime/installed/native-automatic-vulkan-fallback.png",
+      "sha256": "02ca928a56ed414efe7a62da64f3c9c123a1e2bf91ede62bc9b633df00f763ae"
+    },
+    {
+      "ubuntu": "24.04",
+      "kind": "portable-default",
+      "frames": 236,
+      "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+      "error": "",
+      "graphics_adapter": {
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)",
+        "backend": "Gl",
+        "device_type": "Cpu"
+      },
+      "environment": {
+        "WGPU_BACKEND": null,
+        "WGPU_ADAPTER_NAME": null,
+        "WGPU_POWER_PREF": null,
+        "WINIT_UNIX_BACKEND": "x11",
+        "LIBGL_ALWAYS_SOFTWARE": "1",
+        "__EGL_VENDOR_LIBRARY_FILENAMES": null,
+        "VK_ICD_FILENAMES": null,
+        "VK_DRIVER_FILES": null
+      },
+      "pattern": {
+        "dark_fraction": 0.3440234375,
+        "light_fraction": 0.5351171875
+      },
+      "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-24.04/linux-package-runtime/portable/native-video.png",
+      "sha256": "9a76ffddd4d26f278f11a59abf32a5f82e8f6a772e699acf9c8a949b99fe27e5"
+    },
+    {
+      "ubuntu": "24.04",
+      "kind": "portable-automatic-vulkan",
+      "frames": 237,
+      "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+      "error": "",
+      "graphics_adapter": {
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)",
+        "backend": "Vulkan",
+        "device_type": "Cpu"
+      },
+      "environment": {
+        "WGPU_BACKEND": null,
+        "WGPU_ADAPTER_NAME": null,
+        "WGPU_POWER_PREF": null,
+        "WINIT_UNIX_BACKEND": "x11",
+        "LIBGL_ALWAYS_SOFTWARE": "1",
+        "__EGL_VENDOR_LIBRARY_FILENAMES": "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/nonexistent-egl-vendor.json",
+        "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/lvp_icd.json",
+        "VK_DRIVER_FILES": "/usr/share/vulkan/icd.d/lvp_icd.json"
+      },
+      "pattern": {
+        "dark_fraction": 0.3440234375,
+        "light_fraction": 0.5351171875
+      },
+      "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-24.04/linux-package-runtime/portable/native-automatic-vulkan-fallback.png",
+      "sha256": "ff3f5f5ed3a577c3daff5ad5e1a71ce261c1ed7fc1e1b4c037b84778abb8ae9f"
+    },
+    {
+      "ubuntu": "24.04",
+      "kind": "no-camera-startup",
+      "frames": 236,
+      "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/default-startup/app/examples/sample.mp4",
+      "error": "",
+      "graphics_adapter": {
+        "name": "llvmpipe (LLVM 20.1.2, 256 bits)",
+        "backend": "Gl",
+        "device_type": "Cpu"
+      },
+      "environment": {
+        "WGPU_BACKEND": null,
+        "WGPU_ADAPTER_NAME": null,
+        "WGPU_POWER_PREF": null,
+        "WINIT_UNIX_BACKEND": "x11",
+        "LIBGL_ALWAYS_SOFTWARE": "1",
+        "__EGL_VENDOR_LIBRARY_FILENAMES": null,
+        "VK_ICD_FILENAMES": null,
+        "VK_DRIVER_FILES": null
+      },
+      "pattern": {
+        "dark_fraction": 0.3441796875,
+        "light_fraction": 0.5358984375
+      },
+      "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-24.04/linux-package-runtime/default-startup/native-fallback.png",
+      "sha256": "2864b0338ce75e426c08d9099dcd51c5bbdf81c2a64d26de2eda0a41fb827ca3"
+    }
+  ],
+  "negative_controls": [
+    {
+      "ubuntu": "22.04",
+      "kind": "installed",
+      "command": [
+        "xvfb-run",
+        "-a",
+        "-s",
+        "-screen 0 1280x800x24",
+        "/usr/lib/hejjetrak/hejjetrac",
+        "--window-size",
+        "640x480",
+        "--exit-after",
+        "8",
+        "--state-output",
+        "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/graphics-forced-gl-negative.json",
+        "--screenshot",
+        "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/graphics-forced-gl-negative.png",
+        "--screenshot-after",
+        "3",
+        "--config",
+        "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/config.txt"
+      ],
+      "seconds": 0.0821253950000056,
+      "exit_code": 1,
+      "expected_graphics_failure": "hejjetrac: WGPU error: Failed to create surface for any enabled backend: {}",
+      "no_rendered_gui": true,
+      "graphics_environment": {
+        "WGPU_BACKEND": "gl",
+        "WGPU_ADAPTER_NAME": null,
+        "WGPU_POWER_PREF": null,
+        "WINIT_UNIX_BACKEND": "x11",
+        "LIBGL_ALWAYS_SOFTWARE": "1",
+        "__EGL_VENDOR_LIBRARY_FILENAMES": "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/nonexistent-egl-vendor.json",
+        "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json",
+        "VK_DRIVER_FILES": "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
+      }
+    },
+    {
+      "ubuntu": "22.04",
+      "kind": "portable",
+      "command": [
+        "xvfb-run",
+        "-a",
+        "-s",
+        "-screen 0 1280x800x24",
+        "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/hejjetrac",
+        "--window-size",
+        "640x480",
+        "--exit-after",
+        "8",
+        "--state-output",
+        "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/graphics-forced-gl-negative.json",
+        "--screenshot",
+        "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/graphics-forced-gl-negative.png",
+        "--screenshot-after",
+        "3",
+        "--config",
+        "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/config.txt"
+      ],
+      "seconds": 0.08102135699999735,
+      "exit_code": 1,
+      "expected_graphics_failure": "hejjetrac: WGPU error: Failed to create surface for any enabled backend: {}",
+      "no_rendered_gui": true,
+      "graphics_environment": {
+        "WGPU_BACKEND": "gl",
+        "WGPU_ADAPTER_NAME": null,
+        "WGPU_POWER_PREF": null,
+        "WINIT_UNIX_BACKEND": "x11",
+        "LIBGL_ALWAYS_SOFTWARE": "1",
+        "__EGL_VENDOR_LIBRARY_FILENAMES": "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/nonexistent-egl-vendor.json",
+        "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json",
+        "VK_DRIVER_FILES": "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
+      }
+    },
+    {
+      "ubuntu": "24.04",
+      "kind": "installed",
+      "command": [
+        "xvfb-run",
+        "-a",
+        "-s",
+        "-screen 0 1280x800x24",
+        "/usr/lib/hejjetrak/hejjetrac",
+        "--window-size",
+        "640x480",
+        "--exit-after",
+        "8",
+        "--state-output",
+        "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/graphics-forced-gl-negative.json",
+        "--screenshot",
+        "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/graphics-forced-gl-negative.png",
+        "--screenshot-after",
+        "3",
+        "--config",
+        "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/config.txt"
+      ],
+      "seconds": 0.05828481499999327,
+      "exit_code": 1,
+      "expected_graphics_failure": "hejjetrac: WGPU error: Failed to create surface for any enabled backend: {}",
+      "no_rendered_gui": true,
+      "graphics_environment": {
+        "WGPU_BACKEND": "gl",
+        "WGPU_ADAPTER_NAME": null,
+        "WGPU_POWER_PREF": null,
+        "WINIT_UNIX_BACKEND": "x11",
+        "LIBGL_ALWAYS_SOFTWARE": "1",
+        "__EGL_VENDOR_LIBRARY_FILENAMES": "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/nonexistent-egl-vendor.json",
+        "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/lvp_icd.json",
+        "VK_DRIVER_FILES": "/usr/share/vulkan/icd.d/lvp_icd.json"
+      }
+    },
+    {
+      "ubuntu": "24.04",
+      "kind": "portable",
+      "command": [
+        "xvfb-run",
+        "-a",
+        "-s",
+        "-screen 0 1280x800x24",
+        "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/hejjetrac",
+        "--window-size",
+        "640x480",
+        "--exit-after",
+        "8",
+        "--state-output",
+        "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/graphics-forced-gl-negative.json",
+        "--screenshot",
+        "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/graphics-forced-gl-negative.png",
+        "--screenshot-after",
+        "3",
+        "--config",
+        "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/config.txt"
+      ],
+      "seconds": 0.058855804000003786,
+      "exit_code": 1,
+      "expected_graphics_failure": "hejjetrac: WGPU error: Failed to create surface for any enabled backend: {}",
+      "no_rendered_gui": true,
+      "graphics_environment": {
+        "WGPU_BACKEND": "gl",
+        "WGPU_ADAPTER_NAME": null,
+        "WGPU_POWER_PREF": null,
+        "WINIT_UNIX_BACKEND": "x11",
+        "LIBGL_ALWAYS_SOFTWARE": "1",
+        "__EGL_VENDOR_LIBRARY_FILENAMES": "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/nonexistent-egl-vendor.json",
+        "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/lvp_icd.json",
+        "VK_DRIVER_FILES": "/usr/share/vulkan/icd.d/lvp_icd.json"
+      }
+    }
+  ],
+  "archive_sha256": "2125ce1e64ec7d667335989bfa49d42bf1a8d296fe52dc4804d24103e0052551",
+  "unchanged_package_proof": {
+    "mode": "unchanged_artifact",
+    "source_commit": "93f973b1b1dc6c582f52f076dede0e272ebc9784",
+    "version": "0.3.2",
+    "packaging_tool_revision": "60b0aedd0d679177ee722f4b1c383646bd422933",
+    "input_sha256": "0e8bf58bb7f85db7d72e93e0a3eeae2019914d0dbc4a8ce37fdab307064cc850",
+    "output_sha256": "0e8bf58bb7f85db7d72e93e0a3eeae2019914d0dbc4a8ce37fdab307064cc850"
+  },
+  "limitations": [
+    "Actual Xvfb/Mesa GLES and automatic Lavapipe Vulkan presentation; no physical camera, hardware hybrid-GPU, GPU hotplug or native Wayland exercise."
+  ],
+  "visual_review": {
+    "status": "passed",
+    "review": "All ten native screenshots visually inspected: textured sample ball, cyan movement trace, path inset, toolbar and FPS/tracking status are visible; no blank feed, rendering corruption or error overlay.",
+    "scope": "Xvfb/Mesa software graphics; no physical hybrid GPU or native Wayland testing.",
+    "screenshots": [
+      {
+        "ubuntu": "22.04",
+        "kind": "installed-default",
+        "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-22.04/linux-package-runtime/installed/native-video.png",
+        "sha256": "33fff2f92908b93dd057aab204b55a1a71c0fb81df64f0f17fff478de3967e48",
+        "backend": "Gl",
+        "passed": true
+      },
+      {
+        "ubuntu": "22.04",
+        "kind": "installed-automatic-vulkan",
+        "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-22.04/linux-package-runtime/installed/native-automatic-vulkan-fallback.png",
+        "sha256": "3eb28a5aaa72db554eecb3434458eee3ae9946dff08797fe0128434eb0c5248b",
+        "backend": "Vulkan",
+        "passed": true
+      },
+      {
+        "ubuntu": "22.04",
+        "kind": "portable-default",
+        "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-22.04/linux-package-runtime/portable/native-video.png",
+        "sha256": "d9ecdc98faa5b3e2a4b506d0ca031ca57c0838ca883808c12481843114fab023",
+        "backend": "Gl",
+        "passed": true
+      },
+      {
+        "ubuntu": "22.04",
+        "kind": "portable-automatic-vulkan",
+        "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-22.04/linux-package-runtime/portable/native-automatic-vulkan-fallback.png",
+        "sha256": "e31fe779661be9539034daef971eebcea6aba90def744b22af595bf2713b1b11",
+        "backend": "Vulkan",
+        "passed": true
+      },
+      {
+        "ubuntu": "22.04",
+        "kind": "no-camera-startup",
+        "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-22.04/linux-package-runtime/default-startup/native-fallback.png",
+        "sha256": "534b412b183664a7de910864bef2885eb2b45a1994c7ead5e583ad80f8615ff6",
+        "backend": "Gl",
+        "passed": true
+      },
+      {
+        "ubuntu": "24.04",
+        "kind": "installed-default",
+        "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-24.04/linux-package-runtime/installed/native-video.png",
+        "sha256": "027f448ef46145ca9563f9a29e163b5c950d1bc2d70752e8cca2d8724d7d9ee8",
+        "backend": "Gl",
+        "passed": true
+      },
+      {
+        "ubuntu": "24.04",
+        "kind": "installed-automatic-vulkan",
+        "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-24.04/linux-package-runtime/installed/native-automatic-vulkan-fallback.png",
+        "sha256": "02ca928a56ed414efe7a62da64f3c9c123a1e2bf91ede62bc9b633df00f763ae",
+        "backend": "Vulkan",
+        "passed": true
+      },
+      {
+        "ubuntu": "24.04",
+        "kind": "portable-default",
+        "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-24.04/linux-package-runtime/portable/native-video.png",
+        "sha256": "9a76ffddd4d26f278f11a59abf32a5f82e8f6a772e699acf9c8a949b99fe27e5",
+        "backend": "Gl",
+        "passed": true
+      },
+      {
+        "ubuntu": "24.04",
+        "kind": "portable-automatic-vulkan",
+        "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-24.04/linux-package-runtime/portable/native-automatic-vulkan-fallback.png",
+        "sha256": "ff3f5f5ed3a577c3daff5ad5e1a71ce261c1ed7fc1e1b4c037b84778abb8ae9f",
+        "backend": "Vulkan",
+        "passed": true
+      },
+      {
+        "ubuntu": "24.04",
+        "kind": "no-camera-startup",
+        "path": "/private/tmp/hejjetrac-v032-linux-audit/ubuntu-24.04/linux-package-runtime/default-startup/native-fallback.png",
+        "sha256": "2864b0338ce75e426c08d9099dcd51c5bbdf81c2a64d26de2eda0a41fb827ca3",
+        "backend": "Gl",
+        "passed": true
+      }
+    ]
+  }
+}

@@ -1,5 +1,17 @@
 # Behavioral parity assessment
 
+## Published v0.3.2 graphics patch
+
+[v0.3.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.2), source
+`93f973b1b1dc6c582f52f076dede0e272ebc9784`, adds automatic surface-compatible
+OpenGL/Vulkan selection on X11/XWayland. All four native package jobs pass.
+The original Debian/portable packages pass normal GL rendering, forced-GL failure
+controls and automatic Vulkan rendering on Ubuntu 22.04/24.04 using Xvfb/Mesa.
+All ten previews were inspected. [Validation](validation.md#v032-published-release--2026-10-27)
+records exact package identities, the separate QA-parser correction and hardware
+limits. Numerical tracking and camera behavior retain the v0.3.1 baseline below.
+
+
 ## Published v0.3.1 baseline
 
 [v0.3.1](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.1), source

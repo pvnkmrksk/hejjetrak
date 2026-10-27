@@ -1,5 +1,61 @@
 # HejjéTrac validation evidence
 
+## v0.3.2 published release — 2026-10-27
+
+Published [v0.3.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.2)
+contains five platform downloads from exact application source
+`93f973b1b1dc6c582f52f076dede0e272ebc9784`. Implicit X11/XWayland startup
+prefers surface-compatible OpenGL and selects Vulkan when OpenGL is unavailable.
+Explicit backend and adapter choices remain respected. Tracking, camera controls,
+calibration and recording behavior are unchanged.
+
+All four [native package jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40530185839)
+pass formatting, strict locked all-target Clippy, release builds and known-motion
+demos: **277 workspace tests per Mac, 282 on Linux and 276 on Windows**, plus
+**1,353 decoder tests per platform** and three Linux camera-adapter tests. There
+are no failed or ignored Rust tests. Both Mac signatures and Windows static-CRT
+checks pass. Each archive has **474 notice groups** and **838 verified provenance
+hashes**, including original bundled font terms.
+
+The first Ubuntu runtime run stopped after successful preview rendering because
+the new harness read adapter diagnostics only from stderr; Linux writes them to
+stdout. QA-only commit `60b0aedd0d679177ee722f4b1c383646bd422933` corrects stream
+parsing with six regressions. The [corrected runtime run](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40535209814)
+passes on **Ubuntu 22.04.5 and 24.04.5**, using the original packages without
+rebuilding or normalizing them. The release tag remains at the tested application
+source; main also contains the QA correction.
+
+Both installed and portable apps select **Gl** normally. With EGL discovery
+disabled, all four forced-GL controls exit cleanly with the expected surface
+error, while all four ordinary launches select **Vulkan** with backend/adapter
+name/power overrides unset. All ten captured previews were visually inspected;
+the sample, trace, path and toolbar are visible, and every session has empty
+error status. Frame counts, in installed GL/Vulkan, portable GL/Vulkan and
+no-camera fallback order, are **238/237/237/237/237** on 22.04 and
+**237/236/236/237/236** on 24.04. All four complete sample runs process **300
+images**, reject **zero** and pass the unchanged reference gates, with path RMS
+**0.0448067514 sphere rad**. Both executables require at most **GLIBC_2.35**.
+
+The Debian download is **24,380,674 bytes**, SHA-256
+`0e8bf58bb7f85db7d72e93e0a3eeae2019914d0dbc4a8ce37fdab307064cc850`.
+Its input/output runtime-validation hashes match exactly. The official Apple
+Silicon ZIP is **23,848,165 bytes**, SHA-256
+`26072da06436829cc5cccce0bbad921b9f47f22eb08eaeb370e59cd36616c832`;
+its strict signature, aliases, full sample and **176-frame native Metal preview**
+pass. Anonymous public API checks confirm the five uploaded digests match the
+tested archives.
+
+These Ubuntu cases use **Xvfb/Mesa software graphics**. They test adapter/surface
+selection and rendered sample startup, without establishing physical hybrid-GPU,
+Wayland or later driver/device recovery behavior. The user's RTX4070 report
+establishes that the prior release works with an explicit Vulkan override; it
+is not a new-build hardware test. Walking-speed tracking work remains separate.
+[Release and archive evidence](benchmarks/release-v032-20261027.json),
+[Ubuntu runtime evidence](benchmarks/release-v032-linux-20261027.json) and
+[local checks](benchmarks/local-v032-20261027.json) retain source, hashes,
+commands, results and execution scope.
+
+
 ## v0.3.1 published release — 2026-10-27
 
 Published [v0.3.1](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.1)

@@ -36,7 +36,7 @@ the earlier driver paths can reproduce their failures. Other platforms retain
 their existing graphics defaults. These tests establish behavior on this host,
 not a guarantee for every display server or driver.
 
-## Surface-compatible graphics fallback in current source
+## Surface-compatible graphics fallback in v0.3.2
 
 A later user report on the installed Debian package reached X11/XWayland but
 failed before creating the tracking window: OpenGL was incompatible with the
@@ -44,7 +44,7 @@ window surface and Vulkan had not been requested. The same user confirmed that
 `WGPU_BACKEND=vulkan hejjetrac` opened the application. The old forced-OpenGL
 workaround was therefore too restrictive for that system.
 
-Current source enumerates OpenGL and Vulkan for implicit X11 startup. A native
+v0.3.2 enumerates OpenGL and Vulkan for implicit X11 startup. A native
 selector first checks the actual window surface and supported framebuffer
 formats. Compatible OpenGL remains preferred, including over a discrete Vulkan
 GPU, preserving the earlier tested hybrid-driver path. Vulkan is selected only
@@ -59,8 +59,15 @@ harness checks baseline GL rendering, then disables EGL vendor discovery and
 restricts Vulkan to Mesa Lavapipe. Forced GL must fail cleanly in that environment;
 automatic startup must select Vulkan and render the patterned sample. The same
 full-video, quality, numeric, frame-count and screenshot-texture checks apply.
-Execution results are recorded separately after the candidate runs; software
-rendering is not a physical hybrid-GPU or Wayland validation claim.
+The [corrected runtime run](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40535209814)
+passes on Ubuntu 22.04/24.04 with the original installer and portable bytes:
+four forced-GL controls fail cleanly, all four automatic cases select Vulkan
+with no backend/adapter overrides, and all ten normal/fallback previews render
+and pass visual review. All four full 300-image sample comparisons retain their
+unchanged gates. The initial harness had read stderr instead of Linux's stdout;
+its correction changes no application code or package bytes. [Published evidence](validation.md#v032-published-release--2026-10-27)
+records exact source and hashes. Software rendering does not establish physical
+hybrid-GPU, Wayland or later driver/device recovery behavior.
 
 ## Complete VR3 replay through the native application
 
