@@ -1,0 +1,95 @@
+{
+  "date": "2026-10-27",
+  "request": "Commit remaining needed work and remove old generated raw video while retaining compact posterity evidence.",
+  "free_bytes_before": 4633202688,
+  "free_bytes_after": 18510188544,
+  "free_bytes_gained": 13876985856,
+  "free_GiB_before": 4.315006256103516,
+  "free_GiB_after": 17.238956451416016,
+  "freed_GiB": 12.9239501953125,
+  "removed_obsolete_generated_movies": 206,
+  "retained_final_source_clips": [
+    {
+      "path": "runs/overnight-20261027/segments/000364/session-1/epoch-0000-media/raw.avi",
+      "bytes": 24128792,
+      "sha256": "89509eca3d78e93723526b4e5280531a7f6d52f7235709734edbbb211cd1ed63",
+      "reason": "final short representative camera clip"
+    },
+    {
+      "path": "runs/overnight-20261027/segments/000364/session-2/epoch-0000-media/raw.avi",
+      "bytes": 23804650,
+      "sha256": "44c374051018b04ba3be17c608f68f576da39392004904ac3d5fa33ac1aa6e7d",
+      "reason": "final short representative camera clip"
+    },
+    {
+      "path": "runs/overnight-20261027/segments/000364/session-3/epoch-0000-media/raw.avi",
+      "bytes": 23932432,
+      "sha256": "b3352177d41f61af83a6432ce07480b4592a2b180e0b8d867dd8ae8f4cabf8a3",
+      "reason": "final short representative camera clip"
+    },
+    {
+      "path": "runs/overnight-20261027/segments/000364/session-4/epoch-0000-media/raw.avi",
+      "bytes": 24221696,
+      "sha256": "67c8f400087863c912e88e8fc3289e363b6b95ff04e578ab0b54406d7ad7286f",
+      "reason": "final short representative camera clip"
+    }
+  ],
+  "verified_lossless_archives": [
+    {
+      "path": "runs/.archives/20261027-cleanup/failed-video-evidence.tar.zst",
+      "sha256": "ce72f2b83838ec2e5d78e7855c889bc9b22aa227d98cc75ba8cbe5725e45e02d",
+      "compressed_bytes": 106441155,
+      "original_bytes": 1003958156,
+      "entries": 41,
+      "verified_entries": 41,
+      "removed_plain_files": 41,
+      "removed_plain_bytes": 1003958156,
+      "catalog": "runs/.archives/20261027-cleanup/failed-video-evidence.catalog.json"
+    },
+    {
+      "path": "runs/.archives/20261027-cleanup/numerical-evidence.tar.zst",
+      "sha256": "54ebc98aa13eeadb517fa504d417b6842b57fd6350ac4fb1ffc70df00931bf4f",
+      "compressed_bytes": 3155996917,
+      "original_bytes": 8169762055,
+      "entries": 5397,
+      "verified_entries": 5397,
+      "removed_plain_files": 5397,
+      "removed_plain_bytes": 8169762055,
+      "catalog": "runs/.archives/20261027-cleanup/numerical-evidence.catalog.json"
+    },
+    {
+      "path": "runs/.archives/20261027-cleanup/large-logs.tar.zst",
+      "sha256": "6824f6422ba356c8f7f23f0a8c89690903c48ef419110f677ed17f7c286d6711",
+      "compressed_bytes": 16011348,
+      "original_bytes": 739973947,
+      "entries": 24,
+      "verified_entries": 24,
+      "removed_plain_files": 24,
+      "removed_plain_bytes": 739973947,
+      "catalog": "runs/.archives/20261027-cleanup/large-logs.catalog.json"
+    }
+  ],
+  "removed_release_cache_directories": [
+    "target/release/deps",
+    "target/release/build",
+    "target/release/.fingerprint",
+    "target/release/incremental",
+    "target/release/examples"
+  ],
+  "removed_previous_package_backup": "dist/previous-0211b7e",
+  "previous_build_metadata_preserved": "runs/.archives/20261027-cleanup/previous-build-metadata/BUILD.json",
+  "detailed_cleanup_manifest": "runs/.archives/20261027-cleanup/cleanup-manifest.json",
+  "detailed_cleanup_manifest_sha256": "2272657c80f34c1cca9a925f5e5f08dd48055fc704ae128ae33f1bbc0f81d90a",
+  "protected": [
+    "All source and Git history",
+    "examples/ and its original sample/reference data",
+    "/home/pkaushi/src/fictrac/VR_array/VR1..VR4 original inputs",
+    "Current dist/hejjetrac-linux-x86_64/ bundle and current tar/deb packages",
+    "Root target/release/fictrac and fictrac-desktop executables",
+    "Reports, configuration text, figures, PNG excerpts and quality decisions"
+  ],
+  "active_app_not_stopped": true,
+  "current_packaged_binary_hashes_verified": true,
+  "skipped_files": [],
+  "scope": "Only generated runs/, old dist backup, and regenerable target/release caches were removed. Every numerical/log/failure archive entry was fully decompressed and SHA256-verified before expanded files were unlinked. Historical test retention counts remain audit-time facts; current retention is recorded here."
+}

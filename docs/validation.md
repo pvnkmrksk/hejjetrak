@@ -1,5 +1,10 @@
 # HejjéTrac validation evidence
 
+The later user-requested [storage cleanup](storage-retention.md) archives full
+numerical/log/failure evidence losslessly and prunes redundant movies. Retention
+counts below describe what existed at each audit time; current locations and
+restore commands are recorded separately.
+
 ## Completed four-camera overnight run — 2026-10-27
 
 The packaged Linux build from `01180ef8dad1a9007bffa0eb791461d7d7b6830c`

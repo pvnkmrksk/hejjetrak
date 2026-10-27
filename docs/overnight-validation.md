@@ -1,5 +1,10 @@
 # Overnight native validation
 
+After the completed run, the user requested removal of old raw videos and
+compact retention. See [storage retention](storage-retention.md) for the verified
+lossless archives, four retained final clips and restoration commands. Historical
+counts below remain the actual audit-time results.
+
 `scripts/overnight_soak.py` is a development supervisor for the real native
 application. It is not an application decoder or recording implementation.
 Capture, estimation, numerical logging and video encoding remain in Rust.
