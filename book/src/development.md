@@ -44,3 +44,16 @@ Linux release compilation takes place inside an **Ubuntu 22.04 container** on a 
 The release workflow inspects/extracts the `.deb`, validates its desktop entry and checks dependency resolution before upload. Separate Ubuntu **22.04 and 24.04** container jobs consume that same built artifact, install the actual `.deb` and test it alongside its portable archive. `scripts/test_linux_package.py` decodes and tracks all 300 supplied sample frames, checks the unchanged numerical reference gates, launches the native GUI under Xvfb/Mesa and retains screenshots and state. A no-device startup case checks the automatic sample fallback. These are software-rendered Linux userspace checks; physical V4L cameras, GPU drivers and real display hardware still require separate testing.
 
 `/usr/bin/hejjetrac` and `hejjetrac-cli` link to the binaries adjacent to their resources under `/usr/lib/hejjetrak`. The desktop entry and scalable/PNG icons use freedesktop locations. Releases attach the `.deb` alongside the portable archive; source tags remain immutable.
+
+## Python used for packaging
+
+The application needs no Python runtime. Source packaging and development tests
+use Python 3. On Windows, enable UTF-8 mode before running those tools:
+
+```powershell
+$env:PYTHONUTF8 = "1"
+```
+
+Alternatively, invoke each packaging command with `python -X utf8`. Cargo
+manifests, configuration and notice metadata are UTF-8. Release CI enables
+this mode explicitly on every platform.
