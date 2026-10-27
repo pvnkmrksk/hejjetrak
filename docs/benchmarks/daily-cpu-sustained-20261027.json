@@ -1,0 +1,310 @@
+{
+  "scope": "Sustained serial native Linux measurements on i7-6700K: 60 measured seconds after 5 warmup seconds, display 30 FPS, no concurrent compiler or other application test. Full-source MJPEG 320x240 at nominal 100 FPS. Percent of one logical CPU and eight-logical-CPU total are separate; no physical-core, GPU, power or zero-sensor-loss inference. This binary predates the asynchronous recording-finalization fix; no recording rotation occurs inside these timed intervals.",
+  "binary_sha256": "613711bb79dceaddddbcef263417a9b80e2b5a3e495f9a3d4621f181533eb707",
+  "cases": [
+    {
+      "cameras": 1,
+      "mode": "data",
+      "measured_seconds": 60.00353479012847,
+      "warmup_seconds": 5.0,
+      "cpu_percent_one_logical_core": 45.38065981486105,
+      "cpu_percent_eight_logical_total": 5.672582476857631,
+      "rates": [
+        100.8940560114465
+      ],
+      "cost": [
+        {
+          "session": 1,
+          "tracker_interval_arithmetic_mean_ms": 2.669024995870497,
+          "tracking_samples": 6054,
+          "worker_ema_end_ms": 2.596454690154463
+        }
+      ],
+      "complete_video": true,
+      "all_rows": 6572,
+      "source_clock_diagnostics": [
+        {
+          "nominal_interval_ms": 10.0,
+          "intervals": 6571,
+          "median_interval_ms": 8.029999000002135,
+          "p95_interval_ms": 12.019995000000563,
+          "maximum_interval_ms": 12.049001999999746,
+          "intervals_above_1_5x_nominal": 0,
+          "intervals_above_1_5x_nominal_per_1000_intervals": 0.0,
+          "intervals_above_2_5x_nominal": 0,
+          "nominal_missing_interval_estimate": 0,
+          "first_source_clock_second": {
+            "rows": 101,
+            "maximum_interval_ms": 12.030987000000096,
+            "intervals_above_1_5x_nominal": 0
+          },
+          "boundary": "Actual emitted source-clock gaps, including startup and overload transitions, from complete numeric rows. Rounded nominal missing intervals are diagnostics only; no verified sensor sequence counter or sensor-level zero-loss claim."
+        }
+      ]
+    },
+    {
+      "cameras": 1,
+      "mode": "raw",
+      "measured_seconds": 60.00397223979235,
+      "warmup_seconds": 5.0,
+      "cpu_percent_one_logical_core": 72.44520383797584,
+      "cpu_percent_eight_logical_total": 9.05565047974698,
+      "rates": [
+        100.90998602230128
+      ],
+      "cost": [
+        {
+          "session": 1,
+          "tracker_interval_arithmetic_mean_ms": 2.6718582677126435,
+          "tracking_samples": 6055,
+          "worker_ema_end_ms": 2.7333286596755
+        }
+      ],
+      "complete_video": true,
+      "all_rows": 6573,
+      "source_clock_diagnostics": [
+        {
+          "nominal_interval_ms": 10.0,
+          "intervals": 6572,
+          "median_interval_ms": 8.032997999995132,
+          "p95_interval_ms": 12.016999000014039,
+          "maximum_interval_ms": 12.042004000017187,
+          "intervals_above_1_5x_nominal": 0,
+          "intervals_above_1_5x_nominal_per_1000_intervals": 0.0,
+          "intervals_above_2_5x_nominal": 0,
+          "nominal_missing_interval_estimate": 0,
+          "first_source_clock_second": {
+            "rows": 102,
+            "maximum_interval_ms": 12.029007999997702,
+            "intervals_above_1_5x_nominal": 0
+          },
+          "boundary": "Actual emitted source-clock gaps, including startup and overload transitions, from complete numeric rows. Rounded nominal missing intervals are diagnostics only; no verified sensor sequence counter or sensor-level zero-loss claim."
+        }
+      ]
+    },
+    {
+      "cameras": 4,
+      "mode": "data",
+      "measured_seconds": 60.034182354807854,
+      "warmup_seconds": 5.0,
+      "cpu_percent_one_logical_core": 200.10266699398025,
+      "cpu_percent_eight_logical_total": 25.01283337424753,
+      "rates": [
+        100.8258922263017,
+        100.90917811117392,
+        100.9424924651228,
+        100.87586375722503
+      ],
+      "cost": [
+        {
+          "session": 1,
+          "tracker_interval_arithmetic_mean_ms": 2.9724083684123537,
+          "tracking_samples": 6053,
+          "worker_ema_end_ms": 3.1037497764918647
+        },
+        {
+          "session": 2,
+          "tracker_interval_arithmetic_mean_ms": 2.9835138286563265,
+          "tracking_samples": 6058,
+          "worker_ema_end_ms": 3.633143077717221
+        },
+        {
+          "session": 3,
+          "tracker_interval_arithmetic_mean_ms": 3.1259946120462123,
+          "tracking_samples": 6060,
+          "worker_ema_end_ms": 3.0022311955183025
+        },
+        {
+          "session": 4,
+          "tracker_interval_arithmetic_mean_ms": 2.862195378137383,
+          "tracking_samples": 6056,
+          "worker_ema_end_ms": 3.1428364048036523
+        }
+      ],
+      "complete_video": true,
+      "all_rows": 26339,
+      "source_clock_diagnostics": [
+        {
+          "nominal_interval_ms": 10.0,
+          "intervals": 6583,
+          "median_interval_ms": 8.033000000003085,
+          "p95_interval_ms": 12.02298699998937,
+          "maximum_interval_ms": 20.00499999999738,
+          "intervals_above_1_5x_nominal": 3,
+          "intervals_above_1_5x_nominal_per_1000_intervals": 0.4557192769254139,
+          "intervals_above_2_5x_nominal": 0,
+          "nominal_missing_interval_estimate": 3,
+          "first_source_clock_second": {
+            "rows": 101,
+            "maximum_interval_ms": 12.030021999999917,
+            "intervals_above_1_5x_nominal": 0
+          },
+          "boundary": "Actual emitted source-clock gaps, including startup and overload transitions, from complete numeric rows. Rounded nominal missing intervals are diagnostics only; no verified sensor sequence counter or sensor-level zero-loss claim."
+        },
+        {
+          "nominal_interval_ms": 10.0,
+          "intervals": 6581,
+          "median_interval_ms": 8.031001999996079,
+          "p95_interval_ms": 12.012997999998333,
+          "maximum_interval_ms": 27.99999399999797,
+          "intervals_above_1_5x_nominal": 3,
+          "intervals_above_1_5x_nominal_per_1000_intervals": 0.455857772375019,
+          "intervals_above_2_5x_nominal": 1,
+          "nominal_missing_interval_estimate": 4,
+          "first_source_clock_second": {
+            "rows": 101,
+            "maximum_interval_ms": 12.022014000000127,
+            "intervals_above_1_5x_nominal": 0
+          },
+          "boundary": "Actual emitted source-clock gaps, including startup and overload transitions, from complete numeric rows. Rounded nominal missing intervals are diagnostics only; no verified sensor sequence counter or sensor-level zero-loss claim."
+        },
+        {
+          "nominal_interval_ms": 10.0,
+          "intervals": 6586,
+          "median_interval_ms": 8.029988000004323,
+          "p95_interval_ms": 12.013990999999805,
+          "maximum_interval_ms": 12.292991000002075,
+          "intervals_above_1_5x_nominal": 0,
+          "intervals_above_1_5x_nominal_per_1000_intervals": 0.0,
+          "intervals_above_2_5x_nominal": 0,
+          "nominal_missing_interval_estimate": 0,
+          "first_source_clock_second": {
+            "rows": 101,
+            "maximum_interval_ms": 12.02700300000015,
+            "intervals_above_1_5x_nominal": 0
+          },
+          "boundary": "Actual emitted source-clock gaps, including startup and overload transitions, from complete numeric rows. Rounded nominal missing intervals are diagnostics only; no verified sensor sequence counter or sensor-level zero-loss claim."
+        },
+        {
+          "nominal_interval_ms": 10.0,
+          "intervals": 6585,
+          "median_interval_ms": 8.03099199999997,
+          "p95_interval_ms": 12.013991999998325,
+          "maximum_interval_ms": 12.419996000004176,
+          "intervals_above_1_5x_nominal": 0,
+          "intervals_above_1_5x_nominal_per_1000_intervals": 0.0,
+          "intervals_above_2_5x_nominal": 0,
+          "nominal_missing_interval_estimate": 0,
+          "first_source_clock_second": {
+            "rows": 101,
+            "maximum_interval_ms": 12.024010999999973,
+            "intervals_above_1_5x_nominal": 0
+          },
+          "boundary": "Actual emitted source-clock gaps, including startup and overload transitions, from complete numeric rows. Rounded nominal missing intervals are diagnostics only; no verified sensor sequence counter or sensor-level zero-loss claim."
+        }
+      ]
+    },
+    {
+      "cameras": 4,
+      "mode": "raw",
+      "measured_seconds": 60.03138574026525,
+      "warmup_seconds": 5.0,
+      "cpu_percent_one_logical_core": 345.33602288802336,
+      "cpu_percent_eight_logical_total": 43.16700286100292,
+      "rates": [
+        100.93053700634478,
+        100.98051086523553,
+        100.78061542967254,
+        100.89722110041761
+      ],
+      "cost": [
+        {
+          "session": 1,
+          "tracker_interval_arithmetic_mean_ms": 3.1813607143092777,
+          "tracking_samples": 6059,
+          "worker_ema_end_ms": 3.3788066985436656
+        },
+        {
+          "session": 2,
+          "tracker_interval_arithmetic_mean_ms": 3.2030467680633627,
+          "tracking_samples": 6062,
+          "worker_ema_end_ms": 3.574300899867935
+        },
+        {
+          "session": 3,
+          "tracker_interval_arithmetic_mean_ms": 3.3345886657851325,
+          "tracking_samples": 6050,
+          "worker_ema_end_ms": 3.547474495312181
+        },
+        {
+          "session": 4,
+          "tracker_interval_arithmetic_mean_ms": 3.077705052831431,
+          "tracking_samples": 6057,
+          "worker_ema_end_ms": 3.350982768885797
+        }
+      ],
+      "complete_video": true,
+      "all_rows": 26337,
+      "source_clock_diagnostics": [
+        {
+          "nominal_interval_ms": 10.0,
+          "intervals": 6583,
+          "median_interval_ms": 8.030996000001323,
+          "p95_interval_ms": 12.005981000009342,
+          "maximum_interval_ms": 28.02699399999983,
+          "intervals_above_1_5x_nominal": 2,
+          "intervals_above_1_5x_nominal_per_1000_intervals": 0.3038128512836093,
+          "intervals_above_2_5x_nominal": 1,
+          "nominal_missing_interval_estimate": 3,
+          "first_source_clock_second": {
+            "rows": 101,
+            "maximum_interval_ms": 12.031011999992188,
+            "intervals_above_1_5x_nominal": 0
+          },
+          "boundary": "Actual emitted source-clock gaps, including startup and overload transitions, from complete numeric rows. Rounded nominal missing intervals are diagnostics only; no verified sensor sequence counter or sensor-level zero-loss claim."
+        },
+        {
+          "nominal_interval_ms": 10.0,
+          "intervals": 6585,
+          "median_interval_ms": 8.030984999990324,
+          "p95_interval_ms": 12.005013000001782,
+          "maximum_interval_ms": 12.044013999999152,
+          "intervals_above_1_5x_nominal": 0,
+          "intervals_above_1_5x_nominal_per_1000_intervals": 0.0,
+          "intervals_above_2_5x_nominal": 0,
+          "nominal_missing_interval_estimate": 0,
+          "first_source_clock_second": {
+            "rows": 101,
+            "maximum_interval_ms": 12.022995000006631,
+            "intervals_above_1_5x_nominal": 0
+          },
+          "boundary": "Actual emitted source-clock gaps, including startup and overload transitions, from complete numeric rows. Rounded nominal missing intervals are diagnostics only; no verified sensor sequence counter or sensor-level zero-loss claim."
+        },
+        {
+          "nominal_interval_ms": 10.0,
+          "intervals": 6580,
+          "median_interval_ms": 8.029010500002187,
+          "p95_interval_ms": 12.005001999990782,
+          "maximum_interval_ms": 27.995997999998508,
+          "intervals_above_1_5x_nominal": 5,
+          "intervals_above_1_5x_nominal_per_1000_intervals": 0.7598784194528876,
+          "intervals_above_2_5x_nominal": 1,
+          "nominal_missing_interval_estimate": 6,
+          "first_source_clock_second": {
+            "rows": 101,
+            "maximum_interval_ms": 12.023990000001504,
+            "intervals_above_1_5x_nominal": 0
+          },
+          "boundary": "Actual emitted source-clock gaps, including startup and overload transitions, from complete numeric rows. Rounded nominal missing intervals are diagnostics only; no verified sensor sequence counter or sensor-level zero-loss claim."
+        },
+        {
+          "nominal_interval_ms": 10.0,
+          "intervals": 6585,
+          "median_interval_ms": 8.031979999999749,
+          "p95_interval_ms": 12.007001999983913,
+          "maximum_interval_ms": 12.044000000008964,
+          "intervals_above_1_5x_nominal": 0,
+          "intervals_above_1_5x_nominal_per_1000_intervals": 0.0,
+          "intervals_above_2_5x_nominal": 0,
+          "nominal_missing_interval_estimate": 0,
+          "first_source_clock_second": {
+            "rows": 101,
+            "maximum_interval_ms": 12.027997000011965,
+            "intervals_above_1_5x_nominal": 0
+          },
+          "boundary": "Actual emitted source-clock gaps, including startup and overload transitions, from complete numeric rows. Rounded nominal missing intervals are diagnostics only; no verified sensor sequence counter or sensor-level zero-loss claim."
+        }
+      ]
+    }
+  ]
+}
