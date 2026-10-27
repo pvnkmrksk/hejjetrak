@@ -125,7 +125,10 @@ pub struct MediaRecordingStatus {
     pub debug: MediaStreamStatus,
 }
 
-const MEDIA_QUEUE_CAPACITY: usize = 8;
+// Absorb brief scheduling/I/O bursts without stopping a live stream whose
+// average encoder throughput exceeds capture. The independent byte budget
+// still bounds queued plus in-flight payloads, including large debug frames.
+const MEDIA_QUEUE_CAPACITY: usize = 32;
 const MEDIA_QUEUE_BYTE_CAPACITY: usize = 32 * 1024 * 1024;
 
 const LIVE_VIDEO_STORAGE_RESERVE: u64 = 512 * 1024 * 1024;
