@@ -3,7 +3,9 @@
 
 CI supplies an installed .deb, its portable tar, Xvfb and Mesa software graphics.
 This checks ABI/dependencies, resource discovery, full-video numerical output,
-native rendering and the no-camera fallback. It does not simulate V4L hardware.
+native rendering, automatic graphics fallback and no-camera fallback. Software
+rendering under Xvfb does not establish physical hybrid-GPU or Wayland support.
+It does not simulate V4L hardware.
 """
 from __future__ import annotations
 
@@ -13,6 +15,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import re
 import signal
 import shutil
 import struct
@@ -22,7 +25,7 @@ import time
 import zlib
 
 
-def run(arguments, directory, label, *, env=None, timeout=60):
+def run(arguments, directory, label, *, env=None, timeout=60, allow_failure=False):
     arguments = [str(value) for value in arguments]
     tick = time.monotonic()
     process = subprocess.Popen(arguments, cwd=directory, env=env,
@@ -42,7 +45,7 @@ def run(arguments, directory, label, *, env=None, timeout=60):
         raise RuntimeError(f'{label} exceeded {timeout}s; see saved stdout/stderr')
     (directory / (label + '.stdout')).write_text(stdout)
     (directory / (label + '.stderr')).write_text(stderr)
-    if process.returncode:
+    if process.returncode and not allow_failure:
         raise RuntimeError(f'{label} exited {process.returncode}: {stderr[-2000:]}')
     return {'command': arguments, 'seconds': time.monotonic() - tick,
             'exit_code': process.returncode}
@@ -124,20 +127,73 @@ def preview_pattern(png):
     return evidence
 
 
-def gui(binary, directory, label, *, config_path=None, expect_fallback=False):
-    state = directory / (label + '.json')
-    screenshot = directory / (label + '.png')
-    runtime = directory / (label + '-runtime')
-    runtime.mkdir(mode=0o700)
+def graphics_environment(runtime, overrides=None):
     env = {**os.environ, 'XDG_RUNTIME_DIR': str(runtime),
            'LIBGL_ALWAYS_SOFTWARE': '1', 'WINIT_UNIX_BACKEND': 'x11'}
+    # Each baseline/automatic test exercises the actual implicit backend policy.
+    # Explicit selection is enabled only for the isolated negative control.
+    for key in ('WGPU_BACKEND', 'WGPU_ADAPTER_NAME', 'WGPU_POWER_PREF'):
+        env.pop(key, None)
+    for key, value in (overrides or {}).items():
+        if value is None:
+            env.pop(key, None)
+        else:
+            env[key] = str(value)
+    return env
+
+
+def graphics_environment_evidence(env):
+    return {key: env.get(key) for key in (
+        'WGPU_BACKEND', 'WGPU_ADAPTER_NAME', 'WGPU_POWER_PREF',
+        'WINIT_UNIX_BACKEND', 'LIBGL_ALWAYS_SOFTWARE',
+        '__EGL_VENDOR_LIBRARY_FILENAMES', 'VK_ICD_FILENAMES', 'VK_DRIVER_FILES')}
+
+
+def graphics_adapter(stderr):
+    matches = re.findall(r'^Graphics: (.+) \((Gl|Vulkan), ([^)\r\n]+)\)\s*$',
+                         stderr, re.MULTILINE)
+    if len(matches) != 1:
+        raise RuntimeError('Expected exactly one actual Gl/Vulkan adapter initialization log')
+    name, backend, device_type = matches[0]
+    return {'name': name, 'backend': backend, 'device_type': device_type}
+
+
+def graphics_failure(stderr):
+    if 'panicked' in stderr.lower():
+        raise RuntimeError('Forced-GL control panicked instead of failing cleanly')
+    markers = ('no suitable graphics adapter found', 'adapter selection failed:',
+               'there was no valid format for the surface at all',
+               'failed to create surface for any enabled backend:')
+    failures = [line for line in stderr.splitlines()
+                if line.lower().startswith('hejjetrac: wgpu error: ')
+                and any(marker in line.lower() for marker in markers)]
+    if len(failures) != 1:
+        raise RuntimeError('Forced-GL control did not report an application graphics/adapter failure')
+    return failures[0]
+
+
+def gui_arguments(binary, state, screenshot, config_path):
     arguments = ['xvfb-run', '-a', '-s', '-screen 0 1280x800x24', binary,
                  '--window-size', '640x480', '--exit-after', '8',
                  '--state-output', state, '--screenshot', screenshot,
                  '--screenshot-after', '3']
     if config_path is not None:
         arguments.extend(['--config', config_path])
+    return arguments
+
+
+def gui(binary, directory, label, *, config_path=None, expect_fallback=False,
+        env_overrides=None, expected_backend='Gl'):
+    state = directory / (label + '.json')
+    screenshot = directory / (label + '.png')
+    runtime = directory / (label + '-runtime')
+    runtime.mkdir(mode=0o700)
+    env = graphics_environment(runtime, env_overrides)
+    arguments = gui_arguments(binary, state, screenshot, config_path)
     result = run(arguments, directory, label, env=env, timeout=45)
+    adapter = graphics_adapter((directory / (label + '.stderr')).read_text())
+    if adapter['backend'] != expected_backend:
+        raise RuntimeError(f'{label}: expected {expected_backend}, selected {adapter}')
     value = json.loads(state.read_text())
     instances = value.get('instances', [])
     if len(instances) != 1 or instances[0]['frames'] < 3 or instances[0]['error']:
@@ -151,8 +207,51 @@ def gui(binary, directory, label, *, config_path=None, expect_fallback=False):
     result.update({'frames': instances[0]['frames'], 'source': instances[0]['source'],
                    'error': instances[0]['error'], 'screenshot_size': [width, height],
                    'screenshot_sha256': hashlib.sha256(pixels).hexdigest(),
-                   'visible_sample_pattern': preview_pattern(pixels)})
+                   'visible_sample_pattern': preview_pattern(pixels),
+                   'graphics_adapter': adapter, 'expected_graphics_backend': expected_backend,
+                   'graphics_environment': graphics_environment_evidence(env)})
     return result
+
+
+def automatic_graphics_fallback(binary, directory, config_path):
+    manifests = sorted(Path('/usr/share/vulkan/icd.d').glob('*lvp*.json'))
+    if len(manifests) != 1:
+        raise RuntimeError(f'Expected exactly one installed Lavapipe ICD: {manifests}')
+    manifest = manifests[0].resolve()
+    disabled_egl = directory / 'nonexistent-egl-vendor.json'
+    if disabled_egl.exists():
+        raise RuntimeError('The EGL-disable negative-control path unexpectedly exists')
+    overrides = {'WGPU_BACKEND': None, 'WGPU_ADAPTER_NAME': None,
+                 'VK_ICD_FILENAMES': str(manifest), 'VK_DRIVER_FILES': str(manifest),
+                 '__EGL_VENDOR_LIBRARY_FILENAMES': str(disabled_egl.resolve())}
+    # Demonstrate that EGL really is unavailable in this environment. A camera,
+    # decoder, missing-library, Xvfb or panic failure cannot satisfy this control.
+    label = 'graphics-forced-gl-negative'
+    state, screenshot = directory / (label + '.json'), directory / (label + '.png')
+    runtime = directory / (label + '-runtime')
+    runtime.mkdir(mode=0o700)
+    env = graphics_environment(runtime, {**overrides, 'WGPU_BACKEND': 'gl'})
+    negative = run(gui_arguments(binary, state, screenshot, config_path), directory,
+                   label, env=env, timeout=45, allow_failure=True)
+    if negative['exit_code'] not in (1, 2):
+        raise RuntimeError(f'Forced-GL control did not fail cleanly: {negative}')
+    stderr = (directory / (label + '.stderr')).read_text()
+    failure = graphics_failure(stderr)
+    if state.exists() or screenshot.exists() or re.search(r'^Graphics:', stderr, re.MULTILINE):
+        raise RuntimeError('Forced-GL control unexpectedly initialized a rendered GUI')
+    negative.update({'expected_graphics_failure': failure, 'no_rendered_gui': True,
+                     'graphics_environment': graphics_environment_evidence(env)})
+    automatic = gui(binary, directory, 'native-automatic-vulkan-fallback',
+                    config_path=config_path, env_overrides=overrides,
+                    expected_backend='Vulkan')
+    if any(automatic['graphics_environment'][key] is not None
+           for key in ('WGPU_BACKEND', 'WGPU_ADAPTER_NAME')):
+        raise RuntimeError('Automatic graphics fallback accidentally used an adapter/backend override')
+    return {'scope': 'Actual Xvfb/Mesa rendering with EGL vendor discovery disabled; '
+                     'automatic Vulkan selection, not a physical hybrid-GPU or Wayland test',
+            'lavapipe_icd': str(manifest),
+            'lavapipe_icd_sha256': hashlib.sha256(manifest.read_bytes()).hexdigest(),
+            'forced_gl_negative_control': negative, 'automatic_vulkan_preview': automatic}
 
 
 def check_install(root, directory):
@@ -207,8 +306,10 @@ def check_install(root, directory):
     if summary['frames'] != 300 or summary['rejected'] != 0 or not comparison['passed']:
         raise RuntimeError(f'{root}: full sample failed: {summary}, {comparison}')
     checks.append(gui(root / 'hejjetrac', directory, 'native-video', config_path=configured))
+    graphics_fallback = automatic_graphics_fallback(root / 'hejjetrac', directory, configured)
     return {'root': str(root), 'build': build, 'dependency_packages_with_verified_notice_text': verified_notices,
-            'sample': summary, 'comparison': comparison, 'checks': checks}
+            'sample': summary, 'comparison': comparison, 'checks': checks,
+            'automatic_graphics_fallback': graphics_fallback}
 
 
 def main():
@@ -224,7 +325,8 @@ def main():
     report = {'distribution': platform.freedesktop_os_release(), 'libc': platform.libc_ver(),
               'archive_sha256': hashlib.sha256(args.archive.read_bytes()).hexdigest(),
               'harness_sha256': hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-              'scope': 'Actual packaged CLI and software-rendered GUI; no physical V4L camera',
+              'scope': 'Actual packaged CLI, Xvfb/Mesa GLES and automatic Vulkan fallback; '
+                       'no physical V4L camera, hardware hybrid-GPU or Wayland claim',
               'status': 'running', 'checks': []}
     try:
         with tarfile.open(args.archive) as archive:

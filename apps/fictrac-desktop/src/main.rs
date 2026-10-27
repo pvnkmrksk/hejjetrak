@@ -1,6 +1,8 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 mod calibration;
 mod control;
+#[cfg(any(target_os = "linux", test))]
+mod graphics;
 mod icons;
 mod runtime;
 mod session;
@@ -705,15 +707,6 @@ fn app_icon() -> Result<egui::IconData, String> {
     })
 }
 #[cfg(target_os = "linux")]
-fn linux_graphics_backends(explicit: Option<wgpu::Backends>, x11: bool) -> wgpu::Backends {
-    explicit.unwrap_or(if x11 {
-        wgpu::Backends::GL
-    } else {
-        wgpu::Backends::PRIMARY | wgpu::Backends::GL
-    })
-}
-
-#[cfg(target_os = "linux")]
 fn linux_use_x11(display: bool, requested: Option<&str>) -> Result<bool, String> {
     match requested {
         None => Ok(display),
@@ -774,8 +767,9 @@ fn configure_graphics(mut options: eframe::NativeOptions) -> Result<eframe::Nati
     if x11 {
         // The tested hybrid Vulkan driver loses surface capabilities on
         // resize, and Wayland EGL can block indefinitely in presentation.
-        // X11/XWayland + GLES avoids both observed driver paths. Preserve
-        // explicit backend overrides and native Wayland-only installations.
+        // Prefer X11/XWayland + GLES. If no GLES adapter can present to
+        // this surface, a compatible Vulkan adapter can still open the app.
+        // Preserve explicit overrides and native Wayland-only installations.
         eprintln!("Linux window system: X11/XWayland");
         options.event_loop_builder = Some(Box::new(|builder| {
             use winit::platform::x11::EventLoopBuilderExtX11;
@@ -788,8 +782,12 @@ fn configure_graphics(mut options: eframe::NativeOptions) -> Result<eframe::Nati
         }));
     }
     if let eframe::egui_wgpu::WgpuSetup::CreateNew(setup) = &mut options.wgpu_options.wgpu_setup {
-        setup.instance_descriptor.backends =
-            linux_graphics_backends(wgpu::Backends::from_env(), x11);
+        graphics::configure_setup(
+            setup,
+            wgpu::Backends::from_env(),
+            x11,
+            std::env::var("WGPU_ADAPTER_NAME").ok(),
+        );
     }
     Ok(options)
 }
@@ -898,13 +896,16 @@ mod arguments_tests {
         assert!(!x11_bootstrap_needed(true, Some(""), None));
         assert!(x11_bootstrap_needed(true, Some(""), Some("")));
         assert!(!x11_bootstrap_needed(false, Some("wayland-0"), None));
-        assert_eq!(linux_graphics_backends(None, true), wgpu::Backends::GL);
         assert_eq!(
-            linux_graphics_backends(Some(wgpu::Backends::VULKAN), true),
+            graphics::linux_backends(None, true),
+            wgpu::Backends::GL | wgpu::Backends::VULKAN
+        );
+        assert_eq!(
+            graphics::linux_backends(Some(wgpu::Backends::VULKAN), true),
             wgpu::Backends::VULKAN
         );
         assert_eq!(
-            linux_graphics_backends(None, false),
+            graphics::linux_backends(None, false),
             wgpu::Backends::PRIMARY | wgpu::Backends::GL
         );
         Ok(())

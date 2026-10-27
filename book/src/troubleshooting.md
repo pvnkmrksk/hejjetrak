@@ -4,6 +4,25 @@
 
 Use the platform **binary archive**, extract it fully and follow [installation](install.md). Mac release bundles are ad hoc signed and not notarized; Windows binaries are unsigned. Use only a per-app trust exception after verifying the source. Do not disable global OS protections. An actual malware/damaged-file warning needs investigation, not an automatic override.
 
+## Linux: no suitable graphics adapter
+
+In v0.3.1, X11/XWayland startup forces OpenGL to avoid a driver problem observed
+on a particular hybrid-GPU system. Some systems cannot present OpenGL to the
+window surface even though Vulkan works. For that release, try:
+
+```sh
+WGPU_BACKEND=vulkan hejjetrac
+# Portable archive, from its extracted folder:
+WGPU_BACKEND=vulkan ./hejjetrac
+```
+
+Current source prefers a surface-compatible OpenGL adapter and automatically
+falls back to compatible Vulkan, including software adapters when installed.
+Explicit `WGPU_BACKEND` choices are respected. The terminal reports the actual
+selected GPU/backend; a failure lists available adapters and their window-surface
+compatibility. This concerns window rendering and does not change calibration,
+camera settings or numerical tracking.
+
 ## The camera is missing or cannot open
 
 Refresh enumeration after connecting the device, close other applications using it and verify OS camera permission. Select a supported native format/rate and inspect readback. A vendor SDK-only device is not automatically supported by generic native capture. Built-in Mac camera evidence does not establish every industrial camera or Linux/Windows driver. See [camera controls](camera-controls.md).

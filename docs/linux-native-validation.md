@@ -21,8 +21,8 @@ this version of wgpu advertises FIFO presentation only, so merely requesting
 non-vsync presentation does not fix that path.
 
 The tested configuration uses **X11/XWayland with GLES**, reporting the actual
-GPU as `NV136 (Gl, Other)`. When `DISPLAY` is available, ordinary startup now
-selects that configuration. Before creating windows or capture workers, the
+GPU as `NV136 (Gl, Other)`. In v0.3.1, when `DISPLAY` is available, ordinary startup
+forces that configuration. Before creating windows or capture workers, the
 same executable replaces its process image with a private environment that
 sets `WAYLAND_DISPLAY` empty and removes `WAYLAND_SOCKET`. This aligns winit's
 window connection with wgpu's independent EGL-display probing; the command
@@ -35,6 +35,32 @@ Those alternatives have not passed this machine's complete matrix, and forcing
 the earlier driver paths can reproduce their failures. Other platforms retain
 their existing graphics defaults. These tests establish behavior on this host,
 not a guarantee for every display server or driver.
+
+## Surface-compatible graphics fallback in current source
+
+A later user report on the installed Debian package reached X11/XWayland but
+failed before creating the tracking window: OpenGL was incompatible with the
+window surface and Vulkan had not been requested. The same user confirmed that
+`WGPU_BACKEND=vulkan hejjetrac` opened the application. The old forced-OpenGL
+workaround was therefore too restrictive for that system.
+
+Current source enumerates OpenGL and Vulkan for implicit X11 startup. A native
+selector first checks the actual window surface and supported framebuffer
+formats. Compatible OpenGL remains preferred, including over a discrete Vulkan
+GPU, preserving the earlier tested hybrid-driver path. Vulkan is selected only
+when there is no eligible OpenGL adapter. Power preference applies within the
+preferred backend; explicit backend masks and adapter-name filters remain
+explicit. Native Wayland and Mac/Windows defaults retain their existing paths.
+No capture, calibration, numerical or recording behavior is changed.
+
+Policy regressions cover compatibility, GL-first priority, Vulkan fallback,
+explicit masks, adapter names and power preferences. The extended Linux package
+harness checks baseline GL rendering, then disables EGL vendor discovery and
+restricts Vulkan to Mesa Lavapipe. Forced GL must fail cleanly in that environment;
+automatic startup must select Vulkan and render the patterned sample. The same
+full-video, quality, numeric, frame-count and screenshot-texture checks apply.
+Execution results are recorded separately after the candidate runs; software
+rendering is not a physical hybrid-GPU or Wayland validation claim.
 
 ## Complete VR3 replay through the native application
 
