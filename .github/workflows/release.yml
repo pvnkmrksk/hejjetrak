@@ -37,6 +37,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.source_ref || github.ref }}
+      - name: Check out versioned packaging tools
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: .release-tools
+          sparse-checkout: |
+            scripts/prepare_missing_notices.py
+            scripts/test_prepare_missing_notices.py
+          sparse-checkout-cone-mode: false
       - name: Trust the checked-out workspace inside Linux containers
         if: runner.os == 'Linux'
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -71,9 +80,6 @@ jobs:
         shell: pwsh
         # Explicit flags also make immutable older-tag rebuilds portable.
         run: Add-Content $env:GITHUB_ENV 'RUSTFLAGS=-C target-feature=+crt-static'
-      - run: cargo fmt --all -- --check
-      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
-      - run: cargo test --workspace --locked
       - name: Timezone data for Windows development-tool tests
         if: runner.os == 'Windows'
         run: python -m pip install tzdata==2025.2
@@ -82,6 +88,11 @@ jobs:
           python -m unittest discover -s scripts -p test_package.py
           python -m unittest discover -s scripts -p test_overnight_soak.py
           python -m unittest discover -s scripts -p test_bridged_launcher.py
+      - name: Notice collector regressions
+        run: python -m unittest discover -s .release-tools/scripts -p test_prepare_missing_notices.py
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --locked
       - name: Patched Linux camera adapter regression
         if: runner.os == 'Linux' && hashFiles('vendor/nokhwa-bindings-linux/Cargo.toml') != ''
         run: cargo test -p nokhwa-bindings-linux --lib --locked
@@ -106,8 +117,11 @@ jobs:
               throw "$binary requires a separately installed Visual C++ runtime. Rebuild with static CRT linkage."
             }
           }
-      - run: cargo vendor --locked third-party-source
-      - run: python scripts/prepare_missing_notices.py --registry third-party-source --fetch-upstream
+      - run: cargo vendor --locked --versioned-dirs third-party-source
+      - name: Collect exact dependency notices
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python .release-tools/scripts/prepare_missing_notices.py --registry third-party-source --fetch-upstream
       - run: python scripts/package.py
       - name: Verify Linux installer metadata and extracted payload
         if: runner.os == 'Linux'

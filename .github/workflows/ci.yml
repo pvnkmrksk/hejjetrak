@@ -41,9 +41,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - run: cargo fmt --all -- --check
-      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
-      - run: cargo test --workspace --locked
       - name: Timezone data for Windows development-tool tests
         if: runner.os == 'Windows'
         run: python -m pip install tzdata==2025.2
@@ -52,6 +49,10 @@ jobs:
           python -m unittest discover -s scripts -p test_package.py
           python -m unittest discover -s scripts -p test_overnight_soak.py
           python -m unittest discover -s scripts -p test_bridged_launcher.py
+          python -m unittest discover -s scripts -p test_prepare_missing_notices.py
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --locked
       - name: Patched Linux camera adapter regression
         if: runner.os == 'Linux' && hashFiles('vendor/nokhwa-bindings-linux/Cargo.toml') != ''
         run: cargo test -p nokhwa-bindings-linux --lib --locked
@@ -60,8 +61,11 @@ jobs:
       - run: cargo build --workspace --release --locked
       - run: cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120
       # Include dependency sources and license texts in downloadable artifacts.
-      - run: cargo vendor --locked third-party-source
-      - run: python scripts/prepare_missing_notices.py --registry third-party-source --fetch-upstream
+      - run: cargo vendor --locked --versioned-dirs third-party-source
+      - name: Collect exact dependency notices
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/prepare_missing_notices.py --registry third-party-source --fetch-upstream
       - uses: actions/upload-artifact@v4
         with:
           name: fictrac-${{ matrix.os }}-${{ runner.arch }}

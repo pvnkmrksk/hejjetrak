@@ -1,0 +1,215 @@
+{
+  "checked_at_utc": "2026-10-27T13:37:07.781473+00:00",
+  "fixture_tests_passed": 12,
+  "all_package_preflight": {
+    "staged_packages": 471,
+    "all_staged_packages_have_notice_text": true,
+    "packages_without_notice_text": []
+  },
+  "helper_sha256": {
+    "prepare_missing_notices.py": "76931e4a5923caef5b36c6856ddbc950afb6fdef77543d002c66c8a8a3c6edd7",
+    "test_prepare_missing_notices.py": "d68126cf067ec4fc7487b8a7a4bfe1a2282af095e68f8305d4523955fae22d5c"
+  },
+  "selected_evidence": {
+    "block-0.1.6": {
+      "notice_files": [
+        "LICENSE-DECLARED-MIT.txt",
+        "LICENSE-UPSTREAM-MANIFEST.toml",
+        "LICENSE-UPSTREAM-PROVENANCE.json"
+      ],
+      "provenance": [
+        {
+          "notice_file": "LICENSE-UPSTREAM-MANIFEST.toml",
+          "source": {
+            "kind": "exact_published_crate",
+            "crate_sha256": "0d8c1fef690941d3e7788d328517591fecc684c084084702d6ff1641e993699a",
+            "repository": "https://github.com/SSheldon/rust-block",
+            "commit": "47178790cfc9d4a8b092051d8b413b78bd31254a",
+            "file": "Cargo.toml"
+          },
+          "sha256": "24df2f33b48c9e756a4f864f882c1ab07a159b6c2b790f45af2e8162499b6719"
+        },
+        {
+          "notice_file": "LICENSE-DECLARED-MIT.txt",
+          "source": {
+            "kind": "declared_license_with_versioned_standard_terms",
+            "url": "https://raw.githubusercontent.com/spdx/license-list-data/279b7e997a87c09be00dd6bdda189519ade502cf/text/MIT.txt",
+            "standard_text_sha256": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5",
+            "source_commit": "47178790cfc9d4a8b092051d8b413b78bd31254a",
+            "crate_sha256": "0d8c1fef690941d3e7788d328517591fecc684c084084702d6ff1641e993699a"
+          },
+          "sha256": "4995f553480b84d98330a2dbe2b78e4d8be1cb6a574ff291f40525f7999f559e"
+        }
+      ]
+    },
+    "dispatch-0.2.0": {
+      "notice_files": [
+        "LICENSE-DECLARED-MIT.txt",
+        "LICENSE-UPSTREAM-MANIFEST.toml",
+        "LICENSE-UPSTREAM-PROVENANCE.json"
+      ],
+      "provenance": [
+        {
+          "notice_file": "LICENSE-UPSTREAM-MANIFEST.toml",
+          "source": {
+            "kind": "exact_published_crate",
+            "crate_sha256": "bd0c93bb4b0c6d9b77f4435b0ae98c24d17f1c45b2ff844c6151a07256ca923b",
+            "repository": "https://github.com/SSheldon/rust-dispatch",
+            "commit": "82d6c7a5b75dc0c71c3f46f87bb6c16a476f7748",
+            "file": "Cargo.toml"
+          },
+          "sha256": "bd6cecbea33be54304d73d48e29182b4baff69695a25e68d7ac67ff3e69263a9"
+        },
+        {
+          "notice_file": "LICENSE-DECLARED-MIT.txt",
+          "source": {
+            "kind": "declared_license_with_versioned_standard_terms",
+            "url": "https://raw.githubusercontent.com/spdx/license-list-data/279b7e997a87c09be00dd6bdda189519ade502cf/text/MIT.txt",
+            "standard_text_sha256": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5",
+            "source_commit": "82d6c7a5b75dc0c71c3f46f87bb6c16a476f7748",
+            "crate_sha256": "bd0c93bb4b0c6d9b77f4435b0ae98c24d17f1c45b2ff844c6151a07256ca923b"
+          },
+          "sha256": "960d7bbccba658d8ff8bef418da9ca82c7a774da88bcfaeeb8c0dcc76c584769"
+        }
+      ]
+    },
+    "malloc_buf-0.0.6": {
+      "notice_files": [
+        "LICENSE-DECLARED-MIT.txt",
+        "LICENSE-UPSTREAM-MANIFEST.toml",
+        "LICENSE-UPSTREAM-PROVENANCE.json"
+      ],
+      "provenance": [
+        {
+          "notice_file": "LICENSE-UPSTREAM-MANIFEST.toml",
+          "source": {
+            "kind": "exact_published_crate",
+            "crate_sha256": "62bb907fe88d54d8d9ce32a3cceab4218ed2f6b7d35617cafe9adf84e43919cb",
+            "repository": "https://github.com/SSheldon/malloc_buf",
+            "commit": "a7811e5f4c6f9685dd57ad9bfe34e9bf6b0ba4f9",
+            "file": "Cargo.toml"
+          },
+          "sha256": "d87624d9d117489bd49dbaeb70077a0721e00ac2a76eb371faec818a92da5661"
+        },
+        {
+          "notice_file": "LICENSE-DECLARED-MIT.txt",
+          "source": {
+            "kind": "declared_license_with_versioned_standard_terms",
+            "url": "https://raw.githubusercontent.com/spdx/license-list-data/279b7e997a87c09be00dd6bdda189519ade502cf/text/MIT.txt",
+            "standard_text_sha256": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5",
+            "source_commit": "a7811e5f4c6f9685dd57ad9bfe34e9bf6b0ba4f9",
+            "crate_sha256": "62bb907fe88d54d8d9ce32a3cceab4218ed2f6b7d35617cafe9adf84e43919cb"
+          },
+          "sha256": "1e5244acb652380ca751dda26db61bc925c4af3cd8956aad91b9570ff5d509bd"
+        }
+      ]
+    },
+    "epaint_default_fonts-0.33.3": {
+      "notice_files": [
+        "LICENSE-FONT-Hack-Regular.txt",
+        "LICENSE-FONT-OFL.txt",
+        "LICENSE-FONT-UFL.txt",
+        "LICENSE-FONT-emoji-icon-font-mit-license.txt",
+        "LICENSE-UPSTREAM-PROVENANCE.json",
+        "LICENSE-UPSTREAM/LICENSE-APACHE",
+        "LICENSE-UPSTREAM/LICENSE-MIT"
+      ],
+      "provenance": [
+        {
+          "notice_file": "LICENSE-FONT-emoji-icon-font-mit-license.txt",
+          "source": {
+            "kind": "registry_package",
+            "file": "/private/tmp/hejjetrac-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/epaint_default_fonts-0.33.3/fonts/emoji-icon-font-mit-license.txt"
+          },
+          "sha256": "b9d2c1d909aa149996fd4c91dcb92b2362a04431640c1d200959da94caf8cde1"
+        },
+        {
+          "notice_file": "LICENSE-FONT-Hack-Regular.txt",
+          "source": {
+            "kind": "registry_package",
+            "file": "/private/tmp/hejjetrac-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/epaint_default_fonts-0.33.3/fonts/Hack-Regular.txt"
+          },
+          "sha256": "47c0cccbeec7e8614548cc485588b28149e7874188df5f41b36efebcee285c87"
+        },
+        {
+          "notice_file": "LICENSE-FONT-OFL.txt",
+          "source": {
+            "kind": "registry_package",
+            "file": "/private/tmp/hejjetrac-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/epaint_default_fonts-0.33.3/fonts/OFL.txt"
+          },
+          "sha256": "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
+        },
+        {
+          "notice_file": "LICENSE-FONT-UFL.txt",
+          "source": {
+            "kind": "registry_package",
+            "file": "/private/tmp/hejjetrac-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/epaint_default_fonts-0.33.3/fonts/UFL.txt"
+          },
+          "sha256": "2f0015108d68627bd788d313f529c21ff4da2c2c42a5e1f3883acc83480f9002"
+        },
+        {
+          "notice_file": "LICENSE-UPSTREAM/LICENSE-APACHE",
+          "source": {
+            "kind": "exact_git_commit",
+            "repository": "https://github.com/emilk/egui",
+            "commit": "44cdd653e2317d300fb8a6c9c36b03f23991e803",
+            "url": "https://raw.githubusercontent.com/emilk/egui/44cdd653e2317d300fb8a6c9c36b03f23991e803/LICENSE-APACHE"
+          },
+          "sha256": "8173d5c29b4f956d532781d2b86e4e30f83e6b7878dce18c919451d6ba707c90"
+        },
+        {
+          "notice_file": "LICENSE-UPSTREAM/LICENSE-MIT",
+          "source": {
+            "kind": "exact_git_commit",
+            "repository": "https://github.com/emilk/egui",
+            "commit": "44cdd653e2317d300fb8a6c9c36b03f23991e803",
+            "url": "https://raw.githubusercontent.com/emilk/egui/44cdd653e2317d300fb8a6c9c36b03f23991e803/LICENSE-MIT"
+          },
+          "sha256": "95ca92f5f8ea5231f1580b3a2a799e8260af3114b900e1def5355a7f44bcf60c"
+        }
+      ]
+    },
+    "r-efi-5.3.0": {
+      "notice_files": [
+        "LICENSE-AUTHORS",
+        "LICENSE-UPSTREAM-PROVENANCE.json"
+      ],
+      "provenance": [
+        {
+          "notice_file": "LICENSE-AUTHORS",
+          "source": {
+            "kind": "registry_package",
+            "file": "/private/tmp/hejjetrac-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/r-efi-5.3.0/AUTHORS"
+          },
+          "sha256": "ff92bed461f50338dd703a9ba9aee496a425957873df1d91192776e4bdf5dda7"
+        }
+      ]
+    },
+    "r-efi-6.0.0": {
+      "notice_files": [
+        "LICENSE-AUTHORS",
+        "LICENSE-UPSTREAM-PROVENANCE.json"
+      ],
+      "provenance": [
+        {
+          "notice_file": "LICENSE-AUTHORS",
+          "source": {
+            "kind": "registry_package",
+            "file": "/private/tmp/hejjetrac-cargo/registry/src/index.crates.io-1949cf8c6b5b557f/r-efi-6.0.0/AUTHORS"
+          },
+          "sha256": "d027e91dbc9cdbb2f1190068e498bd6b61cff022b6a032b191021ba658d96111"
+        }
+      ]
+    }
+  },
+  "application_source_unchanged_from": "bf92129bb241bebf9331065dba07fd1998476418",
+  "scope": "Build-time notice collection only; application Rust unchanged. Legacy declared-MIT supplements explicitly retain original published author/manifest and canonical pinned SPDX template; no invented copyright statement.",
+  "intended_release": "0.3.1",
+  "application_source_scope": "Rust application functions unchanged from bf92129; workspace/package version metadata advances to0.3.1.",
+  "signed_local_package": {
+    "packages_with_nonempty_notice_text": 474,
+    "all_provenance_sha256_match": true,
+    "all_four_font_notices": true,
+    "signature_verified_by_packager": true
+  }
+}

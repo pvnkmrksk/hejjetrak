@@ -4,7 +4,7 @@
 
 The landing page resolves GitHub's latest published release at download time and shows the platform archive, release tag and available SHA-256 digest. Manual OS/chip choices remain available; browser architecture detection is not treated as infallible. If the release API is unavailable or an archive has not uploaded yet, use the visible GitHub release link rather than a guessed download.
 
-## v0.3.0
+## v0.3.1
 
 This release combines the four-camera Linux improvements with v0.2.3's saved
 user configuration and recording-clock fixes.
@@ -22,6 +22,10 @@ setup. Check camera IDs, formats, output ports and geometry for your own rig.
 The [recording guide](recording.md) and [validation record](https://github.com/pvnkmrksk/hejjetrak/blob/main/docs/validation.md)
 retain the tested limits and historical overnight-run evidence.
 
+
+The v0.3.0 candidate remains unpublished. v0.3.1 includes the corrected
+build-time timezone setup and dependency-notice collector, including exact
+source provenance for legacy crates and complete bundled font terms.
 
 ## v0.2.3 — 26 October 2026
 
