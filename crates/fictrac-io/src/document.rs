@@ -373,7 +373,7 @@ pub fn parameter_description(key: &str) -> (&'static str, &'static str) {
         ),
         "zmq_host" | "zmq_port" => (
             "Output",
-            "Pure Rust ZeroMQ PUB bind on localhost. Port -1/0 disables; use a unique port per instance (VR1..4: 9871..9874). Native FT rows are the default; legacy MATREX VR JSON is an explicit output mode.",
+            "Pure Rust ZeroMQ PUB bind on this computer. Default localhost; select a numeric local interface IP or wildcard (0.0.0.0 / * for IPv4, :: for IPv6) for LAN receivers. This is not the receiver address. Port -1/0 disables; each rig needs an unused port (VR1..4: 9871..9874). Native FT is default; legacy MATREX VR JSON is explicit.",
         ),
         "zmq_queue_capacity" => (
             "Output",

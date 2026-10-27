@@ -11,6 +11,26 @@ tools; they are not application components.
 
 ## Set up a rig
 
+For the existing four Python republishers, keep HejjéTrac's direct publisher
+disabled (`zmq_port : 0`) and use UDP ports 1111–1114. The republishers own
+network ports 9871–9874. From this repository, start all four calibrated rigs in
+one process with:
+
+```sh
+./scripts/run_four_bridged.sh
+```
+
+This selects the explicit repository `VR1.txt`–`VR4.txt` files, avoiding a
+different saved configuration in the installed app or portable folder. It
+opens a 2×2 grid, starts tracking and leaves video recording off until selected
+in the UI. Keep the four Python republishers running. Close original FicTrac
+and any other camera-owning tracker windows before taking over all four
+cameras; the launcher does not terminate other programs or steal their devices.
+
+## Alternative: direct publisher without Python
+
+Use this alternative only on a port that the Python republishers do not own.
+
 Open **Settings → Output & recording → ZeroMQ publisher**. Choose
 **Legacy MATREX VR (JSON)** and a port matching the VR receiver. Use
 **Topic + JSON** for v0.1.0's paired topic/payload reads. v0.3.0 accepts either
@@ -30,12 +50,43 @@ zmq_topic          : FT
 zmq_queue_capacity : 256
 ```
 
-The publisher binds; Unity connects. Use a unique port for each rig. Bind
-addresses remain localhost-only. Set `zmq_port` to `-1` or `0` to disable the
+The publisher binds; Unity connects. Use a unique, unused port for each rig.
+The default bind address remains localhost. Set `zmq_port` to `-1` or `0` to disable the
 publisher. To retain native output, omit the new fields or set
 `zmq_output_mode : native_ft`; native FT always sends a single FT frame,
 regardless of a stored JSON framing preference. UDP and serial retain FT rows
 in both modes.
+
+### A VR receiver on another computer
+
+Set `zmq_host` to an interface address **on the tracking computer**, or explicitly
+use `0.0.0.0` / `*` to bind all its IPv4 interfaces. Numeric IPv6 interface
+addresses and `::` for IPv6 interfaces are also supported. Only `localhost` and
+numeric addresses are accepted; the publisher does not perform DNS resolution.
+Do not enter the remote VR computer's IP as the bind address.
+
+For example, if the tracker is `10.126.17.125` and a VR2 receiver is on
+`10.126.17.75`, the tracker can use:
+
+```text
+zmq_host           : 0.0.0.0
+zmq_port           : 9872
+zmq_output_mode    : legacy_matrex_vr
+zmq_framing        : single
+```
+
+The VR receiver connects to `tcp://10.126.17.125:9872`. Use `topic_json` instead
+when that receiver requires paired topic/payload frames. Binding a specific
+local IP such as `10.126.17.125` limits the publisher to that interface; binding
+the receiver's `10.126.17.75` fails because it is not an address on the tracker.
+
+The existing Python republisher binds `tcp://*:987x`. Stop only that rig's
+republisher before binding the same port directly in HejjéTrac, or choose a
+different unused port and update its receiver. A second publisher cannot share
+an occupied bind port. The original alternative still works: keep direct ZMQ
+disabled and send HejjéTrac's UDP FT rows to that rig's Python republisher.
+Changing bind scope does not change payload bytes, framing, coordinates or the
+bounded queue/peer behavior.
 
 The same fields can be edited through the CLI or agent interfaces:
 
@@ -82,7 +133,7 @@ change could not establish a connection.
 The new Rust publisher stages its greeting and negotiates the old 2.0 handshake
 or its supported NULL-authenticated 3.0 protocol with newer peers, following
 [ZMTP version negotiation](https://rfc.zeromq.org/spec/23/#version-negotiation).
-This is a bounded localhost PUB transport with SUB/XSUB peers, not a general
+This is a bounded TCP PUB transport with SUB/XSUB peers, not a general
 implementation of every ZeroMQ socket type or authentication mechanism.
 
 Each peer has its own queue and write deadline. Partial greetings, slow

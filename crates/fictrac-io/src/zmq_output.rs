@@ -53,18 +53,17 @@ impl ZmqSettings {
             ));
         }
         let host = host.unwrap_or("127.0.0.1");
-        let address = if host.eq_ignore_ascii_case("localhost") {
+        let address = if host == "*" {
+            IpAddr::from([0, 0, 0, 0])
+        } else if host.eq_ignore_ascii_case("localhost") {
             IpAddr::from([127, 0, 0, 1])
         } else {
             host.parse::<IpAddr>().map_err(|_| {
-                Error::Config("zmq_host must be localhost or a loopback IP address".into())
+                Error::Config(
+                    "zmq_host must be localhost, a numeric local IPv4/IPv6 address, or * for all IPv4 interfaces; this binds the tracking computer, not the VR receiver, and DNS names are not resolved".into(),
+                )
             })?
         };
-        if !address.is_loopback() {
-            return Err(Error::Config(
-                "zmq_host must be a loopback address (for example 127.0.0.1 or ::1)".into(),
-            ));
-        }
         if port <= 0 {
             return Ok(None);
         }
@@ -235,6 +234,39 @@ impl Drop for ZmqOutput {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn publisher_bind_addresses_keep_local_default_and_accept_explicit_lan_without_dns()
+    -> Result<()> {
+        let default = ZmqSettings::parse(Some("9872"), None, None)?
+            .ok_or_else(|| Error::Config("default publisher unexpectedly disabled".into()))?;
+        assert_eq!(default.endpoint, "tcp://127.0.0.1:9872");
+        for (host, endpoint) in [
+            ("localhost", "tcp://127.0.0.1:9872"),
+            ("10.126.17.125", "tcp://10.126.17.125:9872"),
+            ("0.0.0.0", "tcp://0.0.0.0:9872"),
+            ("*", "tcp://0.0.0.0:9872"),
+            ("::1", "tcp://[::1]:9872"),
+            ("2001:db8::125", "tcp://[2001:db8::125]:9872"),
+            ("::", "tcp://[::]:9872"),
+        ] {
+            let settings = ZmqSettings::parse(Some("9872"), Some(host), Some("32"))?
+                .ok_or_else(|| Error::Config("explicit publisher unexpectedly disabled".into()))?;
+            assert_eq!(settings.endpoint, endpoint);
+            assert_eq!(settings.capacity, 32);
+        }
+        for host in [
+            "tracker.example.invalid",
+            "tcp://127.0.0.1",
+            "127.0.0.1:9872",
+        ] {
+            assert!(ZmqSettings::parse(Some("9872"), Some(host), None).is_err());
+            assert!(ZmqSettings::parse(Some("0"), Some(host), None).is_err());
+        }
+        for port in ["-1", "0"] {
+            assert!(ZmqSettings::parse(Some(port), Some("*"), None)?.is_none());
+        }
+        Ok(())
+    }
     #[test]
     fn bounded_queue_overload_is_reported_without_waiting() -> Result<()> {
         let settings = ZmqSettings {

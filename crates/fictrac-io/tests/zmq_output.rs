@@ -99,6 +99,70 @@ fn real_rust_subscriber_and_udp_receive_identical_full_rows() -> TestResult {
     Ok(())
 }
 
+#[test]
+fn explicit_wildcard_bind_serves_modern_and_legacy_subscribers_with_unchanged_bytes() -> TestResult
+{
+    for (host, mode, prefix) in [
+        ("0.0.0.0", "native_ft", "FT, "),
+        ("*", "legacy_matrex_vr", "{"),
+    ] {
+        let reservation = TcpListener::bind("0.0.0.0:0")?;
+        let port = reservation.local_addr()?.port();
+        drop(reservation);
+        let document = ConfigDocument::parse(format!(
+            "zmq_host:{host}\nzmq_port:{port}\nzmq_output_mode:{mode}\n"
+        ))?;
+        let mut sinks = OutputSinks::from_config(&document)?;
+        assert_eq!(
+            sinks
+                .status()
+                .zmq
+                .ok_or("missing wildcard publisher")?
+                .endpoint,
+            format!("tcp://0.0.0.0:{port}")
+        );
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()?;
+        runtime.block_on(async {
+            let mut subscriber = zeromq::SubSocket::new();
+            subscriber.connect(&format!("tcp://127.0.0.1:{port}")).await?;
+            subscriber.subscribe(prefix).await?;
+            let expected = if mode == "native_ft" {
+                let mut native = b"FT, ".to_vec();
+                write_dat(&mut native, &row())?;
+                native
+            } else {
+                // Python json.dumps of the original bridge's selected FT
+                // values, including its field order and radians-to-degrees.
+                br#"{"x": 0.1, "y": 0.2, "z": 0.0, "yaw": 17.188733853924695, "pitch": 0.0, "roll": 0.0}"#.to_vec()
+            };
+            let deadline = Instant::now() + Duration::from_secs(2);
+            loop {
+                assert!(sinks.write(&row()).is_empty());
+                if let Ok(message) =
+                    tokio::time::timeout(Duration::from_millis(20), subscriber.recv()).await
+                {
+                    let message = message?;
+                    assert_eq!(message.len(), 1);
+                    assert_eq!(message.get(0).ok_or("empty modern packet")?.as_ref(), expected);
+                    break;
+                }
+                assert!(Instant::now() < deadline, "wildcard publisher must reach a subscriber");
+            }
+            // Binding scope must not change the old ZMTP 2.0 protocol or wire
+            // bytes. This socket subscribes after the independent modern peer.
+            let mut legacy = zmtp2(port, true)?;
+            subscription(&mut legacy, prefix.as_bytes(), true)?;
+            let (flags, packet) = receive_published(&mut sinks, &mut legacy)?;
+            assert_eq!(flags & 1, 0);
+            assert_eq!(packet, expected);
+            Ok::<(), Box<dyn std::error::Error>>(())
+        })?;
+    }
+    Ok(())
+}
+
 fn zmtp2(port: u16, fragmented: bool) -> Result<TcpStream, Box<dyn std::error::Error>> {
     let mut socket = TcpStream::connect(("127.0.0.1", port))?;
     socket.set_read_timeout(Some(Duration::from_millis(100)))?;
@@ -316,6 +380,7 @@ fn occupied_pub_port_is_actionable_and_disabled_pub_opens_no_socket() -> TestRes
         Err(error) => error,
     };
     assert!(error.to_string().contains("cannot bind ZMQ PUB"));
+    assert!(error.to_string().contains("zmq_port must be unused"));
     let disabled = ConfigDocument::parse("zmq_port:-1\n".into())?;
     let sinks = OutputSinks::from_config(&disabled)?;
     assert!(!sinks.active());
@@ -390,7 +455,7 @@ fn zmq_parameters_validate_losslessly_without_entering_the_core() -> TestResult 
         ("zmq_port", "abc"),
         ("zmq_queue_capacity", "0"),
         ("zmq_queue_capacity", "4097"),
-        ("zmq_host", "0.0.0.0"),
+        ("zmq_host", "tracker.example.invalid"),
     ] {
         let mut doc = ConfigDocument::parse(base.into())?;
         doc.set(key, value)?;

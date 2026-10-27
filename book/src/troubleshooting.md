@@ -30,7 +30,7 @@ Use the graphical fit operation after editing rim/square clicks; saved `roi_c`/`
 
 ## UDP or ZeroMQ receives no rows
 
-Check the selected instance, enabled ports and accepted quality status. Rejected legacy rows are omitted by design. UDP sends to a destination; ZeroMQ **binds PUB** on localhost and subscribers **connect**. Subscribe to `FT, ` and allow subscription setup before starting the experiment. Late subscribers miss previous rows. `published` means a send attempt completed, not subscriber receipt. Inspect busy-port and queue/failure notices in status.
+Check the selected instance, enabled ports and accepted quality status. Rejected legacy rows are omitted by design. UDP sends to a destination; ZeroMQ **binds PUB** on this computer and subscribers **connect**. The default is localhost; a remote receiver requires an explicit local LAN bind or `0.0.0.0` / `*` for IPv4 interfaces. The receiver connects to the tracker IP, not `0.0.0.0`. Check that a Python republisher is not already using the same port. Subscribe to `FT, ` for native FT, or the empty prefix / `{` for single legacy JSON, and allow subscription setup before starting the experiment. Late subscribers miss previous rows. `published` means a send attempt completed, not subscriber receipt. Inspect busy-port and queue/failure notices in status.
 
 ## A recording ended with `.partial` files
 

@@ -1330,11 +1330,11 @@ impl Session {
             ui.end_row();
             ui.label("Port");
             ui.add(egui::TextEdit::singleline(&mut port).desired_width(100.0))
-                .on_hover_text("PUB bind port: -1 or 0 disables. Give each rig a unique port, normally 9871–9874. The VR subscriber connects to this port.");
+                .on_hover_text("PUB bind port: -1 or 0 disables. Give each rig a unique port, normally 9871–9874. If a Python republisher already owns that port, use UDP to that bridge with this publisher disabled, or stop the bridge before enabling direct ZMQ.");
             ui.end_row();
             ui.label("Bind address");
             ui.add(egui::TextEdit::singleline(&mut host).desired_width(180.0))
-                .on_hover_text("A localhost address such as 127.0.0.1 or ::1. This publisher does not bind to public interfaces.");
+                .on_hover_text("Bind address on this tracking computer. 127.0.0.1 or ::1 accepts local clients only; 0.0.0.0 or * accepts IPv4 LAN clients, and :: accepts IPv6. A remote VR player connects to this computer's LAN IP, not to 0.0.0.0.");
             ui.end_row();
             ui.label("Queue capacity");
             ui.add(egui::TextEdit::singleline(&mut capacity).desired_width(100.0))

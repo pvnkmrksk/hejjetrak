@@ -1,4 +1,4 @@
-//! Narrow loopback PUB transport: ZMTP 2.0 and NULL-authenticated ZMTP 3.0.
+//! Bounded TCP PUB transport: ZMTP 2.0 and NULL-authenticated ZMTP 3.0.
 //! The staged greeting is essential for NetMQ 4.0.0.1, which speaks ZMTP 2.0.
 //! This is not a general ZeroMQ implementation: only SUB/XSUB peers are accepted.
 use super::{CLOSE_DRAIN, Counters, MAX_WIRE_BYTES};
@@ -42,7 +42,7 @@ pub(super) async fn publish_loop(
     ready: mpsc::SyncSender<std::result::Result<(), String>>,
 ) {
     let Some(address) = endpoint.strip_prefix("tcp://") else {
-        let _ = ready.send(Err("ZMQ PUB requires a tcp:// loopback endpoint".into()));
+        let _ = ready.send(Err("ZMQ PUB requires a tcp:// bind endpoint".into()));
         return;
     };
     let listener = match tokio::time::timeout(
@@ -59,7 +59,7 @@ pub(super) async fn publish_loop(
                 Ok(Ok(_)) => String::new(),
             };
             let message = format!(
-                "cannot bind ZMQ PUB {endpoint}: {detail}; use a free zmq_port for each instance"
+                "cannot bind ZMQ PUB {endpoint}: {detail}; zmq_host must be an interface on this computer (not the receiver IP), or 0.0.0.0 / * for IPv4 interfaces, and zmq_port must be unused. Stop this rig's other publisher or choose a free matching receiver port"
             );
             counters.fail(message.clone());
             let _ = ready.send(Err(message));
@@ -172,7 +172,7 @@ async fn handshake(stream: &mut TcpStream) -> io::Result<()> {
             stream.write_all(&remainder).await?;
             stream.read_exact(&mut remainder).await?;
             if remainder[1..5] != *b"NULL" || remainder[5..21].iter().any(|byte| *byte != 0) {
-                return Err(invalid("ZMQ loopback PUB supports the NULL mechanism only"));
+                return Err(invalid("ZMQ PUB supports the NULL mechanism only"));
             }
             let mut properties = vec![11];
             properties.extend_from_slice(b"Socket-Type");

@@ -30,7 +30,7 @@ Current downloads are ad hoc signed on Mac and unsigned on Windows. Use the proj
 - **Guided calibration.** The ball outline fits live from three rim marks. Redraw exclusions and lab axes in turn, with a precision magnifier, right-click correction and the original FicTrac coordinate conventions.
 - **Independent rigs.** Each window has its own source, calibration, recording and outputs. Tile up to sixteen windows.
 - **Complete recording.** Save data, source video and diagnostic video. Every take retains all-frame numeric data, quality decisions and its configuration.
-- **Live output.** Use UDP, serial or localhost ZeroMQ for downstream experiments. An explicit [legacy MATREX VR mode](docs/matrex-vr.md) matches the Python JSON republisher and old NetMQ handshake; native FT remains the default. The CLI, JSONL and MCP interfaces call the same numerical engine as the desktop.
+- **Live output.** Use UDP, serial or ZeroMQ for downstream experiments. ZeroMQ defaults to localhost and supports explicit local-interface/wildcard binds for LAN receivers. An explicit [legacy MATREX VR mode](docs/matrex-vr.md) matches the Python JSON republisher and old NetMQ handshake; native FT remains the default. The CLI, JSONL and MCP interfaces call the same numerical engine as the desktop.
 - **A Rust application.** Native windows and camera APIs, Rust video codecs and a shared engine. No OpenCV, FFmpeg executable, Python runtime or webview is required.
 
 ![The native tracking window](docs/images/preview.png)
