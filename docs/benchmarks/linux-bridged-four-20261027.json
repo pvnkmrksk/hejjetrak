@@ -1,0 +1,169 @@
+{
+  "passed": true,
+  "scope": "Four physical cameras, packaged binary, exact repository bridge launcher, numeric recordings only; no original process or republisher stopped. control-stdio pauses only first session, explicitly started for test.",
+  "command": [
+    "/home/pkaushi/Documents/ChatGPT/Hejjetrac/scripts/run_four_bridged.sh",
+    "--control-stdio"
+  ],
+  "binary_sha256": "e7a6000167c7bb97db84161f526980c270383bcadedfbf6a9e551674a133c1a4",
+  "measurement_seconds": 15.013296201825142,
+  "progress": [
+    {
+      "session": 1,
+      "source": "Arducam OV9281 USB Camera: Ardu (/dev/video0)",
+      "processed_frame_delta": 1513,
+      "processed_frames_per_second": 100.77733627982822,
+      "advertised_source_fps": 100.0
+    },
+    {
+      "session": 2,
+      "source": "Arducam OV9281 USB Camera: Ardu (/dev/video2)",
+      "processed_frame_delta": 1514,
+      "processed_frames_per_second": 100.84394390460008,
+      "advertised_source_fps": 100.0
+    },
+    {
+      "session": 3,
+      "source": "Arducam OV9281 USB Camera: Ardu (/dev/video4)",
+      "processed_frame_delta": 1513,
+      "processed_frames_per_second": 100.77733627982822,
+      "advertised_source_fps": 100.0
+    },
+    {
+      "session": 4,
+      "source": "Arducam OV9281 USB Camera: Ardu (/dev/video6)",
+      "processed_frame_delta": 1515,
+      "processed_frames_per_second": 100.91055152937194,
+      "advertised_source_fps": 100.0
+    }
+  ],
+  "wire_cases": [
+    {
+      "rig": 1,
+      "accepted_rows": 1905,
+      "all_frame_rows": 1905,
+      "quality_rows": 1905,
+      "passed": true,
+      "expected_rows": 1905,
+      "observed_packets": 2006,
+      "invalid_schema_or_framing": 0,
+      "expected_unique_payloads": 1905,
+      "window_first_observed_index": 33,
+      "window_last_observed_index": 1937,
+      "exact_contiguous_expected_rows": 1905,
+      "window_payload_sha256": "a9c73b3d5cbca677a4faaa56b569fdecbcb47631bda9743959e4431c173d090c",
+      "scope": "Complete accepted-recording payload vector appears contiguously and byte-exactly. Identical JSON poses inherently carry no unique frame ID."
+    },
+    {
+      "rig": 2,
+      "accepted_rows": 1904,
+      "all_frame_rows": 1904,
+      "quality_rows": 1904,
+      "passed": true,
+      "expected_rows": 1904,
+      "observed_packets": 2119,
+      "invalid_schema_or_framing": 0,
+      "expected_unique_payloads": 1904,
+      "window_first_observed_index": 148,
+      "window_last_observed_index": 2051,
+      "exact_contiguous_expected_rows": 1904,
+      "window_payload_sha256": "a0bf369d71120530decf6bb78ce8a6a8d430b236213096d80e8b9c4f4ce1442d",
+      "scope": "Complete accepted-recording payload vector appears contiguously and byte-exactly. Identical JSON poses inherently carry no unique frame ID."
+    },
+    {
+      "rig": 3,
+      "accepted_rows": 1905,
+      "all_frame_rows": 1905,
+      "quality_rows": 1905,
+      "passed": true,
+      "expected_rows": 1905,
+      "observed_packets": 2086,
+      "invalid_schema_or_framing": 0,
+      "expected_unique_payloads": 1905,
+      "window_first_observed_index": 117,
+      "window_last_observed_index": 2021,
+      "exact_contiguous_expected_rows": 1905,
+      "window_payload_sha256": "6f5a4c432daab81fa4cf4c0437fecef13f013e0817fa1036d3feaed4c2f196cc",
+      "scope": "Complete accepted-recording payload vector appears contiguously and byte-exactly. Identical JSON poses inherently carry no unique frame ID."
+    },
+    {
+      "rig": 4,
+      "accepted_rows": 1904,
+      "all_frame_rows": 1904,
+      "quality_rows": 1904,
+      "passed": true,
+      "expected_rows": 1904,
+      "observed_packets": 2055,
+      "invalid_schema_or_framing": 0,
+      "expected_unique_payloads": 1904,
+      "window_first_observed_index": 87,
+      "window_last_observed_index": 1990,
+      "exact_contiguous_expected_rows": 1904,
+      "window_payload_sha256": "569c506c0b4ff61a596a9cbe18d09b81cddabd5358852c64e91b18b5d0769274",
+      "scope": "Complete accepted-recording payload vector appears contiguously and byte-exactly. Identical JSON poses inherently carry no unique frame ID."
+    }
+  ],
+  "native_exit_code": 0,
+  "source_commit": "934d9c5460f3805a5c572d8b6f627c5c8ba553f2",
+  "required_checks": {
+    "fmt": "passed",
+    "strict_workspace_clippy": "passed",
+    "workspace_tests_passed": 262,
+    "test_suites": 27,
+    "release_build": "passed"
+  },
+  "full_sample_wire_oracle": {
+    "pyzmq": "25.1.1",
+    "libzmq": "4.3.4",
+    "cli_sha256": "c1e2bb22c9a5ad4e59cf25d1b854eb9cccda77b02fe39251b9f2ee485f2014da",
+    "input_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+    "scope": "Modern libzmq wire oracle over all 300 real sample frames; no legacy VR acceptance claim",
+    "cases": [
+      {
+        "mode": "native_ft",
+        "framing": "single",
+        "source_frames": 300,
+        "recorded_rows": 300,
+        "received_rows": 300,
+        "first_row_index": 0,
+        "last_row_index": 299,
+        "all_received_bytes_exact": true
+      },
+      {
+        "mode": "legacy_matrex_vr",
+        "framing": "single",
+        "source_frames": 300,
+        "recorded_rows": 300,
+        "received_rows": 300,
+        "first_row_index": 0,
+        "last_row_index": 299,
+        "all_received_bytes_exact": true
+      },
+      {
+        "mode": "legacy_matrex_vr",
+        "framing": "topic_json",
+        "source_frames": 300,
+        "recorded_rows": 300,
+        "received_rows": 300,
+        "first_row_index": 0,
+        "last_row_index": 299,
+        "all_received_bytes_exact": true
+      }
+    ]
+  },
+  "native_visual": {
+    "passed": true,
+    "binary_sha256": "e7a6000167c7bb97db84161f526980c270383bcadedfbf6a9e551674a133c1a4",
+    "scope": "Actual native System-theme pixels; light/dark toolbar geometry and semantic-red rendering also have CPU egui regression coverage. No physical camera or throughput claim.",
+    "recorded_rows": 30,
+    "read_only_review_preserved_source_and_config": true
+  },
+  "packaging": {
+    "dependency_notice_packages": 333,
+    "notice_files": 1255,
+    "archives": {
+      "hejjetrac-linux-x86_64.tar.gz": "dea1bb6825d951acc436573420f22e390966500443a3e4ffe3a4eaa9282af5b5",
+      "hejjetrac-linux-amd64.deb": "a235ac861fa12ce1770af25b7019dc8d170c7318009e8e67ad726f1141a22f5b"
+    }
+  }
+}
