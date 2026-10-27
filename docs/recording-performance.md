@@ -1,6 +1,6 @@
 # Linux camera recording measurements — 26–27 October 2026
 
-The final release preserves near-100-FPS numeric processing during optional
+The earlier queue-eight release preserves near-100-FPS numeric processing during optional
 video overload. Its fastest uncompressed setting completes every requested
 raw/debug video on one and four cameras: **20/20 complete videos**, independently
 decoded and aligned with all numeric rows. All **22,266 accepted recorded rows**
@@ -140,13 +140,24 @@ recording and live outputs continue. The manifest distinguishes `complete`,
 and timestamp bounds. A partial prefix never counts as a completed video.
 Recorded-file/headless processing retains lossless backpressure instead.
 
-Each stream allows eight queued images and one in flight, with a 32 MiB budget
-covering pending payload bytes. The initial two-image queue passed the numeric
+Each stream now allows 32 queued images and one in flight, with the same
+32 MiB budget covering queued plus in-flight payload bytes. Large diagnostic
+messages may reach the byte limit before the frame-count limit. The initial two-image queue passed the numeric
 continuity checks but stopped some four-camera MJPEG raw and uncompressed debug
 streams during startup, including a raw encoder averaging 158 FPS. Those failed
 full-video cases remain explicit prior-candidate evidence. Eight queued images
-provide about 90 ms of burst headroom at 100 FPS, while retaining the byte limit
-and explicit overload policy.
+passed the short matrices and sustained one-minute source cases below. A later
+90-second recording-rotation preflight nevertheless stopped one MJPEG source
+stream after 1,769 images despite a 2.99 ms average encoder time. The live frame
+bound was therefore increased to 32 without increasing the byte budget or
+blocking numerical processing. The final 90-second live repeat completes all
+28 requested movies, including 20 MJPEG source movies and eight uncompressed
+source/debug movies. All 35,374 numeric/quality rows and accepted wire bytes
+align; the largest capture interval is 31.994 ms. This tests the measured burst
+and short debug probe rather than unlimited sustained debug throughput.
+[Exact rotation results](benchmarks/linux-rotation-final-20261027.json) retain
+the binary hash and every media count. Earlier matrices retain their actual
+queue-eight binary hashes and results.
 
 Source-clock gap reports include the first recorded second and control
 transitions, including any initial pause/resume or retained starting row. Their

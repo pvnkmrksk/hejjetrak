@@ -145,3 +145,26 @@ queued V4L frames hid those gaps until several rows after the file boundary.
 That failed evidence remains unchanged. The final overnight launch requires a
 repeat with asynchronous finalization and acceptable active capture continuity;
 the earlier file-only functional success does not override this failure.
+
+The asynchronous repeat in
+`runs/overnight-live-async-preflight-20261027/` retained 35,392 consecutive rows,
+100% accepted quality decisions and exact accepted wire bytes. All 24 completion
+markers were complete, the final audit backlog was zero and the native process
+exited normally. Across the whole capture, including recording boundaries, the
+largest source-clock interval was 39.983 ms, with no interval above 50 ms.
+This removes the earlier multi-second finalization stall in this preflight.
+Recording completeness still failed: one source-MJPEG movie and two debug movies
+stopped with explicit partial prefixes under an eight-frame encoder queue. The
+partial files remain available. A larger bounded queue requires another live
+preflight before the main campaign can be accepted.
+
+That repeat passed in
+`runs/overnight-live-buffered-preflight-20261027/` with the 32-frame queue and
+unchanged 32 MiB per-stream byte budget. It retained 35,374 consecutive numeric
+and quality rows at 100.830–100.898 rows per source-clock second per rig. Every
+requested movie completed: 20 source-MJPEG movies, four raw movies and four
+debug movies, each checked by an independent complete decode and frame count.
+All 24 finalization markers completed, all accepted wire bytes matched and the
+native process exited with status zero. The largest whole-capture source-clock
+interval was 31.994 ms; no interval exceeded 50 ms. These are measured operational
+preflight gates, not a sensor-level zero-loss or live physical-ground-truth claim.

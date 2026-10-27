@@ -1,5 +1,80 @@
 # HejjéTrac validation evidence
 
+## Daily controls, motion structure and sustained CPU — 2026-10-27
+
+The final daily-control/async-finalization source passes formatting, strict
+locked all-target workspace Clippy and **260 tests across 27 suites**, with
+zero failures and zero ignored tests. The release build also passes; logs are
+`runs/validation/buffered-final-{fmt,clippy,tests,release}.log`. The final
+serial release demo and 300-image sample retain their unchanged accuracy gates.
+All **5,157** VR3 image decisions, quality values and all **25** numeric columns
+are byte-identical to the earlier fully gated result, including recovery.
+`runs/buffered-release-oracles-20261027/report.json` records commands, hashes,
+numerical comparisons and descriptive timings (22.695 seconds externally for
+the full VR3 command). This is regression evidence, not a new general speed
+claim. The platform/toolchain remain the native Linux host described below.
+
+The daily toolbar now exposes reset, recording, camera, source/ball view,
+normal/debug view, saved calibration review and configuration directly. The
+record control changes from a red circle to a stop square. Calibration review
+shows the saved ball, exclusion and laboratory-axis layers; an operator can
+keep a valid layer, redraw one layer or enter the full guided sequence. Opening
+and closing review preserves the configuration, playback clock and earlier view.
+Saved geometry still requires visual inspection after the apparatus is bumped.
+
+Native Linux visual verification covers 13 screenshots, including the toolbar,
+configuration and individual calibration stages. A five-round native control
+stress pass exercises 20 recording takes, all source/debug selections, saved
+configuration, resets, rewind, invalid edits and calibration cancellation.
+Independent full movie decoding matches every requested take's numeric and
+quality rows. Source recordings retain the full image dimensions. Evidence:
+`runs/daily-ui-release-final-20261027/report.json` and
+`runs/daily-controls-release-final-20261027/report.json`; the corresponding development scripts are
+`scripts/test_daily_ui_visual.py` and `scripts/test_daily_controls.py`.
+
+[Whole-recording motion analysis](vr3-motion-structure.md) now includes complete
+trajectories and derivatives rather than only the high-speed interval. Across
+all 4,678 clear pre-hand images, heading-independent cumulative body movement
+has combined RMS difference 0.029703 sphere radians from the supplied live
+FicTrac data. Shared-capture-clock body-speed correlation is 0.990263 with RMS
+ratio 0.999886. Low-motion framewise agreement and accumulated heading remain
+weaker, and the raw world-path discrepancy is retained. Original post-hand
+motion is assessed as an unreliable comparison; recovered motion is reported
+separately, with no invented displacement during the occlusion.
+
+Four serial native measurements use 60 measured seconds after five warmup
+seconds, display at 30 FPS, and the supplied 320×240 camera configuration. One
+camera uses 45.38% of one logical CPU with data only and 72.45% with complete
+full-source MJPEG. Four cameras use 200.10% and 345.34%, respectively. On this
+eight-logical-CPU machine those are 5.67% / 9.06% and 25.01% / 43.17% of the
+logical total. Every camera delivers approximately 100.8–101.0 FPS. Engine
+arithmetic means are 2.67 ms/frame for one camera and 2.86–3.33 ms/frame for
+four, depending on mode. These are process CPU and wall-clock engine timings,
+not physical-core headroom, power or GPU measurements. Small source-clock gaps
+are reported rather than claiming zero sensor loss. The exact binary and all
+interval boundaries are in
+[the sustained CPU record](benchmarks/daily-cpu-sustained-20261027.json).
+
+The [overnight supervisor](overnight-validation.md) retains independent numeric,
+quality, wire and movie evidence while bounding media storage. Its actual
+elapsed duration and health must be read from the run report; development
+smokes and a scheduled monitor do not establish a completed overnight run.
+Six supervisor regression tests additionally cover explicit completion,
+missing-motion statistics, clock gaps, storage projection, process identity and
+retention boundaries.
+
+The final 90-second four-camera rotation preflight passes on the queue-32
+binary: **35,374** consecutive numeric/quality rows, exact accepted FT bytes,
+**28/28 complete videos** (20 full-source MJPEG, four uncompressed source and
+four debug), 24 committed completion markers, zero verification backlog and a
+clean native exit. Per-rig source-clock rates are 100.830–100.898 rows/s; maximum
+capture intervals are 28.002 / 28.000 / 20.000 / 31.994 ms, including every file
+boundary, with no interval above 50 ms. This establishes the measured rotation
+improvement while retaining small capture gaps as diagnostics, not claiming
+zero sensor loss. The earlier synchronous case reached 2.368 seconds; the first
+async queue-eight repeat fixed acquisition but retained three partial movies.
+Neither failed campaign was overwritten. [Final rotation evidence](benchmarks/linux-rotation-final-20261027.json).
+
 ## Linux four-camera and VR3 work — 2026-10-26–27
 
 This local branch starts from `86b71d7d3f53e8a468c4728513479d07a2d3543a`

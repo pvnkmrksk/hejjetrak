@@ -376,6 +376,15 @@ def parse_deadline(args):
     return deadline
 
 
+def record_application_exit(state, exit_code):
+    state["application_exit_code"] = exit_code
+    if exit_code != 0:
+        message = f"native application exited with status {exit_code}; inspect stderr.log"
+        state["shutdown_error"] = message
+        state.setdefault("error", message)
+        state["state"] = "failed"
+
+
 def run_soak(args):
     output = args.output.resolve()
     if args.prepared:
@@ -604,7 +613,7 @@ def run_soak(args):
     finally:
         if bridge:
             bridge.finish(identities)
-            state["application_exit_code"] = bridge.process.returncode
+            record_application_exit(state, bridge.process.returncode)
         if probe:
             try:
                 state["wire_final"] = probe.finish()

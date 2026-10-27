@@ -8,11 +8,24 @@ import tempfile
 import unittest
 
 from overnight_soak import (atomic_json, await_completion, clock_warnings, completion_marker, pid_identity, read_status,
-                            require_generated_directory, storage_projection,
+                            record_application_exit, require_generated_directory, storage_projection,
                             trajectory_statistics)
 
 
 class OvernightEvidenceTests(unittest.TestCase):
+    def test_abnormal_native_exit_is_a_terminal_failure(self):
+        state = {"state": "completed"}
+        record_application_exit(state, 0)
+        self.assertEqual(state["state"], "completed")
+        record_application_exit(state, -15)
+        self.assertEqual(state["state"], "failed")
+        self.assertEqual(state["application_exit_code"], -15)
+        self.assertIn("-15", state["error"])
+        state = {"state": "failed", "error": "earlier acquisition failure"}
+        record_application_exit(state, 1)
+        self.assertEqual(state["error"], "earlier acquisition failure")
+        self.assertIn("status 1", state["shutdown_error"])
+
     def test_velocity_excludes_missing_motion_and_uses_recorded_time(self):
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)

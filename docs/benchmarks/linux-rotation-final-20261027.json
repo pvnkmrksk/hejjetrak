@@ -1,0 +1,629 @@
+{
+  "status": "completed",
+  "binary_sha256": "5eeca211a8179021cd9284b71f12ed5e7c83591ae5ce94fec7dbd28828dbbea1",
+  "duration_seconds_requested": 90,
+  "recording_rotations_without_pause_or_reset": true,
+  "asynchronous_recording_finalization": true,
+  "native_exit_code": 0,
+  "native_exit_zero_gate": true,
+  "numeric_rows": 35374,
+  "minimum_accepted_fraction": 0.9995110024449878,
+  "sessions": {
+    "1": {
+      "rows": 8844,
+      "frame_ids_consecutive": true,
+      "source_clock_strictly_increasing": true,
+      "source_clock_span_seconds": 87.65652101,
+      "processed_rows_per_source_clock_second": 100.88239754565636,
+      "maximum_source_interval_ms": 28.002003000001423,
+      "intervals_above_50ms": 0,
+      "intervals_above_25ms": 1,
+      "nominal_missing_interval_estimate": 3
+    },
+    "2": {
+      "rows": 8839,
+      "frame_ids_consecutive": true,
+      "source_clock_strictly_increasing": true,
+      "source_clock_span_seconds": 87.652519993,
+      "processed_rows_per_source_clock_second": 100.82995903261892,
+      "maximum_source_interval_ms": 28.000003000001016,
+      "intervals_above_50ms": 0,
+      "intervals_above_25ms": 1,
+      "nominal_missing_interval_estimate": 8
+    },
+    "3": {
+      "rows": 8845,
+      "frame_ids_consecutive": true,
+      "source_clock_strictly_increasing": true,
+      "source_clock_span_seconds": 87.652504009,
+      "processed_rows_per_source_clock_second": 100.89842954277626,
+      "maximum_source_interval_ms": 20.000003999997716,
+      "intervals_above_50ms": 0,
+      "intervals_above_25ms": 0,
+      "nominal_missing_interval_estimate": 2
+    },
+    "4": {
+      "rows": 8846,
+      "frame_ids_consecutive": true,
+      "source_clock_strictly_increasing": true,
+      "source_clock_span_seconds": 87.69251399999999,
+      "processed_rows_per_source_clock_second": 100.86379779236346,
+      "maximum_source_interval_ms": 31.994008000001486,
+      "intervals_above_50ms": 0,
+      "intervals_above_25ms": 1,
+      "nominal_missing_interval_estimate": 5
+    }
+  },
+  "all_completion_markers_terminal_complete": true,
+  "completion_markers": 24,
+  "expected_completion_markers": 24,
+  "final_verification_backlog": 0,
+  "all_audits_verified": true,
+  "all_accepted_wire_bytes_exact": true,
+  "all_requested_video_complete": true,
+  "source_movies_complete": true,
+  "media": [
+    {
+      "segment": 0,
+      "phase": "source",
+      "session": 1,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 2055,
+      "encoded_frames": "2055",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 2.8249585673965965
+    },
+    {
+      "segment": 0,
+      "phase": "source",
+      "session": 2,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 2054,
+      "encoded_frames": "2054",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 2.845809805258023
+    },
+    {
+      "segment": 0,
+      "phase": "source",
+      "session": 3,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 2054,
+      "encoded_frames": "2054",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 2.8399698568646534
+    },
+    {
+      "segment": 0,
+      "phase": "source",
+      "session": 4,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 2052,
+      "encoded_frames": "2052",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 2.7823006457115
+    },
+    {
+      "segment": 1,
+      "phase": "debug_probe",
+      "session": 1,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 325,
+      "encoded_frames": "325",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 0.6711882830769226
+    },
+    {
+      "segment": 1,
+      "phase": "debug_probe",
+      "session": 1,
+      "kind": "debug",
+      "state": "complete",
+      "numeric_rows": 325,
+      "encoded_frames": "325",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 8.123237803076925
+    },
+    {
+      "segment": 1,
+      "phase": "debug_probe",
+      "session": 2,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 327,
+      "encoded_frames": "327",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 0.5709666116207949
+    },
+    {
+      "segment": 1,
+      "phase": "debug_probe",
+      "session": 2,
+      "kind": "debug",
+      "state": "complete",
+      "numeric_rows": 327,
+      "encoded_frames": "327",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 7.87139808868502
+    },
+    {
+      "segment": 1,
+      "phase": "debug_probe",
+      "session": 3,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 327,
+      "encoded_frames": "327",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 0.6912357064220185
+    },
+    {
+      "segment": 1,
+      "phase": "debug_probe",
+      "session": 3,
+      "kind": "debug",
+      "state": "complete",
+      "numeric_rows": 327,
+      "encoded_frames": "327",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 7.8365941162079515
+    },
+    {
+      "segment": 1,
+      "phase": "debug_probe",
+      "session": 4,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 329,
+      "encoded_frames": "329",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 0.6118138328267472
+    },
+    {
+      "segment": 1,
+      "phase": "debug_probe",
+      "session": 4,
+      "kind": "debug",
+      "state": "complete",
+      "numeric_rows": 329,
+      "encoded_frames": "329",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 7.850109717325225
+    },
+    {
+      "segment": 2,
+      "phase": "source",
+      "session": 1,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 2042,
+      "encoded_frames": "2042",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 3.155241978942216
+    },
+    {
+      "segment": 2,
+      "phase": "source",
+      "session": 2,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 2036,
+      "encoded_frames": "2036",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 3.0944019425343816
+    },
+    {
+      "segment": 2,
+      "phase": "source",
+      "session": 3,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 2041,
+      "encoded_frames": "2041",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 3.0684955502204883
+    },
+    {
+      "segment": 2,
+      "phase": "source",
+      "session": 4,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 2037,
+      "encoded_frames": "2037",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 3.028388041237116
+    },
+    {
+      "segment": 3,
+      "phase": "source",
+      "session": 1,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 2045,
+      "encoded_frames": "2045",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 3.0289199398532984
+    },
+    {
+      "segment": 3,
+      "phase": "source",
+      "session": 2,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 2045,
+      "encoded_frames": "2045",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 3.0262919716381385
+    },
+    {
+      "segment": 3,
+      "phase": "source",
+      "session": 3,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 2045,
+      "encoded_frames": "2045",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 2.9727849951100223
+    },
+    {
+      "segment": 3,
+      "phase": "source",
+      "session": 4,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 2045,
+      "encoded_frames": "2045",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 2.9543317501222455
+    },
+    {
+      "segment": 4,
+      "phase": "source",
+      "session": 1,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 2048,
+      "encoded_frames": "2048",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 3.028838610351561
+    },
+    {
+      "segment": 4,
+      "phase": "source",
+      "session": 2,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 2048,
+      "encoded_frames": "2048",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 2.98233759082031
+    },
+    {
+      "segment": 4,
+      "phase": "source",
+      "session": 3,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 2049,
+      "encoded_frames": "2049",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 2.9821508701805723
+    },
+    {
+      "segment": 4,
+      "phase": "source",
+      "session": 4,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 2048,
+      "encoded_frames": "2048",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 2.9114216450195283
+    },
+    {
+      "segment": 5,
+      "phase": "source",
+      "session": 1,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 329,
+      "encoded_frames": "329",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 3.2902641124620087
+    },
+    {
+      "segment": 5,
+      "phase": "source",
+      "session": 2,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 329,
+      "encoded_frames": "329",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 3.1796238480243177
+    },
+    {
+      "segment": 5,
+      "phase": "source",
+      "session": 3,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 329,
+      "encoded_frames": "329",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 3.164065300911855
+    },
+    {
+      "segment": 5,
+      "phase": "source",
+      "session": 4,
+      "kind": "raw",
+      "state": "complete",
+      "numeric_rows": 335,
+      "encoded_frames": "335",
+      "complete": true,
+      "queue_capacity": 32,
+      "processing_ms": 3.1485393343283574
+    }
+  ],
+  "segments": [
+    {
+      "segment": 0,
+      "phase": "source",
+      "verification_seconds": 4.730557689443231,
+      "sessions": [
+        {
+          "session": 1,
+          "rows": 2055,
+          "rotation_boundary_interval_ms": null,
+          "maximum_inside_segment_interval_ms": 12.049000999997588,
+          "intervals_above_50ms": 0
+        },
+        {
+          "session": 2,
+          "rows": 2054,
+          "rotation_boundary_interval_ms": null,
+          "maximum_inside_segment_interval_ms": 12.036004999998113,
+          "intervals_above_50ms": 0
+        },
+        {
+          "session": 3,
+          "rows": 2054,
+          "rotation_boundary_interval_ms": null,
+          "maximum_inside_segment_interval_ms": 12.031995999999708,
+          "intervals_above_50ms": 0
+        },
+        {
+          "session": 4,
+          "rows": 2052,
+          "rotation_boundary_interval_ms": null,
+          "maximum_inside_segment_interval_ms": 12.031998999999814,
+          "intervals_above_50ms": 0
+        }
+      ]
+    },
+    {
+      "segment": 1,
+      "phase": "debug_probe",
+      "verification_seconds": 11.957417977973819,
+      "sessions": [
+        {
+          "session": 1,
+          "rows": 325,
+          "rotation_boundary_interval_ms": 8.004992000001948,
+          "maximum_inside_segment_interval_ms": 28.002003000001423,
+          "intervals_above_50ms": 0
+        },
+        {
+          "session": 2,
+          "rows": 327,
+          "rotation_boundary_interval_ms": 8.000009000003047,
+          "maximum_inside_segment_interval_ms": 20.000984000002063,
+          "intervals_above_50ms": 0
+        },
+        {
+          "session": 3,
+          "rows": 327,
+          "rotation_boundary_interval_ms": 7.999996999998984,
+          "maximum_inside_segment_interval_ms": 12.025986000000557,
+          "intervals_above_50ms": 0
+        },
+        {
+          "session": 4,
+          "rows": 329,
+          "rotation_boundary_interval_ms": 8.009982999996282,
+          "maximum_inside_segment_interval_ms": 20.002000000004045,
+          "intervals_above_50ms": 0
+        }
+      ]
+    },
+    {
+      "segment": 2,
+      "phase": "source",
+      "verification_seconds": 11.113426188006997,
+      "sessions": [
+        {
+          "session": 1,
+          "rows": 2042,
+          "rotation_boundary_interval_ms": 7.998999000003096,
+          "maximum_inside_segment_interval_ms": 19.99700500000108,
+          "intervals_above_50ms": 0
+        },
+        {
+          "session": 2,
+          "rows": 2036,
+          "rotation_boundary_interval_ms": 12.004003999998531,
+          "maximum_inside_segment_interval_ms": 28.000003000001016,
+          "intervals_above_50ms": 0
+        },
+        {
+          "session": 3,
+          "rows": 2041,
+          "rotation_boundary_interval_ms": 8.0020050000021,
+          "maximum_inside_segment_interval_ms": 20.000003999997716,
+          "intervals_above_50ms": 0
+        },
+        {
+          "session": 4,
+          "rows": 2037,
+          "rotation_boundary_interval_ms": 11.996000999999524,
+          "maximum_inside_segment_interval_ms": 31.994008000001486,
+          "intervals_above_50ms": 0
+        }
+      ]
+    },
+    {
+      "segment": 3,
+      "phase": "source",
+      "verification_seconds": 11.217957643792033,
+      "sessions": [
+        {
+          "session": 1,
+          "rows": 2045,
+          "rotation_boundary_interval_ms": 7.998003000000608,
+          "maximum_inside_segment_interval_ms": 12.032981000003929,
+          "intervals_above_50ms": 0
+        },
+        {
+          "session": 2,
+          "rows": 2045,
+          "rotation_boundary_interval_ms": 8.007989999998244,
+          "maximum_inside_segment_interval_ms": 12.03600500000175,
+          "intervals_above_50ms": 0
+        },
+        {
+          "session": 3,
+          "rows": 2045,
+          "rotation_boundary_interval_ms": 8.007996000007552,
+          "maximum_inside_segment_interval_ms": 12.631046999995306,
+          "intervals_above_50ms": 0
+        },
+        {
+          "session": 4,
+          "rows": 2045,
+          "rotation_boundary_interval_ms": 8.00002300000051,
+          "maximum_inside_segment_interval_ms": 12.269985999999335,
+          "intervals_above_50ms": 0
+        }
+      ]
+    },
+    {
+      "segment": 4,
+      "phase": "source",
+      "verification_seconds": 11.00598486699164,
+      "sessions": [
+        {
+          "session": 1,
+          "rows": 2048,
+          "rotation_boundary_interval_ms": 11.993000999995274,
+          "maximum_inside_segment_interval_ms": 12.048001999995904,
+          "intervals_above_50ms": 0
+        },
+        {
+          "session": 2,
+          "rows": 2048,
+          "rotation_boundary_interval_ms": 12.00900500001444,
+          "maximum_inside_segment_interval_ms": 20.005995999992592,
+          "intervals_above_50ms": 0
+        },
+        {
+          "session": 3,
+          "rows": 2049,
+          "rotation_boundary_interval_ms": 12.000016999983927,
+          "maximum_inside_segment_interval_ms": 12.037998999992851,
+          "intervals_above_50ms": 0
+        },
+        {
+          "session": 4,
+          "rows": 2048,
+          "rotation_boundary_interval_ms": 8.004005000009784,
+          "maximum_inside_segment_interval_ms": 12.037014999994426,
+          "intervals_above_50ms": 0
+        }
+      ]
+    },
+    {
+      "segment": 5,
+      "phase": "source",
+      "verification_seconds": 0.8311439882963896,
+      "sessions": [
+        {
+          "session": 1,
+          "rows": 329,
+          "rotation_boundary_interval_ms": 8.006991000002017,
+          "maximum_inside_segment_interval_ms": 12.02700200000254,
+          "intervals_above_50ms": 0
+        },
+        {
+          "session": 2,
+          "rows": 329,
+          "rotation_boundary_interval_ms": 8.00899699999718,
+          "maximum_inside_segment_interval_ms": 12.018992999990587,
+          "intervals_above_50ms": 0
+        },
+        {
+          "session": 3,
+          "rows": 329,
+          "rotation_boundary_interval_ms": 12.005996999985655,
+          "maximum_inside_segment_interval_ms": 12.244006000008085,
+          "intervals_above_50ms": 0
+        },
+        {
+          "session": 4,
+          "rows": 335,
+          "rotation_boundary_interval_ms": 8.00800000000163,
+          "maximum_inside_segment_interval_ms": 12.027003999988665,
+          "intervals_above_50ms": 0
+        }
+      ]
+    }
+  ],
+  "minimum_sampled_processed_fps": {
+    "1": 97.46617216712329,
+    "2": 96.77498785519998,
+    "3": 99.24455878176806,
+    "4": 99.23943882716468
+  },
+  "minimum_sampled_free_bytes": 15424843776,
+  "warnings": [],
+  "all_preflight_gates_pass": true,
+  "conclusion": "All requested numeric/quality/media/wire/finalization and capture-clock preflight gates pass on this 90-second four-camera run. Nominal missing interval estimates are diagnostics, not verified sensor sequence loss.",
+  "scope": "Final 90-second native four-camera rotation preflight on Ubuntu 22.04/i7-6700K, with 32-frame queues and the unchanged 32 MiB per-stream payload bound. Capture/source-clock, numerical/quality, FT wire and complete whole-frame source/debug movies audited independently. Not a completed overnight run, sensor zero-loss proof or physical ground-truth accuracy test.",
+  "assessment_sha256": "944c3fb5184ed9f735724461e5254543ac9d165c3501ccacef843546bf59993b",
+  "prior_acquisition_failure": "runs/overnight-live-preflight-20261027/preflight-assessment.json: synchronous finalization, source-clock gap up to 2.368 seconds.",
+  "prior_queue8_failure": "runs/overnight-live-async-preflight-20261027/preflight-assessment.json: acquisition maxima 39.983/19.998/28.005/20.001 ms, three retained partial movies including one MJPEG source."
+}

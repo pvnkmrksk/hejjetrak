@@ -1,6 +1,6 @@
 # Behavioral parity assessment
 
-## Current Linux rig work — 2026-10-26
+## Current Linux rig work — 2026-10-26–27
 
 The local `codex/robust-multicamera` branch is based on the requested
 `codex/ubuntu22-compat-ci` source. Its supplied VR3 recording has 5,157 images.
@@ -28,6 +28,23 @@ establish numerical identity with FicTrac, arbitrary occlusion recovery, unlimit
 camera capacity or immunity to OS/driver failures. Recording throughput and its
 separate processing/preview/media boundaries are documented in
 [recording performance](recording-performance.md).
+
+Daily controls now provide direct calibration status, selective saved-layer
+review/redraw and a one-row toolbar. These are native adapters to the shared
+commands, without new numerical calibration algorithms. Full-video
+[body movement and derivative comparisons](vr3-motion-structure.md) distinguish
+heading drift, time-base jitter and weak low-motion agreement from overall
+motion structure. Sustained one/four-camera CPU cases and their exact scope are
+recorded in [validation](validation.md).
+
+Live recording Stop/replacement now finalizes old takes on one bounded worker
+per camera. Completion is explicit in status and `completion.json`; active
+capture does not wait for the old encoder drain/fsync. Initializing a new take
+and changing configuration epochs remain synchronous. Independent acquisition
+clock checks are required: consecutive saved frame IDs alone missed the
+multi-second gaps in the earlier rotation preflight. The
+[overnight protocol and actual run reports](overnight-validation.md) distinguish
+that failed preflight, the revised live test and any eventual long run.
 
 The separate 300-frame sample also passes its original gates with the selected
 complete-ROI policy: path RMS 0.044807 sphere rad, heading RMS 0.013185 rad and
