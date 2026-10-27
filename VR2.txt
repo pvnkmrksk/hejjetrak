@@ -33,4 +33,4 @@ rust_instance_name : VR2
 rust_resilient     : y
 rust_camera_width  : 320
 rust_camera_height : 240
-zmq_port           : 0
+zmq_port           : 9872
