@@ -1,0 +1,104 @@
+{
+  "date": "2026-10-26",
+  "hardware": "Arducam OV9281 / Mac Apple Silicon",
+  "raw_footage_published": false,
+  "scope": "Local observational capture and controlled replay with original timestamps. Physical optical FOV, lab axes and angle/speed ground truth were not independently verified. No camera footage or numeric rows are redistributed.",
+  "original_live_capture": {
+    "frames": 3646,
+    "elapsed_source_seconds": 30.217033333331347,
+    "statuses": {
+      "tracked": 3113,
+      "rejected": 23,
+      "relocalized": 23,
+      "recovering": 487
+    },
+    "unaccepted": 510,
+    "longest_unaccepted_frames": 181,
+    "source_fps": 120.00048,
+    "tracking_ms": 0.6973434721391688,
+    "dropped": 1,
+    "dropped_running": 1
+  },
+  "recording_bug": {
+    "version": "0.2.2",
+    "first_interval_ms": 9,
+    "encoded_fps": 111.111,
+    "native_nominal_fps": 120.00048,
+    "video_duration_seconds": 32.814032814,
+    "source_pts_span_seconds": 30.2170333333,
+    "numeric_timestamps_intact": true
+  },
+  "cold_replay": {
+    "scope": "LOCAL camera replay with original capture timestamps. Existing example versus manually fitted sphere rim; optical FOV still unverified; no independent physical angle ground truth. Each replay starts cold at recording frame36; original tracker had35 earlier frames. No threshold changes.",
+    "cases": {
+      "baseline_fitted_roi": {
+        "frames": 3646,
+        "status_counts": {
+          "initializing": 1,
+          "tracked": 3614,
+          "rejected": 9,
+          "relocalized": 9,
+          "recovering": 13
+        },
+        "unaccepted": 22,
+        "longest_unaccepted_frames": 6
+      },
+      "baseline_old_roi": {
+        "frames": 3646,
+        "status_counts": {
+          "initializing": 1,
+          "tracked": 3481,
+          "rejected": 13,
+          "relocalized": 13,
+          "recovering": 138
+        },
+        "unaccepted": 151,
+        "longest_unaccepted_frames": 63
+      },
+      "current_fitted_roi": {
+        "frames": 3646,
+        "status_counts": {
+          "initializing": 1,
+          "tracked": 3620,
+          "rejected": 8,
+          "relocalized": 8,
+          "recovering": 9
+        },
+        "unaccepted": 17,
+        "longest_unaccepted_frames": 3
+      },
+      "current_old_roi": {
+        "frames": 3646,
+        "status_counts": {
+          "initializing": 1,
+          "tracked": 3481,
+          "rejected": 13,
+          "relocalized": 13,
+          "recovering": 138
+        },
+        "unaccepted": 151,
+        "longest_unaccepted_frames": 63
+      }
+    },
+    "interpretation": "Example ROI includes stationary holder/background; temporary shared-core rim fit isolates the sphere. Replay begins at recorded frame36 with a cold atlas and cannot be directly compared against the live warm-start count. Remaining fitted-ROI gaps are brief motion confirmations; no threshold changes were justified.",
+    "assumed_vfov_degrees": 14,
+    "optical_vfov_verified": false
+  },
+  "recording_patch_live_check": {
+    "scope": "Local candidate runtime recording fix on real Arducam; no physical angle/speed claim",
+    "version": "0.2.3 local candidate",
+    "source_nominal_fps": 120.00048,
+    "avi_scale": 1000,
+    "avi_rate": 120000,
+    "avi_fps": 120.0,
+    "frames": 243,
+    "first_capture_interval_ms": 8.0,
+    "source_pts_span_seconds": 2.006,
+    "quality_all_accepted": true,
+    "dropped": 1,
+    "runtime_source_sha256": "0da05b0bc37dcc4997db731846aeaf401855a4656786330f89a4ce5cebb1ea58",
+    "raw_sha256": "06611447f8bb853147bd6a82cb9fb0b8747a2d170404bc020eabccb27aad7c13",
+    "images_published": false
+  },
+  "tracking_engine_unchanged_in_v023": true
+}

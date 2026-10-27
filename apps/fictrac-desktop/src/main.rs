@@ -4,6 +4,7 @@ mod control;
 mod icons;
 mod runtime;
 mod session;
+mod startup;
 mod ui;
 use clap::Parser;
 use eframe::egui;
@@ -141,6 +142,7 @@ struct Desktop {
     window_origin: Pair,
     tile_columns: usize,
     root_hidden: bool,
+    startup_notice: String,
 }
 impl Desktop {
     fn camera_owners(&self, except: Option<u64>) -> std::collections::BTreeMap<u32, String> {
@@ -183,15 +185,28 @@ impl Desktop {
             );
         }
         ui::configure_appearance(&cc.egui_ctx);
-        let path = args.config.clone().map(Ok).unwrap_or_else(|| {
-            if args.control_stdio {
-                resource("examples/upstream-config.txt")
-            } else {
-                default_config()
+        let normal_startup = args.config.is_none() && !args.control_stdio;
+        let startup = if normal_startup {
+            startup::default_document(&default_config()?)?
+        } else {
+            let path = args
+                .config
+                .clone()
+                .map(Ok)
+                .unwrap_or_else(|| resource("examples/upstream-config.txt"))?;
+            startup::Startup {
+                document: ConfigDocument::parse(
+                    std::fs::read_to_string(&path).map_err(|e| e.to_string())?,
+                )
+                .map_err(|e| e.to_string())?,
+                path,
+                fresh: false,
+                temporary: false,
+                notice: String::new(),
             }
-        })?;
-        let doc = ConfigDocument::parse(std::fs::read_to_string(&path).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?;
+        };
+        let path = startup.path;
+        let doc = startup.document;
         let mut first = Session::new(1, doc.clone(), Some(path.clone()));
         first.framebuffer_limit = cc
             .wgpu_render_state
@@ -204,9 +219,13 @@ impl Desktop {
             .send_viewport_cmd(egui::ViewportCommand::MaxInnerSize(
                 first.max_window_inner_size,
             ));
-        if args.config.is_none() && !args.control_stdio {
+        first.temporary_config = startup.temporary;
+        first.fallback_notice = startup.notice.clone();
+        if normal_startup {
             first.startup_fallback = Some(fallback_document(&doc)?);
-            if let Some(camera) = first.cameras.first() {
+            if startup.fresh
+                && let Some(camera) = first.cameras.first()
+            {
                 first.fields(&[("src_fn", camera.id.to_string())])?;
                 first.changed = None;
             }
@@ -281,6 +300,7 @@ impl Desktop {
             window_origin,
             tile_columns: grid.0 as usize,
             root_hidden: false,
+            startup_notice: startup.notice,
         };
         for _ in 1..app.args.windows.clamp(1, 16) {
             app.spawn_from(app.sessions.len() - 1);
@@ -533,6 +553,18 @@ impl eframe::App for Desktop {
         }
         if !self.sessions[0].closed {
             self.sessions[0].show(ctx);
+            // A delayed camera failure replaces its own notice. Keep the separate
+            // bootstrap failure actionable until the preview has been saved.
+            let first = &mut self.sessions[0];
+            if first.temporary_config
+                && !self.startup_notice.is_empty()
+                && !first.fallback_notice.contains(&self.startup_notice)
+            {
+                if !first.fallback_notice.is_empty() {
+                    first.fallback_notice.push_str(". ");
+                }
+                first.fallback_notice.push_str(&self.startup_notice);
+            }
         }
         let mut cell = usize::from(!self.sessions[0].closed);
         for session in self.sessions.iter_mut().skip(1) {

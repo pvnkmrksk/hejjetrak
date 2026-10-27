@@ -43,6 +43,7 @@ pub struct Camera {
     start: Instant,
     clock: crate::clock::CaptureClock,
     count: u64,
+    read_failed: bool,
 }
 impl Camera {
     /// Identity reported by the opened backend, not an inferred enumeration path.
@@ -176,6 +177,7 @@ impl Camera {
             start: Instant::now(),
             clock: crate::clock::CaptureClock::default(),
             count: 0,
+            read_failed: false,
         })
     }
     pub fn capabilities(&mut self) -> Result<CameraCapabilities> {
@@ -350,11 +352,21 @@ impl Camera {
         self.capabilities()
     }
     pub fn next_frame(&mut self) -> Result<Option<CameraFrame>> {
+        if self.read_failed {
+            return Err(Error(
+                "camera stream previously failed; reconnect before reading another frame".into(),
+            ));
+        }
         let id = self.camera.index().as_string();
-        let frame = self
-            .camera
-            .frame()
-            .map_err(|e| camera_error(id, "read from", e))?;
+        let frame = match self.camera.frame() {
+            Ok(frame) => frame,
+            Err(error) => {
+                // A timed-out V4L MMAP queue already has a pending buffer;
+                // retrying would enqueue it again. Reconnect creates a new queue.
+                self.read_failed = true;
+                return Err(camera_error(id, "read from", error));
+            }
+        };
         CameraFormatRequest {
             width: frame.resolution().width() as usize,
             height: frame.resolution().height() as usize,
@@ -363,7 +375,18 @@ impl Camera {
         .validate()?;
         let width = frame.resolution().width() as usize;
         let height = frame.resolution().height() as usize;
-        let rgb = if frame.source_frame_format() == FrameFormat::MJPEG {
+        let encoding = frame.source_frame_format();
+        let packed_layout = match encoding {
+            FrameFormat::GRAY => Some(crate::packed::Layout::Gray8),
+            FrameFormat::RAWRGB | FrameFormat::RAWBGR => Some(crate::packed::Layout::Rgb24),
+            FrameFormat::YUYV => Some(crate::packed::Layout::Yuyv422),
+            FrameFormat::NV12 => Some(crate::packed::Layout::Nv12),
+            FrameFormat::MJPEG => None,
+        };
+        if let Some(layout) = packed_layout {
+            crate::packed::validate(layout, width, height, frame.buffer().len())?;
+        }
+        let rgb = if encoding == FrameFormat::MJPEG {
             crate::jpeg::decode(frame.buffer(), width, height)?
         } else {
             frame

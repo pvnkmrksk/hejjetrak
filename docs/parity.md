@@ -1,9 +1,9 @@
 # Behavioral parity assessment
 
-## Current Linux rig work — 2026-10-26–27
+## Linux rig improvements — 2026-10-26–27
 
-The local `codex/robust-multicamera` branch is based on the requested
-`codex/ubuntu22-compat-ci` source. Its supplied VR3 recording has 5,157 images.
+The `codex/robust-multicamera` branch was based on the
+`codex/ubuntu22-compat-ci` source and is merged for v0.3.0. Its supplied VR3 recording has 5,157 images.
 The revised resilient fitter accepts all 4,678 clear pre-hand images and all
 410 images in the selected fast section. Increment RMS against the original
 live data is 0.006677/0.006547/0.009413 rad; all rolling 100-image component
@@ -60,19 +60,23 @@ complete-ROI policy: path RMS 0.044807 sphere rad, heading RMS 0.013185 rad and
 component RMS .008761/.008292/.014211 rad. The 0.025594 sample path result in
 the historical accelerated-search assessment below describes that earlier policy.
 
-## Historical v0.1.3 release assessment
+## Historical v0.2.3 release assessment
 
-Published [v0.1.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.3)
-passed all four [native release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40180700262),
-with 173 workspace tests on Linux and both Macs, 170 platform-applicable tests
-on Windows, and 1,353 decoder tests on each platform. The official Apple Silicon
-archive passed strict signature/version checks, the complete sample comparison
-and native preview/recording inspection. Native hover/loupe pointer verification
-remains incomplete; physical camera and GUI coverage limits below still apply.
+Published baseline: [v0.2.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.2.3),
+source `35859b3faf7ec7a394b6608730e20a78d6e5d9b8`, passes all four
+[native package jobs and both Ubuntu runtime jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40381876617).
+The official Apple Silicon archive passes strict ad hoc signature/version/source
+checks, the complete sample comparison and native preview inspection. The same
+Linux packages pass installed/portable sample and visible Xvfb/Mesa preview
+checks on Ubuntu 22.04 and 24.04. Native Windows visual checks, physical Linux
+cameras and unrestricted physical-motion accuracy remain unverified. The
+[published validation](validation.md#v023-published-release--2026-10-26) records
+the v0.2.3 recording-rate correction, unchanged numeric timestamps and native
+saved-default relaunch checks. The numerical engine is unchanged from v0.2.2.
 
 Current source also includes live calibration previews, a multi-rig manager, system/light/dark appearance and stricter invalid-input checks. The [polish validation](validation.md#final-polish--2026-10-25) records native Mac interaction checks and the unchanged numerical comparison gates.
 
-Current source additionally uses the [accelerated local search](tracking-performance.md).
+The v0.2.3 source uses the [accelerated local search](tracking-performance.md).
 It changes candidate generation while retaining complete error/quality scoring,
 coordinates, maps and the original reference gates. Its sample path RMS improves
 to 0.025594 sphere radians; component RMS remains within 0.020 rad each.
@@ -82,6 +86,34 @@ unreliable images; `rust_resilient : n` restores the older permissive/reset
 behavior. The new adaptive guard is not described as an unchanged quality gate.
 The fixed healthy-trajectory regression tolerances and complete fit scores remain
 separate from this intentional policy extension.
+
+## Current compatibility and recovery corrections
+
+Published v0.2.2 corrects the Linux build baseline to Ubuntu 22.04 / glibc
+2.35, with an ELF symbol-version guard for both executables. A single package
+built on that baseline has been installed and run in Ubuntu 22.04 and 24.04
+userspace: installed/portable CLIs process the full sample and pass the fixed
+numerical comparison, and native Xvfb/Mesa windows show the sample and exercise
+unavailable-camera fallback. The [final release evidence](benchmarks/release-v022-linux-20261026.json)
+identifies the exact published source, package hashes and execution scope;
+the [earlier preflight](benchmarks/ubuntu22-compatibility-20261026.json) remains
+separate. These checks do not exercise physical V4L cameras. Windows/Linux capture supports validated
+mono and pure Rust MJPEG decoding alongside the existing raw formats; V4L frame
+waits are bounded. [Camera contracts and hardware limits](camera-controls.md)
+remain explicit.
+
+Fast-motion recovery now uses a held candidate's velocity only to propose the
+next search seed. Complete ROI verification and all acceptance/learning rules
+remain unchanged. A default-budget known-motion regression that previously
+never resumed at 0.20 rad/frame now confirms on the fourth visible image for
+sharp and simulated half-frame-exposure images, then measures all 86 remaining
+relative deltas within the existing 0.008 rad/component gate. The actual-video
+full/partial-obstruction oracle retains its exact prior errors and original
+gates. These [controlled results](benchmarks/fast-motion-recovery-20261026.json)
+do not establish a universal physical speed, shutter-exposure or occluder limit.
+Final workspace/release verification of the combined changes is recorded in
+[validation](validation.md). Live-camera accuracy remains provisional pending
+correct ball-only calibration and independent physical reference measurements.
 
 Assessed against pvnkmrksk/fictrac commit `10fc4472af1fc9062b9bf5a92738e835b98cc3ec` and the supplied FicTrac 2.1.2 sample output. This version closes the previously missing operational features for the supported recorded-video workflow. **It does not establish unrestricted or numerical identity.**
 
@@ -102,12 +134,12 @@ Assessed against pvnkmrksk/fictrac commit `10fc4472af1fc9062b9bf5a92738e835b98cc
 | Full CLI | Conventional commands plus legacy positional config invocation; structured status, schema, all numerical/calibration/recording operations through JSONL |
 | AI agent control | JSONL/MCP share the numerical controller; native GUI JSONL controls displayed sessions, including calibration steps/edit/loupe/full-image choices. Historical v0.1.1 native video/camera/grid transcripts and current validation are distinguished in validation.md |
 | Video inputs | H.264 MP4/MOV/AVI (including B-frame ordering), MPEG-4 Part 2 MP4/MOV/AVI, MJPEG/raw AVI and mono/420 Y4M |
-| Video recording | All original codec settings: H.264 AVI default, XVID AVI, MPEG-4 MP4, MJPEG/raw AVI; explicit H.264 MP4; exact FPS/container tests, calibrated debug mosaic, safe partial finalization |
+| Video recording | H.264 AVI default, XVID AVI, MPEG-4 MP4, MJPEG/raw AVI; explicit H.264 MP4; FPS/container tests, calibrated debug mosaic, safe partial finalization. v0.2.3 prefers explicit FPS, then source metadata, with interval inference only when unknown. Real-frame tests retain exact numeric/quality timestamps; encoded video remains constant-rate. See validation.md |
 | Video codec boundaries | Segmented OpenDML AVI supports >4 GiB offsets; H.264 encodes even dimensions with SPS cropping; odd H.264 4:2:0 dimensions fail explicitly; exotic profiles/formats remain outside tested coverage |
 | Serial/UDP | Native Rust serial2 and datagram sinks with original prefix/full row; actual OS pseudo-terminal and loopback tests; physical serial hardware untested |
-| Camera | Built-in FaceTime HD camera: actual 640×480/30 and 1280×720/15 format/readback, pause/step/config, two 35-frame H.264 recordings, source switch and reopen; unsupported exposure/gain controls explain limitations; physical sphere accuracy/iPhone/industrial SDKs unverified |
-| Native platforms | Published v0.1.3 passed all four native release jobs. Official Apple Silicon archive signature/version/sample and native preview/recording checks passed. Native hover/loupe pointer testing remains incomplete; Windows/Linux GUI appearance and camera hardware remain unverified |
-| Packaging | Published v0.1.3 has five assets: two Mac ZIPs, Windows ZIP, Linux portable tar and Linux amd64 `.deb`, with dependency notices. The Linux package passed extraction, dependency/desktop-entry and CLI smoke validation on its build host; ABI requirements remain explicit. No Developer ID notarization or Windows Authenticode signing |
+| Camera | Historical FaceTime HD checks cover 640×480/30 and 1280×720/15 format/readback, pause/step/config, two 35-frame recordings, source switch and reopen. A v0.2.2 ~120 FPS USB-camera check maintains acquisition/preview for ~30 seconds, but its old calibration includes the holder and cannot establish tracking accuracy. Physical Linux V4L, iPhone and industrial SDKs remain unverified |
+| Native platforms | Published v0.2.3 passes four native package jobs and four portability jobs. Official Apple Silicon signature/version/source/sample, 175-frame preview and saved-user-config relaunch checks pass; Ubuntu 22.04/24.04 installed/portable sample, Xvfb/Mesa previews and per-user default fallback pass. Native hover/loupe pointer testing remains incomplete; Windows visual checks, Linux hardware GPU/Wayland and physical V4L cameras remain unverified |
+| Packaging | Published v0.2.3 has five assets: two Mac ZIPs, Windows ZIP, Linux portable tar and Linux amd64 `.deb`, with dependency notices. Actual Linux GUI/CLI ELF requirements stop at glibc 2.35; installed/portable binary hashes and full sample checks match on Ubuntu 22.04/24.04. Writable defaults live outside installed/signed resources. No Developer ID notarization or Windows Authenticode signing |
 | Resource scheduling | Interruptible source deadlines/idle waits, bounded queues/staged frame, coalesced preview publication, unchanged per-frame numerical/recording evidence, cached geometry/textures and deque history. CPU/RSS methodology/results in resources.md; no wattage or sixteen high-rate camera capacity claim |
 
 A protocol request accepted into a GUI worker queue is not proof the action completed. Clients poll revision/frame/advance/recording/notice state and validate files. Synchronous headless commands expose the same numerical operations; playback and OS-window scheduling differ deliberately.

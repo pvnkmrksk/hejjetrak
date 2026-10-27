@@ -15,6 +15,9 @@ Original copyright and Apache-2.0 terms are retained.
 - Preserve sparse V4L2 menu entries as typed enums, including exposure modes.
   Accept enum setters and verify their native readback. A menu containing only
   manual `1` and aperture-priority `3` must not fabricate support for entry `0`.
+- Use the driver's checked, nonempty `bytesused` payload instead of copying
+  unused MMAP capacity. Invalid metadata fails before copying or decoding;
+  packed pixel validation in the application does not guess row padding.
 
 Application JPEG decoding remains pure Rust, outside Nokhwa's optional
 `mozjpeg` feature. No C/C++ media runtime or subprocess is added.

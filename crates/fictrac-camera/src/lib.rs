@@ -6,6 +6,8 @@ mod identity;
 #[cfg(any(not(target_os = "macos"), test))]
 mod jpeg;
 #[cfg(any(not(target_os = "macos"), test))]
+mod packed;
+#[cfg(any(not(target_os = "macos"), test))]
 mod selection;
 pub use controls::*;
 #[cfg(any(target_os = "macos", test))]

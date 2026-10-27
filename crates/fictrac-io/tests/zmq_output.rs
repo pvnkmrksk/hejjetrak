@@ -491,9 +491,12 @@ fn root_vr_configs_and_fallback_use_independent_ports_labels_and_sources() -> Te
             document.get("sock_port"),
             Some((1110 + index).to_string().as_str())
         );
-        // These physical rigs retain their existing UDP republishers. Direct
-        // ZMQ is opt-in so the tracker does not contend with those publishers.
-        assert_eq!(document.get("zmq_port"), Some("0"));
+        // Saved rigs retain their explicit direct publisher ports. The bridge
+        // launcher disables those ports in copies before using republishers.
+        assert_eq!(
+            document.get("zmq_port"),
+            Some((9870 + index).to_string().as_str())
+        );
         assert_eq!(document.get("rust_camera_width"), Some("320"));
         assert_eq!(document.get("rust_camera_height"), Some("240"));
         assert_eq!(document.get("vfov"), Some("17"));
@@ -512,7 +515,10 @@ fn root_vr_configs_and_fallback_use_independent_ports_labels_and_sources() -> Te
     assert_eq!(document.get("rust_instance_name"), Some("VR5"));
     assert_eq!(document.get("src_fn"), Some("7"));
     assert_eq!(document.get("sock_port"), Some("1115"));
-    assert_eq!(document.get("zmq_port"), Some("0"));
+    assert_eq!(document.get("zmq_port"), Some("9875"));
+    document.set("zmq_port", "0")?;
+    let (disabled, _) = document.next_instance(None)?;
+    assert_eq!(disabled.get("zmq_port"), Some("0"));
     // An explicitly enabled direct publisher still increments independently.
     document.set("zmq_port", "9875")?;
     document.set("src_fn", "sample.mp4")?;

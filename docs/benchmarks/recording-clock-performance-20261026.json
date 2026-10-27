@@ -1,0 +1,221 @@
+{
+  "date": "2026-10-26",
+  "version": "0.2.3",
+  "platform": "Apple M2 Pro / macOS27.0.1 arm64",
+  "rust": "1.99.1 LLVM23.1.1",
+  "profile": "thinLTO,onecodegenunit,no target-CPU override",
+  "binary_sha256": "81feba975df0bd725edee292b5e1fa192175a3ceaaa5df9f3b9d2eda28921c52",
+  "sample_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+  "core_sha256": {
+    "crates/fictrac-core/src/resilience.rs": "7397232a7ed84094b7eb11b75bfc568b8b2de129ef0fa9ee11b08ed8513abc37",
+    "crates/fictrac-core/src/spherical.rs": "164294a2195b6f4045ff9a2440efb5fbf44fd3c5c4f0dcb092ab508c7f8311f8"
+  },
+  "scope": "Serial recorded-fixture correctness and descriptive timing; no physical-accuracy or speedup claim; engine identical to v0.2.2.",
+  "timing_boundary": "Externalprocesswall. Synthetic includesfixturegeneration+verification. Sample includesopen/decode/track/numeric+quality+SVG output/finalization; wire/raw/debugvideo disabled. Comparison separatelytimed.",
+  "results": [
+    {
+      "command": [
+        "/private/tmp/hejjetrac-fix-target/release/fictrac",
+        "demo",
+        "--output",
+        "/private/tmp/hejjetrac-v023-validation/fixture-checks/synthetic",
+        "--frames",
+        "120"
+      ],
+      "external_seconds": 0.6321337919980579,
+      "exit_code": 0,
+      "stdout": "{\n  \"version\": \"0.2.3\",\n  \"input\": \"/private/tmp/hejjetrac-v023-validation/fixture-checks/synthetic/sphere.y4m\",\n  \"video\": {\n    \"width\": 160,\n    \"height\": 160,\n    \"fps\": 60.0,\n    \"codec\": \"y4m/mono\",\n    \"duration_ms\": null\n  },\n  \"effective_config\": {\n    \"spherical_map\": null,\n    \"width\": 160,\n    \"height\": 160,\n    \"vfov_deg\": 45.0,\n    \"fisheye\": false,\n    \"sphere\": {\n      \"centre\": [\n        0.0,\n        0.0,\n        1.0\n      ],\n      \"angular_radius\": 0.29\n    },\n    \"camera_to_lab\": [\n      0.0,\n      0.0,\n      0.0\n    ],\n    \"legacy_roi_coordinates\": false,\n    \"ignore_polygons\": [],\n    \"max_rotation\": 0.35,\n    \"max_error\": 0.16,\n    \"sample_stride\": 2,\n    \"iterations\": 20,\n    \"source\": \"sphere.y4m\"\n  },\n  \"frames\": 120,\n  \"tracked\": 119,\n  \"relocalized\": 0,\n  \"rejected\": 0,\n  \"initializing\": 1,\n  \"mean_error\": 0.016496092142655572,\n  \"max_error\": 0.017650473980493932,\n  \"wall_seconds\": 0.206797041,\n  \"end_to_end_fps\": 580.2790959663683,\n  \"tracking_fps\": 630.5871764516972,\n  \"input_duration_ms\": 1983.3333333333333,\n  \"final_position\": [\n    -1.185437068437707,\n    -0.39796415863396967\n  ],\n  \"final_heading\": 5.7576452643299385,\n  \"estimator\": \"perspective pairwise robust photometric SO(3)\",\n  \"error_metric\": \"normalized luma RMSE (0..1)\",\n  \"warnings\": []\n}\n{\n  \"expected_delta\": [\n    0.006,\n    -0.009,\n    0.004\n  ],\n  \"passed\": true,\n  \"rotation_component_rmse_rad\": 0.0003040496948914138,\n  \"tolerance_rad\": 0.003\n}\n",
+      "stderr": "100 frames \u00b7 0 rejected\n"
+    },
+    {
+      "command": [
+        "/private/tmp/hejjetrac-fix-target/release/fictrac",
+        "track",
+        "--config",
+        "/private/tmp/hejjetrac-v023-release/examples/benchmark/config.txt",
+        "--input",
+        "/private/tmp/hejjetrac-v023-release/examples/sample.mp4",
+        "--output",
+        "/private/tmp/hejjetrac-v023-validation/fixture-checks/sample"
+      ],
+      "external_seconds": 0.7423008750010922,
+      "exit_code": 0,
+      "stdout": "{\n  \"version\": \"0.2.3\",\n  \"input\": \"/private/tmp/hejjetrac-v023-release/examples/sample.mp4\",\n  \"video\": {\n    \"width\": 384,\n    \"height\": 288,\n    \"fps\": null,\n    \"codec\": \"h264 (pure Rust)\",\n    \"duration_ms\": 10000.0\n  },\n  \"effective_config\": {\n    \"spherical_map\": {\n      \"resilient\": true,\n      \"global_search\": false,\n      \"max_bad_frames\": -1,\n      \"global_evaluations\": 100000,\n      \"channel\": null,\n      \"quality\": 6,\n      \"threshold_ratio\": 1.25,\n      \"threshold_window\": 0.25,\n      \"max_evaluations\": 50,\n      \"tolerance\": 0.001,\n      \"max_error\": -1.0\n    },\n    \"width\": 384,\n    \"height\": 288,\n    \"vfov_deg\": 45.0,\n    \"fisheye\": false,\n    \"sphere\": {\n      \"centre\": [\n        -0.22938965658632982,\n        0.0999680947095317,\n        0.9681873607372448\n      ],\n      \"angular_radius\": 0.12481674439688986\n    },\n    \"camera_to_lab\": [\n      0.722445,\n      -0.131314,\n      -0.460878\n    ],\n    \"legacy_roi_coordinates\": true,\n    \"ignore_polygons\": [\n      [\n        [\n          96.0,\n          156.0\n        ],\n        [\n          113.0,\n          147.0\n        ],\n        [\n          106.0,\n          128.0\n        ],\n        [\n          82.0,\n          130.0\n        ],\n        [\n          81.0,\n          150.0\n        ]\n      ],\n      [\n        [\n          71.0,\n          213.0\n        ],\n        [\n          90.0,\n          219.0\n        ],\n        [\n          114.0,\n          218.0\n        ],\n        [\n          135.0,\n          211.0\n        ],\n        [\n          154.0,\n          196.0\n        ],\n        [\n          150.0,\n          217.0\n        ],\n        [\n          121.0,\n          228.0\n        ],\n        [\n          99.0,\n          234.0\n        ],\n        [\n          75.0,\n          225.0\n        ]\n      ]\n    ],\n    \"max_rotation\": 0.35,\n    \"max_error\": 0.16,\n    \"sample_stride\": 2,\n    \"iterations\": 20,\n    \"source\": \"sample.mp4\"\n  },\n  \"frames\": 300,\n  \"tracked\": 299,\n  \"relocalized\": 0,\n  \"rejected\": 0,\n  \"initializing\": 1,\n  \"mean_error\": 6621.574210432903,\n  \"max_error\": 8531.321104876995,\n  \"wall_seconds\": 0.736757583,\n  \"end_to_end_fps\": 407.1895653634555,\n  \"tracking_fps\": 2063.2878187400534,\n  \"input_duration_ms\": 9966.666666666666,\n  \"final_position\": [\n    3.641684896510073,\n    -2.6467681123615514\n  ],\n  \"final_heading\": 6.175048949743612,\n  \"estimator\": \"accumulated spherical map / pure Rust BOBYQA\",\n  \"error_metric\": \"mean squared binary intensity (0..65025)\",\n  \"warnings\": []\n}\n",
+      "stderr": "100 frames \u00b7 0 rejected\n200 frames \u00b7 0 rejected\n300 frames \u00b7 0 rejected\n"
+    },
+    {
+      "command": [
+        "/private/tmp/hejjetrac-fix-target/release/fictrac",
+        "compare",
+        "--reference",
+        "/private/tmp/hejjetrac-v023-release/examples/benchmark/upstream.dat",
+        "--candidate",
+        "/private/tmp/hejjetrac-v023-validation/fixture-checks/sample/tracking.dat",
+        "--report",
+        "/private/tmp/hejjetrac-v023-validation/fixture-checks/comparison.json"
+      ],
+      "external_seconds": 0.005776166999567067,
+      "exit_code": 0,
+      "stdout": "{\n  \"comparison\": {\n    \"candidate_final_position\": [\n      3.64168489651,\n      -2.646768112362\n    ],\n    \"endpoint_error_sphere_rad\": 0.041252009416150356,\n    \"frames\": 300,\n    \"heading_rmse_rad\": 0.013651430288528159,\n    \"path_point_rmse_sphere_rad\": 0.025593841799898084,\n    \"reference_final_position\": [\n      3.674266189723,\n      -2.6214661833162\n    ],\n    \"rotation_component_rmse_rad\": [\n      0.009475898823054007,\n      0.010924711781146961,\n      0.01781987973491448\n    ],\n    \"timestamp_max_error_ms\": 3.456079866737127e-11\n  },\n  \"limits\": {\n    \"heading_rmse_rad\": 0.025,\n    \"path_rmse_sphere_rad\": 0.075,\n    \"rotation_component_rmse_rad\": 0.02\n  },\n  \"passed\": true\n}\n",
+      "stderr": ""
+    }
+  ],
+  "sample_summary": {
+    "version": "0.2.3",
+    "input": "/private/tmp/hejjetrac-v023-release/examples/sample.mp4",
+    "video": {
+      "width": 384,
+      "height": 288,
+      "fps": null,
+      "codec": "h264 (pure Rust)",
+      "duration_ms": 10000.0
+    },
+    "effective_config": {
+      "spherical_map": {
+        "resilient": true,
+        "global_search": false,
+        "max_bad_frames": -1,
+        "global_evaluations": 100000,
+        "channel": null,
+        "quality": 6,
+        "threshold_ratio": 1.25,
+        "threshold_window": 0.25,
+        "max_evaluations": 50,
+        "tolerance": 0.001,
+        "max_error": -1.0
+      },
+      "width": 384,
+      "height": 288,
+      "vfov_deg": 45.0,
+      "fisheye": false,
+      "sphere": {
+        "centre": [
+          -0.22938965658632982,
+          0.0999680947095317,
+          0.9681873607372448
+        ],
+        "angular_radius": 0.12481674439688986
+      },
+      "camera_to_lab": [
+        0.722445,
+        -0.131314,
+        -0.460878
+      ],
+      "legacy_roi_coordinates": true,
+      "ignore_polygons": [
+        [
+          [
+            96.0,
+            156.0
+          ],
+          [
+            113.0,
+            147.0
+          ],
+          [
+            106.0,
+            128.0
+          ],
+          [
+            82.0,
+            130.0
+          ],
+          [
+            81.0,
+            150.0
+          ]
+        ],
+        [
+          [
+            71.0,
+            213.0
+          ],
+          [
+            90.0,
+            219.0
+          ],
+          [
+            114.0,
+            218.0
+          ],
+          [
+            135.0,
+            211.0
+          ],
+          [
+            154.0,
+            196.0
+          ],
+          [
+            150.0,
+            217.0
+          ],
+          [
+            121.0,
+            228.0
+          ],
+          [
+            99.0,
+            234.0
+          ],
+          [
+            75.0,
+            225.0
+          ]
+        ]
+      ],
+      "max_rotation": 0.35,
+      "max_error": 0.16,
+      "sample_stride": 2,
+      "iterations": 20,
+      "source": "sample.mp4"
+    },
+    "frames": 300,
+    "tracked": 299,
+    "relocalized": 0,
+    "rejected": 0,
+    "initializing": 1,
+    "mean_error": 6621.574210432903,
+    "max_error": 8531.321104876995,
+    "wall_seconds": 0.736757583,
+    "end_to_end_fps": 407.1895653634555,
+    "tracking_fps": 2063.2878187400534,
+    "input_duration_ms": 9966.666666666666,
+    "final_position": [
+      3.641684896510073,
+      -2.6467681123615514
+    ],
+    "final_heading": 6.175048949743612,
+    "estimator": "accumulated spherical map / pure Rust BOBYQA",
+    "error_metric": "mean squared binary intensity (0..65025)",
+    "warnings": []
+  },
+  "comparison": {
+    "comparison": {
+      "candidate_final_position": [
+        3.64168489651,
+        -2.646768112362
+      ],
+      "endpoint_error_sphere_rad": 0.041252009416150356,
+      "frames": 300,
+      "heading_rmse_rad": 0.013651430288528159,
+      "path_point_rmse_sphere_rad": 0.025593841799898084,
+      "reference_final_position": [
+        3.674266189723,
+        -2.6214661833162
+      ],
+      "rotation_component_rmse_rad": [
+        0.009475898823054007,
+        0.010924711781146961,
+        0.01781987973491448
+      ],
+      "timestamp_max_error_ms": 3.456079866737127e-11
+    },
+    "limits": {
+      "heading_rmse_rad": 0.025,
+      "path_rmse_sphere_rad": 0.075,
+      "rotation_component_rmse_rad": 0.02
+    },
+    "passed": true
+  }
+}

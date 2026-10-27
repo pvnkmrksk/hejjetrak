@@ -65,9 +65,12 @@ Keep a saved config for each physical rig, with distinct output ports. Bundled `
 
 The current VR1–VR4 files use the supplied 2026-10-26 rig calibrations and
 explicit 320×240, 100 FPS capture, matching that setup's modified C++ capture
-adapter. Their camera IDs are 0/2/4/6 and UDP ports 1111–1114 feed the existing
-republisher; direct ZMQ is disabled in these files. The camera chooser preserves
-an active preview when a camera is already in use and identifies its owning rig.
+adapter. Their camera IDs are 0/2/4/6, UDP ports are 1111–1114 and direct ZMQ
+ports are 9871–9874. When using the existing Python republishers, launch
+`./scripts/run_four_bridged.sh`: it disables direct ZMQ in temporary calibrated
+copies, leaving your saved files unchanged. [Connection setup](docs/matrex-vr.md).
+The camera chooser preserves an active preview when a camera is already in use
+and identifies its owning rig.
 
 Display FPS controls preview updates independently of processing. The recording
 speed/size control selects the configured codec, faster MJPEG, or fastest

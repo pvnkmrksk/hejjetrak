@@ -1,0 +1,2650 @@
+{
+  "format": 1,
+  "date": "2026-10-26",
+  "scope": "Unreleased Linux compatibility preflight; native Ubuntu userspace in containers on GitHub Linux hosts, software rendering only. No physical V4L camera, GPU hardware or experimental Mac capture validation.",
+  "source_commit": "86b71d7d3f53e8a468c4728513479d07a2d3543a",
+  "source_branch": "codex/ubuntu22-compat-ci",
+  "source_snapshot": {
+    "branch": "codex/ubuntu22-compat-ci",
+    "commit": "86b71d7d3f53e8a468c4728513479d07a2d3543a",
+    "parent": "0c62ede732deab77b1d095e278e099b16ee8d5b5",
+    "source_sha256": {
+      ".github/workflows/ci.yml": "b5eb0d9bf068e8acbdf6ec5cbd142cdfdc61b8a01d9923c2a0fa63e4cdd189e1",
+      ".github/workflows/release.yml": "476b402e7afdac7389db5c46326586227384a7b55511028a028ce5584d1a1e39",
+      "README.md": "0f6df6377d38f9cd3f415834e13eac8801ad96fdc240c85b4d5731b173f72258",
+      "book/src/install.md": "58bd15097574e8895298752157653e885739a69c92b8478ffb70af3c662e158d",
+      "book/src/development.md": "d75d23b12463ee1540d7b6f49ee74f83e47ddce0bec65a671b9c6b2c18b1d160",
+      "scripts/package.py": "c2ae4a60c64634d34524aeb527b34d4761286e1b6b965f0cb7e6bcfcbbec942a",
+      "scripts/test_package.py": "39c562630daf57d76c5385b7f3da821933cf4829514213a127ec891b6ed2f25c",
+      "scripts/test_linux_package.py": "12baa42acfd733b64158a98e6b4ee9bcc80a8a870a3262ee9f83e49aa27978ab",
+      "site/index.html": "69b33e39b525053bf6b187c09d03cea2c7b0ef35e203c69bed5f3a54b6910fb1",
+      "Cargo.toml": "4b6a4ff4f945c63391d4ce4ac466214ea0c01ef6cf07bfc941051cec18baf5c7",
+      "Cargo.lock": "1a849d5803018e041b88a5e327cfe92a4132f53094bfb8d24c3f539f72856dfa",
+      "crates/fictrac-camera/Cargo.toml": "74c8d3b6f0493c667fe29c2b60371e044cac6823b1b46bfd07a7b1adfeeddf93",
+      "crates/fictrac-camera/src/lib.rs": "50c6b4e9c254b8281afc655d9a567d3a9c8738060c339757a18af4c48e23eeeb",
+      "crates/fictrac-camera/src/native.rs": "6d3ccce13e6d41173e6649b59166e43fee640fffbcf1c32d4547fdf56ef79c93",
+      "crates/fictrac-camera/src/jpeg.rs": "d7163dacc355581991295c779e40e2e013d01377a0eff3582eb5a29d17fb7a1c",
+      "crates/fictrac-camera/src/selection.rs": "b4f09522240eaefd7214b18c2399c4b631888f021658f9ba9ba73138c7e00c95",
+      "crates/fictrac-camera/examples/camera_probe.rs": "cfb6dd25cfa4d6f4332a8c18b11f39a9433414db53e3962af781f2a25b210f02",
+      "crates/fictrac-core/src/resilience.rs": "7397232a7ed84094b7eb11b75bfc568b8b2de129ef0fa9ee11b08ed8513abc37",
+      "crates/fictrac-core/src/spherical.rs": "164294a2195b6f4045ff9a2440efb5fbf44fd3c5c4f0dcb092ab508c7f8311f8",
+      "crates/fictrac-core/tests/recovery.rs": "5423bad88357bc2162cf74a2302584e0903af80082ae6600ce045715fecf29c4",
+      "docs/recovery.md": "b47c4b82958dfe1511c74ec69cd66e36d580f2d778098abc29adb76d1dfc7907",
+      "docs/benchmarks/fast-motion-recovery-20261026.json": "21415033485db3699df7c79a0c0f6516e12d3a085d3c54d49b605e229494b0d3",
+      "THIRD_PARTY.md": "3c2396c9dda5c786bee10f63372d3db16b56727760d7baaa7fcf6a55aebada2e",
+      "docs/camera-controls.md": "9db85886f28d6e646498d97999c82f918c091f7e1e89c5fc457d4090e693e6e5",
+      "apps/fictrac-desktop/src/runtime.rs": "b77b0ee715687f0790a326a6ee2773bd681d3d112804913ea44a228e9affa407",
+      "vendor/nokhwa-bindings-linux/Cargo.toml": "9a826baaede69e433649f35a0efb988610988afa915fb003426acf60fb83c6fd",
+      "vendor/nokhwa-bindings-linux/Cargo.toml.orig": "a2fc89448900767df3bf28ee102b3a152d1d1e21e3a6ebbe624a11db3d1d3097",
+      "vendor/nokhwa-bindings-linux/HEJJETRAK_PATCHES.md": "2a59fdf01870194a1e2d6281d462242d3c854c2349edadd497411e42e9144fb5",
+      "vendor/nokhwa-bindings-linux/LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "vendor/nokhwa-bindings-linux/README.md": "eec18a425e14e83eefbb06324fcc41d260870d4a5d657b7cedbe8b14b2e52a69",
+      "vendor/nokhwa-bindings-linux/src/lib.rs": "a1ea7fc97ac55aa382ea6b7a10ed808c85cfe27cee992b08dd82ddf11e0c835c"
+    },
+    "changed_paths": [
+      ".github/workflows/ci.yml",
+      ".github/workflows/release.yml",
+      "Cargo.lock",
+      "Cargo.toml",
+      "THIRD_PARTY.md",
+      "apps/fictrac-desktop/src/runtime.rs",
+      "crates/fictrac-camera/Cargo.toml",
+      "crates/fictrac-camera/examples/camera_probe.rs",
+      "crates/fictrac-camera/src/jpeg.rs",
+      "crates/fictrac-camera/src/lib.rs",
+      "crates/fictrac-camera/src/native.rs",
+      "crates/fictrac-camera/src/selection.rs",
+      "crates/fictrac-core/src/resilience.rs",
+      "crates/fictrac-core/src/spherical.rs",
+      "crates/fictrac-core/tests/recovery.rs",
+      "docs/benchmarks/fast-motion-recovery-20261026.json",
+      "docs/camera-controls.md",
+      "docs/recovery.md",
+      "scripts/test_linux_package.py",
+      "site/index.html",
+      "vendor/nokhwa-bindings-linux/Cargo.toml",
+      "vendor/nokhwa-bindings-linux/Cargo.toml.orig",
+      "vendor/nokhwa-bindings-linux/HEJJETRAK_PATCHES.md",
+      "vendor/nokhwa-bindings-linux/LICENSE",
+      "vendor/nokhwa-bindings-linux/README.md",
+      "vendor/nokhwa-bindings-linux/src/lib.rs"
+    ],
+    "Mac_camera_source": "unchanged from 27476386d07ff8b4dcb46cb2cd57fecd14e749d7"
+  },
+  "before": {
+    "release": "v0.1.4",
+    "asset": "hejjetrac-linux-amd64.deb",
+    "sha256": "9800f877aa2a0370c398ff7b56182548aac08a360e316328cb8c776c92766113",
+    "control": "Package: hejjetrak\nVersion: 0.1.4\nArchitecture: amd64\nSection: science\nPriority: optional\nMaintainer: Pavan Kumar Kaushik <noreply@github.com>\nInstalled-Size: 47970\nDepends: libc6 (>= 2.39), libgcc-s1 (>= 4.2), libudev1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libegl1, libgles2, libvulkan1\nRecommends: xdg-desktop-portal, xdg-desktop-portal-gtk | xdg-desktop-portal-kde\nHomepage: https://github.com/pvnkmrksk/hejjetrak\nDescription: Native spherical motion tracking compatible with FicTrac\n Pure Rust numerical engine, native desktop and command-line/agent interfaces.\n Includes sample video, calibration examples and dependency notices.\n"
+  },
+  "compiler_log_lines": [
+    "rustc 1.99.1 (58cf8f9c3 2026-10-13)"
+  ],
+  "native_test_counts": {
+    "Run cargo test --workspace --locked": {
+      "passed": 214,
+      "failed": 0,
+      "ignored": 0,
+      "suites": 27
+    },
+    "Patched Linux camera adapter regression": {
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "suites": 1
+    },
+    "Patched Rust decoder regression suite": {
+      "passed": 1353,
+      "failed": 0,
+      "ignored": 0,
+      "suites": 1
+    }
+  },
+  "workflows": [
+    {
+      "conclusion": "success",
+      "headSha": "86b71d7d3f53e8a468c4728513479d07a2d3543a",
+      "jobs": [
+        {
+          "completedAt": "2026-10-26T13:42:22Z",
+          "conclusion": "success",
+          "databaseId": 121599843001,
+          "name": "package (ubuntu-22.04)",
+          "startedAt": "2026-10-26T13:28:55Z",
+          "status": "completed",
+          "steps": [
+            {
+              "completedAt": "2026-10-26T13:28:56Z",
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "startedAt": "2026-10-26T13:28:55Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:01Z",
+              "conclusion": "success",
+              "name": "Initialize containers",
+              "number": 2,
+              "startedAt": "2026-10-26T13:28:56Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:24Z",
+              "conclusion": "success",
+              "name": "Ubuntu 22.04 build tools and native desktop libraries",
+              "number": 3,
+              "startedAt": "2026-10-26T13:29:01Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:26Z",
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 4,
+              "startedAt": "2026-10-26T13:29:24Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:26Z",
+              "conclusion": "success",
+              "name": "Trust the checked-out workspace inside Linux containers",
+              "number": 5,
+              "startedAt": "2026-10-26T13:29:26Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:26Z",
+              "conclusion": "skipped",
+              "name": "Verify release tag matches the packaged source",
+              "number": 6,
+              "startedAt": "2026-10-26T13:29:26Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:26Z",
+              "conclusion": "success",
+              "name": "Record packaged source revision",
+              "number": 7,
+              "startedAt": "2026-10-26T13:29:26Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:36Z",
+              "conclusion": "success",
+              "name": "Run dtolnay/rust-toolchain@stable",
+              "number": 8,
+              "startedAt": "2026-10-26T13:29:26Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:36Z",
+              "conclusion": "skipped",
+              "name": "Portable Windows runtime linkage",
+              "number": 9,
+              "startedAt": "2026-10-26T13:29:36Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:36Z",
+              "conclusion": "success",
+              "name": "Run cargo fmt --all -- --check",
+              "number": 10,
+              "startedAt": "2026-10-26T13:29:36Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:30:43Z",
+              "conclusion": "success",
+              "name": "Run cargo clippy --workspace --all-targets --locked -- -D warnings",
+              "number": 11,
+              "startedAt": "2026-10-26T13:29:36Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:36:33Z",
+              "conclusion": "success",
+              "name": "Run cargo test --workspace --locked",
+              "number": 12,
+              "startedAt": "2026-10-26T13:30:43Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:36:42Z",
+              "conclusion": "success",
+              "name": "Patched Linux camera adapter regression",
+              "number": 13,
+              "startedAt": "2026-10-26T13:36:33Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:37:05Z",
+              "conclusion": "success",
+              "name": "Patched Rust decoder regression suite",
+              "number": 14,
+              "startedAt": "2026-10-26T13:36:42Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:40:49Z",
+              "conclusion": "success",
+              "name": "Run cargo build --workspace --release --locked",
+              "number": 15,
+              "startedAt": "2026-10-26T13:37:05Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:41:53Z",
+              "conclusion": "success",
+              "name": "Run cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120",
+              "number": 16,
+              "startedAt": "2026-10-26T13:40:49Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:41:53Z",
+              "conclusion": "skipped",
+              "name": "Verify Windows redistributable independence",
+              "number": 17,
+              "startedAt": "2026-10-26T13:41:53Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:41:58Z",
+              "conclusion": "success",
+              "name": "Run cargo vendor --locked third-party-source",
+              "number": 18,
+              "startedAt": "2026-10-26T13:41:53Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:09Z",
+              "conclusion": "success",
+              "name": "Run python scripts/package.py",
+              "number": 19,
+              "startedAt": "2026-10-26T13:41:58Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:12Z",
+              "conclusion": "success",
+              "name": "Verify Linux installer metadata and extracted payload",
+              "number": 20,
+              "startedAt": "2026-10-26T13:42:09Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:15Z",
+              "conclusion": "success",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 21,
+              "startedAt": "2026-10-26T13:42:12Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:15Z",
+              "conclusion": "skipped",
+              "name": "Attach platform archive to release",
+              "number": 22,
+              "startedAt": "2026-10-26T13:42:15Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:15Z",
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4",
+              "number": 43,
+              "startedAt": "2026-10-26T13:42:15Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:20Z",
+              "conclusion": "success",
+              "name": "Stop containers",
+              "number": 44,
+              "startedAt": "2026-10-26T13:42:15Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:20Z",
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 45,
+              "startedAt": "2026-10-26T13:42:20Z",
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40330930037/job/121599843001"
+        },
+        {
+          "completedAt": "2026-10-26T13:43:48Z",
+          "conclusion": "success",
+          "databaseId": 121606778681,
+          "name": "Linux package runtime (Ubuntu 24.04)",
+          "startedAt": "2026-10-26T13:42:24Z",
+          "status": "completed",
+          "steps": [
+            {
+              "completedAt": "2026-10-26T13:42:26Z",
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "startedAt": "2026-10-26T13:42:25Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:31Z",
+              "conclusion": "success",
+              "name": "Initialize containers",
+              "number": 2,
+              "startedAt": "2026-10-26T13:42:26Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:53Z",
+              "conclusion": "success",
+              "name": "Native runtime, software graphics and installer tools",
+              "number": 3,
+              "startedAt": "2026-10-26T13:42:31Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:55Z",
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 4,
+              "startedAt": "2026-10-26T13:42:53Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:57Z",
+              "conclusion": "success",
+              "name": "Run actions/download-artifact@v4",
+              "number": 5,
+              "startedAt": "2026-10-26T13:42:55Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:43:42Z",
+              "conclusion": "success",
+              "name": "Install actual Debian package and verify the same portable build",
+              "number": 6,
+              "startedAt": "2026-10-26T13:42:57Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:43:44Z",
+              "conclusion": "success",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 7,
+              "startedAt": "2026-10-26T13:43:42Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:43:44Z",
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4",
+              "number": 13,
+              "startedAt": "2026-10-26T13:43:44Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:43:46Z",
+              "conclusion": "success",
+              "name": "Stop containers",
+              "number": 14,
+              "startedAt": "2026-10-26T13:43:44Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:43:46Z",
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 15,
+              "startedAt": "2026-10-26T13:43:46Z",
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40330930037/job/121606778681"
+        },
+        {
+          "completedAt": "2026-10-26T13:43:55Z",
+          "conclusion": "success",
+          "databaseId": 121606778807,
+          "name": "Linux package runtime (Ubuntu 22.04)",
+          "startedAt": "2026-10-26T13:42:24Z",
+          "status": "completed",
+          "steps": [
+            {
+              "completedAt": "2026-10-26T13:42:26Z",
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "startedAt": "2026-10-26T13:42:25Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:31Z",
+              "conclusion": "success",
+              "name": "Initialize containers",
+              "number": 2,
+              "startedAt": "2026-10-26T13:42:26Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:50Z",
+              "conclusion": "success",
+              "name": "Native runtime, software graphics and installer tools",
+              "number": 3,
+              "startedAt": "2026-10-26T13:42:31Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:52Z",
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 4,
+              "startedAt": "2026-10-26T13:42:50Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:59Z",
+              "conclusion": "success",
+              "name": "Run actions/download-artifact@v4",
+              "number": 5,
+              "startedAt": "2026-10-26T13:42:52Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:43:50Z",
+              "conclusion": "success",
+              "name": "Install actual Debian package and verify the same portable build",
+              "number": 6,
+              "startedAt": "2026-10-26T13:42:59Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:43:51Z",
+              "conclusion": "success",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 7,
+              "startedAt": "2026-10-26T13:43:50Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:43:52Z",
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4",
+              "number": 13,
+              "startedAt": "2026-10-26T13:43:51Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:43:54Z",
+              "conclusion": "success",
+              "name": "Stop containers",
+              "number": 14,
+              "startedAt": "2026-10-26T13:43:52Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:43:54Z",
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 15,
+              "startedAt": "2026-10-26T13:43:54Z",
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40330930037/job/121606778807"
+        }
+      ],
+      "status": "completed",
+      "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40330930037"
+    },
+    {
+      "conclusion": "success",
+      "headSha": "86b71d7d3f53e8a468c4728513479d07a2d3543a",
+      "jobs": [
+        {
+          "completedAt": "2026-10-26T13:42:17Z",
+          "conclusion": "success",
+          "databaseId": 121599836539,
+          "name": "test (ubuntu-24.04, ubuntu-latest, ubuntu:24.04)",
+          "startedAt": "2026-10-26T13:28:54Z",
+          "status": "completed",
+          "steps": [
+            {
+              "completedAt": "2026-10-26T13:28:56Z",
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "startedAt": "2026-10-26T13:28:55Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:28:58Z",
+              "conclusion": "success",
+              "name": "Initialize containers",
+              "number": 2,
+              "startedAt": "2026-10-26T13:28:56Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:16Z",
+              "conclusion": "success",
+              "name": "Linux build tools and native desktop libraries",
+              "number": 3,
+              "startedAt": "2026-10-26T13:28:58Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:17Z",
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 4,
+              "startedAt": "2026-10-26T13:29:16Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:17Z",
+              "conclusion": "success",
+              "name": "Trust the checked-out workspace inside Linux containers",
+              "number": 5,
+              "startedAt": "2026-10-26T13:29:17Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:27Z",
+              "conclusion": "success",
+              "name": "Run dtolnay/rust-toolchain@stable",
+              "number": 6,
+              "startedAt": "2026-10-26T13:29:17Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:28Z",
+              "conclusion": "success",
+              "name": "Run cargo fmt --all -- --check",
+              "number": 7,
+              "startedAt": "2026-10-26T13:29:27Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:30:33Z",
+              "conclusion": "success",
+              "name": "Run cargo clippy --workspace --all-targets --locked -- -D warnings",
+              "number": 8,
+              "startedAt": "2026-10-26T13:29:28Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:36:19Z",
+              "conclusion": "success",
+              "name": "Run cargo test --workspace --locked",
+              "number": 9,
+              "startedAt": "2026-10-26T13:30:33Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:36:28Z",
+              "conclusion": "success",
+              "name": "Patched Linux camera adapter regression",
+              "number": 10,
+              "startedAt": "2026-10-26T13:36:19Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:36:50Z",
+              "conclusion": "success",
+              "name": "Patched Rust decoder regression suite",
+              "number": 11,
+              "startedAt": "2026-10-26T13:36:28Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:40:30Z",
+              "conclusion": "success",
+              "name": "Run cargo build --workspace --release --locked",
+              "number": 12,
+              "startedAt": "2026-10-26T13:36:50Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:41:32Z",
+              "conclusion": "success",
+              "name": "Run cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120",
+              "number": 13,
+              "startedAt": "2026-10-26T13:40:30Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:41:37Z",
+              "conclusion": "success",
+              "name": "Run cargo vendor --locked third-party-source",
+              "number": 14,
+              "startedAt": "2026-10-26T13:41:32Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:14Z",
+              "conclusion": "success",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 15,
+              "startedAt": "2026-10-26T13:41:37Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:14Z",
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4",
+              "number": 29,
+              "startedAt": "2026-10-26T13:42:14Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:16Z",
+              "conclusion": "success",
+              "name": "Stop containers",
+              "number": 30,
+              "startedAt": "2026-10-26T13:42:14Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:16Z",
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 31,
+              "startedAt": "2026-10-26T13:42:16Z",
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40330929818/job/121599836539"
+        },
+        {
+          "completedAt": "2026-10-26T13:42:52Z",
+          "conclusion": "success",
+          "databaseId": 121599836942,
+          "name": "test (macos-latest, macos-latest)",
+          "startedAt": "2026-10-26T13:28:55Z",
+          "status": "completed",
+          "steps": [
+            {
+              "completedAt": "2026-10-26T13:28:56Z",
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "startedAt": "2026-10-26T13:28:55Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:28:56Z",
+              "conclusion": "skipped",
+              "name": "Linux build tools and native desktop libraries",
+              "number": 2,
+              "startedAt": "2026-10-26T13:28:56Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:28:59Z",
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 3,
+              "startedAt": "2026-10-26T13:28:56Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:28:59Z",
+              "conclusion": "skipped",
+              "name": "Trust the checked-out workspace inside Linux containers",
+              "number": 4,
+              "startedAt": "2026-10-26T13:28:59Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:08Z",
+              "conclusion": "success",
+              "name": "Run dtolnay/rust-toolchain@stable",
+              "number": 5,
+              "startedAt": "2026-10-26T13:28:59Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:09Z",
+              "conclusion": "success",
+              "name": "Run cargo fmt --all -- --check",
+              "number": 6,
+              "startedAt": "2026-10-26T13:29:08Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:30:15Z",
+              "conclusion": "success",
+              "name": "Run cargo clippy --workspace --all-targets --locked -- -D warnings",
+              "number": 7,
+              "startedAt": "2026-10-26T13:29:09Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:36:13Z",
+              "conclusion": "success",
+              "name": "Run cargo test --workspace --locked",
+              "number": 8,
+              "startedAt": "2026-10-26T13:30:15Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:36:13Z",
+              "conclusion": "skipped",
+              "name": "Patched Linux camera adapter regression",
+              "number": 9,
+              "startedAt": "2026-10-26T13:36:13Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:36:47Z",
+              "conclusion": "success",
+              "name": "Patched Rust decoder regression suite",
+              "number": 10,
+              "startedAt": "2026-10-26T13:36:13Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:40:33Z",
+              "conclusion": "success",
+              "name": "Run cargo build --workspace --release --locked",
+              "number": 11,
+              "startedAt": "2026-10-26T13:36:47Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:41:46Z",
+              "conclusion": "success",
+              "name": "Run cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120",
+              "number": 12,
+              "startedAt": "2026-10-26T13:40:33Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:05Z",
+              "conclusion": "success",
+              "name": "Run cargo vendor --locked third-party-source",
+              "number": 13,
+              "startedAt": "2026-10-26T13:41:46Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:46Z",
+              "conclusion": "success",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 14,
+              "startedAt": "2026-10-26T13:42:05Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:47Z",
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4",
+              "number": 28,
+              "startedAt": "2026-10-26T13:42:46Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:49Z",
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 29,
+              "startedAt": "2026-10-26T13:42:47Z",
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40330929818/job/121599836942"
+        },
+        {
+          "completedAt": "2026-10-26T13:46:54Z",
+          "conclusion": "success",
+          "databaseId": 121599837015,
+          "name": "test (windows-latest, windows-latest)",
+          "startedAt": "2026-10-26T13:28:54Z",
+          "status": "completed",
+          "steps": [
+            {
+              "completedAt": "2026-10-26T13:28:57Z",
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "startedAt": "2026-10-26T13:28:55Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:28:57Z",
+              "conclusion": "skipped",
+              "name": "Linux build tools and native desktop libraries",
+              "number": 2,
+              "startedAt": "2026-10-26T13:28:57Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:04Z",
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 3,
+              "startedAt": "2026-10-26T13:28:57Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:04Z",
+              "conclusion": "skipped",
+              "name": "Trust the checked-out workspace inside Linux containers",
+              "number": 4,
+              "startedAt": "2026-10-26T13:29:04Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:13Z",
+              "conclusion": "success",
+              "name": "Run dtolnay/rust-toolchain@stable",
+              "number": 5,
+              "startedAt": "2026-10-26T13:29:04Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:17Z",
+              "conclusion": "success",
+              "name": "Run cargo fmt --all -- --check",
+              "number": 6,
+              "startedAt": "2026-10-26T13:29:13Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:31:09Z",
+              "conclusion": "success",
+              "name": "Run cargo clippy --workspace --all-targets --locked -- -D warnings",
+              "number": 7,
+              "startedAt": "2026-10-26T13:29:17Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:37:46Z",
+              "conclusion": "success",
+              "name": "Run cargo test --workspace --locked",
+              "number": 8,
+              "startedAt": "2026-10-26T13:31:09Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:37:46Z",
+              "conclusion": "skipped",
+              "name": "Patched Linux camera adapter regression",
+              "number": 9,
+              "startedAt": "2026-10-26T13:37:46Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:38:28Z",
+              "conclusion": "success",
+              "name": "Patched Rust decoder regression suite",
+              "number": 10,
+              "startedAt": "2026-10-26T13:37:46Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:43:44Z",
+              "conclusion": "success",
+              "name": "Run cargo build --workspace --release --locked",
+              "number": 11,
+              "startedAt": "2026-10-26T13:38:28Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:45:42Z",
+              "conclusion": "success",
+              "name": "Run cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120",
+              "number": 12,
+              "startedAt": "2026-10-26T13:43:44Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:46:06Z",
+              "conclusion": "success",
+              "name": "Run cargo vendor --locked third-party-source",
+              "number": 13,
+              "startedAt": "2026-10-26T13:45:42Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:46:51Z",
+              "conclusion": "success",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 14,
+              "startedAt": "2026-10-26T13:46:06Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:46:53Z",
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4",
+              "number": 28,
+              "startedAt": "2026-10-26T13:46:51Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:46:53Z",
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 29,
+              "startedAt": "2026-10-26T13:46:53Z",
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40330929818/job/121599837015"
+        },
+        {
+          "completedAt": "2026-10-26T13:42:02Z",
+          "conclusion": "success",
+          "databaseId": 121599837078,
+          "name": "test (ubuntu-22.04, ubuntu-latest, ubuntu:22.04)",
+          "startedAt": "2026-10-26T13:28:54Z",
+          "status": "completed",
+          "steps": [
+            {
+              "completedAt": "2026-10-26T13:28:56Z",
+              "conclusion": "success",
+              "name": "Set up job",
+              "number": 1,
+              "startedAt": "2026-10-26T13:28:55Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:05Z",
+              "conclusion": "success",
+              "name": "Initialize containers",
+              "number": 2,
+              "startedAt": "2026-10-26T13:28:56Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:28Z",
+              "conclusion": "success",
+              "name": "Linux build tools and native desktop libraries",
+              "number": 3,
+              "startedAt": "2026-10-26T13:29:05Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:30Z",
+              "conclusion": "success",
+              "name": "Run actions/checkout@v4",
+              "number": 4,
+              "startedAt": "2026-10-26T13:29:28Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:30Z",
+              "conclusion": "success",
+              "name": "Trust the checked-out workspace inside Linux containers",
+              "number": 5,
+              "startedAt": "2026-10-26T13:29:30Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:41Z",
+              "conclusion": "success",
+              "name": "Run dtolnay/rust-toolchain@stable",
+              "number": 6,
+              "startedAt": "2026-10-26T13:29:30Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:29:41Z",
+              "conclusion": "success",
+              "name": "Run cargo fmt --all -- --check",
+              "number": 7,
+              "startedAt": "2026-10-26T13:29:41Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:30:44Z",
+              "conclusion": "success",
+              "name": "Run cargo clippy --workspace --all-targets --locked -- -D warnings",
+              "number": 8,
+              "startedAt": "2026-10-26T13:29:41Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:35:56Z",
+              "conclusion": "success",
+              "name": "Run cargo test --workspace --locked",
+              "number": 9,
+              "startedAt": "2026-10-26T13:30:44Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:36:04Z",
+              "conclusion": "success",
+              "name": "Patched Linux camera adapter regression",
+              "number": 10,
+              "startedAt": "2026-10-26T13:35:56Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:36:27Z",
+              "conclusion": "success",
+              "name": "Patched Rust decoder regression suite",
+              "number": 11,
+              "startedAt": "2026-10-26T13:36:04Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:40:14Z",
+              "conclusion": "success",
+              "name": "Run cargo build --workspace --release --locked",
+              "number": 12,
+              "startedAt": "2026-10-26T13:36:27Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:41:20Z",
+              "conclusion": "success",
+              "name": "Run cargo run -p fictrac --release --locked -- demo --output ci-demo --frames 120",
+              "number": 13,
+              "startedAt": "2026-10-26T13:40:14Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:41:24Z",
+              "conclusion": "success",
+              "name": "Run cargo vendor --locked third-party-source",
+              "number": 14,
+              "startedAt": "2026-10-26T13:41:20Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:41:58Z",
+              "conclusion": "success",
+              "name": "Run actions/upload-artifact@v4",
+              "number": 15,
+              "startedAt": "2026-10-26T13:41:24Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:41:58Z",
+              "conclusion": "success",
+              "name": "Post Run actions/checkout@v4",
+              "number": 29,
+              "startedAt": "2026-10-26T13:41:58Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:00Z",
+              "conclusion": "success",
+              "name": "Stop containers",
+              "number": 30,
+              "startedAt": "2026-10-26T13:41:58Z",
+              "status": "completed"
+            },
+            {
+              "completedAt": "2026-10-26T13:42:00Z",
+              "conclusion": "success",
+              "name": "Complete job",
+              "number": 31,
+              "startedAt": "2026-10-26T13:42:00Z",
+              "status": "completed"
+            }
+          ],
+          "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40330929818/job/121599837078"
+        }
+      ],
+      "status": "completed",
+      "url": "https://github.com/pvnkmrksk/hejjetrak/actions/runs/40330929818"
+    }
+  ],
+  "runtime_reports": {
+    "ubuntu22": {
+      "distribution": {
+        "NAME": "Ubuntu",
+        "ID": "ubuntu",
+        "PRETTY_NAME": "Ubuntu 22.04.5 LTS",
+        "VERSION_ID": "22.04",
+        "VERSION": "22.04.5 LTS (Jammy Jellyfish)",
+        "VERSION_CODENAME": "jammy",
+        "ID_LIKE": "debian",
+        "HOME_URL": "https://www.ubuntu.com/",
+        "SUPPORT_URL": "https://help.ubuntu.com/",
+        "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
+        "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
+        "UBUNTU_CODENAME": "jammy"
+      },
+      "libc": [
+        "glibc",
+        "2.35"
+      ],
+      "archive_sha256": "91ea2fc29417844515b84cc583fc5a95e768c2a532251e41600aba56b02854d3",
+      "harness_sha256": "12baa42acfd733b64158a98e6b4ee9bcc80a8a870a3262ee9f83e49aa27978ab",
+      "scope": "Actual packaged CLI and software-rendered GUI; no physical V4L camera",
+      "status": "passed",
+      "checks": [
+        {
+          "root": "/usr/lib/hejjetrak",
+          "build": {
+            "name": "Hejj\u00e9Trac",
+            "version": "0.2.1",
+            "platform": "linux",
+            "architecture": "x86_64",
+            "source_commit": "86b71d7d3f53e8a468c4728513479d07a2d3543a",
+            "source_url": "https://github.com/pvnkmrksk/hejjetrak",
+            "binary_hash_boundary": "compiled binaries before application signing",
+            "binaries": [
+              {
+                "name": "hejjetrac",
+                "compiled_sha256": "ddc25b30c1b132ef6639ea1cca40604c0dfb1016542939cfd3608629e1e1b915"
+              },
+              {
+                "name": "hejjetrac-cli",
+                "compiled_sha256": "7d044d6f9a89f00b2da9336ca0ee2df0db69ae91e4cea1cb5d7a0fb60d5c35c4"
+              }
+            ],
+            "linux_abi": {
+              "target_baseline": "Ubuntu 22.04 / glibc 2.35",
+              "glibc_ceiling": "2.35",
+              "binaries": [
+                {
+                  "binary": "hejjetrac",
+                  "required_glibc_versions": [
+                    "2.2.5",
+                    "2.3",
+                    "2.3.2",
+                    "2.3.4",
+                    "2.4",
+                    "2.7",
+                    "2.9",
+                    "2.10",
+                    "2.14",
+                    "2.15",
+                    "2.16",
+                    "2.17",
+                    "2.18",
+                    "2.25",
+                    "2.27",
+                    "2.28",
+                    "2.29",
+                    "2.30",
+                    "2.32",
+                    "2.33",
+                    "2.34",
+                    "2.35"
+                  ],
+                  "maximum_required_glibc": "2.35"
+                },
+                {
+                  "binary": "hejjetrac-cli",
+                  "required_glibc_versions": [
+                    "2.2.5",
+                    "2.3",
+                    "2.3.2",
+                    "2.3.4",
+                    "2.4",
+                    "2.7",
+                    "2.9",
+                    "2.10",
+                    "2.14",
+                    "2.16",
+                    "2.17",
+                    "2.18",
+                    "2.25",
+                    "2.28",
+                    "2.29",
+                    "2.30",
+                    "2.32",
+                    "2.33",
+                    "2.34",
+                    "2.35"
+                  ],
+                  "maximum_required_glibc": "2.35"
+                }
+              ]
+            },
+            "linux_depends": "libc6 (>= 2.35), libgcc-s1 (>= 4.2), libudev1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libegl1, libgles2, libvulkan1"
+          },
+          "sample": {
+            "version": "0.2.1",
+            "input": "/usr/lib/hejjetrak/examples/sample.mp4",
+            "video": {
+              "width": 384,
+              "height": 288,
+              "fps": null,
+              "codec": "h264 (pure Rust)",
+              "duration_ms": 10000.0
+            },
+            "effective_config": {
+              "spherical_map": {
+                "resilient": true,
+                "global_search": false,
+                "max_bad_frames": -1,
+                "global_evaluations": 100000,
+                "channel": null,
+                "quality": 6,
+                "threshold_ratio": 1.25,
+                "threshold_window": 0.25,
+                "max_evaluations": 50,
+                "tolerance": 0.001,
+                "max_error": -1.0
+              },
+              "width": 384,
+              "height": 288,
+              "vfov_deg": 45.0,
+              "fisheye": false,
+              "sphere": {
+                "centre": [
+                  -0.22938965658632302,
+                  0.09996809470952124,
+                  0.9681873607372475
+                ],
+                "angular_radius": 0.12481674439688094
+              },
+              "camera_to_lab": [
+                0.722445,
+                -0.131314,
+                -0.460878
+              ],
+              "legacy_roi_coordinates": true,
+              "ignore_polygons": [
+                [
+                  [
+                    96.0,
+                    156.0
+                  ],
+                  [
+                    113.0,
+                    147.0
+                  ],
+                  [
+                    106.0,
+                    128.0
+                  ],
+                  [
+                    82.0,
+                    130.0
+                  ],
+                  [
+                    81.0,
+                    150.0
+                  ]
+                ],
+                [
+                  [
+                    71.0,
+                    213.0
+                  ],
+                  [
+                    90.0,
+                    219.0
+                  ],
+                  [
+                    114.0,
+                    218.0
+                  ],
+                  [
+                    135.0,
+                    211.0
+                  ],
+                  [
+                    154.0,
+                    196.0
+                  ],
+                  [
+                    150.0,
+                    217.0
+                  ],
+                  [
+                    121.0,
+                    228.0
+                  ],
+                  [
+                    99.0,
+                    234.0
+                  ],
+                  [
+                    75.0,
+                    225.0
+                  ]
+                ]
+              ],
+              "max_rotation": 0.35,
+              "max_error": 0.16,
+              "sample_stride": 2,
+              "iterations": 20,
+              "source": "/usr/lib/hejjetrak/examples/sample.mp4"
+            },
+            "frames": 300,
+            "tracked": 299,
+            "relocalized": 0,
+            "rejected": 0,
+            "initializing": 1,
+            "mean_error": 6621.574210432903,
+            "max_error": 8531.321104876995,
+            "wall_seconds": 1.461835974,
+            "end_to_end_fps": 205.22138279243086,
+            "tracking_fps": 685.6360918564499,
+            "input_duration_ms": 9966.666666666666,
+            "final_position": [
+              3.641684896510083,
+              -2.6467681123615034
+            ],
+            "final_heading": 6.175048949743621,
+            "estimator": "accumulated spherical map / pure Rust BOBYQA",
+            "error_metric": "mean squared binary intensity (0..65025)",
+            "warnings": []
+          },
+          "comparison": {
+            "comparison": {
+              "candidate_final_position": [
+                3.64168489651,
+                -2.646768112362
+              ],
+              "endpoint_error_sphere_rad": 0.041252009416150356,
+              "frames": 300,
+              "heading_rmse_rad": 0.013651430288521045,
+              "path_point_rmse_sphere_rad": 0.025593841799876324,
+              "reference_final_position": [
+                3.674266189723,
+                -2.6214661833162
+              ],
+              "rotation_component_rmse_rad": [
+                0.009475898823054007,
+                0.010924711781146961,
+                0.01781987973491448
+              ],
+              "timestamp_max_error_ms": 3.456079866737127e-11
+            },
+            "limits": {
+              "heading_rmse_rad": 0.025,
+              "path_rmse_sphere_rad": 0.075,
+              "rotation_component_rmse_rad": 0.02
+            },
+            "passed": true
+          },
+          "checks": [
+            {
+              "command": [
+                "/usr/lib/hejjetrak/hejjetrac-cli",
+                "--version"
+              ],
+              "seconds": 0.001846908999993957,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "/usr/lib/hejjetrak/hejjetrac-cli",
+                "config",
+                "--config",
+                "/usr/lib/hejjetrak/examples/benchmark/config.txt",
+                "--output",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/config.txt",
+                "--set",
+                "src_fn=/usr/lib/hejjetrak/examples/sample.mp4",
+                "--set",
+                "zmq_port=-1",
+                "--set",
+                "sock_port=-1",
+                "--set",
+                "save_raw=n",
+                "--set",
+                "save_debug=n",
+                "--set",
+                "do_display=y"
+              ],
+              "seconds": 0.0013909420000004502,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "/usr/lib/hejjetrak/hejjetrac-cli",
+                "inspect",
+                "/usr/lib/hejjetrak/examples/sample.mp4",
+                "--decode"
+              ],
+              "seconds": 1.1027121390000048,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "/usr/lib/hejjetrak/hejjetrac-cli",
+                "track",
+                "--config",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/config.txt",
+                "--input",
+                "/usr/lib/hejjetrak/examples/sample.mp4",
+                "--output",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/tracking"
+              ],
+              "seconds": 1.4639786179999987,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "/usr/lib/hejjetrak/hejjetrac-cli",
+                "compare",
+                "--reference",
+                "/usr/lib/hejjetrak/examples/benchmark/upstream.dat",
+                "--candidate",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/tracking/tracking.dat",
+                "--report",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/comparison.json"
+              ],
+              "seconds": 0.00272268300000178,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "xvfb-run",
+                "-a",
+                "-s",
+                "-screen 0 1280x800x24",
+                "/usr/lib/hejjetrak/hejjetrac",
+                "--window-size",
+                "640x480",
+                "--exit-after",
+                "8",
+                "--state-output",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/native-video.json",
+                "--screenshot",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/native-video.png",
+                "--screenshot-after",
+                "3",
+                "--config",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/config.txt"
+              ],
+              "seconds": 8.166207004,
+              "exit_code": 0,
+              "preview_center": {
+                "bright_fraction": 0.9036384976525822,
+                "dark_fraction": 0.3828345070422535
+              },
+              "frames": 231,
+              "source": "/usr/lib/hejjetrak/examples/sample.mp4",
+              "error": "",
+              "screenshot_size": [
+                640,
+                480
+              ],
+              "screenshot_sha256": "ecc86674050b0940000ce7dbb62d30cf4cbd3599dcdbca11c6281e4f5a1388ac",
+              "visible_sample_pattern": {
+                "dark_fraction": 0.3440234375,
+                "light_fraction": 0.5351171875
+              }
+            }
+          ]
+        },
+        {
+          "root": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64",
+          "build": {
+            "name": "Hejj\u00e9Trac",
+            "version": "0.2.1",
+            "platform": "linux",
+            "architecture": "x86_64",
+            "source_commit": "86b71d7d3f53e8a468c4728513479d07a2d3543a",
+            "source_url": "https://github.com/pvnkmrksk/hejjetrak",
+            "binary_hash_boundary": "compiled binaries before application signing",
+            "binaries": [
+              {
+                "name": "hejjetrac",
+                "compiled_sha256": "ddc25b30c1b132ef6639ea1cca40604c0dfb1016542939cfd3608629e1e1b915"
+              },
+              {
+                "name": "hejjetrac-cli",
+                "compiled_sha256": "7d044d6f9a89f00b2da9336ca0ee2df0db69ae91e4cea1cb5d7a0fb60d5c35c4"
+              }
+            ],
+            "linux_abi": {
+              "target_baseline": "Ubuntu 22.04 / glibc 2.35",
+              "glibc_ceiling": "2.35",
+              "binaries": [
+                {
+                  "binary": "hejjetrac",
+                  "required_glibc_versions": [
+                    "2.2.5",
+                    "2.3",
+                    "2.3.2",
+                    "2.3.4",
+                    "2.4",
+                    "2.7",
+                    "2.9",
+                    "2.10",
+                    "2.14",
+                    "2.15",
+                    "2.16",
+                    "2.17",
+                    "2.18",
+                    "2.25",
+                    "2.27",
+                    "2.28",
+                    "2.29",
+                    "2.30",
+                    "2.32",
+                    "2.33",
+                    "2.34",
+                    "2.35"
+                  ],
+                  "maximum_required_glibc": "2.35"
+                },
+                {
+                  "binary": "hejjetrac-cli",
+                  "required_glibc_versions": [
+                    "2.2.5",
+                    "2.3",
+                    "2.3.2",
+                    "2.3.4",
+                    "2.4",
+                    "2.7",
+                    "2.9",
+                    "2.10",
+                    "2.14",
+                    "2.16",
+                    "2.17",
+                    "2.18",
+                    "2.25",
+                    "2.28",
+                    "2.29",
+                    "2.30",
+                    "2.32",
+                    "2.33",
+                    "2.34",
+                    "2.35"
+                  ],
+                  "maximum_required_glibc": "2.35"
+                }
+              ]
+            },
+            "linux_depends": "libc6 (>= 2.35), libgcc-s1 (>= 4.2), libudev1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libegl1, libgles2, libvulkan1"
+          },
+          "sample": {
+            "version": "0.2.1",
+            "input": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+            "video": {
+              "width": 384,
+              "height": 288,
+              "fps": null,
+              "codec": "h264 (pure Rust)",
+              "duration_ms": 10000.0
+            },
+            "effective_config": {
+              "spherical_map": {
+                "resilient": true,
+                "global_search": false,
+                "max_bad_frames": -1,
+                "global_evaluations": 100000,
+                "channel": null,
+                "quality": 6,
+                "threshold_ratio": 1.25,
+                "threshold_window": 0.25,
+                "max_evaluations": 50,
+                "tolerance": 0.001,
+                "max_error": -1.0
+              },
+              "width": 384,
+              "height": 288,
+              "vfov_deg": 45.0,
+              "fisheye": false,
+              "sphere": {
+                "centre": [
+                  -0.22938965658632302,
+                  0.09996809470952124,
+                  0.9681873607372475
+                ],
+                "angular_radius": 0.12481674439688094
+              },
+              "camera_to_lab": [
+                0.722445,
+                -0.131314,
+                -0.460878
+              ],
+              "legacy_roi_coordinates": true,
+              "ignore_polygons": [
+                [
+                  [
+                    96.0,
+                    156.0
+                  ],
+                  [
+                    113.0,
+                    147.0
+                  ],
+                  [
+                    106.0,
+                    128.0
+                  ],
+                  [
+                    82.0,
+                    130.0
+                  ],
+                  [
+                    81.0,
+                    150.0
+                  ]
+                ],
+                [
+                  [
+                    71.0,
+                    213.0
+                  ],
+                  [
+                    90.0,
+                    219.0
+                  ],
+                  [
+                    114.0,
+                    218.0
+                  ],
+                  [
+                    135.0,
+                    211.0
+                  ],
+                  [
+                    154.0,
+                    196.0
+                  ],
+                  [
+                    150.0,
+                    217.0
+                  ],
+                  [
+                    121.0,
+                    228.0
+                  ],
+                  [
+                    99.0,
+                    234.0
+                  ],
+                  [
+                    75.0,
+                    225.0
+                  ]
+                ]
+              ],
+              "max_rotation": 0.35,
+              "max_error": 0.16,
+              "sample_stride": 2,
+              "iterations": 20,
+              "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4"
+            },
+            "frames": 300,
+            "tracked": 299,
+            "relocalized": 0,
+            "rejected": 0,
+            "initializing": 1,
+            "mean_error": 6621.574210432903,
+            "max_error": 8531.321104876995,
+            "wall_seconds": 1.468166861,
+            "end_to_end_fps": 204.3364470137022,
+            "tracking_fps": 690.355252947177,
+            "input_duration_ms": 9966.666666666666,
+            "final_position": [
+              3.641684896510083,
+              -2.6467681123615034
+            ],
+            "final_heading": 6.175048949743621,
+            "estimator": "accumulated spherical map / pure Rust BOBYQA",
+            "error_metric": "mean squared binary intensity (0..65025)",
+            "warnings": []
+          },
+          "comparison": {
+            "comparison": {
+              "candidate_final_position": [
+                3.64168489651,
+                -2.646768112362
+              ],
+              "endpoint_error_sphere_rad": 0.041252009416150356,
+              "frames": 300,
+              "heading_rmse_rad": 0.013651430288521045,
+              "path_point_rmse_sphere_rad": 0.025593841799876324,
+              "reference_final_position": [
+                3.674266189723,
+                -2.6214661833162
+              ],
+              "rotation_component_rmse_rad": [
+                0.009475898823054007,
+                0.010924711781146961,
+                0.01781987973491448
+              ],
+              "timestamp_max_error_ms": 3.456079866737127e-11
+            },
+            "limits": {
+              "heading_rmse_rad": 0.025,
+              "path_rmse_sphere_rad": 0.075,
+              "rotation_component_rmse_rad": 0.02
+            },
+            "passed": true
+          },
+          "checks": [
+            {
+              "command": [
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/hejjetrac-cli",
+                "--version"
+              ],
+              "seconds": 0.0018569989999974723,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/hejjetrac-cli",
+                "config",
+                "--config",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/benchmark/config.txt",
+                "--output",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/config.txt",
+                "--set",
+                "src_fn=/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+                "--set",
+                "zmq_port=-1",
+                "--set",
+                "sock_port=-1",
+                "--set",
+                "save_raw=n",
+                "--set",
+                "save_debug=n",
+                "--set",
+                "do_display=y"
+              ],
+              "seconds": 0.0015463850000116963,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/hejjetrac-cli",
+                "inspect",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+                "--decode"
+              ],
+              "seconds": 1.109344675999992,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/hejjetrac-cli",
+                "track",
+                "--config",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/config.txt",
+                "--input",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+                "--output",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/tracking"
+              ],
+              "seconds": 1.4703465559999955,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/hejjetrac-cli",
+                "compare",
+                "--reference",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/benchmark/upstream.dat",
+                "--candidate",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/tracking/tracking.dat",
+                "--report",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/comparison.json"
+              ],
+              "seconds": 0.002650349000006713,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "xvfb-run",
+                "-a",
+                "-s",
+                "-screen 0 1280x800x24",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/hejjetrac",
+                "--window-size",
+                "640x480",
+                "--exit-after",
+                "8",
+                "--state-output",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/native-video.json",
+                "--screenshot",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/native-video.png",
+                "--screenshot-after",
+                "3",
+                "--config",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/config.txt"
+              ],
+              "seconds": 8.161476738999994,
+              "exit_code": 0,
+              "preview_center": {
+                "bright_fraction": 0.9036384976525822,
+                "dark_fraction": 0.3828345070422535
+              },
+              "frames": 231,
+              "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+              "error": "",
+              "screenshot_size": [
+                640,
+                480
+              ],
+              "screenshot_sha256": "ef3498149a7515e9aafc7389f35dc0ae7764282eb99224d5830713daca0f15aa",
+              "visible_sample_pattern": {
+                "dark_fraction": 0.3440234375,
+                "light_fraction": 0.5351171875
+              }
+            }
+          ]
+        }
+      ],
+      "no_camera_startup": {
+        "command": [
+          "xvfb-run",
+          "-a",
+          "-s",
+          "-screen 0 1280x800x24",
+          "/__w/hejjetrak/hejjetrak/linux-package-runtime/default-startup/app/hejjetrac",
+          "--window-size",
+          "640x480",
+          "--exit-after",
+          "8",
+          "--state-output",
+          "/__w/hejjetrak/hejjetrak/linux-package-runtime/default-startup/native-fallback.json",
+          "--screenshot",
+          "/__w/hejjetrak/hejjetrak/linux-package-runtime/default-startup/native-fallback.png",
+          "--screenshot-after",
+          "3"
+        ],
+        "seconds": 8.158288268999996,
+        "exit_code": 0,
+        "preview_center": {
+          "bright_fraction": 0.9036384976525822,
+          "dark_fraction": 0.3828345070422535
+        },
+        "frames": 231,
+        "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/default-startup/app/examples/sample.mp4",
+        "error": "",
+        "screenshot_size": [
+          640,
+          480
+        ],
+        "screenshot_sha256": "dce180bc24884d2581625293aea698e042052fd095ff317ee7c631713737676c",
+        "visible_sample_pattern": {
+          "dark_fraction": 0.3440234375,
+          "light_fraction": 0.5351171875
+        }
+      }
+    },
+    "ubuntu24": {
+      "distribution": {
+        "NAME": "Ubuntu",
+        "ID": "ubuntu",
+        "PRETTY_NAME": "Ubuntu 24.04.5 LTS",
+        "VERSION_ID": "24.04",
+        "VERSION": "24.04.5 LTS (Noble Numbat)",
+        "VERSION_CODENAME": "noble",
+        "ID_LIKE": "debian",
+        "HOME_URL": "https://www.ubuntu.com/",
+        "SUPPORT_URL": "https://help.ubuntu.com/",
+        "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
+        "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
+        "UBUNTU_CODENAME": "noble",
+        "LOGO": "ubuntu-logo"
+      },
+      "libc": [
+        "glibc",
+        "2.39"
+      ],
+      "archive_sha256": "91ea2fc29417844515b84cc583fc5a95e768c2a532251e41600aba56b02854d3",
+      "harness_sha256": "12baa42acfd733b64158a98e6b4ee9bcc80a8a870a3262ee9f83e49aa27978ab",
+      "scope": "Actual packaged CLI and software-rendered GUI; no physical V4L camera",
+      "status": "passed",
+      "checks": [
+        {
+          "root": "/usr/lib/hejjetrak",
+          "build": {
+            "name": "Hejj\u00e9Trac",
+            "version": "0.2.1",
+            "platform": "linux",
+            "architecture": "x86_64",
+            "source_commit": "86b71d7d3f53e8a468c4728513479d07a2d3543a",
+            "source_url": "https://github.com/pvnkmrksk/hejjetrak",
+            "binary_hash_boundary": "compiled binaries before application signing",
+            "binaries": [
+              {
+                "name": "hejjetrac",
+                "compiled_sha256": "ddc25b30c1b132ef6639ea1cca40604c0dfb1016542939cfd3608629e1e1b915"
+              },
+              {
+                "name": "hejjetrac-cli",
+                "compiled_sha256": "7d044d6f9a89f00b2da9336ca0ee2df0db69ae91e4cea1cb5d7a0fb60d5c35c4"
+              }
+            ],
+            "linux_abi": {
+              "target_baseline": "Ubuntu 22.04 / glibc 2.35",
+              "glibc_ceiling": "2.35",
+              "binaries": [
+                {
+                  "binary": "hejjetrac",
+                  "required_glibc_versions": [
+                    "2.2.5",
+                    "2.3",
+                    "2.3.2",
+                    "2.3.4",
+                    "2.4",
+                    "2.7",
+                    "2.9",
+                    "2.10",
+                    "2.14",
+                    "2.15",
+                    "2.16",
+                    "2.17",
+                    "2.18",
+                    "2.25",
+                    "2.27",
+                    "2.28",
+                    "2.29",
+                    "2.30",
+                    "2.32",
+                    "2.33",
+                    "2.34",
+                    "2.35"
+                  ],
+                  "maximum_required_glibc": "2.35"
+                },
+                {
+                  "binary": "hejjetrac-cli",
+                  "required_glibc_versions": [
+                    "2.2.5",
+                    "2.3",
+                    "2.3.2",
+                    "2.3.4",
+                    "2.4",
+                    "2.7",
+                    "2.9",
+                    "2.10",
+                    "2.14",
+                    "2.16",
+                    "2.17",
+                    "2.18",
+                    "2.25",
+                    "2.28",
+                    "2.29",
+                    "2.30",
+                    "2.32",
+                    "2.33",
+                    "2.34",
+                    "2.35"
+                  ],
+                  "maximum_required_glibc": "2.35"
+                }
+              ]
+            },
+            "linux_depends": "libc6 (>= 2.35), libgcc-s1 (>= 4.2), libudev1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libegl1, libgles2, libvulkan1"
+          },
+          "sample": {
+            "version": "0.2.1",
+            "input": "/usr/lib/hejjetrak/examples/sample.mp4",
+            "video": {
+              "width": 384,
+              "height": 288,
+              "fps": null,
+              "codec": "h264 (pure Rust)",
+              "duration_ms": 10000.0
+            },
+            "effective_config": {
+              "spherical_map": {
+                "resilient": true,
+                "global_search": false,
+                "max_bad_frames": -1,
+                "global_evaluations": 100000,
+                "channel": null,
+                "quality": 6,
+                "threshold_ratio": 1.25,
+                "threshold_window": 0.25,
+                "max_evaluations": 50,
+                "tolerance": 0.001,
+                "max_error": -1.0
+              },
+              "width": 384,
+              "height": 288,
+              "vfov_deg": 45.0,
+              "fisheye": false,
+              "sphere": {
+                "centre": [
+                  -0.22938965658632302,
+                  0.09996809470952124,
+                  0.9681873607372475
+                ],
+                "angular_radius": 0.12481674439688094
+              },
+              "camera_to_lab": [
+                0.722445,
+                -0.131314,
+                -0.460878
+              ],
+              "legacy_roi_coordinates": true,
+              "ignore_polygons": [
+                [
+                  [
+                    96.0,
+                    156.0
+                  ],
+                  [
+                    113.0,
+                    147.0
+                  ],
+                  [
+                    106.0,
+                    128.0
+                  ],
+                  [
+                    82.0,
+                    130.0
+                  ],
+                  [
+                    81.0,
+                    150.0
+                  ]
+                ],
+                [
+                  [
+                    71.0,
+                    213.0
+                  ],
+                  [
+                    90.0,
+                    219.0
+                  ],
+                  [
+                    114.0,
+                    218.0
+                  ],
+                  [
+                    135.0,
+                    211.0
+                  ],
+                  [
+                    154.0,
+                    196.0
+                  ],
+                  [
+                    150.0,
+                    217.0
+                  ],
+                  [
+                    121.0,
+                    228.0
+                  ],
+                  [
+                    99.0,
+                    234.0
+                  ],
+                  [
+                    75.0,
+                    225.0
+                  ]
+                ]
+              ],
+              "max_rotation": 0.35,
+              "max_error": 0.16,
+              "sample_stride": 2,
+              "iterations": 20,
+              "source": "/usr/lib/hejjetrak/examples/sample.mp4"
+            },
+            "frames": 300,
+            "tracked": 299,
+            "relocalized": 0,
+            "rejected": 0,
+            "initializing": 1,
+            "mean_error": 6621.574210432903,
+            "max_error": 8531.321104876995,
+            "wall_seconds": 1.47348752,
+            "end_to_end_fps": 203.5986025860606,
+            "tracking_fps": 696.7837021734639,
+            "input_duration_ms": 9966.666666666666,
+            "final_position": [
+              3.641684896510083,
+              -2.6467681123615034
+            ],
+            "final_heading": 6.175048949743621,
+            "estimator": "accumulated spherical map / pure Rust BOBYQA",
+            "error_metric": "mean squared binary intensity (0..65025)",
+            "warnings": []
+          },
+          "comparison": {
+            "comparison": {
+              "candidate_final_position": [
+                3.64168489651,
+                -2.646768112362
+              ],
+              "endpoint_error_sphere_rad": 0.041252009416150356,
+              "frames": 300,
+              "heading_rmse_rad": 0.013651430288521045,
+              "path_point_rmse_sphere_rad": 0.025593841799876324,
+              "reference_final_position": [
+                3.674266189723,
+                -2.6214661833162
+              ],
+              "rotation_component_rmse_rad": [
+                0.009475898823054007,
+                0.010924711781146961,
+                0.01781987973491448
+              ],
+              "timestamp_max_error_ms": 3.456079866737127e-11
+            },
+            "limits": {
+              "heading_rmse_rad": 0.025,
+              "path_rmse_sphere_rad": 0.075,
+              "rotation_component_rmse_rad": 0.02
+            },
+            "passed": true
+          },
+          "checks": [
+            {
+              "command": [
+                "/usr/lib/hejjetrak/hejjetrac-cli",
+                "--version"
+              ],
+              "seconds": 0.0017899129999960905,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "/usr/lib/hejjetrak/hejjetrac-cli",
+                "config",
+                "--config",
+                "/usr/lib/hejjetrak/examples/benchmark/config.txt",
+                "--output",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/config.txt",
+                "--set",
+                "src_fn=/usr/lib/hejjetrak/examples/sample.mp4",
+                "--set",
+                "zmq_port=-1",
+                "--set",
+                "sock_port=-1",
+                "--set",
+                "save_raw=n",
+                "--set",
+                "save_debug=n",
+                "--set",
+                "do_display=y"
+              ],
+              "seconds": 0.0013675839999933714,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "/usr/lib/hejjetrak/hejjetrac-cli",
+                "inspect",
+                "/usr/lib/hejjetrak/examples/sample.mp4",
+                "--decode"
+              ],
+              "seconds": 1.1005689920000066,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "/usr/lib/hejjetrak/hejjetrac-cli",
+                "track",
+                "--config",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/config.txt",
+                "--input",
+                "/usr/lib/hejjetrak/examples/sample.mp4",
+                "--output",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/tracking"
+              ],
+              "seconds": 1.4755852220000065,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "/usr/lib/hejjetrak/hejjetrac-cli",
+                "compare",
+                "--reference",
+                "/usr/lib/hejjetrak/examples/benchmark/upstream.dat",
+                "--candidate",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/tracking/tracking.dat",
+                "--report",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/comparison.json"
+              ],
+              "seconds": 0.0025816830000024993,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "xvfb-run",
+                "-a",
+                "-s",
+                "-screen 0 1280x800x24",
+                "/usr/lib/hejjetrak/hejjetrac",
+                "--window-size",
+                "640x480",
+                "--exit-after",
+                "8",
+                "--state-output",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/native-video.json",
+                "--screenshot",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/native-video.png",
+                "--screenshot-after",
+                "3",
+                "--config",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/installed/config.txt"
+              ],
+              "seconds": 8.193867847999996,
+              "exit_code": 0,
+              "preview_center": {
+                "bright_fraction": 0.9036384976525822,
+                "dark_fraction": 0.3828345070422535
+              },
+              "frames": 231,
+              "source": "/usr/lib/hejjetrak/examples/sample.mp4",
+              "error": "",
+              "screenshot_size": [
+                640,
+                480
+              ],
+              "screenshot_sha256": "51d2cf95ac469af4a6a8ffc929ff7033665346d3ea9c972fd8eb2a52c91fd672",
+              "visible_sample_pattern": {
+                "dark_fraction": 0.3440234375,
+                "light_fraction": 0.5351171875
+              }
+            }
+          ]
+        },
+        {
+          "root": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64",
+          "build": {
+            "name": "Hejj\u00e9Trac",
+            "version": "0.2.1",
+            "platform": "linux",
+            "architecture": "x86_64",
+            "source_commit": "86b71d7d3f53e8a468c4728513479d07a2d3543a",
+            "source_url": "https://github.com/pvnkmrksk/hejjetrak",
+            "binary_hash_boundary": "compiled binaries before application signing",
+            "binaries": [
+              {
+                "name": "hejjetrac",
+                "compiled_sha256": "ddc25b30c1b132ef6639ea1cca40604c0dfb1016542939cfd3608629e1e1b915"
+              },
+              {
+                "name": "hejjetrac-cli",
+                "compiled_sha256": "7d044d6f9a89f00b2da9336ca0ee2df0db69ae91e4cea1cb5d7a0fb60d5c35c4"
+              }
+            ],
+            "linux_abi": {
+              "target_baseline": "Ubuntu 22.04 / glibc 2.35",
+              "glibc_ceiling": "2.35",
+              "binaries": [
+                {
+                  "binary": "hejjetrac",
+                  "required_glibc_versions": [
+                    "2.2.5",
+                    "2.3",
+                    "2.3.2",
+                    "2.3.4",
+                    "2.4",
+                    "2.7",
+                    "2.9",
+                    "2.10",
+                    "2.14",
+                    "2.15",
+                    "2.16",
+                    "2.17",
+                    "2.18",
+                    "2.25",
+                    "2.27",
+                    "2.28",
+                    "2.29",
+                    "2.30",
+                    "2.32",
+                    "2.33",
+                    "2.34",
+                    "2.35"
+                  ],
+                  "maximum_required_glibc": "2.35"
+                },
+                {
+                  "binary": "hejjetrac-cli",
+                  "required_glibc_versions": [
+                    "2.2.5",
+                    "2.3",
+                    "2.3.2",
+                    "2.3.4",
+                    "2.4",
+                    "2.7",
+                    "2.9",
+                    "2.10",
+                    "2.14",
+                    "2.16",
+                    "2.17",
+                    "2.18",
+                    "2.25",
+                    "2.28",
+                    "2.29",
+                    "2.30",
+                    "2.32",
+                    "2.33",
+                    "2.34",
+                    "2.35"
+                  ],
+                  "maximum_required_glibc": "2.35"
+                }
+              ]
+            },
+            "linux_depends": "libc6 (>= 2.35), libgcc-s1 (>= 4.2), libudev1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libegl1, libgles2, libvulkan1"
+          },
+          "sample": {
+            "version": "0.2.1",
+            "input": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+            "video": {
+              "width": 384,
+              "height": 288,
+              "fps": null,
+              "codec": "h264 (pure Rust)",
+              "duration_ms": 10000.0
+            },
+            "effective_config": {
+              "spherical_map": {
+                "resilient": true,
+                "global_search": false,
+                "max_bad_frames": -1,
+                "global_evaluations": 100000,
+                "channel": null,
+                "quality": 6,
+                "threshold_ratio": 1.25,
+                "threshold_window": 0.25,
+                "max_evaluations": 50,
+                "tolerance": 0.001,
+                "max_error": -1.0
+              },
+              "width": 384,
+              "height": 288,
+              "vfov_deg": 45.0,
+              "fisheye": false,
+              "sphere": {
+                "centre": [
+                  -0.22938965658632302,
+                  0.09996809470952124,
+                  0.9681873607372475
+                ],
+                "angular_radius": 0.12481674439688094
+              },
+              "camera_to_lab": [
+                0.722445,
+                -0.131314,
+                -0.460878
+              ],
+              "legacy_roi_coordinates": true,
+              "ignore_polygons": [
+                [
+                  [
+                    96.0,
+                    156.0
+                  ],
+                  [
+                    113.0,
+                    147.0
+                  ],
+                  [
+                    106.0,
+                    128.0
+                  ],
+                  [
+                    82.0,
+                    130.0
+                  ],
+                  [
+                    81.0,
+                    150.0
+                  ]
+                ],
+                [
+                  [
+                    71.0,
+                    213.0
+                  ],
+                  [
+                    90.0,
+                    219.0
+                  ],
+                  [
+                    114.0,
+                    218.0
+                  ],
+                  [
+                    135.0,
+                    211.0
+                  ],
+                  [
+                    154.0,
+                    196.0
+                  ],
+                  [
+                    150.0,
+                    217.0
+                  ],
+                  [
+                    121.0,
+                    228.0
+                  ],
+                  [
+                    99.0,
+                    234.0
+                  ],
+                  [
+                    75.0,
+                    225.0
+                  ]
+                ]
+              ],
+              "max_rotation": 0.35,
+              "max_error": 0.16,
+              "sample_stride": 2,
+              "iterations": 20,
+              "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4"
+            },
+            "frames": 300,
+            "tracked": 299,
+            "relocalized": 0,
+            "rejected": 0,
+            "initializing": 1,
+            "mean_error": 6621.574210432903,
+            "max_error": 8531.321104876995,
+            "wall_seconds": 1.463240802,
+            "end_to_end_fps": 205.02435387938286,
+            "tracking_fps": 698.543712392677,
+            "input_duration_ms": 9966.666666666666,
+            "final_position": [
+              3.641684896510083,
+              -2.6467681123615034
+            ],
+            "final_heading": 6.175048949743621,
+            "estimator": "accumulated spherical map / pure Rust BOBYQA",
+            "error_metric": "mean squared binary intensity (0..65025)",
+            "warnings": []
+          },
+          "comparison": {
+            "comparison": {
+              "candidate_final_position": [
+                3.64168489651,
+                -2.646768112362
+              ],
+              "endpoint_error_sphere_rad": 0.041252009416150356,
+              "frames": 300,
+              "heading_rmse_rad": 0.013651430288521045,
+              "path_point_rmse_sphere_rad": 0.025593841799876324,
+              "reference_final_position": [
+                3.674266189723,
+                -2.6214661833162
+              ],
+              "rotation_component_rmse_rad": [
+                0.009475898823054007,
+                0.010924711781146961,
+                0.01781987973491448
+              ],
+              "timestamp_max_error_ms": 3.456079866737127e-11
+            },
+            "limits": {
+              "heading_rmse_rad": 0.025,
+              "path_rmse_sphere_rad": 0.075,
+              "rotation_component_rmse_rad": 0.02
+            },
+            "passed": true
+          },
+          "checks": [
+            {
+              "command": [
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/hejjetrac-cli",
+                "--version"
+              ],
+              "seconds": 0.0015756730000049401,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/hejjetrac-cli",
+                "config",
+                "--config",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/benchmark/config.txt",
+                "--output",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/config.txt",
+                "--set",
+                "src_fn=/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+                "--set",
+                "zmq_port=-1",
+                "--set",
+                "sock_port=-1",
+                "--set",
+                "save_raw=n",
+                "--set",
+                "save_debug=n",
+                "--set",
+                "do_display=y"
+              ],
+              "seconds": 0.0013637370000054716,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/hejjetrac-cli",
+                "inspect",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+                "--decode"
+              ],
+              "seconds": 1.1033637300000123,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/hejjetrac-cli",
+                "track",
+                "--config",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/config.txt",
+                "--input",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+                "--output",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/tracking"
+              ],
+              "seconds": 1.4653421750000035,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/hejjetrac-cli",
+                "compare",
+                "--reference",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/benchmark/upstream.dat",
+                "--candidate",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/tracking/tracking.dat",
+                "--report",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/comparison.json"
+              ],
+              "seconds": 0.0025135260000013204,
+              "exit_code": 0
+            },
+            {
+              "command": [
+                "xvfb-run",
+                "-a",
+                "-s",
+                "-screen 0 1280x800x24",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/hejjetrac",
+                "--window-size",
+                "640x480",
+                "--exit-after",
+                "8",
+                "--state-output",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/native-video.json",
+                "--screenshot",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/native-video.png",
+                "--screenshot-after",
+                "3",
+                "--config",
+                "/__w/hejjetrak/hejjetrak/linux-package-runtime/portable/config.txt"
+              ],
+              "seconds": 8.172159593000003,
+              "exit_code": 0,
+              "preview_center": {
+                "bright_fraction": 0.9036384976525822,
+                "dark_fraction": 0.3828345070422535
+              },
+              "frames": 231,
+              "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/extracted/hejjetrac-linux-x86_64/examples/sample.mp4",
+              "error": "",
+              "screenshot_size": [
+                640,
+                480
+              ],
+              "screenshot_sha256": "4c59bbaca1de5bff727d3c8c1e9b979c108b1848656e027175decd3622a078fb",
+              "visible_sample_pattern": {
+                "dark_fraction": 0.3440234375,
+                "light_fraction": 0.5351171875
+              }
+            }
+          ]
+        }
+      ],
+      "no_camera_startup": {
+        "command": [
+          "xvfb-run",
+          "-a",
+          "-s",
+          "-screen 0 1280x800x24",
+          "/__w/hejjetrak/hejjetrak/linux-package-runtime/default-startup/app/hejjetrac",
+          "--window-size",
+          "640x480",
+          "--exit-after",
+          "8",
+          "--state-output",
+          "/__w/hejjetrak/hejjetrak/linux-package-runtime/default-startup/native-fallback.json",
+          "--screenshot",
+          "/__w/hejjetrak/hejjetrak/linux-package-runtime/default-startup/native-fallback.png",
+          "--screenshot-after",
+          "3"
+        ],
+        "seconds": 8.162333487000012,
+        "exit_code": 0,
+        "preview_center": {
+          "bright_fraction": 0.9036384976525822,
+          "dark_fraction": 0.3828345070422535
+        },
+        "frames": 231,
+        "source": "/__w/hejjetrak/hejjetrak/linux-package-runtime/default-startup/app/examples/sample.mp4",
+        "error": "",
+        "screenshot_size": [
+          640,
+          480
+        ],
+        "screenshot_sha256": "5e31b9e6f65606319c83a13e66f809f2e14aecc58d82cc368636e357acf530d0",
+        "visible_sample_pattern": {
+          "dark_fraction": 0.3440234375,
+          "light_fraction": 0.5351171875
+        }
+      }
+    }
+  },
+  "visual_review": {
+    "performed": true,
+    "observed": "Visible patterned ball, contact trace and path on both Ubuntu 22.04 and 24.04. Configured video and default no-camera fallback render the sample.",
+    "gate": "do_display:y and at least 8% dark plus 8% light pixels inside the central preview; excludes toolbar/status/path chrome. Same fixed numerical reference gates remain unchanged.",
+    "screenshot_files": {
+      "ubuntu22": "/private/tmp/hejjetrac-ubuntu-fix-preflight/ubuntu22/installed/native-video.png",
+      "ubuntu24": "/private/tmp/hejjetrac-ubuntu-fix-preflight/ubuntu24/installed/native-video.png"
+    }
+  },
+  "raw_evidence": "/private/tmp/hejjetrac-ubuntu-fix-preflight",
+  "retained_workspace_evidence": "runs/ubuntu22-compatibility-20261026"
+}

@@ -1,5 +1,36 @@
 # HejjéTrac validation evidence
 
+## v0.3.0 merged-source checks — 2026-10-27
+
+The release candidate merges the user's `cf567ba` four-camera branch with
+`main` at `e652450`, retaining the v0.2.3 recording-clock and writable-default
+fixes. Missing companion VR2–VR4 defaults are seeded without replacing existing
+user files. The bridge launcher uses temporary copies with direct ZMQ disabled,
+while the saved rig files retain their explicit 9871–9874 ports.
+
+On Apple M2 Pro / macOS arm64 / Rust 1.99.1, formatting, locked strict all-target
+Clippy, all **270 workspace tests** and **1,353 decoder tests** pass. Seven
+package-tool tests and six bridge-launcher tests pass. Five portable supervisor
+tests pass; its Linux `/proc` identity test is explicitly skipped on Mac.
+The website passes all **2,038 internal references across 43 HTML pages** and
+the download-controller and workflow checks pass.
+
+Serial optimized fixtures retain the unchanged gates. The 120-image synthetic
+demo has component RMS **0.000304049695 rad**. The supplied 300-image video
+has zero rejections, path RMS **0.0448067514 sphere rad**, heading RMS
+**0.0131848108 rad** and component RMS **.00876080/.00829214/.01421073 rad**.
+These match the user's complete-ROI policy; no acceptance threshold or reference
+gate was relaxed during the merge. Exact commands and timing boundaries are
+in the [local record](benchmarks/local-v030-20261027.json).
+
+The actual native GUI passes five daily-control rounds and 20 recording takes;
+all 20 requested videos independently decode with their exact numeric/quality
+counts. Main, diagnostic and active ball-calibration views were visually
+reviewed at 45 processed sample frames each, with empty error status. These
+are current-source Mac sample checks. The historical physical Linux/VR3 and
+overnight results below retain their original binary/source scope.
+
+
 The later user-requested [storage cleanup](storage-retention.md) archives full
 numerical/log/failure evidence losslessly and prunes redundant movies. Retention
 counts below describe what existed at each audit time; current locations and
@@ -193,8 +224,250 @@ do not prove absence of sensor/driver loss or unrestricted camera capacity.
 
 Historical platform and release results below retain their original scope;
 they are not evidence that this local Linux change ran natively on other OSes.
+## v0.2.3 published release — 2026-10-26
+
+**[v0.2.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.2.3)** is
+published as latest at **19:27:46 UTC**, from immutable source
+`35859b3faf7ec7a394b6608730e20a78d6e5d9b8`, with all five platform assets.
+All six [release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40381876617)
+and all four [portability jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40381869205)
+pass. Linux and both Macs pass **225 workspace tests**; Windows passes **222**
+applicable tests. Every platform passes **1,353 decoder tests** and the 120-frame
+demo; Linux also passes both camera-vendor regressions. Formatting, strict
+Clippy, source/version checks, Mac ad hoc signatures and Windows static-runtime
+dependency checks pass.
+
+The actual installed and portable Linux builds pass on Ubuntu **22.04.5** and
+**24.04.5**: complete 300-frame decode/tracking, zero sample rejections, unchanged
+reference gates and visible Xvfb/Mesa previews. Both unavailable-camera startup
+states use `/github/home/.config/hejjetrac/VR1.txt`, preserving the installed
+template. Independently decoded ELF requirements remain at **glibc 2.35**.
+[Final Linux hashes, user-config paths and six inspected previews](benchmarks/release-v023-linux-20261026.json)
+retain the exact runtime evidence; physical V4L and hardware-GPU testing remain
+outside this execution.
+
+The official Mac ARM ZIP SHA-256 is
+`d78cca6e4ef51f64b004a848a787936315049a9929246b38f5fe4366a49ec35c`.
+It passes strict signature, aliases, version/source and full sample comparison.
+Its native preview advances 175 frames and was visually checked. Two normal
+launches from a test-owned user default each advance 113 frames with no error,
+retain the saved video source/config bytes and leave the signed bundle intact.
+Only the unchanged test-owned user file was removed afterward.
+
+An anonymous public API lookup selects v0.2.3, and its public attachment returns
+HTTP 200 with the same 21,475,538-byte archive and SHA-256. This verifies the
+public route independently of the browser tool; final browser-download
+completion remains unverified after that tool's earlier failure. The one-click
+controller regressions pass. [Published metadata, native counts, official Mac
+checks and anonymous download](benchmarks/release-v023-20261026.json) record the
+complete release scope. The numerical tracking engine, coordinates and quality
+thresholds are unchanged from v0.2.2.
+
+## v0.2.3 local recording and startup checks — 2026-10-26
+
+The frozen patch source passes workspace formatting, locked strict all-target
+Clippy, the release build and **225 tests across 27 workspace suites**, zero
+failures, on Apple M2 Pro / macOS 27.0.1 arm64 / Rust 1.99.1. Six new filesystem
+cases cover preserving existing defaults, source/video association, concurrent
+first launches, oversized/invalid files and temporary fallback after a blocked
+write. Two native normal launches retain the user-owned video config, advance
+114/113 frames with no error and leave both config and signed bundle unchanged.
+The rendered preview was visually checked; the unchanged test-owned user file
+was removed afterward. [Checks, source hashes and native result](benchmarks/local-v023-20261026.json)
+record this local execution. Official package execution is recorded above.
+
+Real-frame recording tests cover nominal 120.00048 FPS with a 9 ms first gap,
+an explicit 60 FPS override, unknown-rate inference and one-frame recordings.
+Raw and debug videos fully decode; their numeric and quality rows retain the
+original timestamp bytes. A short Arducam check of the same recording code
+captures and decodes **243 frames at 120 FPS**, although its first interval is
+8 ms and would previously have selected 125 FPS. All 243 rows are accepted.
+This tests recording metadata, not physical angle accuracy.
+
+The earlier 30-second live take has 3,646 frames and one capture drop. Its example
+ROI includes stationary holder/background. Controlled cold replays preserve the
+original timestamps: the v0.2.2 engine has 151 unaccepted frames with that ROI
+(longest gap 63), versus 17 with a temporary shared-core visible-ball rim fit
+(longest gap three). The v0.2.1 engine has 22/longest-six with the fitted ROI.
+These replay counts cannot be directly compared with the live 510 unaccepted
+rows: recording begins after 35 earlier live tracker frames and their atlas
+state is not saved. Optical FOV and lab axes remain unverified; no physical
+velocity or angle ground truth is claimed. No further threshold change was
+justified. [Aggregate live, replay and recording-clock evidence](benchmarks/recording-clock-live-20261026.json)
+contains no camera images or raw numeric rows.
+
+Serial release CLI checks repeat the 120-frame demo and complete 300-frame
+sample with the unchanged accuracy gates. Sample path/heading RMS remain
+0.0255938418 sphere radians / 0.0136514303 radians, with zero rejections. The
+tracking engine is unchanged from v0.2.2. [Commands, build hashes and separate
+descriptive timings](benchmarks/recording-clock-performance-20261026.json)
+retain the new fixture checks.
+
+## v0.2.2 published release — 2026-10-26
+
+**[v0.2.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.2.2)** was
+published at **17:22:53 UTC** from immutable source commit
+`d4aad90e233b4ba4b695d1a48a285dbff543d40b`. All five platform assets are
+present. The [release workflow](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40361383864)
+passes all four native package jobs and both Ubuntu runtime jobs. The separate
+[portability workflow](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40361378082)
+passes on Ubuntu 22.04, Ubuntu 24.04, Windows and Mac ARM. The official Ubuntu
+22.04 build passes **217 workspace tests**, both Linux camera regressions
+(`GREY` format and checked captured-buffer length), and **1,353 decoder tests**,
+along with formatting, strict Clippy, release build and the known-motion demo.
+
+The downloaded Linux `.deb` and portable archive match their published SHA-256
+digests. Their manifests and independently hashed GUI/CLI payloads are identical,
+with the exact release version and source above. Independent ELF requirement
+decoding confirms **glibc 2.35** for both executables; the actual installer
+declares `libc6 (>= 2.35)`. On **Ubuntu 22.04.5 / glibc 2.35** and
+**Ubuntu 24.04.5 / glibc 2.39**, installed and portable packages each process all
+300 sample frames with zero rejections and pass the unchanged reference
+comparison. Native Xvfb/Mesa previews advance 231–241 frames with no errors;
+unavailable-camera fallback advances 236–237 frames. All six screenshots were
+visually inspected and independently checked for visible ball texture.
+[Final Linux package, runtime and visual evidence](benchmarks/release-v022-linux-20261026.json)
+records the exact hashes, reports and hardware limits.
+
+The downloaded official Apple Silicon archive matches published SHA-256
+`36b505f29fdbcd8b292379595ac04751f93c4b432f0c1186a8016cd921586088`.
+Strict ad hoc signature verification, CLI version and source provenance pass.
+The bundled sample decodes and processes all **300 frames**, with zero
+rejections and the original numerical comparison limits unchanged. The packaged
+native Mac window advances **175 frames**, visibly renders the ball, contact
+trace, path and timing strip, and reports no error. These checks do not establish
+Developer ID notarization, first-launch permission behavior or physical tracking
+accuracy.
+
+Before publication, the public website's muted demo was playing with
+`readyState = 4`; the 390-pixel mobile viewport had no horizontal overflow.
+Manual links to the website and GitHub and return navigation were checked.
+The final README download was attempted, but the computer-use download call
+did not complete and its session was reset. **Completion of that browser
+download is unverified.** The official archive download described above used
+GitHub CLI. [Published metadata, asset digests and official Mac/browser evidence](benchmarks/release-v022-20261026.json)
+separate these checks.
+
+### Known v0.2.2 live-camera limits
+
+A roughly 30-second live-camera check confirms acquisition and a responsive
+preview. Its old example calibration also included the holder, so its tracking
+results are provisional and are not physical accuracy evidence. Raw camera
+images, recordings and per-frame data remain local.
+
+That check exposed a desktop recording-rate bug: a **9 ms first frame interval**
+can select **111.111 FPS** for recorded-video metadata even when the camera
+reports approximately **120 FPS**. Original numeric timestamps are retained;
+the recorded video's playback rate must not be treated as the capture clock.
+A correction is being investigated for a later patch. The published v0.2.2 tag
+is unchanged, and this document does not claim that correction is complete.
+Physical Linux V4L devices, hardware GPU rendering, Wayland and arbitrary
+high-speed/blurred physical motion remain outside the completed checks.
+
+## v0.2.2 pre-release local checks — 2026-10-26
+
+**Historical source checkpoint:** the local checks and compatibility preflight
+below preceded the final published-package checks above.
+
+The combined v0.2.2 source passes `cargo fmt --all -- --check`, locked strict
+workspace/all-target Clippy and **217 tests across 27 workspace suites**, zero
+failures, on Apple M2 Pro / macOS 27.0.1 arm64 / Rust 1.99.1. Checks ran from a
+frozen temporary checkout outside the cloud-backed workspace. Platform archive
+builds were still pending at this source checkpoint. New serial release fixture
+measurements are recorded below; historical timings remain separate.
+[Exact local checks and tested source hashes](benchmarks/local-v022-20261026.json)
+record this run.
+
+The camera tests reject short/oversized packed payloads before pixel conversion.
+The desktop's real-video truncation regression delivers four sample images,
+then a read error: four numeric and quality rows and the config survive, the
+recorded AVI finalizes and decodes all four frames, and recording ends with the
+original error intact. Another real-video regression keeps preview and recording
+working while the requested publisher port is occupied, then successfully
+retries the same settings after that port is freed.
+
+The final local native Mac window was visually checked with the supplied video
+and an intentionally occupied publisher port. It continues through 175 frames,
+renders the ball/contact trace/path and FPS/tracking-time strip, and retains the
+output error with ZMQ disabled. This verifies the available Mac UI, not physical
+high-speed camera accuracy.
+
+An independent modern libzmq subscriber receives all **900/900** final CLI rows
+exactly and in order: 300 native FT, 300 single JSON and 300 multipart JSON.
+[Fresh wire evidence](benchmarks/wire-v022-20261026.json) records its binary hash
+and distinguishes this check from the unchanged old-player acceptance below.
+
+### Fast-motion recovery
+
+The changed core passes strict all-target core Clippy and **48 release core
+tests**, including the existing occluder, textured-impostor, acceleration and
+coordinate regressions. The identical new known-motion regression fails against
+unmodified v0.2.1 core source: its 0.20 rad/frame sharp fast segment never resumes.
+A held-velocity search proposal restores fourth-image confirmation for both
+sharp and simulated half-frame-exposure cases, followed by **86 measured rows**
+each. Component RMS remains below the unchanged **0.008 rad** gate. The proposal
+changes no MSE/edge/motion threshold, confirmation count, 768-evaluation recovery
+cap, atlas probation or missing-motion semantics.
+
+`cargo test -p fictrac-io --test recovery_video --release --locked` also passes.
+Its full 240-frame obstruction and approximately 70% partial-obstruction cases
+each retain 178 measured suffix rows, with exactly the earlier recorded path,
+heading and rotation errors. Original limits remain 0.075 sphere radians path,
+0.025 radians heading and 0.020 radians per rotation component. [Exact regression
+results, source hashes and baseline failure](benchmarks/fast-motion-recovery-20261026.json)
+separate controlled rendering and supplied-video tests from physical-camera
+accuracy, which they do not establish.
+
+### Ubuntu compatibility preflight
+
+The old v0.1.4 Linux installer declares `libc6 (>= 2.39)`; changing that declaration
+alone would not make its executable run on Ubuntu 22.04. The new build runs in
+Ubuntu 22.04 userspace and checks the actual ELF symbol requirements of both
+executables against **glibc 2.35** before packaging. The exact preflight snapshot
+`86b71d7d3f53e8a468c4728513479d07a2d3543a` includes the recovery correction and
+Linux camera-format/JPEG changes, while retaining the previous Mac capture code.
+Its [package workflow](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40330930037)
+passes **214 workspace tests**, the canonical V4L `GREY` regression, **1,353 decoder
+tests**, the known-motion demo and package verification. Both packaged binaries
+require at most GLIBC_2.35; the installer declares `libc6 (>= 2.35)`.
+
+The same built package is installed and run under **Ubuntu 22.04.5** and
+**Ubuntu 24.04** userspace. Installed and portable CLIs each process all 300
+sample frames with zero rejections and pass the unchanged numerical comparison.
+Xvfb/Mesa native windows visibly show the patterned ball, trace and path;
+unavailable-camera startup falls back to the supplied sample. A separate
+[portability workflow](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40330929818)
+passes on Ubuntu 22.04/24.04, Windows and Mac ARM. [Source hashes, exact ABI,
+package/runtime reports and screenshot evidence](benchmarks/ubuntu22-compatibility-20261026.json)
+record the scope. These are actual userspace/container executions with software
+graphics, not cross-target checks or physical Linux camera/GPU tests. Later raw
+buffer and terminal-error handling changes require separate final checks.
+Experimental Mac capture changes were discarded; the production Mac adapter
+matches the previous version. Live high-speed ball accuracy remains unverified.
+
+### Serial release fixture checks
+
+The v0.2.2 CLI built on Apple M2 Pro / macOS 27.0.1 arm64 / Rust 1.99.1 passes
+the 120-frame known-motion demo at component RMS **0.000304049695 rad** against
+the unchanged **0.003 rad** gate. The supplied 300-frame sample retains 299
+tracked frames, one initializing frame and zero rejections. Reference path RMS
+is **0.0255938418 sphere rad**, heading RMS **0.0136514303 rad**, and rotation
+component RMS is **[0.00947590, 0.01092471, 0.01781988] rad**, within the original
+0.020 rad component limits.
+
+The fixtures ran serially with wire/raw/debug video disabled. The synthetic
+tracking pipeline took 0.20377 seconds (0.59871 seconds external wall including
+fixture generation and verification); the full sample pipeline took 0.69405
+seconds (0.69929 seconds external wall). Its separate comparison took 0.00478
+seconds. These descriptive checks include ordinary numeric/quality/SVG output
+and finalization, use thin LTO and one codegen unit, and make no speedup or
+physical-camera claim. [Commands, hashes, build and timing boundaries](benchmarks/ubuntu-fast-motion-performance-20261026.json)
+retain the new measurements independently of historical runs below.
 
 ## v0.2 series local MATREX validation — 2026-10-26
+
+**Historical candidate evidence:** the 208-test counts and timings in this section
+refer to the frozen v0.2.0/v0.2.1 work below, not the current combined fixes.
 
 On Apple M2 Pro / macOS 27.0.1 arm64 / Rust 1.99.1 (LLVM 23.1.1),
 `cargo fmt --all -- --check`, locked strict all-target Clippy and the complete

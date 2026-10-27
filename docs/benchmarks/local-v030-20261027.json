@@ -1,0 +1,350 @@
+{
+  "date": "2026-10-27",
+  "version": "0.3.0",
+  "user_commit": "cf567baf96252ef1346ddf1b6aa48a3ccb839666",
+  "merged_previous_main": "e652450398e6fbbd45f57501b695cb64a9010040",
+  "git_author": "Pavan Kumar Kaushik <pkaushik@ab.mpg.de>",
+  "platform": "macOS-27.0.1-arm64-arm-64bit",
+  "machine": "arm64",
+  "toolchain": "Rust 1.99.1 (58cf8f9c3 2026-10-13), thin LTO, one codegen unit",
+  "checks": {
+    "fmt": true,
+    "locked_strict_all_target_clippy": true,
+    "locked_workspace_tests": {
+      "passed": 270,
+      "suites_including_doc_tests": 27,
+      "failed": 0,
+      "ignored": 0
+    },
+    "decoder_lib_tests": 1353,
+    "package_tool_tests": 7,
+    "bridge_launcher_tests": 6,
+    "overnight_tool_tests": {
+      "passed": 5,
+      "skipped_linux_proc_identity": 1
+    },
+    "downloads": true,
+    "actionlint": true,
+    "website_internal_references": 2038,
+    "website_html_pages": 43
+  },
+  "serial_release_fixtures": {
+    "version": "0.3.0",
+    "user_source": "cf567baf96252ef1346ddf1b6aa48a3ccb839666",
+    "previous_main": "e652450398e6fbbd45f57501b695cb64a9010040",
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "machine": "arm64",
+    "sample_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+    "binary_sha256": "8c9b92a37dcc5f20a30c0c0a6ca921c716230a90ed955665b13f26272e5ad75f",
+    "scope": "Serial release fixture checks, including normal numeric/quality output and finalization. External times include process startup. No physical-camera or generalized throughput claim.",
+    "runs": [
+      {
+        "label": "demo",
+        "command": [
+          "/private/tmp/hejjetrac-fix-target/release/fictrac",
+          "demo",
+          "--output",
+          "/private/tmp/hejjetrac-v030-validation/serial/demo",
+          "--frames",
+          "120"
+        ],
+        "external_seconds": 0.31380258299999997,
+        "exit_code": 0
+      },
+      {
+        "label": "sample",
+        "command": [
+          "/private/tmp/hejjetrac-fix-target/release/fictrac",
+          "track",
+          "--config",
+          "examples/benchmark/config.txt",
+          "--input",
+          "examples/sample.mp4",
+          "--output",
+          "/private/tmp/hejjetrac-v030-validation/serial/sample"
+        ],
+        "external_seconds": 0.741192166,
+        "exit_code": 0
+      },
+      {
+        "label": "comparison",
+        "command": [
+          "/private/tmp/hejjetrac-fix-target/release/fictrac",
+          "compare",
+          "--reference",
+          "examples/benchmark/upstream.dat",
+          "--candidate",
+          "/private/tmp/hejjetrac-v030-validation/serial/sample/tracking.dat",
+          "--report",
+          "/private/tmp/hejjetrac-v030-validation/serial/sample/comparison.json"
+        ],
+        "external_seconds": 0.005090000000000039,
+        "exit_code": 0
+      }
+    ],
+    "demo": {
+      "version": "0.3.0",
+      "input": "/private/tmp/hejjetrac-v030-validation/serial/demo/sphere.y4m",
+      "video": {
+        "width": 160,
+        "height": 160,
+        "fps": 60.0,
+        "codec": "y4m/mono",
+        "duration_ms": null
+      },
+      "effective_config": {
+        "spherical_map": null,
+        "width": 160,
+        "height": 160,
+        "vfov_deg": 45.0,
+        "fisheye": false,
+        "sphere": {
+          "centre": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "angular_radius": 0.29
+        },
+        "camera_to_lab": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "legacy_roi_coordinates": false,
+        "ignore_polygons": [],
+        "max_rotation": 0.35,
+        "max_error": 0.16,
+        "sample_stride": 2,
+        "iterations": 20,
+        "source": "sphere.y4m"
+      },
+      "frames": 120,
+      "tracked": 119,
+      "relocalized": 0,
+      "rejected": 0,
+      "initializing": 1,
+      "mean_error": 0.016496092142655572,
+      "max_error": 0.017650473980493932,
+      "wall_seconds": 0.219725792,
+      "end_to_end_fps": 546.1352484281863,
+      "tracking_fps": 596.1697524214327,
+      "input_duration_ms": 1983.3333333333333,
+      "final_position": [
+        -1.185437068437707,
+        -0.39796415863396967
+      ],
+      "final_heading": 5.7576452643299385,
+      "estimator": "perspective pairwise robust photometric SO(3)",
+      "error_metric": "normalized luma RMSE (0..1)",
+      "warnings": []
+    },
+    "demo_oracle": {
+      "expected_delta": [
+        0.006,
+        -0.009,
+        0.004
+      ],
+      "passed": true,
+      "rotation_component_rmse_rad": 0.0003040496948914138,
+      "tolerance_rad": 0.003
+    },
+    "sample": {
+      "version": "0.3.0",
+      "input": "/private/tmp/hejjetrac-user-release-20261027/examples/sample.mp4",
+      "video": {
+        "width": 384,
+        "height": 288,
+        "fps": null,
+        "codec": "h264 (pure Rust)",
+        "duration_ms": 10000.0
+      },
+      "effective_config": {
+        "spherical_map": {
+          "resilient": true,
+          "global_search": false,
+          "max_bad_frames": -1,
+          "global_evaluations": 100000,
+          "channel": null,
+          "quality": 6,
+          "threshold_ratio": 1.25,
+          "threshold_window": 0.25,
+          "max_evaluations": 50,
+          "tolerance": 0.001,
+          "max_error": -1.0
+        },
+        "width": 384,
+        "height": 288,
+        "vfov_deg": 45.0,
+        "fisheye": false,
+        "sphere": {
+          "centre": [
+            -0.22938965658632982,
+            0.0999680947095317,
+            0.9681873607372448
+          ],
+          "angular_radius": 0.12481674439688986
+        },
+        "camera_to_lab": [
+          0.722445,
+          -0.131314,
+          -0.460878
+        ],
+        "legacy_roi_coordinates": true,
+        "ignore_polygons": [
+          [
+            [
+              96.0,
+              156.0
+            ],
+            [
+              113.0,
+              147.0
+            ],
+            [
+              106.0,
+              128.0
+            ],
+            [
+              82.0,
+              130.0
+            ],
+            [
+              81.0,
+              150.0
+            ]
+          ],
+          [
+            [
+              71.0,
+              213.0
+            ],
+            [
+              90.0,
+              219.0
+            ],
+            [
+              114.0,
+              218.0
+            ],
+            [
+              135.0,
+              211.0
+            ],
+            [
+              154.0,
+              196.0
+            ],
+            [
+              150.0,
+              217.0
+            ],
+            [
+              121.0,
+              228.0
+            ],
+            [
+              99.0,
+              234.0
+            ],
+            [
+              75.0,
+              225.0
+            ]
+          ]
+        ],
+        "max_rotation": 0.35,
+        "max_error": 0.16,
+        "sample_stride": 2,
+        "iterations": 20,
+        "source": "sample.mp4"
+      },
+      "frames": 300,
+      "tracked": 299,
+      "relocalized": 0,
+      "rejected": 0,
+      "initializing": 1,
+      "mean_error": 6424.500252392103,
+      "max_error": 8268.539271610356,
+      "wall_seconds": 0.736169,
+      "end_to_end_fps": 407.5151222069932,
+      "tracking_fps": 1195.6639152460496,
+      "input_duration_ms": 9966.666666666666,
+      "final_position": [
+        3.6200534616363367,
+        -2.62729631571117
+      ],
+      "final_heading": 6.177704995564474,
+      "estimator": "accumulated spherical map / pure Rust BOBYQA",
+      "error_metric": "mean squared binary intensity (0..65025)",
+      "warnings": []
+    },
+    "comparison": {
+      "comparison": {
+        "candidate_final_position": [
+          3.620053461636,
+          -2.627296315711
+        ],
+        "endpoint_error_sphere_rad": 0.054525318251027806,
+        "frames": 300,
+        "heading_rmse_rad": 0.013184810790688728,
+        "path_point_rmse_sphere_rad": 0.04480675139756663,
+        "reference_final_position": [
+          3.674266189723,
+          -2.6214661833162
+        ],
+        "rotation_component_rmse_rad": [
+          0.008760804755303081,
+          0.008292135984256042,
+          0.014210731643506284
+        ],
+        "timestamp_max_error_ms": 3.456079866737127e-11
+      },
+      "limits": {
+        "heading_rmse_rad": 0.025,
+        "path_rmse_sphere_rad": 0.075,
+        "rotation_component_rmse_rad": 0.02
+      },
+      "passed": true
+    }
+  },
+  "native_gui": {
+    "source": "supplied public examples/sample.mp4",
+    "graphics": "Apple M2 Pro / Metal",
+    "daily_control_rounds": 5,
+    "recording_takes": 20,
+    "independently_decoded_movies": 20,
+    "passed": true,
+    "views": [
+      {
+        "name": "main",
+        "frames": 45,
+        "error": "",
+        "screenshot_sha256": "2ea96ccce3d4b9b90e62da4f7ee187f58ac129fc0d83f5ed8de0672cd4c47eff",
+        "visually_reviewed": true
+      },
+      {
+        "name": "diagnostics",
+        "frames": 45,
+        "error": "",
+        "screenshot_sha256": "5a991eefef82ff3d30badaea67aa978ff13a8677c81f875db8589a15dc1a090c",
+        "visually_reviewed": true
+      },
+      {
+        "name": "calibration",
+        "frames": 45,
+        "error": "",
+        "screenshot_sha256": "61f39f75e589f68fd591a94ba657a9bf56dc5e2de0cb6b23b409fd1655a2d263",
+        "visually_reviewed": true
+      }
+    ]
+  },
+  "scope": "Local merged-source checks on Mac ARM. The physical four-camera Linux/VR3/overnight campaigns retain their own earlier source hashes. Native release CI and package runtime results are separate. No private camera imagery or data rows included.",
+  "validation_log_sha256": {
+    "fmt.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "clippy.log": "0f5f3da6c50bfd1118a2d73664e5e28c1167e969b7d7c584f537135fa4984c46",
+    "tests.log": "3b2ba346f03d7d3ee3798fc053b70191544957b26642508fef9d6177ab0b685e",
+    "decoder.log": "608b9e5128da9ae32630605ec1f3ee0774f6e0084a74c82869cf1349965030e5",
+    "release.log": "2f72c6e671a5b196a62151ab04d1c2b601b55fa553dc4b6153429394274e7a01"
+  }
+}

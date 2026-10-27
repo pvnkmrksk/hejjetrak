@@ -1108,6 +1108,7 @@ mod tests {
             window_origin: crate::Pair(12., 36.),
             window_size: crate::Pair(520., 480.),
             root_hidden: false,
+            startup_notice: String::new(),
         };
         let request =
             serde_json::from_value(json!({"id":"root-close","command":"close","session":1}))?;

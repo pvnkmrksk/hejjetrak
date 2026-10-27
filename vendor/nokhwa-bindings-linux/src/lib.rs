@@ -907,10 +907,11 @@ mod internal {
             match &mut self.stream_handle {
                 Some(sh) => match sh.next() {
                     Ok((data, meta)) => {
+                        let payload = captured_payload(data, meta.bytesused)?;
                         let wall_ts = monotonic_to_wallclock(meta.timestamp);
                         Ok(Buffer::with_timestamp(
                             cam_fmt.resolution(),
-                            data,
+                            payload,
                             cam_fmt.format(),
                             wall_ts,
                         ))
@@ -932,7 +933,7 @@ mod internal {
         fn frame_raw(&mut self) -> Result<Cow<'_, [u8]>, NokhwaError> {
             match &mut self.stream_handle {
                 Some(sh) => match sh.next() {
-                    Ok((data, _)) => Ok(Cow::Borrowed(data)),
+                    Ok((data, meta)) => Ok(Cow::Borrowed(captured_payload(data, meta.bytesused)?)),
                     Err(why) => Err(NokhwaError::ReadFrameError(
                         if why.kind() == io::ErrorKind::TimedOut {
                             "no camera frame received within two seconds; reconnect the camera or check its connection/exposure".to_owned()
@@ -953,6 +954,19 @@ mod internal {
             }
             Ok(())
         }
+    }
+
+    // MMAP capacity may exceed the bytes occupied by this captured frame.
+    // Preserve only the driver's checked payload; row padding is not guessed.
+    fn captured_payload(data: &[u8], bytesused: u32) -> Result<&[u8], NokhwaError> {
+        let length = bytesused as usize;
+        if length == 0 || length > data.len() {
+            return Err(NokhwaError::ReadFrameError(format!(
+                "camera reports {length} captured bytes in a {}-byte buffer; reconnect the camera",
+                data.len()
+            )));
+        }
+        Ok(&data[..length])
     }
 
     fn fourcc_to_frameformat(fourcc: FourCC) -> Option<FrameFormat> {
@@ -977,6 +991,18 @@ mod internal {
             assert!(!capture_node(Flags::META_CAPTURE | Flags::STREAMING));
             assert!(!capture_node(Flags::VIDEO_CAPTURE));
             assert!(!capture_node(Flags::VIDEO_CAPTURE_MPLANE | Flags::STREAMING));
+        }
+        #[test]
+        fn captured_bytes_exclude_unused_mmap_capacity_and_reject_invalid_metadata()
+        -> Result<(), NokhwaError> {
+            let mapping = [1, 2, 3, 4, 99, 99, 99, 99];
+            assert_eq!(captured_payload(&mapping, 4)?, &[1, 2, 3, 4]);
+            assert_eq!(captured_payload(&mapping, 8)?, &mapping);
+            assert!(captured_payload(&mapping, 0).is_err());
+            assert!(captured_payload(&mapping, 9).is_err());
+            assert!(captured_payload(&mapping, u32::MAX).is_err());
+            assert!(captured_payload(&[], 0).is_err());
+            Ok(())
         }
         #[test]
         fn standard_and_legacy_grey_fourccs_select_mono_capture() {

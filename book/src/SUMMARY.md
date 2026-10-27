@@ -34,6 +34,12 @@
 # Scientific and implementation reference
 
 - [Tracking-stage latency](tracking-performance.md)
+- [Recording throughput and limits](recording-performance.md)
+- [VR3 tracking validation](vr3-validation.md)
+- [VR3 motion structure](vr3-motion-structure.md)
+- [Native Linux validation](linux-native-validation.md)
+- [Four-camera overnight validation](overnight-validation.md)
+- [Validation media retention](storage-retention.md)
 - [Pipeline performance](performance.md)
 - [Resource use and scheduling](resources.md)
 - [Compatibility boundaries](parity.md)

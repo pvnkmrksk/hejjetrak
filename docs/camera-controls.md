@@ -35,6 +35,8 @@ Select the named camera and check its negotiated dimensions/rate in diagnostics.
 Use automatic settings first; explicit format requests must match an advertised
 mode. A Linux stream that supplies no frames reports an error and can be
 reconnected; ordinary startup can use the sample instead.
+The two-second limit bounds frame polling; device setup and shutdown still
+depend on the operating system's camera driver responding.
 
 A camera already owned by another rig is labelled with that rig in the chooser.
 Selecting it reports the conflict before changing the working preview. Selecting
@@ -75,4 +77,4 @@ all-frame data and the restored readback.
 
 `runs/camera-controls-native/` contains metadata from the built-in FaceTime HD camera on this Mac, using the pure Rust `camera_probe` example in an ad hoc signed local app. No camera pixels were stored. The device advertises seven bounded formats with 15–30 fps ranges. Explicit 640×480/30 and 1280×720/15 were opened and delivered actual frames; status readback and errors are retained in the JSON reports. This built-in camera exposes no supported automatic/locked exposure modes through AVFoundation, so both mode requests and numerical exposure/ISO requests were rejected without interrupting frame delivery. This is evidence of honest unsupported behavior, not evidence of working manual exposure on another camera. Concurrent builds can cause dropped delivered intervals; these probes are configuration/functionality checks, not camera throughput benchmarks.
 
-Windows strict cross-target Clippy passes; native Windows hardware behavior has not been exercised here. Linux camera cross-check remains blocked on this Mac by missing `linux/videodev2.h`; native Linux hardware behavior has not been exercised here. Camera controls never establish physical sphere-tracking accuracy.
+Native preflight CI passes on Windows, Mac and Ubuntu **22.04/24.04** userspace. The Linux builds exercise the shared camera-format/JPEG tests and the vendored canonical `GREY` mapping regression. A single Ubuntu 22.04-built package has also been installed and run on both Ubuntu versions: the installed and portable CLIs process all 300 reference frames, native Xvfb/Mesa previews visibly render the supplied sample, and startup with an unavailable camera falls back to that sample. [The preflight source, exact ABI, numerical checks and screenshot evidence](benchmarks/ubuntu22-compatibility-20261026.json) record the scope. These container checks use software graphics and no V4L hardware; physical Windows/Linux camera and GPU-driver behavior remains untested here. The macOS capture implementation is unchanged by this Linux compatibility fix. Camera controls never establish physical sphere-tracking accuracy.

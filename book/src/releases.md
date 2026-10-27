@@ -4,7 +4,62 @@
 
 The landing page resolves GitHub's latest published release at download time and shows the platform archive, release tag and available SHA-256 digest. Manual OS/chip choices remain available; browser architecture detection is not treated as infallible. If the release API is unavailable or an archive has not uploaded yet, use the visible GitHub release link rather than a guessed download.
 
-## v0.2.1 — legacy MATREX VR output (upcoming)
+## v0.3.0
+
+This release combines the four-camera Linux improvements with v0.2.3's saved
+user configuration and recording-clock fixes.
+
+- More reliable fast-motion fitting and spatial atlas retention.
+- Linux camera timestamps, camera ownership checks and native display fixes.
+- Independent display FPS and recording speed/size controls.
+- Bounded background video encoding and live recording finalization, with
+  explicit completion markers and partial-media status.
+- Saved-layer calibration review and a simpler daily toolbar.
+- Direct LAN publishers and a four-rig launch helper for existing UDP bridges.
+
+The included VR1–VR4 files describe one particular calibrated 320×240/100-FPS
+setup. Check camera IDs, formats, output ports and geometry for your own rig.
+The [recording guide](recording.md) and [validation record](https://github.com/pvnkmrksk/hejjetrak/blob/main/docs/validation.md)
+retain the tested limits and historical overnight-run evidence.
+
+
+## v0.2.3 — 26 October 2026
+
+[v0.2.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.2.3) was published with all five packages. All native build and Ubuntu runtime
+checks pass. The official Mac archive passes signature, complete-sample,
+preview and saved-default relaunch checks. [Validation](validation.md#v023-published-release--2026-10-26)
+records hashes and execution scope.
+
+Desktop recordings prefer an explicit `src_fps`, then the source's reported
+frame rate. Capture jitter in the first two frames no longer changes the whole
+video's playback speed. Numeric and quality timestamps remain unchanged;
+constant-rate video still approximates capture jitter and gaps. A single-frame
+take also uses the known source rate. Normal launch keeps a writable default
+config in the user's config folder and reloads its saved source and calibration.
+Installed templates remain unchanged; an unavailable config folder falls back
+to a temporary preview with Save As guidance.
+
+## v0.2.2 — 26 October 2026
+
+[v0.2.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.2.2) is published
+with all five platform packages. All four native package jobs and both Ubuntu
+runtime jobs pass. The official Apple Silicon archive passes strict ad hoc
+signature, version, source and complete sample checks; its native preview was
+visually checked. [Validation](validation.md#v022-published-release--2026-10-26)
+records exact package hashes, test scope and remaining limits.
+
+Linux packages now target Ubuntu **22.04 and newer**, with a checked glibc 2.35
+ceiling. The same installed and portable builds are tested on Ubuntu 22.04 and
+24.04 with the full sample and a visible native preview. Camera startup handles
+monochrome `GREY` and MJPEG formats, bounds frame waits, and keeps the preview
+and recording available when an output port is occupied. The Mac capture
+adapter is unchanged; physical Linux camera testing remains outstanding.
+
+Fast-motion recovery retains a valid acceleration candidate as a search
+proposal instead of repeatedly starting from a stationary guess. Quality
+thresholds, confirmation rules and missing-motion semantics remain unchanged.
+Sharp and blurred known-motion regressions and the existing real-video
+recovery oracle cover the change. [Recovery](recovery.md) explains the limits.
 
 The minor release adds explicit `legacy_matrex_vr` JSON output and staged Rust
 ZMTP 2/3 negotiation for the original NetMQ 4.0.0.1 DLL. Native FT remains the
@@ -18,16 +73,23 @@ worker-stop warnings and strict lifecycle acceptance remains false; see
 Python or native libzmq runtime. Full release execution evidence is recorded in
 [validation](validation.md).
 
-The v0.2.0 candidate was not published: Windows CI exposed a test-peer shutdown
-race. v0.2.1 corrects the test's connection lifetime without changing production
-transport or tracking behavior. The original candidate tag and CI evidence are
-retained.
+The v0.2.0 and v0.2.1 candidates remain unpublished. Windows CI exposed a
+test-peer shutdown race, corrected by retaining the test connection through its
+validation assertion. Subsequent Ubuntu and tracking fixes are included here;
+the candidate tags and CI evidence are retained.
+
+**Known recording limitation:** on a live camera, the desktop can select video
+recording FPS from a jittered first frame interval. A 9 ms interval produced
+111.111 FPS video metadata for an approximately 120 FPS source. Numeric
+timestamps remain intact. Use those timestamps for capture timing; a correction
+is under investigation for a later patch. The live tracking check also needs a
+corrected ball-only calibration before it can support an accuracy claim.
 
 ## v0.1.4 — 25 October 2026
 
 [v0.1.4](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.1.4) introduces the **HejjéTrac** display name and `hejjetrac` commands. Calibration opens directly into a fresh ball-outline draft, fits the outline automatically from the third point, and never joins rim marks with straight lines. Diagnostics includes the complete saved calibration, direct layer redraw and full config access. The website starts its silent demo automatically and the README download link opens the platform download page directly.
 
-All five platform packages are published and v0.1.4 is the latest release. All four [native release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640739) pass: 188 workspace tests on Linux and both Macs, 185 on Windows, and 1,353 decoder tests each. The official Mac archive passes signature, version, source-commit and complete sample checks. A public README click completes the recommended download without a second click. See [validation evidence](validation.md) for hashes, execution scope and remaining hardware/visual limits.
+All five platform packages were published. All four [native release jobs](https://github.com/pvnkmrksk/hejjetrak/actions/runs/40198640739) pass: 188 workspace tests on Linux and both Macs, 185 on Windows, and 1,353 decoder tests each. The official Mac archive passes signature, version, source-commit and complete sample checks. A public README click completed the recommended v0.1.4 download without a second click. See [validation evidence](validation.md) for hashes, execution scope and remaining hardware/visual limits.
 
 ## Earlier published checkpoint
 

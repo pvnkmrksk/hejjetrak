@@ -1,0 +1,43 @@
+{
+  "pyzmq": "27.2.0",
+  "libzmq": "4.3.5",
+  "cli_sha256": "1693f0e6c4ecc9ade905ad5fe466475518284f3513db96e99739a96bfa35da88",
+  "input_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+  "scope": "Modern libzmq wire oracle over all 300 real sample frames; no legacy VR acceptance claim",
+  "cases": [
+    {
+      "mode": "native_ft",
+      "framing": "single",
+      "source_frames": 300,
+      "recorded_rows": 300,
+      "received_rows": 300,
+      "first_row_index": 0,
+      "last_row_index": 299,
+      "all_received_bytes_exact": true
+    },
+    {
+      "mode": "legacy_matrex_vr",
+      "framing": "single",
+      "source_frames": 300,
+      "recorded_rows": 300,
+      "received_rows": 300,
+      "first_row_index": 0,
+      "last_row_index": 299,
+      "all_received_bytes_exact": true
+    },
+    {
+      "mode": "legacy_matrex_vr",
+      "framing": "topic_json",
+      "source_frames": 300,
+      "recorded_rows": 300,
+      "received_rows": 300,
+      "first_row_index": 0,
+      "last_row_index": 299,
+      "all_received_bytes_exact": true
+    }
+  ],
+  "date": "2026-10-26",
+  "version": "0.2.2",
+  "platform": "Apple M2 Pro / macOS27.0.1 arm64 / Rust1.99.1",
+  "production_runtime": "Rust publisher; PyZMQ is independent QA tooling only"
+}

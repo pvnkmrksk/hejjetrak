@@ -19,6 +19,8 @@ REPORTS = (
     "agent-control.md", "architecture.md", "camera-controls.md", "output.md",
     "parity.md", "performance.md", "tracking-performance.md", "ui-design.md",
     "validation.md", "resources.md", "recovery.md", "matrex-vr.md",
+    "linux-native-validation.md", "overnight-validation.md", "recording-performance.md",
+    "storage-retention.md", "vr3-motion-structure.md", "vr3-validation.md",
 )
 REPOSITORY = "https://github.com/pvnkmrksk/hejjetrak"
 

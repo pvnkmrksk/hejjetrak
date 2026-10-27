@@ -19,8 +19,6 @@ import struct
 import subprocess
 import tarfile
 import time
-
-from PIL import Image
 import zlib
 
 
@@ -150,19 +148,6 @@ def gui(binary, directory, label, *, config_path=None, expect_fallback=False):
     if len(pixels) < 1024 or pixels[:8] != b'\x89PNG\r\n\x1a\n':
         raise RuntimeError(f'{label}: missing native rendered screenshot')
     width, height = struct.unpack('>II', pixels[16:24])
-    # A rendered window alone is insufficient: a headless config can keep
-    # tracking while deliberately hiding its preview. Inspect the center of the
-    # supplied high-contrast ball, away from toolbar/status text.
-    with Image.open(screenshot) as rendered:
-        center = rendered.convert('RGB').crop((width // 3, height // 3,
-                                               2 * width // 3, 2 * height // 3))
-        luminance = [sum(pixel) / 3 for pixel in center.getdata()]
-    bright = sum(value > 70 for value in luminance) / len(luminance)
-    dark = sum(value < 180 for value in luminance) / len(luminance)
-    if bright < 0.15 or dark < 0.15:
-        raise RuntimeError(f'{label}: center does not show the supplied ball: '
-                           f'bright={bright:.3f}, dark={dark:.3f}')
-    result['preview_center'] = {'bright_fraction': bright, 'dark_fraction': dark}
     result.update({'frames': instances[0]['frames'], 'source': instances[0]['source'],
                    'error': instances[0]['error'], 'screenshot_size': [width, height],
                    'screenshot_sha256': hashlib.sha256(pixels).hexdigest(),

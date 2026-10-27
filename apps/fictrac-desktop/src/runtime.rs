@@ -547,6 +547,12 @@ fn run(
             }
         }
     }
+    // Retain reported metadata independently of display rate inference/overrides.
+    // Zero means an unknown source rate and permits a recording PTS fallback.
+    let mut recording_source_fps = match &input {
+        Input::File(video) => video.info.fps.unwrap_or(0.0),
+        Input::Camera(_) => snapshot.source_fps,
+    };
     let mut last_completed: Option<Instant> = None;
     let mut last_timestamp: Option<f64> = None;
     let mut paused = false;
@@ -562,6 +568,7 @@ fn run(
         let recorder = Recorder::automatic(
             &doc,
             source_recording_tuning(&input, MediaRecordingTuning::default()),
+            recording_source_fps,
         )?;
         snapshot.recording = true;
         snapshot.record_options = Some(fictrac_control::RecordOptions::from_document(&doc));
@@ -756,6 +763,7 @@ fn run(
                         snapshot.notice = match &mut input {
                             Input::Camera(camera) => match camera.capabilities() {
                                 Ok(c) => {
+                                    recording_source_fps = c.current_format.fps.unwrap_or(0.0);
                                     snapshot.camera = Some(c);
                                     "Camera controls refreshed".into()
                                 }
@@ -768,6 +776,7 @@ fn run(
                         snapshot.notice = match &mut input {
                             Input::Camera(camera) => match camera.set_control(request) {
                                 Ok(c) => {
+                                    recording_source_fps = c.current_format.fps.unwrap_or(0.0);
                                     snapshot.camera = Some(c);
                                     "Camera setting applied and read back".into()
                                 }
@@ -785,6 +794,7 @@ fn run(
                             &effective,
                             source_recording_tuning(&input, tuning),
                             &mut snapshot,
+                            recording_source_fps,
                         ) {
                             recording_rejected(&mut snapshot, error);
                             continue;
@@ -804,6 +814,7 @@ fn run(
                             &doc,
                             source_recording_tuning(&input, MediaRecordingTuning::default()),
                             &mut snapshot,
+                            recording_source_fps,
                         ) {
                             recording_rejected(&mut snapshot, error);
                             continue;
@@ -899,11 +910,12 @@ fn run(
                         .map(|o| o.recording_document(&doc))
                         .transpose()?;
                     r.tuning = source_recording_tuning(&input, r.tuning);
-                    r.epoch(effective.as_ref().unwrap_or(&doc))?;
+                    r.epoch(effective.as_ref().unwrap_or(&doc), recording_source_fps)?;
                 } else if doc.boolean("save_raw") || doc.boolean("save_debug") {
                     let created = Recorder::automatic(
                         &doc,
                         source_recording_tuning(&input, MediaRecordingTuning::default()),
+                        recording_source_fps,
                     )?;
                     snapshot.recording = true;
                     snapshot.recording_directory = Some(created.directory.clone());
@@ -1307,10 +1319,26 @@ fn run(
     let active_result = retire_recording(&mut recorder, None, &mut snapshot);
     snapshot.recording = false;
     snapshot.record_options = None;
+    let result = match processing_result {
+        Err(mut error) => {
+            for secondary in [active_result, finalizer_result] {
+                if let Err(recording_error) = secondary {
+                    error.push_str(&format!(
+                        "; recording finalization also failed: {recording_error}"
+                    ));
+                }
+            }
+            snapshot.advance_remaining = 0;
+            snapshot.ended = true;
+            snapshot.notice = error.clone();
+            Err(error)
+        }
+        Ok(()) => active_result.and(finalizer_result),
+    };
     *shared
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner) = snapshot;
-    processing_result.and(active_result).and(finalizer_result)
+    result
 }
 fn replace_recording(
     recorder: &mut Option<Recorder>,
@@ -1319,6 +1347,7 @@ fn replace_recording(
     doc: &ConfigDocument,
     tuning: MediaRecordingTuning,
     snapshot: &mut Snapshot,
+    source_fps: f64,
 ) -> Result<()> {
     let identity = recording_destination(&directory)?;
     reject_reserved_destination(
@@ -1341,7 +1370,7 @@ fn replace_recording(
         finalizer.check_capacity()?;
     }
     // Invalid destinations/options must not stop an existing take.
-    let next = Recorder::new_with_tuning(directory, doc, tuning)?;
+    let next = Recorder::new_with_tuning(directory, doc, tuning, source_fps)?;
     retire_recording(recorder, finalizer, snapshot)?;
     snapshot.recording_directory = Some(next.directory.clone());
     *recorder = Some(next);
@@ -1502,6 +1531,7 @@ struct Recorder {
     all: BufWriter<File>,
     quality: BufWriter<File>,
     doc: ConfigDocument,
+    nominal_fps: Option<f64>,
     media: Option<MediaRecorders>,
     pending: Option<PendingMedia>,
     tuning: MediaRecordingTuning,
@@ -1512,7 +1542,11 @@ struct Recorder {
     completion_attempted: bool,
 }
 impl Recorder {
-    fn automatic(doc: &ConfigDocument, tuning: MediaRecordingTuning) -> Result<Self> {
+    fn automatic(
+        doc: &ConfigDocument,
+        tuning: MediaRecordingTuning,
+        source_fps: f64,
+    ) -> Result<Self> {
         let stamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_err(|e| e.to_string())?
@@ -1526,18 +1560,48 @@ impl Recorder {
             recording_root().join(format!("{base}-{stamp}")),
             doc,
             tuning,
+            source_fps,
         )
     }
     #[cfg(test)]
     fn new(directory: PathBuf, doc: &ConfigDocument) -> Result<Self> {
-        Self::new_with_tuning(directory, doc, MediaRecordingTuning::default())
+        Self::new_with_tuning(directory, doc, MediaRecordingTuning::default(), 0.0)
+    }
+    fn nominal_fps(doc: &ConfigDocument, source_fps: f64) -> Result<Option<f64>> {
+        if !doc.boolean("save_raw") && !doc.boolean("save_debug") {
+            // Numeric-only recording has no encoder clock to validate.
+            return Ok(None);
+        }
+        let configured = doc
+            .get("src_fps")
+            .map(str::parse::<f64>)
+            .transpose()
+            .map_err(|_| "Recording src_fps must be a number")?
+            .unwrap_or(-1.0);
+        if !configured.is_finite() {
+            return Err("Recording src_fps must be finite".into());
+        }
+        let rate = if configured > 0.0 {
+            configured
+        } else if source_fps == 0.0 {
+            // Zero represents a source with no reported frame rate.
+            return Ok(None);
+        } else {
+            source_fps
+        };
+        if !rate.is_finite() || !(0.1..=1000.0).contains(&rate) {
+            return Err("Recording FPS must be finite in 0.1..1000; set a valid src_fps or check the source frame rate".into());
+        }
+        Ok(Some(rate))
     }
     fn new_with_tuning(
         directory: PathBuf,
         doc: &ConfigDocument,
         tuning: MediaRecordingTuning,
+        source_fps: f64,
     ) -> Result<Self> {
         let effective = tuning.recording_document(doc)?;
+        let nominal_fps = Self::nominal_fps(&effective, source_fps)?;
         if let Some(p) = directory.parent() {
             fs::create_dir_all(p).map_err(|e| e.to_string())?;
         }
@@ -1555,6 +1619,7 @@ impl Recorder {
             all,
             quality,
             doc: effective,
+            nominal_fps,
             media: None,
             pending: None,
             tuning,
@@ -1571,9 +1636,10 @@ impl Recorder {
         writeln!(self.quality, "frame,timestamp_ms,accepted,status,fit_error")
             .map_err(|e| e.to_string())
     }
-    fn epoch(&mut self, doc: &ConfigDocument) -> Result<()> {
-        self.finish()?;
+    fn epoch(&mut self, doc: &ConfigDocument, source_fps: f64) -> Result<()> {
         let effective = self.tuning.recording_document(doc)?;
+        let nominal_fps = Self::nominal_fps(&effective, source_fps)?;
+        self.finish()?;
         self.index = self
             .index
             .checked_add(1)
@@ -1596,6 +1662,7 @@ impl Recorder {
         )
         .map_err(|e| e.to_string())?;
         self.doc = effective;
+        self.nominal_fps = nominal_fps;
         self.media_disabled = false;
         self.media_status = None;
         self.header()
@@ -1658,12 +1725,10 @@ impl Recorder {
             return Ok(());
         }
         if let Some(pending) = &self.pending {
-            let configured = self.doc.number("src_fps", -1.0);
-            let fps = if configured > 0.0 {
-                configured
-            } else {
-                1000.0 / (frame.timestamp_ms() - pending.frame.timestamp_ms())
-            };
+            // A quantized or delayed first interval is not the nominal rate.
+            let fps = self
+                .nominal_fps
+                .unwrap_or_else(|| 1000.0 / (frame.timestamp_ms() - pending.frame.timestamp_ms()));
             if let Err(error) = self.start_media(fps) {
                 self.stop_media_with_warning(error);
                 return Ok(());
@@ -1702,11 +1767,10 @@ impl Recorder {
                 first_error = Some(format!("Cannot finalize {name}: {error}"));
             }
         }
-        if self.pending.is_some() {
-            let fps = self.doc.number("src_fps", 25.0);
-            if let Err(error) = self.start_media(if fps > 0.0 { fps } else { 25.0 }) {
-                self.stop_media_with_warning(error);
-            }
+        if self.pending.is_some()
+            && let Err(error) = self.start_media(self.nominal_fps.unwrap_or(25.0))
+        {
+            self.stop_media_with_warning(error);
         }
         if let Some(media) = self.media.take() {
             let (status, warnings) = media.finish_with_status();
@@ -1846,6 +1910,7 @@ mod tests {
             &doc,
             MediaRecordingTuning::default(),
             &mut snapshot,
+            0.0,
         )
         .err()
         .ok_or("removed active path was reused")?;
@@ -1870,6 +1935,7 @@ mod tests {
             &doc,
             MediaRecordingTuning::default(),
             &mut snapshot,
+            0.0,
         )
         .err()
         .ok_or("recent completed path was reused")?;
@@ -1910,6 +1976,7 @@ mod tests {
             &doc,
             MediaRecordingTuning::default(),
             &mut snapshot,
+            0.0,
         )
         .err()
         .ok_or("removed pending path was reused")?;
@@ -1993,6 +2060,7 @@ mod tests {
                     &doc,
                     MediaRecordingTuning::default(),
                     &mut snapshot,
+                    0.0,
                 )?;
                 if index == 2 {
                     assert_eq!(
@@ -2011,6 +2079,7 @@ mod tests {
                     &doc,
                     MediaRecordingTuning::default(),
                     &mut snapshot,
+                    0.0,
                 )
                 .err()
                 .ok_or("third pending rotation unexpectedly accepted")?;
@@ -2530,6 +2599,146 @@ mod tests {
         Ok(())
     }
     #[test]
+    fn desktop_recording_prefers_nominal_fps_and_preserves_jittered_capture_timestamps()
+    -> Result<()> {
+        let (source, base) = fixture().map_err(|e| e.to_string())?;
+        let SourceSpec::Video(input) = source else {
+            return Err("video fixture required".into());
+        };
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|e| e.to_string())?
+            .as_nanos();
+        // The 9 ms first interval represents quantized 120 FPS camera PTS.
+        // Metadata must win over that interval, including a one-frame capture.
+        for (name, source_fps, override_fps, count, expected_fps) in [
+            ("nominal", 120.00048, -1.0, 3, 120.0),
+            ("override", 120.00048, 60.0, 3, 60.0),
+            ("unknown", 0.0, -1.0, 3, 111.111),
+            ("one-frame", 120.00048, -1.0, 1, 120.0),
+            ("one-frame-unknown", 0.0, -1.0, 1, 25.0),
+        ] {
+            let directory = std::env::temp_dir().join(format!("hejjetrac-clock-{name}-{stamp}"));
+            let mut doc = base.clone();
+            for (key, value) in [
+                ("save_raw", "y".into()),
+                ("save_debug", "y".into()),
+                ("vid_codec", "mjpg".into()),
+                ("src_fps", override_fps.to_string()),
+            ] {
+                doc.set(key, &value).map_err(|e| e.to_string())?;
+            }
+            let mut recorder = Recorder::new_with_tuning(
+                directory.clone(),
+                &doc,
+                MediaRecordingTuning::default(),
+                source_fps,
+            )?;
+            let mut video = VideoSource::open(&input).map_err(|e| e.to_string())?;
+            video.enable_color();
+            let config = load_config_text(doc.text(), 384, 288)
+                .map_err(|e| e.to_string())?
+                .config;
+            let mut tracker = Tracker::new(config.clone()).map_err(|e| e.to_string())?;
+            let mut path = Vec::new();
+            let mut expected_numeric = Vec::new();
+            let mut expected_quality = "frame,timestamp_ms,accepted,status,fit_error\n".to_owned();
+            for timestamp in [1000.0, 1009.0, 1017.0].into_iter().take(count) {
+                let frame = video
+                    .next_tracking_frame(None)
+                    .map_err(|e| e.to_string())?
+                    .ok_or("reference fixture ended early")?
+                    .with_timestamp(timestamp)
+                    .map_err(|e| e.to_string())?;
+                let rgb = video.take_rgb().ok_or("reference color missing")?;
+                let row = tracker.process(frame.clone()).map_err(|e| e.to_string())?;
+                path.push(row.position);
+                write_dat(&mut expected_numeric, &row).map_err(|e| e.to_string())?;
+                expected_quality.push_str(&format!(
+                    "{},{},{},{},{}\n",
+                    row.frame, row.timestamp_ms, row.accepted, row.status, row.error
+                ));
+                recorder.write(&row)?;
+                recorder.write_media(
+                    &frame,
+                    &rgb,
+                    tracker
+                        .debug_views()
+                        .ok_or("reference diagnostics missing")?,
+                    &path,
+                    &config,
+                    &row,
+                )?;
+            }
+            recorder.finish()?;
+            for name in ["raw.avi", "debug.avi"] {
+                let mut recorded =
+                    VideoSource::open(&directory.join("epoch-0000-media").join(name))
+                        .map_err(|e| e.to_string())?;
+                assert!(
+                    (recorded.info.fps.ok_or("recorded fps missing")? - expected_fps).abs() < 1e-6,
+                    "{name}: incorrect recording rate"
+                );
+                let mut decoded = 0;
+                while recorded.next_frame().map_err(|e| e.to_string())?.is_some() {
+                    decoded += 1;
+                }
+                assert_eq!(decoded, count);
+            }
+            assert_eq!(
+                fs::read(directory.join("epoch-0000-all-frames.dat")).map_err(|e| e.to_string())?,
+                expected_numeric
+            );
+            assert_eq!(
+                fs::read_to_string(directory.join("epoch-0000-quality.csv"))
+                    .map_err(|e| e.to_string())?,
+                expected_quality
+            );
+            fs::remove_dir_all(directory).map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    }
+    #[test]
+    fn invalid_recording_rates_fail_before_creating_files() -> Result<()> {
+        let (_, mut doc) = fixture().map_err(|e| e.to_string())?;
+        doc.set("src_fps", "-1").map_err(|e| e.to_string())?;
+        assert_eq!(Recorder::nominal_fps(&doc, f64::NAN)?, None);
+        doc.set("save_raw", "y").map_err(|e| e.to_string())?;
+        let directory = std::env::temp_dir().join(format!(
+            "hejjetrac-invalid-clock-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|e| e.to_string())?
+                .as_nanos()
+        ));
+        for rate in [f64::NAN, f64::INFINITY, -1.0, 0.01, 1000.01] {
+            assert!(
+                Recorder::new_with_tuning(
+                    directory.clone(),
+                    &doc,
+                    MediaRecordingTuning::default(),
+                    rate
+                )
+                .is_err()
+            );
+            assert!(!directory.exists());
+        }
+        doc.set("src_fps", "60").map_err(|e| e.to_string())?;
+        assert_eq!(Recorder::nominal_fps(&doc, f64::NAN)?, Some(60.0));
+        doc.set("src_fps", "NaN").map_err(|e| e.to_string())?;
+        assert!(
+            Recorder::new_with_tuning(
+                directory.clone(),
+                &doc,
+                MediaRecordingTuning::default(),
+                120.0
+            )
+            .is_err()
+        );
+        assert!(!directory.exists());
+        Ok(())
+    }
+    #[test]
     fn desktop_recording_keeps_first_frame_and_finalizes_playable_media() -> Result<()> {
         let (source, mut doc) = fixture().map_err(|e| e.to_string())?;
         doc.set("save_raw", "y").map_err(|e| e.to_string())?;
@@ -2602,6 +2811,116 @@ mod tests {
                 .count(),
             3
         );
+        fs::remove_dir_all(directory).map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    #[test]
+    fn source_read_failure_finalizes_recorded_video_and_retains_primary_error() -> Result<()> {
+        let (source, mut doc) = fixture().map_err(|e| e.to_string())?;
+        let SourceSpec::Video(sample) = source else {
+            return Err("video fixture required".into());
+        };
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_err(|e| e.to_string())?
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!("hejjetrac-source-error-{stamp}"));
+        fs::create_dir(&directory).map_err(|e| e.to_string())?;
+        let input_path = directory.join("truncated.y4m");
+        let recording_path = directory.join("recording");
+        // Keep four actual reference-video frames, then interrupt a fifth frame.
+        // The real decoder/prefetch pipeline must deliver its queued frames and
+        // primary read error in order; this is not a synthetic error response.
+        let mut reference = VideoSource::open(&sample).map_err(|e| e.to_string())?;
+        let mut input_bytes = Vec::new();
+        for index in 0..4 {
+            let frame = reference
+                .next_frame()
+                .map_err(|e| e.to_string())?
+                .ok_or("reference fixture ended early")?;
+            if index == 0 {
+                fictrac_io::write_y4m_header(&mut input_bytes, frame.width(), frame.height(), 25)
+                    .map_err(|e| e.to_string())?;
+            }
+            fictrac_io::write_y4m_frame(&mut input_bytes, &frame).map_err(|e| e.to_string())?;
+        }
+        input_bytes.extend_from_slice(b"FRAME\n\0\0\0");
+        fs::write(&input_path, input_bytes).map_err(|e| e.to_string())?;
+        let mut oracle = VideoSource::open(&input_path).map_err(|e| e.to_string())?;
+        for _ in 0..4 {
+            oracle.next_frame().map_err(|e| e.to_string())?;
+        }
+        let primary_error = oracle
+            .next_frame()
+            .err()
+            .ok_or("truncated fixture did not fail")?
+            .to_string();
+        drop(oracle);
+        for (key, value) in [
+            ("src_fn", input_path.to_string_lossy().into_owned()),
+            ("sock_port", "-1".into()),
+            ("zmq_port", "-1".into()),
+            ("save_raw", "n".into()),
+            ("save_debug", "n".into()),
+            ("vid_codec", "mjpg".into()),
+        ] {
+            doc.set(key, &value).map_err(|e| e.to_string())?;
+        }
+        let (tx, rx) = mpsc::sync_channel(16);
+        tx.send(Command::RecordOptions(
+            recording_path.clone(),
+            fictrac_control::RecordOptions {
+                raw: true,
+                debug: false,
+            },
+            MediaRecordingTuning::default(),
+        ))
+        .map_err(|e| e.to_string())?;
+        tx.send(Command::Advance(5)).map_err(|e| e.to_string())?;
+        let shared = Arc::new(Mutex::new(Snapshot::default()));
+        let error = run(
+            SourceSpec::Video(input_path),
+            doc,
+            false,
+            rx,
+            &shared,
+            &AtomicBool::new(false),
+            None,
+        )
+        .err()
+        .ok_or("source read failure was swallowed")?;
+        assert_eq!(error, primary_error);
+        let snapshot = shared
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone();
+        assert!(snapshot.ended);
+        assert!(!snapshot.recording);
+        assert!(snapshot.record_options.is_none());
+        assert_eq!(snapshot.advance_remaining, 0);
+        assert_eq!(snapshot.frames, 4);
+        assert_eq!(snapshot.notice, primary_error);
+        let all = fs::read_to_string(recording_path.join("epoch-0000-all-frames.dat"))
+            .map_err(|e| e.to_string())?;
+        let quality = fs::read_to_string(recording_path.join("epoch-0000-quality.csv"))
+            .map_err(|e| e.to_string())?;
+        assert_eq!(all.lines().count(), 4);
+        assert_eq!(quality.lines().count(), 5);
+        let saved = ConfigDocument::parse(
+            fs::read_to_string(recording_path.join("epoch-0000-config.txt"))
+                .map_err(|e| e.to_string())?,
+        )
+        .map_err(|e| e.to_string())?;
+        assert!(saved.boolean("save_raw"));
+        let media = recording_path.join("epoch-0000-media");
+        assert!(!media.join("raw.avi.partial").exists());
+        let mut recorded = VideoSource::open(&media.join("raw.avi")).map_err(|e| e.to_string())?;
+        let mut frames = 0;
+        while recorded.next_frame().map_err(|e| e.to_string())?.is_some() {
+            frames += 1;
+        }
+        assert_eq!(frames, 4);
+        drop(recorded);
         fs::remove_dir_all(directory).map_err(|e| e.to_string())?;
         Ok(())
     }

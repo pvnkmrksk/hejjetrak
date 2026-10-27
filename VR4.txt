@@ -1,6 +1,7 @@
 # VR4: calibration from the physical rig config, 2026-10-26.
 # Pixel marks were measured at 320x240; keep this capture size.
-# UDP port 1114 feeds the existing external republisher. Direct ZMQ is disabled.
+# UDP 1114 and direct ZMQ 9874 are enabled; use only one publisher per port.
+# scripts/run_four_bridged.sh disables direct ZMQ in temporary copies for republishers.
 ## FicTrac v2.1.1 config file (build date Aug 21 2023)
 c2a_cnrs_xy      : { 284, 38, 320, 36, 321, 96, 281, 94 }
 c2a_cnrs_yz      : { 190, 95, 123, 96, 125, 141, 189, 141 }

@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import sys
 import unittest
 
 from overnight_soak import (atomic_json, await_completion, clock_warnings, completion_marker, pid_identity, read_status,
@@ -109,6 +110,7 @@ class OvernightEvidenceTests(unittest.TestCase):
                 require_generated_directory(output, generated)
             self.assertEqual(original.read_bytes(), b"private original input must survive")
 
+    @unittest.skipUnless(sys.platform.startswith("linux"), "PID start ticks require Linux /proc")
     def test_status_checks_freshness_and_pid_start_ticks(self):
         with tempfile.TemporaryDirectory() as temporary:
             output = Path(temporary)

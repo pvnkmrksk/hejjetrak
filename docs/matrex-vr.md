@@ -11,21 +11,31 @@ tools; they are not application components.
 
 ## Set up a rig
 
-For the existing four Python republishers, keep HejjéTrac's direct publisher
-disabled (`zmq_port : 0`) and use UDP ports 1111–1114. The republishers own
-network ports 9871–9874. From this repository, start all four calibrated rigs in
-one process with:
+The saved repository rigs enable UDP ports 1111–1114 and direct ZMQ ports
+9871–9874. When using the existing four Python republishers, those programs
+own ports 9871–9874, so HejjéTrac's direct publishers must be disabled for that
+launch. From this repository, start all four calibrated rigs through the bridge
+with:
 
 ```sh
 ./scripts/run_four_bridged.sh
 ```
 
-This selects the explicit repository `VR1.txt`–`VR4.txt` files, avoiding a
-different saved configuration in the installed app or portable folder. It
-opens a 2×2 grid, starts tracking and leaves video recording off until selected
-in the UI. Keep the four Python republishers running. Close original FicTrac
-and any other camera-owning tracker windows before taking over all four
-cameras; the launcher does not terminate other programs or steal their devices.
+The launcher uses the paired Rust CLI to copy `VR1.txt`–`VR4.txt` into one
+temporary folder with only `zmq_port : 0` changed. Camera IDs, UDP destinations,
+calibration and the original files stay intact. It opens those copies in a 2×2
+grid and retains them until the app exits, then removes the temporary folder.
+To keep calibration edits made during this bridged session, use **Save as** to
+a permanent rig file before quitting. Video recording stays off until selected
+in the UI.
+
+The launcher looks for the extracted Linux portable app under
+`dist/hejjetrac-linux-x86_64`, then the local release build. You can choose
+executables with `HEJJETRAC_BINARY` and `HEJJETRAC_CLI`; otherwise it finds the
+CLI beside the app or at `target/release/fictrac`. Keep the four Python
+republishers running. Close original FicTrac and any other camera-owning tracker
+windows before taking over all four cameras; the launcher does not terminate
+other programs or steal their devices.
 
 ## Alternative: direct publisher without Python
 
