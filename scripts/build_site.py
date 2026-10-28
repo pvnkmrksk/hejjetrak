@@ -21,6 +21,7 @@ REPORTS = (
     "validation.md", "resources.md", "recovery.md", "matrex-vr.md",
     "linux-native-validation.md", "overnight-validation.md", "recording-performance.md",
     "storage-retention.md", "vr3-motion-structure.md", "vr3-validation.md",
+    "raw-video-validation.md", "masking-validation.md", "take-validation.md",
 )
 REPOSITORY = "https://github.com/pvnkmrksk/hejjetrak"
 
@@ -132,6 +133,16 @@ def build(output: Path, mdbook: str, url: str):
         # Historical reports are linked from the evidence chapter.
         for report in ("validation-v0.1.md", "validation-v0.2.md"):
             shutil.copy2(ROOT / "docs" / report, stage / "src" / report)
+        # Canonical chapters link into docs/ and examples/ from their repository
+        # locations. Resolve these in the staged manual without changing sources.
+        for chapter in (stage / "src").rglob("*.md"):
+            text = chapter.read_text()
+            for report in REPORTS:
+                text = text.replace(f"../../docs/{report}", report)
+            text = text.replace(
+                "](../examples/", f"]({REPOSITORY}/blob/main/examples/"
+            )
+            chapter.write_text(text)
         subprocess.run([mdbook, "build", str(stage), "--dest-dir", str(output / "manual")], check=True)
     add_manual_navigation(output / "manual")
     check_links(output, urlsplit(url).path)
