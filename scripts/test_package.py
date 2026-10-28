@@ -2,7 +2,9 @@
 import gzip
 import importlib.util
 import io
+import os
 from pathlib import Path
+import shutil
 import subprocess
 import tarfile
 import tempfile
@@ -97,8 +99,12 @@ class DebianPackageTests(unittest.TestCase):
                 for name in ('hejjetrac-cli', 'hejjetrak-cli'):
                     self.assertEqual((extracted / 'usr/bin' / name).read_text(), 'test fixture hejjetrac-cli')
             # A different ar implementation must understand the actual package too.
-            listing = subprocess.check_output(['ar', 't', str(output)], text=True)
-            self.assertIn('control.tar.gz', listing)
+            external_ar = shutil.which('ar') or shutil.which('llvm-ar')
+            if external_ar:
+                listing = subprocess.check_output([external_ar, 't', output.as_posix()], text=True)
+                self.assertIn('control.tar.gz', listing)
+            elif os.name == 'posix':
+                self.fail('Install ar or llvm-ar for the independent Unix archive check')
             with self.assertRaises(FileExistsError):
                 PACKAGE.build_deb(stage, output, '0.1.4', 'libc6', assets)
 
@@ -193,7 +199,8 @@ class LinuxAbiTests(unittest.TestCase):
         self.assertEqual([v['maximum_required_glibc'] for v in evidence['binaries']],
                          ['2.9', '2.35'])
         self.assertEqual([call.args[0][-1] for call in inspect.call_args_list],
-                         ['/package/hejjetrac', '/package/hejjetrac-cli'])
+                         [str(Path('/package') / name)
+                          for name in ('hejjetrac', 'hejjetrac-cli')])
 
     def test_either_newer_executable_rejects_the_package(self):
         for versions in [('2.39', '2.34'), ('2.34', '2.36')]:

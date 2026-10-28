@@ -156,7 +156,7 @@ def linux_abi_requirements(stage):
             'binaries': evidence}
 
 
-def tar_gz_tree(directory, destination, epoch):
+def tar_gz_tree(directory, destination, epoch, executables=()):
     # dpkg accepts GNU long-name headers, but rejects PAX x/g extensions.
     # Full dependency notices can exceed the ordinary 100-byte name field.
     # Fixed root ownership/modes need no root or maintainer scripts.
@@ -168,10 +168,14 @@ def tar_gz_tree(directory, destination, epoch):
                     info.uid = info.gid = 0
                     info.uname = info.gname = 'root'
                     info.mtime = epoch
+                    if info.issym():
+                        info.linkname = info.linkname.replace(os.sep, '/')
                     if info.isdir() or info.issym():
                         info.mode = 0o755 if info.isdir() else 0o777
                     else:
-                        info.mode = 0o755 if path.stat().st_mode & 0o111 else 0o644
+                        executable = (path.relative_to(directory).as_posix() in executables
+                                      or path.stat().st_mode & 0o111)
+                        info.mode = 0o755 if executable else 0o644
                     if info.isfile():
                         with path.open('rb') as source:
                             archive.addfile(info, source)
@@ -214,7 +218,7 @@ def build_deb(stage, destination, version, dependencies, assets):
             link.symlink_to('../lib/hejjetrak/' + name)
         entry = data / 'usr/share/applications/hejjetrak.desktop'
         entry.parent.mkdir(parents=True)
-        entry.write_text(DESKTOP_ENTRY)
+        entry.write_bytes(DESKTOP_ENTRY.encode('utf-8'))
         for relative, source in (
             ('scalable/apps/hejjetrak.svg', 'hejjetrak.svg'),
             ('1024x1024/apps/hejjetrak.png', 'hejjetrak.png'),
@@ -228,7 +232,7 @@ def build_deb(stage, destination, version, dependencies, assets):
         control = temporary / 'control'
         control.mkdir()
         installed_size = sum(p.stat().st_size for p in data.rglob('*') if p.is_file() and not p.is_symlink())
-        (control / 'control').write_text(
+        control_text = (
             f'Package: hejjetrak\nVersion: {version}\nArchitecture: amd64\n'
             'Section: science\nPriority: optional\n'
             'Maintainer: Pavan Kumar Kaushik <noreply@github.com>\n'
@@ -238,9 +242,15 @@ def build_deb(stage, destination, version, dependencies, assets):
             'Description: Native spherical motion tracking compatible with FicTrac\n'
             ' Pure Rust numerical engine, native desktop and command-line/agent interfaces.\n'
             ' Includes sample video, calibration examples and dependency notices.\n')
+        # Debian metadata uses LF even when these build-tool tests run on Windows.
+        (control / 'control').write_bytes(control_text.encode('utf-8'))
         (temporary / 'debian-binary').write_bytes(b'2.0\n')
         tar_gz_tree(control, temporary / 'control.tar.gz', epoch)
-        tar_gz_tree(data, temporary / 'data.tar.gz', epoch)
+        # Windows chmod cannot express Unix executable bits. Preserve the
+        # install contract explicitly when exercising Debian assembly there.
+        executables = {f'usr/lib/hejjetrak/{name}' for name in
+                       ('hejjetrac', 'hejjetrac-cli', 'hejjetrak', 'hejjetrak-cli')}
+        tar_gz_tree(data, temporary / 'data.tar.gz', epoch, executables)
         with partial.open('xb') as output:
             output.write(b'!<arch>\n')
             for name in ('debian-binary', 'control.tar.gz', 'data.tar.gz'):

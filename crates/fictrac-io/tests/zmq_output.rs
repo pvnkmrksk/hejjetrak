@@ -444,7 +444,10 @@ fn reconfigure_reuses_healthy_outputs_and_restores_previous_pub_after_busy_port(
         .build()?;
     runtime.block_on(async {
         let mut subscriber = zeromq::SubSocket::new();
-        subscriber.connect(&restored.endpoint).await?;
+        // A wildcard is a bind address, not a portable subscriber destination.
+        subscriber
+            .connect(&format!("tcp://127.0.0.1:{old_port}"))
+            .await?;
         subscriber.subscribe("FT, ").await?;
         let deadline = Instant::now() + Duration::from_secs(2);
         loop {

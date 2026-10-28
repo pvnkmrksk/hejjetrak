@@ -4,11 +4,22 @@
 
 The landing page resolves GitHub's latest published release at download time and shows the platform archive, release tag and available SHA-256 digest. Manual OS/chip choices remain available; browser architecture detection is not treated as infallible. If the release API is unavailable or an archive has not uploaded yet, use the visible GitHub release link rather than a guessed download.
 
+## v0.3.5 — 28 October 2026
+
+[v0.3.5](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.5) includes the
+fast-motion tracking, LAN publishing defaults and Linux graphics safeguards,
+with corrected cross-platform release tests and Linux Mesa build dependencies.
+Tracking algorithms and numeric acceptance limits are unchanged from the
+Linux-validated v0.3.3 candidate.
+[Release notes](https://github.com/pvnkmrksk/hejjetrak/blob/v0.3.5/docs/release-v035.md).
+
 ## v0.3.4 — 28 October 2026
 
-[v0.3.4](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.4) retains the
-v0.3.3 tracking, networking and Linux graphics changes and corrects portable
-busy-port test setup. Test reservations now match the wildcard publisher bind,
+[v0.3.4 source](https://github.com/pvnkmrksk/hejjetrak/tree/v0.3.4) is an
+unpublished candidate. Both native Mac builds passed; Linux packaging and
+Windows test-tool issues are addressed by v0.3.5. It retains the v0.3.3
+tracking, networking and Linux graphics changes and corrects portable busy-port
+test setup. Test reservations now match the wildcard publisher bind,
 so native checks exercise a real endpoint conflict on macOS as well as Linux
 and Windows. Numeric reference tolerances are unchanged.
 [Release notes](https://github.com/pvnkmrksk/hejjetrak/blob/v0.3.4/docs/release-v034.md).

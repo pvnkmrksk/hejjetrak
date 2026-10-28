@@ -6,8 +6,8 @@
 <key>CFBundleIdentifier</key><string>org.fictrac.rust.desktop</string>
 <key>CFBundleExecutable</key><string>fictrac-desktop</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleVersion</key><string>0.3.4</string>
-<key>CFBundleShortVersionString</key><string>0.3.4</string>
+<key>CFBundleVersion</key><string>0.3.5</string>
+<key>CFBundleShortVersionString</key><string>0.3.5</string>
 <key>NSCameraUsageDescription</key><string>HejjéTrac uses your selected camera to measure the rotation of a patterned tracking ball.</string>
 <key>NSHumanReadableCopyright</key><string>HejjéTrac by Pavan Kumar Kaushik. Based on FicTrac by R. J. D. Moore and collaborators. CC BY-NC-SA 3.0.</string>
 <key>NSHighResolutionCapable</key><true/>
