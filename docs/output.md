@@ -10,9 +10,28 @@ same budget. The complete score drives the reported map MSE and
 search. Legacy global recovery retains its existing search. Default resilient recovery
 uses bounded accepted-view seeds and a deterministic fallback cover, with
 complete final scoring; see [recovery](recovery.md).
-ROI resolution, map evidence, coordinate conventions and missing-motion rules
-are unchanged. Trajectories can differ from the earlier full-site optimizer;
+Default ROI resolution, coordinate conventions and missing-motion rules
+are unchanged. Guarded seeding leaves unsupported new surface unlearned in low-support views. Trajectories can differ from the earlier full-site optimizer;
 accuracy is assessed with the unchanged trajectory/rotation reference gates.
+
+An uncertain resilient local fit may additionally refine against the previous
+accepted binary observation within the same prediction window. Each of the two
+optimizers is capped by `opt_max_evals`; at most five complete comparison scores
+and two evidence passes accompany fallback. Primary healthy fitting and legacy
+opt-out keep their existing budgets/objectives. Selection requires independent
+spatial verification and temporal improvement, followed by the unchanged full
+persistent score reporting and motion/explicit-cap decisions. See
+[high-speed evidence](take-validation.md).
+
+For resilient extended capture intervals, time-scaled prediction and a bilinear
+proposal help the optimizer follow the larger image-to-image rotation. This
+proposal is not the reported error: both its candidate and predictor receive
+the original complete nearest-cell MSE check. These comparisons add two full
+scores to the primary budget on an extended interval. Error thresholds, output
+columns and all-frame evidence remain unchanged. An extrapolation that would
+make the bounded rotation branch ambiguous is unaccepted; its error is the
+complete MSE at the held pose, and its zero relative delta denotes missing
+measurement.
 
 `tracking.dat` has comma-separated accepted rows in legacy mode, matching upstream rejection omission; modern JSON mode retains every row. `all-frames.dat` and `quality.csv` always preserve every processed frame and decision. Data files have no header. Floating-point values use twelve decimal places; frame/sequence fields are integers.
 
@@ -44,10 +63,36 @@ candidate rejected by the motion guard retains its actual complete image MSE,
 which can be low; acceptance is not inferred from column 5 alone. Ordinary relocalization
 and the following three accepted tracked rows do not teach atlas/error/edge/
 known-view histories. Recovery after a four-image consistent acceleration
-confirmation starts a fresh motion-rate epoch and defers teaching for eight
-following accepted tracked rows. Accepted motion/output semantics stay as
+confirmation starts a fresh motion-rate epoch and protects existing atlas cells
+for eight following accepted tracked rows. Current source may initialize genuinely
+unseen cells once during this acceleration probation; accepted error, edge and
+known-view histories stay frozen. Rejected frames cannot teach new cells either.
+Ordinary recovery retains its complete teaching deferral. Accepted motion/output semantics stay as
 specified above. See [recovery](recovery.md) for bootstrap, timing and probation
 boundaries. `rust_resilient : n` retains the older policy.
+
+`rust_resilient_error_floor` sets the lower bound of the adaptive binary-map MSE
+ceiling (10000 by default, explicitly configurable through 18000). The upper
+ceiling remains 18000; a nonnegative `opt_max_err` still wins when smaller.
+This is the adaptive-history ceiling; the independent appearance route below
+can qualify a higher-MSE fit. Changing this scene-specific allowance changes
+which frames qualify, never the reported complete score, numeric columns, missing-motion semantics or error
+units. Motion and texture checks remain active.
+
+The default appearance check can support acceptance above the usual adaptive
+ceiling only with independent previous-accepted-image evidence. Above 18000
+it also requires persistent support over at least half the ROI and a score at
+least 15% better than the independent-marginals null match. An explicit
+`opt_max_err` always wins; see [recovery](recovery.md). Column 5 still contains
+the complete persistent confidence-map MSE. `Tracker::temporal_evidence()` exposes
+an optional `TemporalEvidence` for a check performed on the latest image:
+known/possible sample counts, binary MSE (`None` when no samples are known),
+spatial support fraction, verification decision, persistent known-sample count
+and persistent independent-marginals MSE (`None` when no persistent sites are
+known). This binary image-to-image MSE is a separate diagnostic with a different reference from the persistent
+confidence-map score. A verified diagnostic alone does not imply final acceptance;
+motion, history, texture and hard caps still decide it. It adds no wire columns.
+`replay_evidence` is a development JSONL driver for retaining rows with that evidence.
 
 The standard `.dat` format has no validity field, so use quality.csv alongside it. Pairwise mode advances its reference image on a rejection; map mode leaves integrated orientation unchanged and does not contaminate the atlas with a rejected image. Prediction resets to zero. Default resilient mode protects the learned atlas instead of applying `max_bad_frames` auto-reset, and requires confirmed plausible absolute matches before `relocalized` (ordinary two-image confirmation, or the v0.1.3 four-image acceleration path). Its adaptive accepted-history MSE ceiling supplements any explicit `opt_max_err`; set `rust_resilient : n` for the legacy quality/reset behavior. Bounded reacquisition or the legacy optional global relocalisation can resume, but cannot reconstruct the lost interval. Absolute pose and path therefore omit that motion.
 

@@ -1,0 +1,355 @@
+{
+  "date": "2026-10-28",
+  "scope": "User live 47-degree calibration and capture-interval regression; original FicTrac is a reference, not physical ground truth. No reference trajectory fitting or threshold loosening.",
+  "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.35",
+  "rust_toolchain": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+  "input": {
+    "video": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live47-fast-20261028/recording/epoch-0000-media/raw.avi",
+    "sha256": "20e1d79f84d85c9b638acb34bdcdb54813f6fcd603a96075796c0fdd11172c45",
+    "frames": 4579,
+    "width": 640,
+    "height": 480,
+    "nominal_fps": 100,
+    "clock_dat_sha256": "15ae6ed354f9db37697399712069508dd8760e60d17f03471972724c7aacd4cd",
+    "complete_media_matches_numeric_frame_bounds": true
+  },
+  "calibration": {
+    "statuses": {
+      "initializing": 1,
+      "tracked": 4578
+    },
+    "median_fit_error": 7768.2704918035,
+    "geometry": {
+      "centre": [
+        -0.018830376238896822,
+        0.10324234570854898,
+        0.9944779710900077
+      ],
+      "angular_radius": 0.3083935000661135
+    },
+    "comparison": {
+      "frames": 4579,
+      "reference_norm_median": 0.23466473275251432,
+      "reference_norm_max": 0.27420562666522774,
+      "component_rmse_rad": [
+        0.006986306732771282,
+        0.007872019925869939,
+        0.0123987574099051
+      ]
+    },
+    "worst_100_frame_component_rms": [
+      0.011958609768586741,
+      0.01062549080124157,
+      0.017911089107959362
+    ],
+    "source_video_sha256": "20e1d79f84d85c9b638acb34bdcdb54813f6fcd603a96075796c0fdd11172c45",
+    "engine_change": "The calibration-only replays used the preceding engine. The final capture-interval change is assessed separately below.",
+    "original_radius": 0.31683778182025574,
+    "new_radius": 0.3083935000661135,
+    "radius_change_percent": -2.6651751270411084,
+    "scope": "Same-video comparison and independent source-rim fit; no physical motion ground truth."
+  },
+  "timing_fixture": {
+    "source_images_omitted": "Last three decoded images of each 80-image block",
+    "omitted_source_images": 171,
+    "processed_images": 4408,
+    "extended_intervals": 57,
+    "clock": "Original recorded capture timestamps; never nominally retimed",
+    "baseline": {
+      "case": "before-omit80",
+      "processed_frames": 4408,
+      "statuses": {
+        "initializing": 1,
+        "tracked": 2895,
+        "rejected": 58,
+        "recovering": 1397,
+        "relocalized": 57
+      }
+    },
+    "final": [
+      {
+        "case": "final-omit80",
+        "processed_frames": 4408,
+        "statuses": {
+          "initializing": 1,
+          "tracked": 4407
+        }
+      },
+      {
+        "case": "final-complete",
+        "processed_frames": 4579,
+        "statuses": {
+          "initializing": 1,
+          "tracked": 4578
+        }
+      }
+    ],
+    "reference_comparison": {
+      "method": "Compose original FicTrac quaternions across each explicitly omitted source interval; no fitted transformations. No physical ground truth.",
+      "cases": [
+        {
+          "case": "final-omit80",
+          "all_decision_component_rms_rad": [
+            0.007054057700273384,
+            0.00790799155748727,
+            0.0126403794193363
+          ],
+          "extended_interval_component_rms_rad": [
+            0.009912802646882376,
+            0.009019980295027697,
+            0.013256936657065512
+          ],
+          "worst_100_interval_component_rms_rad": [
+            0.01174293340239349,
+            0.010650260622184589,
+            0.017767665374391676
+          ],
+          "passes_all_components_020": true,
+          "extended_intervals": 57
+        },
+        {
+          "case": "final-complete",
+          "all_decision_component_rms_rad": [
+            0.006986306732769063,
+            0.007872019925870296,
+            0.012398757409899817
+          ],
+          "extended_interval_component_rms_rad": null,
+          "worst_100_interval_component_rms_rad": [
+            0.011958609768602088,
+            0.010625490801252973,
+            0.01791108910793824
+          ],
+          "passes_all_components_020": true,
+          "extended_intervals": 0
+        }
+      ]
+    }
+  },
+  "live_incomplete_take": {
+    "frames": 6673,
+    "statuses": {
+      "tracked": 6040,
+      "rejected": 28,
+      "recovering": 577,
+      "relocalized": 28
+    },
+    "capture_intervals_over_20ms": 181,
+    "max_capture_interval_ms": 436.002010000171,
+    "rejections_on_long_capture_interval": 18,
+    "rejection_starts": 28
+  },
+  "live_incomplete_video": {
+    "encoded_images": 78,
+    "state": "stopped_overload",
+    "numeric_rows": 6673,
+    "full_video_claim": false
+  },
+  "validation": {
+    "checks": [
+      {
+        "name": "fmt",
+        "command": [
+          "cargo",
+          "fmt",
+          "--all",
+          "--",
+          "--check"
+        ],
+        "exit_code": 0,
+        "elapsed_seconds": 0.8287475444376469
+      },
+      {
+        "name": "clippy",
+        "command": [
+          "cargo",
+          "clippy",
+          "--workspace",
+          "--all-targets",
+          "--locked",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "exit_code": 0,
+        "elapsed_seconds": 5.015581155195832
+      },
+      {
+        "name": "tests",
+        "command": [
+          "cargo",
+          "test",
+          "--workspace",
+          "--locked"
+        ],
+        "exit_code": 0,
+        "elapsed_seconds": 340.1904359217733
+      },
+      {
+        "name": "release",
+        "command": [
+          "cargo",
+          "build",
+          "--release",
+          "--locked",
+          "-p",
+          "fictrac",
+          "-p",
+          "fictrac-desktop",
+          "--bins"
+        ],
+        "exit_code": 0,
+        "elapsed_seconds": 78.06884069368243
+      }
+    ],
+    "tests_passed": 303,
+    "tests_failed": 0,
+    "tests_ignored": 0,
+    "source_sha256": {
+      "crates/fictrac-core/src/spherical.rs": "5c92f1d99d1c406d27be10fef24a5a5317b8be5c2664f529802ff0975be89bda",
+      "crates/fictrac-core/src/resilience.rs": "734d7bf65796e75d68c0cd1fcabae2c5070398652afc0fb3ac6928fdd6336b66",
+      "crates/fictrac-core/tests/recovery.rs": "9cd70639ddf59678788230b5974f8ae33a3fadafb25f2bf7c47b5bbf5c8a39fb",
+      "crates/fictrac-io/examples/replay_evidence.rs": "685764b0ec00dfc2ac95972a15da6771cd8c7405fe9da7a53b66fbda7dca4db3"
+    },
+    "release_serial": {
+      "cases": [
+        {
+          "case": "demo",
+          "exit_code": 0,
+          "wall_seconds": 0.7312055788934231,
+          "command": [
+            "/home/pkaushi/Documents/ChatGPT/Hejjetrac/target/release/fictrac",
+            "demo",
+            "--frames",
+            "120",
+            "--output",
+            "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live47-fast-20261028/release-serial/demo"
+          ]
+        },
+        {
+          "case": "sample",
+          "exit_code": 0,
+          "wall_seconds": 2.111973175778985,
+          "command": [
+            "/home/pkaushi/Documents/ChatGPT/Hejjetrac/target/release/fictrac",
+            "track",
+            "--config",
+            "/home/pkaushi/Documents/ChatGPT/Hejjetrac/examples/benchmark/config.txt",
+            "--input",
+            "/home/pkaushi/Documents/ChatGPT/Hejjetrac/examples/sample.mp4",
+            "--output",
+            "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live47-fast-20261028/release-serial/sample"
+          ]
+        },
+        {
+          "case": "sample-compare",
+          "exit_code": 0,
+          "wall_seconds": 0.0032319240272045135,
+          "command": [
+            "/home/pkaushi/Documents/ChatGPT/Hejjetrac/target/release/fictrac",
+            "compare",
+            "--reference",
+            "/home/pkaushi/Documents/ChatGPT/Hejjetrac/examples/benchmark/upstream.dat",
+            "--candidate",
+            "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live47-fast-20261028/release-serial/sample/tracking.dat",
+            "--report",
+            "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live47-fast-20261028/release-serial/sample-comparison.json"
+          ]
+        }
+      ],
+      "binary_sha256": "b2e5cefb60a05458329739476f8a82c4b3aa29b82a6933107908a4acc2045b2a",
+      "sample_sha256": "afdb193b1555574f9c9eba660eac8eb2531fa9db62e6876afb87fd4fe36753ad",
+      "platform": "Linux-6.8.0-124-generic-x86_64-with-glibc2.35",
+      "timing_boundary": "Subprocess wall time including input/output; cases serial. The previously opened live camera GUI remained running in the background; this is not an isolated machine throughput claim.",
+      "build": "Rust 1.99.1, release thin LTO, one codegen unit; Ubuntu Linux x86_64."
+    },
+    "sample_comparison": {
+      "comparison": {
+        "candidate_final_position": [
+          3.620053461636,
+          -2.627296315711
+        ],
+        "endpoint_error_sphere_rad": 0.054525318251027806,
+        "frames": 300,
+        "heading_rmse_rad": 0.01318481079068964,
+        "path_point_rmse_sphere_rad": 0.04480675139755788,
+        "reference_final_position": [
+          3.674266189723,
+          -2.6214661833162
+        ],
+        "rotation_component_rmse_rad": [
+          0.008760804755303081,
+          0.008292135984256042,
+          0.014210731643506284
+        ],
+        "timestamp_max_error_ms": 3.456079866737127e-11
+      },
+      "limits": {
+        "heading_rmse_rad": 0.025,
+        "path_rmse_sphere_rad": 0.075,
+        "rotation_component_rmse_rad": 0.02
+      },
+      "passed": true
+    },
+    "demo_rotation_component_rmse_rad": 0.0003040496948914138,
+    "demo_limit_rad": 0.003,
+    "git_head": "6c0bea66d77d55eab5b3669d90ca3c0dae9a2dd7",
+    "cargo_lock_sha256": "951e157ef3eb55ade28515d940ef4848c6a9e6158f941079b8987f718e599841",
+    "desktop_sha256": "077dc3a5ee76106c6ba6a5a2c78c62b1d8ab9eecf4cf231a0092160452b06b1a",
+    "cli_sha256": "b2e5cefb60a05458329739476f8a82c4b3aa29b82a6933107908a4acc2045b2a"
+  },
+  "native_live_final": {
+    "wall_seconds": 30.13456810452044,
+    "frames": 3053,
+    "statuses": {
+      "tracked": 3053
+    },
+    "unaccepted_frames": 0,
+    "delivered_fps": 100.92548537149736,
+    "max_delta_norm": 0.34252954043240763,
+    "frames_over_004": 3053,
+    "frames_over_008": 3053,
+    "max_processed_interval_ms": 12.037,
+    "wire_recorded_payloads_exact": 3053,
+    "wire_payload_mismatches_within_recording": 0,
+    "capture": {
+      "file": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/live47-fast-20261028/live-final/end.png",
+      "title": "VR1 \u00b7 ZMQ 9875 \u00b7 /dev/video0 \u00b7 UDP off \u00b7 Hejj\u00e9Trac",
+      "window_id": "0x1400004",
+      "width": 800,
+      "height": 650,
+      "sha256": "263c6adb9218229b50d0b684effb8702002befba8b0219f3f727a781efb734a4",
+      "capture": "actual X11 native window pixels"
+    },
+    "scope": "Native live numeric/quality and actual JSON wire check. No physical motion ground truth.",
+    "numeric_completion": "complete",
+    "recording_scope": "Numeric-only; source video encoding was intentionally disabled for this final tracking/wire run.",
+    "outputs": {
+      "serial_enabled": false,
+      "udp_destination": null,
+      "udp_enabled": false,
+      "zmq": {
+        "dropped": 0,
+        "endpoint": "tcp://0.0.0.0:9875",
+        "enqueued": 3080,
+        "failures": 0,
+        "last_error": null,
+        "published": 3080,
+        "queue_capacity": 256,
+        "queue_len": 0,
+        "worker_alive": true
+      },
+      "zmq_payload": {
+        "framing": "single",
+        "mode": "legacy_matrex_vr",
+        "topic": "FT"
+      }
+    },
+    "remote_receiver": "10.126.17.75: connected and TCP-acknowledging the new publisher after restart; user earlier confirmed VR movement.",
+    "camera_format": {
+      "fps": 100.0,
+      "height": 480,
+      "width": 640
+    }
+  }
+}

@@ -1,5 +1,6 @@
 //! Bounded, confirmed reacquisition; uncertain frames never teach the atlas.
 use crate::MapSettings;
+use crate::diagnostics::LearningPolicy;
 use crate::spherical::AtlasObjective;
 use bobyqa::{Bobyqa, Config as SolverConfig};
 use glam::{DQuat, DVec3};
@@ -58,6 +59,7 @@ pub(crate) struct Recovery {
     recent_interval: [f64; 3],
     recent_motion_count: usize,
     probation: usize,
+    new_surface_probation: bool,
     edge_mean: f64,
     // Unit ROI poses learned only from accepted frames. This small spatial bank
     // revisits known views instead of expecting a coarse uniform SO(3) cover to
@@ -81,6 +83,7 @@ impl Recovery {
         self.pending = None;
         self.pending_motion = None;
         self.recent_motion_count = 0;
+        self.new_surface_probation = false;
     }
     pub fn reject_motion_candidate(&mut self, pose: DQuat, delta: DVec3, delta_ms: f64) {
         self.reject();
@@ -111,8 +114,9 @@ impl Recovery {
         Some(DQuat::from_scaled_axis(delta) * start)
     }
     pub fn limit(&self, settings: &MapSettings) -> f64 {
+        let floor = settings.resilient_error_floor;
         let adaptive = if self.error_mean > 0.0 {
-            (self.error_mean * 1.8 + 2000.0).clamp(10000.0, 18000.0)
+            (self.error_mean * 1.8 + 2000.0).clamp(floor, 18000.0)
         } else {
             18000.0
         };
@@ -120,7 +124,7 @@ impl Recovery {
         // loosen it. A few marginal fits cannot ratchet the ceiling upwards.
         let adaptive = if self.errors.len >= MIN_MOTION_HISTORY {
             let (median, _) = self.errors.median_mad();
-            adaptive.min((median * 1.8 + 2000.0).clamp(10000.0, 18000.0))
+            adaptive.min((median * 1.8 + 2000.0).clamp(floor, 18000.0))
         } else {
             adaptive
         };
@@ -133,17 +137,23 @@ impl Recovery {
     pub fn texture_ok(&self, edge: f64) -> bool {
         self.edge_mean == 0.0 || edge >= self.edge_mean * 0.3
     }
-    /// Recovery can measure without immediately rewriting long-lived evidence.
-    pub fn allow_learning(&mut self, status: &str) -> bool {
+    /// A four-image acceleration confirmation may extend unseen surface while
+    /// established atlas cells and fit histories remain protected. Ordinary
+    /// occlusion recovery retains the complete teaching freeze.
+    pub fn learning_policy(&mut self, status: &str) -> LearningPolicy {
         if status == "relocalized" {
             self.probation = self.probation.max(3);
-            return false;
-        }
-        if self.probation > 0 {
+        } else if self.probation > 0 {
             self.probation -= 1;
-            return false;
+        } else {
+            self.new_surface_probation = false;
+            return LearningPolicy::Full;
         }
-        true
+        if self.new_surface_probation {
+            LearningPolicy::NewSurface
+        } else {
+            LearningPolicy::Frozen
+        }
     }
     pub fn motion_ok(&self, angle: f64, delta_ms: f64) -> bool {
         if !angle.is_finite() || angle < 0.0 || !delta_ms.is_finite() || delta_ms <= 0.0 {
@@ -154,6 +164,37 @@ impl Recovery {
         }
         let (median, mad) = self.motion_rates.median_mad();
         angle <= MOTION_FLOOR_RADIANS.max((4.0 * median + 8.0 * mad) * delta_ms)
+    }
+    pub fn stable_motion_history(&self) -> bool {
+        // Strong acceleration recovery already verified three consecutive
+        // visible increments over four images. Requiring three more measured
+        // rows can immediately reject its first blurred images again, before
+        // the new rate/appearance has a chance to establish itself.
+        self.recent_motion_count >= 3 || self.new_surface_probation
+    }
+    pub fn recent_motion_prediction(&self, delta_ms: f64) -> Option<DVec3> {
+        (self.recent_motion_count >= 3 && delta_ms.is_finite() && delta_ms > 0.0)
+            .then(|| self.recent_velocity.into_iter().sum::<DVec3>() * (delta_ms / 3.0))
+    }
+    pub fn temporal_score_ok(
+        &self,
+        error: f64,
+        settings: &MapSettings,
+        evidence: &crate::TemporalEvidence,
+    ) -> bool {
+        self.stable_motion_history()
+            && error.is_finite()
+            && (error <= 18_000.
+                || (evidence.persistent_known_samples >= 32
+                    && evidence.persistent_known_samples * 2 >= evidence.possible_samples
+                    && evidence.persistent_chance_mse.is_some_and(|chance| {
+                        chance.is_finite() && chance > 0. && error <= 0.85 * chance
+                    })))
+            && (settings.max_error < 0. || error <= settings.max_error)
+            && evidence.verified
+            && evidence
+                .binary_mse
+                .is_some_and(|score| score < error * 0.75)
     }
     pub fn observe_motion(&mut self, angle: f64, delta_ms: f64) {
         if delta_ms.is_finite() && delta_ms > 0.0 && angle.is_finite() && angle >= 0.0 {
@@ -335,6 +376,7 @@ impl Recovery {
                     self.pending = None;
                     self.pending_motion = None;
                     self.lost_frames = 0;
+                    self.new_surface_probation = false;
                     return (
                         Some(RecoveredPose {
                             pose,
@@ -367,9 +409,12 @@ impl Recovery {
                         self.pending_motion = None;
                         self.lost_frames = 0;
                         // The newly confirmed speed starts a motion epoch; this
-                        // does not modify atlas/error/view history or invent gap motion.
+                        // preserves established atlas/error/view history and
+                        // invents no gap motion. Only genuinely new surface may
+                        // be taught during the following bootstrap probation.
                         self.motion_rates = Samples::default();
                         self.probation = MIN_MOTION_HISTORY;
+                        self.new_surface_probation = true;
                         return (
                             Some(RecoveredPose {
                                 pose,
@@ -788,10 +833,158 @@ mod motion_tests {
             recovery.observe(17000.0, 0.1, DQuat::IDENTITY);
         }
         assert!(recovery.limit(&settings) <= old);
-        assert!(!recovery.allow_learning("relocalized"));
+        assert_eq!(
+            recovery.learning_policy("relocalized"),
+            LearningPolicy::Frozen
+        );
         for _ in 0..3 {
-            assert!(!recovery.allow_learning("tracked"));
+            assert_eq!(recovery.learning_policy("tracked"), LearningPolicy::Frozen);
         }
-        assert!(recovery.allow_learning("tracked"));
+        assert_eq!(recovery.learning_policy("tracked"), LearningPolicy::Full);
+    }
+
+    #[test]
+    fn configurable_error_floor_preserves_default_ceiling_and_explicit_hard_cap() {
+        let default = MapSettings::default();
+        let explicit_default = MapSettings {
+            resilient_error_floor: 10_000.0,
+            ..MapSettings::default()
+        };
+        let mut recovery = Recovery::default();
+        assert_eq!(recovery.limit(&default), 18_000.0);
+        for _ in 0..32 {
+            recovery.observe(8000.0, 0.1, DQuat::IDENTITY);
+        }
+        assert_eq!(recovery.limit(&default), 16_400.0);
+        assert_eq!(recovery.limit(&default), recovery.limit(&explicit_default));
+        for _ in 0..32 {
+            recovery.observe(1000.0, 0.1, DQuat::IDENTITY);
+        }
+        assert_eq!(recovery.limit(&default), 10_000.0);
+        assert_eq!(recovery.limit(&default), recovery.limit(&explicit_default));
+        let mut tuned = MapSettings {
+            resilient_error_floor: 15_000.0,
+            ..MapSettings::default()
+        };
+        assert_eq!(recovery.limit(&tuned), 15_000.0);
+        tuned.resilient_error_floor = 18_000.0;
+        assert_eq!(recovery.limit(&tuned), 18_000.0);
+        tuned.max_error = 9000.0;
+        assert_eq!(recovery.limit(&tuned), 9000.0);
+        tuned.max_error = 0.0;
+        assert_eq!(recovery.limit(&tuned), 0.0);
+        tuned.max_error = -1.0;
+        for _ in 0..32 {
+            recovery.observe(100_000.0, 0.1, DQuat::IDENTITY);
+        }
+        assert_eq!(recovery.limit(&tuned), 18_000.0);
+        assert_eq!(recovery.limit(&default), 18_000.0);
+    }
+
+    #[test]
+    fn automatic_appearance_support_requires_consecutive_history_and_hard_caps() {
+        let mut recovery = Recovery::default();
+        let mut settings = MapSettings::default();
+        let mut evidence = crate::TemporalEvidence {
+            known_samples: 1000,
+            possible_samples: 1500,
+            binary_mse: Some(4000.),
+            spatially_supported_fraction: 1.,
+            verified: true,
+            persistent_known_samples: 0,
+            persistent_chance_mse: None,
+        };
+        assert!(!recovery.temporal_score_ok(15_000., &settings, &evidence));
+        for _ in 0..3 {
+            recovery.observe_tracked_motion(DVec3::new(0.01, 0., 0.), 10.);
+        }
+        assert!(recovery.temporal_score_ok(15_000., &settings, &evidence));
+        assert!(!recovery.temporal_score_ok(18_001., &settings, &evidence));
+        evidence.persistent_known_samples = 1000;
+        evidence.persistent_chance_mse = Some(30_000.);
+        assert!(recovery.temporal_score_ok(22_000., &settings, &evidence));
+        assert!(!recovery.temporal_score_ok(26_000., &settings, &evidence));
+        settings.max_error = 18_000.;
+        assert!(!recovery.temporal_score_ok(22_000., &settings, &evidence));
+        settings.max_error = -1.;
+        evidence.persistent_known_samples = 700;
+        assert!(!recovery.temporal_score_ok(22_000., &settings, &evidence));
+        evidence.persistent_known_samples = 1000;
+        evidence.persistent_chance_mse = Some(f64::NAN);
+        assert!(!recovery.temporal_score_ok(22_000., &settings, &evidence));
+        evidence.persistent_chance_mse = None;
+        assert!(!recovery.temporal_score_ok(f64::NAN, &settings, &evidence));
+        settings.max_error = 9000.;
+        assert!(!recovery.temporal_score_ok(15_000., &settings, &evidence));
+        settings.max_error = -1.;
+        evidence.binary_mse = Some(12_000.);
+        assert!(!recovery.temporal_score_ok(15_000., &settings, &evidence));
+        evidence.binary_mse = None;
+        assert!(!recovery.temporal_score_ok(15_000., &settings, &evidence));
+        evidence.binary_mse = Some(4000.);
+        evidence.verified = false;
+        assert!(!recovery.temporal_score_ok(15_000., &settings, &evidence));
+        evidence.verified = true;
+        recovery.reject();
+        assert!(!recovery.temporal_score_ok(15_000., &settings, &evidence));
+    }
+
+    #[test]
+    fn four_image_confirmation_can_bootstrap_blurred_appearance_without_relearning_known_cells() {
+        let settings = MapSettings::default();
+        let mut recovery = Recovery {
+            probation: MIN_MOTION_HISTORY,
+            new_surface_probation: true,
+            ..Recovery::default()
+        };
+        let evidence = crate::TemporalEvidence {
+            known_samples: 1000,
+            possible_samples: 1500,
+            binary_mse: Some(4000.),
+            spatially_supported_fraction: 1.,
+            verified: true,
+            persistent_known_samples: 1000,
+            persistent_chance_mse: Some(30_000.),
+        };
+        assert!(recovery.temporal_score_ok(22_000., &settings, &evidence));
+        assert_eq!(
+            recovery.learning_policy("tracked"),
+            LearningPolicy::NewSurface
+        );
+        recovery.reject();
+        assert!(!recovery.temporal_score_ok(22_000., &settings, &evidence));
+        recovery.probation = 3;
+        assert!(!recovery.temporal_score_ok(22_000., &settings, &evidence));
+    }
+
+    #[test]
+    fn only_confirmed_acceleration_probation_may_add_new_surface() {
+        let mut recovery = Recovery::default();
+        recovery.observe(2000.0, 0.1, DQuat::IDENTITY);
+        let errors = recovery.errors.values;
+        let trusted = recovery.trusted.clone();
+        recovery.probation = MIN_MOTION_HISTORY;
+        recovery.new_surface_probation = true;
+        assert_eq!(
+            recovery.learning_policy("relocalized"),
+            LearningPolicy::NewSurface
+        );
+        for _ in 0..MIN_MOTION_HISTORY {
+            assert_eq!(
+                recovery.learning_policy("tracked"),
+                LearningPolicy::NewSurface
+            );
+        }
+        assert_eq!(recovery.learning_policy("tracked"), LearningPolicy::Full);
+        assert_eq!(recovery.errors.values, errors);
+        assert_eq!(recovery.trusted, trusted);
+
+        recovery.probation = MIN_MOTION_HISTORY;
+        recovery.new_surface_probation = true;
+        recovery.reject();
+        assert_eq!(
+            recovery.learning_policy("relocalized"),
+            LearningPolicy::Frozen
+        );
     }
 }

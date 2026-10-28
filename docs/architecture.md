@@ -23,9 +23,39 @@ Legacy `.txt` configs default to map fitting. Image rays are recentered into Fic
 
 For each new frame, pure Rust PRIMA BOBYQA minimizes mean squared binary-map error against the accumulated atlas within `guess ± opt_bound` on each axis. `opt_tol`, `opt_max_evals`, `opt_max_err` and `q_factor` control the healthy local fit. A filtered previous delta supplies the next guess. The fitted map and the displayed accumulated map are the same state. The optimizer differs from upstream NLopt; compatibility is assessed against fixed rotation/trajectory gates, not numerical identity.
 
+Resilient prediction scales that delta when successive capture intervals
+differ by more than a factor of 1.8 in either direction; smaller timestamp
+jitter retains the usual predictor. For an interval more than 1.8 times its predecessor, the last three
+accepted angular velocities supply a less noisy prediction when available.
+Such extended intervals use a bilinear, known-support-weighted atlas proposal;
+the selected proposal and predictor are both checked using the original full
+nearest-cell binary MSE before acceptance. The search half-width and optimizer
+budget stay fixed. A prediction whose whole bounded window would exceed the
+principal rotation branch is rejected without teaching or integrating a
+possibly hidden turn. Legacy opt-out retains its original predictor/objective.
+
 Spherical-map settings default to `rust_resilient : y`. v0.1.3 source adds a robust accepted-motion-rate gate and short post-recovery atlas-learning probation, without loosening the previous image-error ceiling. A genuine acceleration can establish a fresh rate epoch only after stronger four-image confirmation; see [recovery](recovery.md) for bootstrap and three/eight-row teaching deferrals. Unreliable images freeze the learned atlas, pose, path and integrated movement. Uniform/low-texture observations and an adaptive complete-score ceiling supplement an explicit `opt_max_err`, even when that legacy ceiling is negative. Accepted-only error/edge history and a bank of up to 256 known views guide bounded reacquisition. Searches are throttled, spend at most `min(opt_global_evals, 768)` objective evaluations per recovery call and require confirmation before publishing `relocalized` (ordinary second-image confirmation; stronger four-image confirmation for a new acceleration epoch). Its relative delta is zero: hidden motion is never reconstructed. `recovering` is unaccepted and remains in all-frame quality/numeric evidence. This is an intentional quality/recovery policy extension, not an unchanged upstream acceptance rule. See [recovery](recovery.md).
 
 Current recovery also retains the velocity of a low-error rejected motion candidate only as a bounded search proposal. It compares that predicted pose with the held pose on the complete ROI before refinement, and can fall back to the held pose under the same total recovery budget. This avoids repeatedly restarting a fast, coherent motion fit from zero velocity. The proposal does not update accepted motion history, teach the atlas or publish a measurement: the existing image/texture/motion gates, four-image acceleration confirmation, zero-delta relocalization and learning probation remain in force. [Controlled sharp/blurred-motion and actual-video regressions](recovery.md#what-is-tested) record the evidence.
+
+
+Current shared defaults retain quality six and the 0.35-radian per-axis window,
+and raise the local BOBYQA budget from 50 to 100. The primary local solver retains that budget. An uncertain resilient fit can
+use a second bounded optimizer against the previous accepted observation,
+starting from the better temporal seed and retaining the original prediction
+window. Each optimizer is capped by `opt_max_evals`; fallback comparison adds
+five complete score evaluations and two evidence passes at most.
+Resilient guarded seeding requires mixed local evidence for new cells in
+low-support views and enough supported surface before clean initialization.
+Sufficiently supported accepted images can teach marking interiors normally. One bounded previous-accepted-image
+binary map permits spatially verified appearance adaptation. The base adaptive
+ceiling remains at most 18000; a more expensive-image fit also requires at least
+half the persistent ROI known and a score at least 15% better than its
+independent-marginals null match. An explicit `opt_max_err` always caps it. It is invalidated by rejection/reset/import and adds no
+frontend, I/O or codec dependency to core. The complete persistent score remains
+reported. [Policy](recovery.md), [new high-speed takes](take-validation.md) and
+[earlier partial-atlas evidence](masking-validation.md)
+record acceptance criteria and remaining ambiguity.
 
 Resilient mode suppresses destructive `max_bad_frames` auto-clearing and can reacquire without `opt_do_global`. Setting `rust_resilient : n` restores the legacy permissive quality/reset policy: optional deterministic SO(3) covering and multistart BOBYQA search after failed local fitting or loaded-map reset, and the configured bad-frame reset threshold. This differs from upstream stochastic CRS2. Explicit reset preserves source count/time and heading-independent integrated displacement while resetting pose/path/heading and sequence. Imported confidence maps are validated before mutation; unaccepted frames do not teach the atlas.
 
@@ -34,7 +64,12 @@ velocity vectors and a fourth score-verified image, retains confirmed visible
 motion as the post-recovery predictor, and preserves spatial coverage in the
 256-view reference bank. Mature partial atlas cells acquire up to 16 times the
 inertia against contradictory accepted votes, while new surface and agreeing
-evidence keep learning promptly. The legacy opt-out remains unchanged. Exact
+evidence keep learning promptly. The legacy opt-out remains unchanged. Confirmed
+acceleration recovery may now initialize genuinely unseen cells during its
+eight-row learning probation, while preserving every already observed cell and
+freezing error/edge/view histories. This avoids exhausting a cold partial atlas
+during a real turn; ordinary recovery and rejected observations retain their
+full teaching freeze. Exact
 policy, counter bounds and imported-map age limitations are in
 [recovery](recovery.md); [VR3 evidence](vr3-validation.md) distinguishes
 increment agreement, complete trajectories and post-hand recovery.

@@ -121,7 +121,10 @@ impl Session {
         };
         let diagnostics = Diagnostics::new(
             loaded.config.clone(),
-            doc.number("q_factor", 6.) as usize,
+            doc.number(
+                "q_factor",
+                fictrac_core::MapSettings::default().quality as f64,
+            ) as usize,
             doc.number("thr_ratio", 1.25),
             doc.number("thr_win_pc", 0.25),
         )

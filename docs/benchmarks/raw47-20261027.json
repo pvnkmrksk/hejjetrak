@@ -1,0 +1,1518 @@
+{
+  "date": "2026-10-27",
+  "base_commit": "6c0bea66d77d55eab5b3669d90ca3c0dae9a2dd7",
+  "branch": "codex/raw-video-robustness",
+  "source_state": "Focused uncommitted changes on fetched main; Rust source hashes bind this build. No release publication or installed-app replacement.",
+  "rust_source_sha256": {
+    "crates/fictrac-core/src/config.rs": "594d5882ae0103255dc20b9d69c41ecdd44ca97ebe60f0426d3fad8d3a3499e0",
+    "crates/fictrac-core/src/diagnostics.rs": "bdd61e967a9d7e51a86897bf4567f341e91738c5c06ade337838c0c40ca1874a",
+    "crates/fictrac-core/src/resilience.rs": "5e3caa26bb76a802c32c15208e693ba75f8eaf1e8ca58de0cd3508329fab701f",
+    "crates/fictrac-core/src/spherical.rs": "1a67ac884c96fea84f6a1d1ab44c494451c3cc47b05a006ad1775dbdedde513f",
+    "crates/fictrac-core/tests/recovery.rs": "580f3e20ce311dc630096d09824178f9d52dab1e2441e8476ab9cdc8f1d524aa",
+    "crates/fictrac-io/src/config.rs": "f2a51aac4a1c8035531c91de0b22b95887f151bb16ccd8f89c58913b81f40a00",
+    "crates/fictrac-io/src/document.rs": "3611d071d49c0d3416adc0951d69d554384345d62c89bd8f9627f1f2bcf22b1b",
+    "crates/fictrac-io/tests/config_parity.rs": "cfb9fb43b59c22305916f10bf8772f4420f97d2066743f74ed57ddf4d6fccc6d"
+  },
+  "platform": {
+    "os": "Linux-6.8.0-124-generic-x86_64-with-glibc2.35",
+    "distribution": {
+      "NAME": "Ubuntu",
+      "ID": "ubuntu",
+      "PRETTY_NAME": "Ubuntu 22.04.5 LTS",
+      "VERSION_ID": "22.04",
+      "VERSION": "22.04.5 LTS (Jammy Jellyfish)",
+      "VERSION_CODENAME": "jammy",
+      "ID_LIKE": "debian",
+      "HOME_URL": "https://www.ubuntu.com/",
+      "SUPPORT_URL": "https://help.ubuntu.com/",
+      "BUG_REPORT_URL": "https://bugs.launchpad.net/ubuntu/",
+      "PRIVACY_POLICY_URL": "https://www.ubuntu.com/legal/terms-and-policies/privacy-policy",
+      "UBUNTU_CODENAME": "jammy"
+    },
+    "cpu": "Intel Core i7-6700K, 8 logical CPUs",
+    "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)\nbinary: rustc\ncommit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67\ncommit-date: 2026-10-13\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.1\nLLVM version: 23.1.1\n",
+    "profile": "release, thin LTO, codegen-units=1",
+    "RUSTFLAGS": null,
+    "build_environment": {
+      "RUSTUP_HOME": "/tmp/hejjetrac-rustup",
+      "CARGO_HOME": "/tmp/hejjetrac-cargo",
+      "LIBCLANG_PATH": "/home/pkaushi/miniconda3/envs/rnd/lib"
+    }
+  },
+  "input": {
+    "path": "/media/pkaushi/Pavan/raw.avi",
+    "sha256": "217c3f1d27cd5d050566d30921e177c5fee921e3b2fa8bddcf9ec825b15f7cc3",
+    "width": 640,
+    "height": 480,
+    "fps": 100,
+    "frames": 3565,
+    "private_video_in_repository": false
+  },
+  "config": {
+    "path": "examples/raw47/config.txt",
+    "sha256": "b6678e3fe01076a04ba209b854017220b12be91d1f348d141c174087abd010bf",
+    "display": "Final user config enables display. Numeric full-replay/baseline copies used do_display:n; field comparison proves no numerical difference.",
+    "vfov_deg": 47,
+    "lab_axes": "identity camera/ROI only; physical lab/animal axes unverified"
+  },
+  "binaries": {
+    "main_cli_sha256": "fcb2cb87e6933906af5378b0e62954d32d613a61758553cff1668c7aeeb71feb",
+    "final_cli_sha256": "fc26a09dc000aad55f2e3caea7c032357a0ff8f107df334e4887b4b4e9b680b7",
+    "final_gui_sha256": "49ede97a2c037f0a0be6e776d25c98b5e6813f7d9842e4e9958904d5a0360da6",
+    "original_fictrac_sha256": "3e2b3fb4a4b54eca4b9c4e0498226566d726dc46d9d5c7a2280a6e573d8bd5ae",
+    "historical_atlas_only_cli_sha256": "ac165dd51d589e9e1f808a0531a4db1caf61c0b85019222152e1d74392461e8c",
+    "historical_hash_provenance": "Captured by root tool after candidate-default and before q12 start, before floor build; controls are not attributed to the later mutable target path."
+  },
+  "controls": [
+    {
+      "name": "main-default",
+      "summary": {
+        "frames": 3565,
+        "tracked": 1356,
+        "relocalized": 6,
+        "rejected": 2202,
+        "initializing": 1,
+        "mean_error": 18599.674681378143,
+        "max_error": 36091.3687250111,
+        "wall_seconds": 66.662430951,
+        "tracking_fps": 403.23944198522554,
+        "end_to_end_fps": 53.478397789310165,
+        "final_position": [
+          0.5013987404565508,
+          1.313116652421621
+        ],
+        "final_heading": 6.237856722545594
+      },
+      "numerical_config": {
+        "spherical_map": {
+          "resilient": true,
+          "global_search": false,
+          "max_bad_frames": -1,
+          "global_evaluations": 100000,
+          "channel": null,
+          "quality": 6,
+          "threshold_ratio": 1.25,
+          "threshold_window": 0.25,
+          "max_evaluations": 50,
+          "tolerance": 0.001,
+          "max_error": -1.0
+        },
+        "width": 640,
+        "height": 480,
+        "vfov_deg": 47.0,
+        "fisheye": false,
+        "sphere": {
+          "centre": [
+            0.03600279982549754,
+            0.07631136607934809,
+            0.9964338281149576
+          ],
+          "angular_radius": 0.30091335364466654
+        },
+        "camera_to_lab": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "legacy_roi_coordinates": true,
+        "ignore_polygons": [],
+        "max_rotation": 0.35,
+        "max_error": 0.16,
+        "sample_stride": 2,
+        "iterations": 20,
+        "source": "/media/pkaushi/Pavan/raw.avi"
+      },
+      "unaccepted_intervals": [
+        [
+          1339,
+          1344
+        ],
+        [
+          1348,
+          1559
+        ],
+        [
+          1562,
+          1623
+        ],
+        [
+          1626,
+          1698
+        ],
+        [
+          1701,
+          1792
+        ],
+        [
+          1795,
+          3086
+        ],
+        [
+          3094,
+          3565
+        ]
+      ],
+      "longest_unaccepted_frames": 1291,
+      "all_frames_sha256": "6bc8ef506daf3bbb71bb41ce4e942cd7374e56e81941c6952fc5be8df0147db5",
+      "quality_sha256": "a679a0d857a6d08a56a1c7999ccabff9d1335856b95da8ded313ce80ee54a72f",
+      "timing_scope": "Exploratory accuracy control; builds/tests may overlap. These are descriptive times, not comparable speed measurements."
+    },
+    {
+      "name": "main-narrow",
+      "summary": {
+        "frames": 3565,
+        "tracked": 2384,
+        "relocalized": 4,
+        "rejected": 1176,
+        "initializing": 1,
+        "mean_error": 12386.42150289946,
+        "max_error": 32280.027198211625,
+        "wall_seconds": 64.076056887,
+        "tracking_fps": 467.286007969812,
+        "end_to_end_fps": 55.63700660118619,
+        "final_position": [
+          7.429932218245663,
+          6.752109197307533
+        ],
+        "final_heading": 3.689147689286945
+      },
+      "numerical_config": {
+        "spherical_map": {
+          "resilient": true,
+          "global_search": false,
+          "max_bad_frames": -1,
+          "global_evaluations": 100000,
+          "channel": null,
+          "quality": 6,
+          "threshold_ratio": 1.25,
+          "threshold_window": 0.25,
+          "max_evaluations": 100,
+          "tolerance": 0.001,
+          "max_error": -1.0
+        },
+        "width": 640,
+        "height": 480,
+        "vfov_deg": 47.0,
+        "fisheye": false,
+        "sphere": {
+          "centre": [
+            0.03600279982549754,
+            0.07631136607934809,
+            0.9964338281149576
+          ],
+          "angular_radius": 0.30091335364466654
+        },
+        "camera_to_lab": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "legacy_roi_coordinates": true,
+        "ignore_polygons": [],
+        "max_rotation": 0.08,
+        "max_error": 0.16,
+        "sample_stride": 2,
+        "iterations": 20,
+        "source": "/media/pkaushi/Pavan/raw.avi"
+      },
+      "unaccepted_intervals": [
+        [
+          1348,
+          1619
+        ],
+        [
+          1626,
+          2437
+        ],
+        [
+          2994,
+          2997
+        ],
+        [
+          3019,
+          3110
+        ]
+      ],
+      "longest_unaccepted_frames": 811,
+      "all_frames_sha256": "40e1afc7062bd827280a33c6de6a6f22d9715012af8efd521f462a5b598a9487",
+      "quality_sha256": "37b894836b322abd469ab1044c30ed208d27df2b1be6f88594178234960b8ece",
+      "timing_scope": "Exploratory accuracy control; builds/tests may overlap. These are descriptive times, not comparable speed measurements."
+    },
+    {
+      "name": "candidate-default",
+      "summary": {
+        "frames": 3565,
+        "tracked": 1356,
+        "relocalized": 6,
+        "rejected": 2202,
+        "initializing": 1,
+        "mean_error": 17906.39499442425,
+        "max_error": 34056.72119543846,
+        "wall_seconds": 66.152106678,
+        "tracking_fps": 436.48744604162,
+        "end_to_end_fps": 53.89095191409227,
+        "final_position": [
+          0.4523411655848082,
+          1.3416774946324335
+        ],
+        "final_heading": 0.012612172074933412
+      },
+      "numerical_config": {
+        "spherical_map": {
+          "resilient": true,
+          "global_search": false,
+          "max_bad_frames": -1,
+          "global_evaluations": 100000,
+          "channel": null,
+          "quality": 6,
+          "threshold_ratio": 1.25,
+          "threshold_window": 0.25,
+          "max_evaluations": 50,
+          "tolerance": 0.001,
+          "max_error": -1.0
+        },
+        "width": 640,
+        "height": 480,
+        "vfov_deg": 47.0,
+        "fisheye": false,
+        "sphere": {
+          "centre": [
+            0.03600279982549754,
+            0.07631136607934809,
+            0.9964338281149576
+          ],
+          "angular_radius": 0.30091335364466654
+        },
+        "camera_to_lab": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "legacy_roi_coordinates": true,
+        "ignore_polygons": [],
+        "max_rotation": 0.35,
+        "max_error": 0.16,
+        "sample_stride": 2,
+        "iterations": 20,
+        "source": "/media/pkaushi/Pavan/raw.avi"
+      },
+      "unaccepted_intervals": [
+        [
+          1339,
+          1344
+        ],
+        [
+          1348,
+          1559
+        ],
+        [
+          1563,
+          1624
+        ],
+        [
+          1626,
+          1698
+        ],
+        [
+          1701,
+          1792
+        ],
+        [
+          1795,
+          3086
+        ],
+        [
+          3094,
+          3565
+        ]
+      ],
+      "longest_unaccepted_frames": 1291,
+      "all_frames_sha256": "2d3d3d3e822ce8bdc131c8a6bedf3ccd510643ff4eb93b39a7c9ce1985ab2c6e",
+      "quality_sha256": "77fc0b4ed7331447f331adadd76e51991d39fe0e927dbb4cbb17db7e4975b589",
+      "timing_scope": "Exploratory accuracy control; builds/tests may overlap. These are descriptive times, not comparable speed measurements."
+    },
+    {
+      "name": "candidate-quality12",
+      "summary": {
+        "frames": 3565,
+        "tracked": 1358,
+        "relocalized": 4,
+        "rejected": 2202,
+        "initializing": 1,
+        "mean_error": 17938.9053523622,
+        "max_error": 33812.42276343877,
+        "wall_seconds": 68.568803088,
+        "tracking_fps": 138.92120535039456,
+        "end_to_end_fps": 51.99157400231621,
+        "final_position": [
+          0.4134740675148229,
+          1.3186338653442269
+        ],
+        "final_heading": 6.269034255633228
+      },
+      "numerical_config": {
+        "spherical_map": {
+          "resilient": true,
+          "global_search": false,
+          "max_bad_frames": -1,
+          "global_evaluations": 100000,
+          "channel": null,
+          "quality": 12,
+          "threshold_ratio": 1.25,
+          "threshold_window": 0.25,
+          "max_evaluations": 100,
+          "tolerance": 0.001,
+          "max_error": -1.0
+        },
+        "width": 640,
+        "height": 480,
+        "vfov_deg": 47.0,
+        "fisheye": false,
+        "sphere": {
+          "centre": [
+            0.03600279982549754,
+            0.07631136607934809,
+            0.9964338281149576
+          ],
+          "angular_radius": 0.30091335364466654
+        },
+        "camera_to_lab": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "legacy_roi_coordinates": true,
+        "ignore_polygons": [],
+        "max_rotation": 0.15,
+        "max_error": 0.16,
+        "sample_stride": 2,
+        "iterations": 20,
+        "source": "/media/pkaushi/Pavan/raw.avi"
+      },
+      "unaccepted_intervals": [
+        [
+          1348,
+          1559
+        ],
+        [
+          1562,
+          1623
+        ],
+        [
+          1626,
+          1794
+        ],
+        [
+          1795,
+          3086
+        ],
+        [
+          3094,
+          3565
+        ]
+      ],
+      "longest_unaccepted_frames": 1291,
+      "all_frames_sha256": "94f8d5cf2b13d8224f7c3574b866d6bacfae48d9f6917ba3f2470b3984caa468",
+      "quality_sha256": "1ba0dc61591437ce50d6c8353966ea38744eaed687c48900cd7d680c92b9e1cd",
+      "timing_scope": "Exploratory accuracy control; builds/tests may overlap. These are descriptive times, not comparable speed measurements."
+    },
+    {
+      "name": "tuned-q6",
+      "summary": {
+        "frames": 3565,
+        "tracked": 3559,
+        "relocalized": 1,
+        "rejected": 4,
+        "initializing": 1,
+        "mean_error": 6188.335369902283,
+        "max_error": 16460.892740619904,
+        "wall_seconds": 94.306310889,
+        "tracking_fps": 232.39063157327743,
+        "end_to_end_fps": 37.802348182149345,
+        "final_position": [
+          -22.90410647449349,
+          5.854448430606374
+        ],
+        "final_heading": 4.311670912065809
+      },
+      "numerical_config": {
+        "spherical_map": {
+          "resilient": true,
+          "resilient_error_floor": 18000.0,
+          "global_search": false,
+          "max_bad_frames": -1,
+          "global_evaluations": 100000,
+          "channel": null,
+          "quality": 6,
+          "threshold_ratio": 1.25,
+          "threshold_window": 0.25,
+          "max_evaluations": 100,
+          "tolerance": 0.001,
+          "max_error": 18000.0
+        },
+        "width": 640,
+        "height": 480,
+        "vfov_deg": 47.0,
+        "fisheye": false,
+        "sphere": {
+          "centre": [
+            0.03600279982549754,
+            0.07631136607934809,
+            0.9964338281149576
+          ],
+          "angular_radius": 0.30091335364466654
+        },
+        "camera_to_lab": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "legacy_roi_coordinates": true,
+        "ignore_polygons": [],
+        "max_rotation": 0.08,
+        "max_error": 0.16,
+        "sample_stride": 2,
+        "iterations": 20,
+        "source": "/media/pkaushi/Pavan/raw.avi"
+      },
+      "unaccepted_intervals": [
+        [
+          2993,
+          2997
+        ]
+      ],
+      "longest_unaccepted_frames": 4,
+      "all_frames_sha256": "5f4c5b45d97a57adad599451d071a573950a8a00b59bd62d0ad75c7aca184bd3",
+      "quality_sha256": "907a3c5e4d572868eef0bab64a5ad231dd78f88dd912569a6007af032a2cee36",
+      "timing_scope": "Exploratory accuracy control; builds/tests may overlap. These are descriptive times, not comparable speed measurements."
+    },
+    {
+      "name": "tuned-q12",
+      "summary": {
+        "frames": 3565,
+        "tracked": 3560,
+        "relocalized": 1,
+        "rejected": 3,
+        "initializing": 1,
+        "mean_error": 5702.110622817806,
+        "max_error": 16394.477705694575,
+        "wall_seconds": 70.569757175,
+        "tracking_fps": 100.43953261034663,
+        "end_to_end_fps": 50.51739077349319,
+        "final_position": [
+          -23.439156401322787,
+          4.39905991774659
+        ],
+        "final_heading": 4.469772729757381
+      },
+      "numerical_config": {
+        "spherical_map": {
+          "resilient": true,
+          "resilient_error_floor": 18000.0,
+          "global_search": false,
+          "max_bad_frames": -1,
+          "global_evaluations": 100000,
+          "channel": null,
+          "quality": 12,
+          "threshold_ratio": 1.25,
+          "threshold_window": 0.25,
+          "max_evaluations": 100,
+          "tolerance": 0.001,
+          "max_error": 18000.0
+        },
+        "width": 640,
+        "height": 480,
+        "vfov_deg": 47.0,
+        "fisheye": false,
+        "sphere": {
+          "centre": [
+            0.03600279982549754,
+            0.07631136607934809,
+            0.9964338281149576
+          ],
+          "angular_radius": 0.30091335364466654
+        },
+        "camera_to_lab": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "legacy_roi_coordinates": true,
+        "ignore_polygons": [],
+        "max_rotation": 0.15,
+        "max_error": 0.16,
+        "sample_stride": 2,
+        "iterations": 20,
+        "source": "/media/pkaushi/Pavan/raw.avi"
+      },
+      "unaccepted_intervals": [
+        [
+          2993,
+          2996
+        ]
+      ],
+      "longest_unaccepted_frames": 3,
+      "all_frames_sha256": "8f76f3ec4f74fab45a8003163bdbb565f477cff6aacff10386db6abbe9eae183",
+      "quality_sha256": "268c5d0f669083ec615fc088ef1ea64e2baa7904531fe94773a26cb1c985fd9c",
+      "timing_scope": "Exploratory accuracy control; builds/tests may overlap. These are descriptive times, not comparable speed measurements."
+    }
+  ],
+  "same_numerical_config_original_comparison": {
+    "scope": "Same-video original FicTrac comparison; neither output is physical ground truth. Agreement, acceptance and low image error do not establish motion accuracy.",
+    "inputs": {
+      "candidate_all_frames": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/raw-video-20261027/tuned-q12/all-frames.dat",
+      "candidate_sha256": "8f76f3ec4f74fab45a8003163bdbb565f477cff6aacff10386db6abbe9eae183",
+      "quality": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/raw-video-20261027/tuned-q12/quality.csv",
+      "quality_sha256": "268c5d0f669083ec615fc088ef1ea64e2baa7904531fe94773a26cb1c985fd9c",
+      "reference": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/raw-video-20261027/original-tuned-q12/raw47-20261027_184644.dat",
+      "reference_sha256": "b6888901840126d017f906d1a329e045d83a8e6227946aff55b069b91c3f2cc2",
+      "video": "/media/pkaushi/Pavan/raw.avi",
+      "video_sha256": "217c3f1d27cd5d050566d30921e177c5fee921e3b2fa8bddcf9ec825b15f7cc3"
+    },
+    "alignment": {
+      "method": "reference_frame = candidate_frame + explicit offset; no automatic lag selection",
+      "frame_offset": 0,
+      "candidate_frame_range_inclusive": [
+        0,
+        3564
+      ],
+      "reference_frame_range_inclusive": [
+        0,
+        3564
+      ],
+      "common_rows": 3565,
+      "common_consecutive_image_pairs": 3564,
+      "candidate_rows_without_reference": [],
+      "reference_missing_ID_ranges": [],
+      "candidate_timestamp_interval_ms": {
+        "samples": 3564,
+        "min": 10.0,
+        "max": 10.0,
+        "mean": 10.0,
+        "p50": 10.0,
+        "p90": 10.0,
+        "p95": 10.0,
+        "p99": 10.0
+      },
+      "reference_timestamp_interval_ms_excluding_first_pair": {
+        "samples": 3563,
+        "min": 9.39990234375,
+        "max": 1793123206290.2,
+        "mean": 503262206.544064,
+        "p50": 10.0,
+        "p90": 10.0,
+        "p95": 10.0,
+        "p99": 10.0
+      },
+      "timestamp_interval_difference_ms_excluding_first_pair": {
+        "samples": 3563,
+        "min": -1793123206280.2,
+        "max": 0.60009765625,
+        "mean": -503262196.544064,
+        "p50": 0.0,
+        "p90": 0.0,
+        "p95": 0.0,
+        "p99": 0.0
+      },
+      "reference_clock_mismatches": [
+        {
+          "candidate_frame": 1,
+          "reference_interval_ms": -1793123204260.4,
+          "candidate_interval_ms": 10.0
+        },
+        {
+          "candidate_frame": 3559,
+          "reference_interval_ms": 1793123206290.2,
+          "candidate_interval_ms": 10.0
+        },
+        {
+          "candidate_frame": 3560,
+          "reference_interval_ms": 13.0,
+          "candidate_interval_ms": 10.0
+        },
+        {
+          "candidate_frame": 3561,
+          "reference_interval_ms": 11.300048828125,
+          "candidate_interval_ms": 10.0
+        },
+        {
+          "candidate_frame": 3562,
+          "reference_interval_ms": 9.39990234375,
+          "candidate_interval_ms": 10.0
+        },
+        {
+          "candidate_frame": 3563,
+          "reference_interval_ms": 11.300048828125,
+          "candidate_interval_ms": 10.0
+        },
+        {
+          "candidate_frame": 3564,
+          "reference_interval_ms": 11.300048828125,
+          "candidate_interval_ms": 10.0
+        }
+      ],
+      "clock_note": "Frame identity is asserted by the same-video replay provenance, not inferred from wall-clock timestamps. All reference-clock mismatches, including initial or terminal clock switches, are retained explicitly. Shared video intervals drive derivatives."
+    },
+    "counts": {
+      "candidate": 3565,
+      "reference": 3565,
+      "candidate_statuses": {
+        "initializing": 1,
+        "tracked": 3560,
+        "rejected": 1,
+        "recovering": 2,
+        "relocalized": 1
+      },
+      "accepted": 3562,
+      "measured_relative": 3560,
+      "unaccepted": 3,
+      "missing_relative_measurement_including_initialization": 5
+    },
+    "gaps": {
+      "unaccepted_frame_intervals": [
+        [
+          2993,
+          2996
+        ]
+      ],
+      "longest_unaccepted_run_frames": 3,
+      "all_unmeasured_frame_intervals_including_initialization_and_relocalization": [
+        [
+          0,
+          1
+        ],
+        [
+          2993,
+          2997
+        ]
+      ],
+      "semantics": "Frozen all-frame deltas/paths are missing measurements. Relocalization publishes no hidden motion. Original .dat has no validity flag."
+    },
+    "rotation_comparison": {
+      "all_decisions_including_frozen_missing_rows": [
+        {
+          "samples": 3564,
+          "difference_rmse": 0.002957418839859706,
+          "difference_mean": 6.140209521754477e-05,
+          "pearson_correlation": 0.9936677249137212,
+          "reference": {
+            "samples": 3564,
+            "min": -0.11008523476679,
+            "max": 0.036085616701454,
+            "mean": -0.010853681790790217,
+            "p50": -6.3988050893195e-05,
+            "p90": 0.0098958164924104,
+            "p95": 0.014128625128932,
+            "p99": 0.030643812101581
+          },
+          "candidate": {
+            "samples": 3564,
+            "min": -0.10861068769,
+            "max": 0.037085305321,
+            "mean": -0.01079227969557267,
+            "p50": -7.4882402e-05,
+            "p90": 0.009666027296,
+            "p95": 0.014435729885,
+            "p99": 0.030280089787
+          }
+        },
+        {
+          "samples": 3564,
+          "difference_rmse": 0.0019633534584017013,
+          "difference_mean": -4.911400367645375e-07,
+          "pearson_correlation": 0.9872869666494956,
+          "reference": {
+            "samples": 3564,
+            "min": -0.0275725417264,
+            "max": 0.046223696935534,
+            "mean": 0.005897419629608875,
+            "p50": 0.00030023701323003,
+            "p90": 0.027855290318291,
+            "p95": 0.032688179692842,
+            "p99": 0.039124992429542
+          },
+          "candidate": {
+            "samples": 3564,
+            "min": -0.025746544707,
+            "max": 0.045469866196,
+            "mean": 0.00589692848957211,
+            "p50": 0.000266351496,
+            "p90": 0.027411936346,
+            "p95": 0.032704392654,
+            "p99": 0.03932083358
+          }
+        },
+        {
+          "samples": 3564,
+          "difference_rmse": 0.003353225537825635,
+          "difference_mean": -1.3433641895201204e-05,
+          "pearson_correlation": 0.847961216763499,
+          "reference": {
+            "samples": 3564,
+            "min": -0.030737165377593,
+            "max": 0.028648944369523,
+            "mean": 0.0005222474963971653,
+            "p50": 3.976456771582e-05,
+            "p90": 0.0073683482663252,
+            "p95": 0.011219588270688,
+            "p99": 0.020313996270697
+          },
+          "candidate": {
+            "samples": 3564,
+            "min": -0.023348625882,
+            "max": 0.031843557925,
+            "mean": 0.0005088138545019641,
+            "p50": 4.2570511e-05,
+            "p90": 0.007542858262,
+            "p95": 0.011285948808,
+            "p99": 0.020876307134
+          }
+        }
+      ],
+      "common_measured_relative_only_diagnostic": [
+        {
+          "samples": 3560,
+          "difference_rmse": 0.0021365897321633438,
+          "difference_mean": -4.4793014775905715e-06,
+          "pearson_correlation": 0.9966893325437529,
+          "reference": {
+            "samples": 3560,
+            "min": -0.11008523476679,
+            "max": 0.036085616701454,
+            "mean": -0.010799926551056398,
+            "p50": -6.359203376924e-05,
+            "p90": 0.0098958164924104,
+            "p95": 0.014128625128932,
+            "p99": 0.030643812101581
+          },
+          "candidate": {
+            "samples": 3560,
+            "min": -0.10861068769,
+            "max": 0.037085305321,
+            "mean": -0.01080440585253399,
+            "p50": -7.4979358e-05,
+            "p90": 0.009666027296,
+            "p95": 0.014435729885,
+            "p99": 0.030280089787
+          }
+        },
+        {
+          "samples": 3560,
+          "difference_rmse": 0.001960708733523996,
+          "difference_mean": -1.7345935577559302e-06,
+          "pearson_correlation": 0.9873311018511156,
+          "reference": {
+            "samples": 3560,
+            "min": -0.0275725417264,
+            "max": 0.046223696935534,
+            "mean": 0.0059052888454777,
+            "p50": 0.00030062875422328,
+            "p90": 0.027855290318291,
+            "p95": 0.032688179692842,
+            "p99": 0.039124992429542
+          },
+          "candidate": {
+            "samples": 3560,
+            "min": -0.025746544707,
+            "max": 0.045469866196,
+            "mean": 0.005903554251919944,
+            "p50": 0.000267858554,
+            "p90": 0.027411936346,
+            "p95": 0.032704392654,
+            "p99": 0.03932083358
+          }
+        },
+        {
+          "samples": 3560,
+          "difference_rmse": 0.003333800958499561,
+          "difference_mean": -1.1483238307814854e-06,
+          "pearson_correlation": 0.8496803363138162,
+          "reference": {
+            "samples": 3560,
+            "min": -0.030737165377593,
+            "max": 0.028648944369523,
+            "mean": 0.0005105338792928602,
+            "p50": 3.9573796509802e-05,
+            "p90": 0.0073407161649987,
+            "p95": 0.011119492450527,
+            "p99": 0.020313996270697
+          },
+          "candidate": {
+            "samples": 3560,
+            "min": -0.023348625882,
+            "max": 0.031843557925,
+            "mean": 0.0005093855554620787,
+            "p50": 4.3221892e-05,
+            "p90": 0.007542858262,
+            "p95": 0.011285948808,
+            "p99": 0.020876307134
+          }
+        }
+      ]
+    },
+    "trajectory_all_common_rows": {
+      "samples": 3565,
+      "raw_path_rmse_sphere_rad": 0.16723362628326982,
+      "raw_endpoint_error_sphere_rad": 0.3405476238988866,
+      "raw_wrapped_heading_rmse_rad": 0.02287544936859091,
+      "initial_pose_aligned_path_rmse_sphere_rad": 0.16723362628326982,
+      "initial_pose_aligned_endpoint_error_sphere_rad": 0.3405476238988866,
+      "relative_wrapped_heading_rmse_rad": 0.02287544936859091,
+      "alignment": "Only initial position and heading; no later fitting, scaling or gap reconstruction."
+    },
+    "rolling_comparison": {
+      "window_frames": 100,
+      "overlapping_windows": 3465,
+      "worst_window_per_component": [
+        {
+          "candidate_frame_interval": [
+            2963,
+            3063
+          ],
+          "measured_relative_rows": 96,
+          "component_difference_rmse_rad_all_decisions": [
+            0.012444348051279568,
+            0.0022059483025629865,
+            0.004926939921888016
+          ]
+        },
+        {
+          "candidate_frame_interval": [
+            1345,
+            1445
+          ],
+          "measured_relative_rows": 100,
+          "component_difference_rmse_rad_all_decisions": [
+            0.004091363980953007,
+            0.0035778353841692573,
+            0.006774949972532479
+          ]
+        },
+        {
+          "candidate_frame_interval": [
+            1346,
+            1446
+          ],
+          "measured_relative_rows": 100,
+          "component_difference_rmse_rad_all_decisions": [
+            0.004079054648627175,
+            0.003574582923965744,
+            0.0067821422986925435
+          ]
+        }
+      ],
+      "component_rmse_distributions_rad": [
+        {
+          "samples": 3465,
+          "min": 0.0002041023074369193,
+          "max": 0.012444348051279568,
+          "mean": 0.00218088785515995,
+          "p50": 0.002254958425959789,
+          "p90": 0.0033468065302554484,
+          "p95": 0.0037080647531246708,
+          "p99": 0.012420424133051661
+        },
+        {
+          "samples": 3465,
+          "min": 0.0002902795117597444,
+          "max": 0.0035778353841692573,
+          "mean": 0.0017054976116873464,
+          "p50": 0.0020995172085656994,
+          "p90": 0.002732519799093358,
+          "p95": 0.0030797756487814473,
+          "p99": 0.003478125652646173
+        },
+        {
+          "samples": 3465,
+          "min": 0.00039547907199990865,
+          "max": 0.0067821422986925435,
+          "mean": 0.002909293021512142,
+          "p50": 0.0034797766852273106,
+          "p90": 0.004879862523851332,
+          "p95": 0.005162887113973703,
+          "p99": 0.006529304148067775
+        }
+      ],
+      "note": "Every available overlapping window includes all candidate decisions, including frozen missing-motion rows."
+    },
+    "motion_structure": {
+      "reference": {
+        "delta_norm_rad": {
+          "samples": 3564,
+          "min": 0.0,
+          "max": 0.12002912197656944,
+          "mean": 0.019474226996070494,
+          "p50": 0.007823265726916174,
+          "p90": 0.060375821614761134,
+          "p95": 0.07761600138331669,
+          "p99": 0.10692028280615079
+        },
+        "angular_speed_rad_per_second": {
+          "samples": 3564,
+          "min": 0.0,
+          "max": 12.002912197656942,
+          "mean": 1.9474226996070494,
+          "p50": 0.7823265726916173,
+          "p90": 6.037582161476113,
+          "p95": 7.761600138331669,
+          "p99": 10.692028280615078
+        },
+        "angular_acceleration_norm_rad_per_second_squared": {
+          "samples": 3563,
+          "min": 0.0,
+          "max": 295.95688337506175,
+          "mean": 33.570897688703276,
+          "p50": 23.549994456009053,
+          "p90": 75.71582064635713,
+          "p95": 93.07250523583276,
+          "p99": 138.24980087824224
+        }
+      },
+      "candidate": {
+        "delta_norm_rad": {
+          "samples": 3560,
+          "min": 0.0,
+          "max": 0.11587718365692856,
+          "mean": 0.019558080058526696,
+          "p50": 0.007740480174746853,
+          "p90": 0.059844849676004425,
+          "p95": 0.07738248025565833,
+          "p99": 0.10652122759977667
+        },
+        "angular_speed_rad_per_second": {
+          "samples": 3560,
+          "min": 0.0,
+          "max": 11.587718365692856,
+          "mean": 1.9558080058526697,
+          "p50": 0.7740480174746853,
+          "p90": 5.9844849676004435,
+          "p95": 7.738248025565832,
+          "p99": 10.652122759977667
+        },
+        "angular_acceleration_norm_rad_per_second_squared": {
+          "samples": 3558,
+          "min": 0.0,
+          "max": 309.8218350462923,
+          "mean": 41.05875670731517,
+          "p50": 28.83681097190909,
+          "p90": 96.32911311606263,
+          "p95": 119.1004273240908,
+          "p99": 186.2995904817182
+        }
+      },
+      "common_measured_angular_speed_comparison": {
+        "samples": 3560,
+        "difference_rmse": 0.2365758165721278,
+        "difference_mean": 0.01292178241307542,
+        "pearson_correlation": 0.9957066025993183,
+        "reference": {
+          "samples": 3560,
+          "min": 0.0,
+          "max": 12.002912197656942,
+          "mean": 1.9428862234395943,
+          "p50": 0.7770448129871387,
+          "p90": 6.026152394969206,
+          "p95": 7.749349976177558,
+          "p99": 10.692028280615078
+        },
+        "candidate": {
+          "samples": 3560,
+          "min": 0.0,
+          "max": 11.587718365692856,
+          "mean": 1.9558080058526697,
+          "p50": 0.7740480174746853,
+          "p90": 5.9844849676004435,
+          "p95": 7.738248025565832,
+          "p99": 10.652122759977667
+        }
+      },
+      "clock": "Both derivatives use the validated candidate video presentation intervals. Candidate excludes every unmeasured delta; acceleration never spans a missing interval."
+    },
+    "fit_error": {
+      "all_decisions": {
+        "samples": 3565,
+        "min": 0.0,
+        "max": 16394.477705694575,
+        "mean": 5702.110622817812,
+        "p50": 6408.371713593138,
+        "p90": 10701.254436764431,
+        "p95": 12276.455494454283,
+        "p99": 14572.517833800186
+      },
+      "measured_relative": {
+        "samples": 3560,
+        "min": 408.027208348863,
+        "max": 16394.477705694575,
+        "mean": 5702.7589423719655,
+        "p50": 6408.371713593138,
+        "p90": 10701.254436764431,
+        "p95": 12276.455494454283,
+        "p99": 14572.517833800186
+      },
+      "unaccepted": {
+        "samples": 3,
+        "min": 5997.800409988819,
+        "max": 6833.520778978756,
+        "mean": 6364.820971549261,
+        "p50": 6263.141725680209,
+        "p90": 6833.520778978756,
+        "p95": 6833.520778978756,
+        "p99": 6833.520778978756
+      }
+    }
+  },
+  "native_full": {
+    "passed": true,
+    "binary_sha256": "49ede97a2c037f0a0be6e776d25c98b5e6813f7d9842e4e9958904d5a0360da6",
+    "config_sha256": "ebdf1c28f70edac82ac75d5c043e5b0208118a841f7430fd90e4f571600419ea",
+    "canonical_unchanged": true,
+    "comparison": {
+      "native_numeric_rows": 3565,
+      "headless_numeric_rows": 3565,
+      "native_quality_rows": 3565,
+      "headless_quality_rows": 3565,
+      "all_rows_have_25_columns": true,
+      "all25_numeric_equal": true,
+      "quality_equal": false,
+      "max_abs_column_difference": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "numeric_bytes_equal": true,
+      "quality_bytes_equal": false,
+      "quality_shared_fields": [
+        "frame",
+        "timestamp_ms",
+        "accepted",
+        "status",
+        "fit_error"
+      ],
+      "quality_semantic_equal_at_cli_render_precision": true,
+      "quality_semantic_mismatch_rows": [],
+      "quality_max_abs_fit_error_difference": 5.002220859751105e-10,
+      "quality_format_difference": "Native records frame,timestamp_ms,accepted,status,fit_error using full float serialization. Headless adds samples and prints timestamp/error to6/9 decimals. Byte/string equality is consequently not expected. Numerical/acceptance evidence compared at headless output precision.",
+      "native_status_counts": {
+        "initializing": 1,
+        "tracked": 3560,
+        "rejected": 1,
+        "recovering": 2,
+        "relocalized": 1
+      },
+      "native_accepted_rows": 3562,
+      "native_unaccepted_rows": 3
+    },
+    "exit_code": 0,
+    "visual_verification": {
+      "actual_native_window_capture": true,
+      "native_source_image_visible": false,
+      "native_diagnostic_image_visible": false,
+      "reason": "Canonical config deliberately has do_display:n. Actual X11 pixels show the do_display=n tracking-continues banner; view toggles do not override the configuration. No broad rendered-image validation claim.",
+      "computed_snapshot_inspected": true,
+      "computed_observation": "Final green sphere outline follows the visible silhouette. Thresholded ROI retains strong black/white pattern, warped differences are mainly thin edges, and accumulated atlas retains distinct pattern boundaries with some stippled/gray partially learned cells. No physical ground-truth accuracy claim."
+    },
+    "completion_marker": {
+      "directory": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/raw-video-20261027/native-final/recording",
+      "state": "complete",
+      "numeric_error": null,
+      "media_warnings": [],
+      "media_recording": null,
+      "completion_error": null
+    },
+    "harness_initial_failure": "Initial direct quality-dictionary equality treated different output schemas/float formatting as failure; retained verbatim in initial-comparison-report.json. No tracking replay repeated for corrected semantic comparison.",
+    "report_sha256": "ee2f5171c23f84c3de803ab6279b95cd73238bd692858e97b97dda242166d51b",
+    "advance_wall_seconds": 63.317287577316165,
+    "scope": "Full unpaced 3565-frame numerical replay, numeric-only recording; actual image display suppressed in this headless config, independently checked with final visible config below.",
+    "timing_claim": "Descriptive native decode/track/UI/recording wall interval, not isolated performance or real-time 100FPS evidence."
+  },
+  "native_visible": {
+    "passed": true,
+    "binary_sha256": "49ede97a2c037f0a0be6e776d25c98b5e6813f7d9842e4e9958904d5a0360da6",
+    "canonical_config_sha256": "b6678e3fe01076a04ba209b854017220b12be91d1f348d141c174087abd010bf",
+    "field_changes_vs_full_native": {
+      "do_display": {
+        "before": "n",
+        "after": "y"
+      }
+    },
+    "canonical_unchanged": true,
+    "exit_code": 0,
+    "visual_inspection": {
+      "actual_x11_pixels_viewed": [
+        "normal.png",
+        "diagnostics.png"
+      ],
+      "normal": "Visible full source image with green fitted rim following the ball silhouette, native toolbar/status and path inset. Identity-axis overlay is visible; physical lab orientation remains unverified.",
+      "diagnostics": "Visible six-panel native mosaic: strong thresholded pattern, sparse warped-difference residuals during the initial stationary interval, instant/accumulated atlas containing only the visible initial surface and explicitly gray unknown regions.",
+      "scope": "50initial frames only; full-motion tracking numerical evidence retained independently in native-final. No physical ground-truth or throughput claim."
+    },
+    "frames": 50,
+    "report_sha256": "d5307f18b8840709a83d0685ce2de8562fe68084e2d02bbe17b139b47183096c"
+  },
+  "required_checks": {
+    "fmt": true,
+    "clippy_workspace_all_targets_locked_Dwarnings": true,
+    "tests_workspace_locked": {
+      "passed": 291,
+      "failed": 0,
+      "ignored": 0,
+      "suites_including_doc_results": 27
+    },
+    "release_workspace_locked": true,
+    "logs": {
+      "fmt-final.log": {
+        "path": "runs/raw-video-20261027/validation/fmt-final.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "clippy-final.log": {
+        "path": "runs/raw-video-20261027/validation/clippy-final.log",
+        "sha256": "efc018540fa99328254b89c493a4c60efb3e4aca10f131ebd2e09f97adb391b1"
+      },
+      "tests.log": {
+        "path": "runs/raw-video-20261027/validation/tests.log",
+        "sha256": "7aec3697742e56fb024dcc194684e628116db322ce3cde23306d7019e490c465"
+      },
+      "release-build.log": {
+        "path": "runs/raw-video-20261027/validation/release-build.log",
+        "sha256": "31ac3938599551a8ca2e1bd2dd0d6bc3f277a17ab8857843bd8f9e1da2c64de5"
+      }
+    },
+    "resolved_build_prerequisite": "Initial Clippy lacked libclang discovery; final run used existing LIBCLANG_PATH, no dependency/source workaround."
+  },
+  "serial_release_cases": [
+    {
+      "name": "demo120",
+      "command": [
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/raw-video-20261027/tuned-fictrac",
+        "demo",
+        "--frames",
+        "120",
+        "--output",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/raw-video-20261027/release-demo120"
+      ],
+      "external_wall_seconds": 0.7163146436214447,
+      "exit_code": 0
+    },
+    {
+      "name": "sample300",
+      "command": [
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/raw-video-20261027/tuned-fictrac",
+        "track",
+        "--config",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/examples/benchmark/map-config.txt",
+        "--input",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/examples/sample.mp4",
+        "--output",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/raw-video-20261027/release-sample300"
+      ],
+      "external_wall_seconds": 1.7966851498931646,
+      "exit_code": 0
+    },
+    {
+      "name": "sample-compare",
+      "command": [
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/raw-video-20261027/tuned-fictrac",
+        "compare",
+        "--reference",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/examples/benchmark/upstream.dat",
+        "--candidate",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/raw-video-20261027/release-sample300/tracking.dat",
+        "--report",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/raw-video-20261027/release-sample-comparison.json"
+      ],
+      "external_wall_seconds": 0.002723824232816696,
+      "exit_code": 0
+    },
+    {
+      "name": "vr3-full-regression",
+      "command": [
+        "python3",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/scripts/benchmark_vr3.py",
+        "--reference-dir",
+        "/home/pkaushi/src/fictrac/VR_array/VR3",
+        "--candidate-dir",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/raw-video-20261027/release-vr3",
+        "--output",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/raw-video-20261027/release-vr3-comparison.json",
+        "--binary",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/raw-video-20261027/tuned-fictrac",
+        "--make-suffix-control",
+        "--suffix-control-dir",
+        "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/raw-video-20261027/release-vr3-suffix",
+        "--require-pass"
+      ],
+      "external_wall_seconds": 44.996363431215286,
+      "exit_code": 0
+    }
+  ],
+  "serial_timing_boundary": "Cases ran serially after native/build/test activity completed. CLI summary wall starts before input/config/decode and includes tracking, numeric/quality/SVG/map I/O; ends before summary/rename completion. External time includes entire process. Synthetic generation is outside internal tracking wall but inside external command time. VR3 harness wall also includes fresh suffix generation/replay and analysis; actual VR3 CLI time retained separately. All are this fixture/machine, no speedup claim.",
+  "synthetic_demo": {
+    "oracle": {
+      "expected_delta": [
+        0.006,
+        -0.009,
+        0.004
+      ],
+      "passed": true,
+      "rotation_component_rmse_rad": 0.0003040496948914138,
+      "tolerance_rad": 0.003
+    },
+    "summary": {
+      "frames": 120,
+      "tracked": 119,
+      "rejected": 0,
+      "wall_seconds": 0.514712213,
+      "tracking_fps": 253.60030970684224,
+      "end_to_end_fps": 233.13998962756298
+    }
+  },
+  "sample300": {
+    "comparison": {
+      "comparison": {
+        "candidate_final_position": [
+          3.620053461636,
+          -2.627296315711
+        ],
+        "endpoint_error_sphere_rad": 0.054525318251027806,
+        "frames": 300,
+        "heading_rmse_rad": 0.01318481079068964,
+        "path_point_rmse_sphere_rad": 0.04480675139755788,
+        "reference_final_position": [
+          3.674266189723,
+          -2.6214661833162
+        ],
+        "rotation_component_rmse_rad": [
+          0.008760804755303081,
+          0.008292135984256042,
+          0.014210731643506284
+        ],
+        "timestamp_max_error_ms": 3.456079866737127e-11
+      },
+      "limits": {
+        "heading_rmse_rad": 0.025,
+        "path_rmse_sphere_rad": 0.075,
+        "rotation_component_rmse_rad": 0.02
+      },
+      "passed": true
+    },
+    "summary": {
+      "frames": 300,
+      "tracked": 299,
+      "rejected": 0,
+      "wall_seconds": 1.7946050489999998,
+      "tracking_fps": 391.0493894049249,
+      "end_to_end_fps": 167.16770086385733
+    }
+  },
+  "vr3_regression": {
+    "input_sha256": "0cdb83d8468fce955999a54bd04cfde48e652db8c36de9fc45b15d359c521e4b",
+    "reference_dat_sha256": "a8bfa7306a2144c5a0233739f9e796bff35fd1f3a7dc371392a18c8f8a852475",
+    "source_frame_map_sha256": "5ad33ec6eebc6cef3444705cbe668da18038e5b1ff6fafce8c671d29a1f3b899",
+    "video_frames": 5157,
+    "healthy_pre_hand": {
+      "video_frame_interval": [
+        2,
+        4680
+      ],
+      "frames": 4678,
+      "accepted": 4678,
+      "accepted_fraction": 1.0,
+      "statuses": {
+        "tracked": 4678
+      },
+      "fit_error_median": 3749.7452792285,
+      "fit_error_p95": 5108.337886701,
+      "accepted_fit_error_p95": 5108.337886701,
+      "aligned_delta_frames": 4677,
+      "excluded_source_gap_video_frames": [
+        183
+      ],
+      "rotation_component_rmse_rad_all_decisions": [
+        0.006677137427227678,
+        0.006546610871949008,
+        0.009413437535688608
+      ],
+      "rotation_component_mean_error_rad_all_decisions": [
+        -5.467884370682891e-06,
+        -1.0530318148593666e-05,
+        -1.7679153083826622e-05
+      ],
+      "lab_rotation_component_mean_error_rad_all_decisions": [
+        5.171027188585439e-06,
+        5.700920255704552e-06,
+        -1.985189662353378e-05
+      ],
+      "tracked_only_delta_frames": 4677,
+      "rotation_component_rmse_rad_tracked_only_diagnostic": [
+        0.006677137427227678,
+        0.006546610871949008,
+        0.009413437535688608
+      ],
+      "path_point_rmse_sphere_rad": 2.485640863678002,
+      "heading_rmse_rad": 0.06145085702091334,
+      "endpoint_error_sphere_rad": 2.699863443872491,
+      "reference_path_context_from_source_initialization": {
+        "source_frame_interval_inclusive": [
+          0,
+          4685
+        ],
+        "reference_path_length_sphere_rad": 273.9502859263112,
+        "reference_endpoint_displacement_sphere_rad": 12.6524545701225,
+        "path_rmse_divided_by_reference_path_length": 0.009073328232796971,
+        "path_rmse_divided_by_reference_endpoint_displacement": 0.19645522929183978,
+        "note": "Descriptive scale context only. These ratios do not replace raw errors or establish long-sequence path parity."
+      }
+    },
+    "fast_section": {
+      "video_frame_interval": [
+        1690,
+        2100
+      ],
+      "frames": 410,
+      "accepted": 410,
+      "accepted_fraction": 1.0,
+      "statuses": {
+        "tracked": 410
+      },
+      "fit_error_median": 4938.516881029,
+      "fit_error_p95": 6771.274064733,
+      "accepted_fit_error_p95": 6771.274064733,
+      "aligned_delta_frames": 410,
+      "excluded_source_gap_video_frames": [],
+      "rotation_component_rmse_rad_all_decisions": [
+        0.009213552518292561,
+        0.008630856714623842,
+        0.011502134268641316
+      ],
+      "rotation_component_mean_error_rad_all_decisions": [
+        0.00011295237630912252,
+        0.00015732560459044578,
+        0.00030397830629817605
+      ],
+      "lab_rotation_component_mean_error_rad_all_decisions": [
+        -0.00010536124692870854,
+        -0.0001169681462580792,
+        0.0003242373455919074
+      ],
+      "tracked_only_delta_frames": 410,
+      "rotation_component_rmse_rad_tracked_only_diagnostic": [
+        0.009213552518292561,
+        0.008630856714623842,
+        0.011502134268641316
+      ],
+      "path_point_rmse_sphere_rad": 2.8910990105536563,
+      "heading_rmse_rad": 0.10510373843251364,
+      "endpoint_error_sphere_rad": 4.3179676675211205,
+      "reference_path_context_from_source_initialization": {
+        "source_frame_interval_inclusive": [
+          0,
+          2105
+        ],
+        "reference_path_length_sphere_rad": 63.85235190099726,
+        "reference_endpoint_displacement_sphere_rad": 45.938985768587486,
+        "path_rmse_divided_by_reference_path_length": 0.045277878174891505,
+        "path_rmse_divided_by_reference_endpoint_displacement": 0.06293345319196303,
+        "note": "Descriptive scale context only. These ratios do not replace raw errors or establish long-sequence path parity."
+      },
+      "interval_trajectory": {
+        "video_frame_interval": [
+          1690,
+          2100
+        ],
+        "start_position_and_heading_aligned_path_rmse_sphere_rad": 3.1609214773643375,
+        "start_position_and_heading_aligned_endpoint_error_sphere_rad": 4.703012136847752,
+        "relative_heading_rmse_rad": 0.11310008922040984,
+        "note": "Only the initial position and heading are aligned; no later time-dependent rotation, scaling, trajectory fitting or gap reconstruction is applied. These drift metrics are reported independently of increment gates."
+      }
+    },
+    "post_hand": {
+      "video_frame_interval": [
+        4820,
+        5157
+      ],
+      "frames": 337,
+      "accepted": 337,
+      "accepted_fraction": 1.0,
+      "statuses": {
+        "relocalized": 1,
+        "tracked": 336
+      },
+      "fit_error_median": 3850.389312977,
+      "fit_error_p95": 4681.187223785,
+      "accepted_fit_error_p95": 4681.187223785,
+      "tracked_delta_norm_rms_rad": 0.04657006877948415
+    },
+    "relocalized_video_frames_after_hand_arrival": [
+      4820
+    ],
+    "zero_relative_motion_violations": [],
+    "fresh_suffix_control": {
+      "control": "/home/pkaushi/Documents/ChatGPT/Hejjetrac/runs/raw-video-20261027/release-vr3-suffix",
+      "control_initialization_video_frame": 4820,
+      "comparison_video_frame_interval": [
+        4920,
+        5157
+      ],
+      "control_frames": 337,
+      "control_accepted": 337,
+      "rotation_component_rmse_rad": [
+        0.008255437364640258,
+        0.006261228947161449,
+        0.010896266114878194
+      ],
+      "note": "Same decoded images, independently initialized atlas. Agreement tests recovered increments; it is not physical ground truth."
+    },
+    "gates": {
+      "healthy_rotation_component_rmse": true,
+      "healthy_acceptance": true,
+      "every_rolling_100_image_rotation_component_rmse": true,
+      "fast_section_rotation_component_rmse": true,
+      "fast_section_every_image_tracked": true,
+      "post_hand_acceptance": true,
+      "confirmed_relocalization_after_hand_arrival": true,
+      "missing_interval_and_relocalization_have_zero_relative_motion": true,
+      "post_hand_is_not_a_frozen_zero_estimate": true,
+      "post_hand_fit_error_p95_within_twice_accepted_healthy": true,
+      "recovered_increments_match_fresh_suffix_control": true,
+      "fresh_suffix_control_accepts_every_image": true
+    },
+    "passes": true,
+    "thresholds": {
+      "rotation_component_rmse_rad": 0.02,
+      "min_healthy_acceptance": 0.95,
+      "min_post_hand_acceptance": 0.9,
+      "post_hand_fit_error_p95_multiplier": 2
+    },
+    "path_heading_note": "Pre-hand path/heading drift is reported, with no long-sequence parity claim. The source recording skips capture images; source timestamps are not video timestamps.",
+    "process_wall_seconds": 22.109053529798985
+  },
+  "limitations": [
+    "No physical ground truth for raw.avi; original FicTrac is a baseline.",
+    "No verified lab/animal axes; camera/ROI identity retained explicitly.",
+    "One 40ms relative-motion interval is missing; no interpolation or hidden displacement.",
+    "Complete trajectory discrepancy and weaker third-axis agreement remain reported.",
+    "Native execution is Linux only; raw exploratory/native times do not establish real-time 100FPS throughput."
+  ]
+}

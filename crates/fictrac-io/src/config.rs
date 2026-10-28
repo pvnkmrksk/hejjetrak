@@ -189,8 +189,9 @@ pub fn load_config_text(text: &str, width: usize, height: usize) -> Result<Loade
                 None => Ok(default),
             }
         };
-        let quality = number("q_factor", 6.0)?;
-        let evaluations = number("opt_max_evals", 50.0)?;
+        let defaults = MapSettings::default();
+        let quality = number("q_factor", defaults.quality as f64)?;
+        let evaluations = number("opt_max_evals", defaults.max_evaluations as f64)?;
         if quality.fract() != 0.0 || evaluations.fract() != 0.0 {
             return Err(Error::Config(
                 "q_factor and opt_max_evals must be integers".into(),
@@ -217,6 +218,7 @@ pub fn load_config_text(text: &str, width: usize, height: usize) -> Result<Loade
                 Some("n" | "N" | "false" | "0") => false,
                 Some(_) => return Err(Error::Config("rust_resilient requires y or n".into())),
             },
+            resilient_error_floor: number("rust_resilient_error_floor", 10_000.0)?,
             global_search,
             max_bad_frames,
             global_evaluations,
@@ -243,6 +245,7 @@ pub fn load_config_text(text: &str, width: usize, height: usize) -> Result<Loade
             "opt_max_err",
             "opt_do_global",
             "rust_resilient",
+            "rust_resilient_error_floor",
             "max_bad_frames",
             "opt_global_evals",
         ] {

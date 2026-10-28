@@ -1,5 +1,139 @@
 # HejjéTrac validation evidence
 
+## Live 47° capture-interval follow-up — 2026-10-28
+
+Final-source formatting, locked all-target strict Clippy and **303 workspace
+tests** pass (zero failures or ignored tests). New known-motion regressions
+cover three/four-interval capture jumps at the existing 0.008 rad component
+limit and reject ambiguous long-interval turns without changing the atlas or
+integrated path. The preceding predictor fails the first four-interval jump.
+
+Independent source-rim refitting retains 47° and corrects a 2.665% angular-radius
+overestimate. On the complete 4579-image fast live recording, the corrected
+geometry measures all 4578 increments with the preceding engine. Time-aware
+bounded prediction then improves the controlled real-video omission case from
+2895/4407 to 4407/4407 measured increments. Every 100-interval component comparison
+against composed original FicTrac rotations remains below 0.020 rad (worst
+0.01777); ordinary full-video rotation output remains unchanged to its saved
+precision. The overloaded later video prefix is explicitly incomplete and
+is not used as a full-video oracle. [Methods and limits](take-validation.md#live-47-follow-up-2026-10-28),
+[machine-readable evidence](benchmarks/live47-20261028.json).
+
+Final native data-only validation measures 3053/3053 fast frames, zero
+unaccepted/recovery rows, 100.925 delivered frames/s and maximum increment
+0.34253 rad. All 3053 recorded MATREX payloads match the original Python
+conversion byte for byte. The remote receiver reconnects and acknowledges
+data. The maximum interval in this run is 12.037 ms; longer-interval evidence
+comes from the controlled fixture above. Actual X11 diagnostic pixels are
+inspected, and release demo/sample accuracy limits pass unchanged.
+
+## Settings visibility and ZMQ recheck — 2026-10-28
+
+The native settings editor now displays shared tracking defaults when their keys
+are omitted from a legacy document. A regression checks agreement with the
+loaded engine settings and preservation of explicit values, unfinished edits
+and document text. Native X11 inspection verifies the restored threshold rows;
+opening and scrolling the inspector leaves configuration text unchanged.
+
+Formatting, locked strict all-target Clippy and all **301 workspace tests** pass
+(zero failed or ignored), followed by a successful release desktop build.
+The independent libzmq oracle receives all 300 real sample rows in each of
+native FT, single JSON and topic/JSON modes, with every received byte matching
+its recorded row. Calling the user's original Python republisher's `process_line`
+on the 600 JSON-mode rows gives exactly the same payload bytes.
+
+A separate native 120-image replay binds an unused wildcard port. Subscribers
+on loopback and the tracking machine's own LAN interface each receive all
+120 messages in order, byte-identical to the original Python converter applied
+to the native recording. The existing live camera publisher also delivers 506
+valid single-frame JSON messages during a passive probe. These checks verify
+serialization, framing and local-interface transport; they do not establish
+execution in a remote MATREX player. A localhost bind cannot serve that remote
+player. The inspector now explains this beside enabled localhost publishers.
+
+## New supplied takes and high-speed tracking — 2026-10-27
+
+Current source passes formatting, locked all-target strict Clippy and **300
+workspace tests**, with zero failed/ignored tests. Debug symbols are disabled
+for local check builds to fit disk space; debug assertions, overflow checks and
+all numerical tolerances remain unchanged. Release workspace binaries/examples,
+the known-motion demo, original sample and full VR3/fresh-suffix checks pass.
+The original 3565-image video now measures 3555 relative rows, with seven
+unaccepted rows and two zero-delta recoveries. Its original geometry is frozen
+separately from the user's repurposed live-camera config.
+
+The new 47° clip is replayed in full through Rust and same-config original
+FicTrac. It measures 6070/6074 possible relative increments; the only 40 ms missing
+interval occurs in a hand-contact event. All 3413 clear reference-defined fast
+images are tracked. Every clear 100-image rotation-component RMS window passes
+0.020 rad; the full unexcluded maximum 0.020179 rad is retained explicitly. The
+native GUI's complete 6075-image replay is byte-identical to CLI in all 25 numeric
+columns and agrees in shared quality fields. A separate 1038-image live take
+tracks every row at about 100.9 delivered frames/s with complete MJPEG media.
+Nine actual decoded RGB images, including the >4 GiB AVI region, match independent
+decoding exactly. The 17° source contains only 64 encoded images despite 7205
+complete numeric rows; its missing interval is not treated as benchmarked.
+
+All 312 masking audits are repeated: rejected frames never mutate the atlas and
+all 48 known-view return cases retain clear component RMS below 0.008 rad, while
+textured partials still produce wrong estimates in some cases. The new policy
+has a measured clear-speed/occlusion tradeoff, not universal obstruction parity.
+[Methods and complete results](take-validation.md),
+[bound machine-readable evidence](benchmarks/takes-20261027.json), and
+[SHA-bound fixture annotations](../examples/benchmark/takes-20261027.json)
+record the exact scope, failed controls and remaining limitations.
+
+## Earlier partial-atlas masks and shared defaults — 2026-10-27
+
+Final source passes formatting, locked all-target strict Clippy, **299 workspace
+tests** (zero failed/ignored), and a release workspace/examples build on Ubuntu
+22.04.5 x86-64 / Rust 1.99.1. The release demo, original sample and full
+VR3/fresh-suffix checks pass their unchanged accuracy and continuity gates.
+VR3 retains all 4678 pre-hand and all 410 fast-section measurements. The complete
+3565-image supplied native replay matches CLI output in all 25 numeric columns
+and shared quality fields; actual normal/diagnostic X11 pixels are verified.
+The calibration-only supplied run measures 3552 relative rows and explicitly
+retains ten unaccepted images and two zero-delta recoveries (120 ms unmeasured).
+
+The separate masking audit runs **240 known-motion synthetic cases and 72
+real-image panel controls**. All 48 known-view returns recover within 32 images
+with clear component RMS below 0.008 rad. All 24 severe 70% known-view masks
+leave the atlas unchanged and publish no masked motion. Rejected frames never
+teach in any case. The broad matrix still has 32 cases without stable clear
+recovery and cold textured-startup errors; the real-image panel controls have
+substantial disagreements and nine cases without a measured clear suffix.
+These are reported audit outcomes, not 312 passing accuracy tests.
+
+[Methods, complete results and limits](masking-validation.md) distinguish
+known-motion truth from same-video controls. [Bound evidence](benchmarks/masking-20261027.json)
+retains source/config/binary hashes and every case's availability alongside
+errors. No missing interval is reconstructed and no regression tolerance or
+reference oracle is weakened. Historical tuned-profile results below remain
+separately scoped.
+
+## Initial supplied raw.avi tuning at 47-degree VFOV — 2026-10-27
+
+The focused change based on main `6c0bea6` passes formatting, strict locked
+workspace/all-target Clippy, **291 workspace tests** with no failures/ignored
+tests, and the release workspace build on native Ubuntu 22.04.5 x86-64 / Rust
+1.99.1. New cold partial-atlas regressions retain the existing 0.008 rad/component
+gate, and the full-video decoder and obstruction oracles remain unchanged.
+
+All 3,565 supplied images retain numeric/quality evidence. The dedicated 47°
+calibration and scene-specific settings measure 3,560 relative increments,
+with three rejected/recovering images, one zero-delta relocalization and one
+initializing reference. Same-config original FicTrac component RMS disagreement
+is 0.002957/0.001963/0.003353 rad and measured angular-speed correlation is
+0.995707. Complete path discrepancy and the 40 ms missing-motion interval are
+not hidden or reconstructed. [Calibration, controls, limits and reproduction](raw-video-validation.md)
+separate these replay results from physical ground truth, which is unavailable.
+The native desktop's complete replay is byte-identical to the CLI in all 25
+numeric columns, with matching shared quality fields and clean recording/exit.
+Actual X11 normal/diagnostic pixels are verified separately with display enabled.
+Serial release demo, sample and full VR3/fresh-suffix regressions pass without
+changing their gates. [Bound source, binary and check evidence](benchmarks/raw47-20261027.json)
+retains complete timing boundaries and remaining trajectory limits.
+
 ## v0.3.2 published release — 2026-10-27
 
 Published [v0.3.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.2)

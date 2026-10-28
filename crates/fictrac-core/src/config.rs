@@ -61,6 +61,14 @@ impl Default for Config {
 impl Config {
     pub fn validate(&self) -> Result<()> {
         if let Some(m) = &self.spherical_map
+            && (!m.resilient_error_floor.is_finite()
+                || !(10_000.0..=18_000.0).contains(&m.resilient_error_floor))
+        {
+            return Err(Error::Config(
+                "spherical-map resilient_error_floor must be finite and in 10000..=18000 binary-map MSE".into(),
+            ));
+        }
+        if let Some(m) = &self.spherical_map
             && (m.channel.is_some_and(|c| c > 2)
                 || !(1..=30).contains(&m.quality)
                 || !(8..=10000).contains(&m.max_evaluations)
@@ -139,6 +147,9 @@ pub struct MapSettings {
     /// Protect learned evidence and confirm bounded reacquisition after occlusion.
     /// Disable explicitly for the original permissive/reset policy.
     pub resilient: bool,
+    /// Lower bound for the resilient adaptive complete-ROI MSE ceiling.
+    /// Scene-specific opt-in, 10000..=18000; max_error remains a hard cap.
+    pub resilient_error_floor: f64,
     /// Search the learned atlas after failed local fitting, and on reset/template load.
     pub global_search: bool,
     /// Reset after more than this many consecutive failures; -1 disables automatic reset.
@@ -157,6 +168,7 @@ impl Default for MapSettings {
     fn default() -> Self {
         Self {
             resilient: true,
+            resilient_error_floor: 10_000.0,
             global_search: false,
             max_bad_frames: -1,
             global_evaluations: 100_000,
@@ -164,9 +176,41 @@ impl Default for MapSettings {
             quality: 6,
             threshold_ratio: 1.25,
             threshold_window: 0.25,
-            max_evaluations: 50,
+            max_evaluations: 100,
             tolerance: 0.001,
             max_error: -1.0,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resilient_error_floor_is_finite_bounded_and_defaults_to_existing_policy() {
+        let mut config = Config {
+            spherical_map: Some(MapSettings::default()),
+            ..Config::default()
+        };
+        assert_eq!(MapSettings::default().resilient_error_floor, 10_000.0);
+        for floor in [10_000.0, 15_000.0, 18_000.0] {
+            if let Some(map) = &mut config.spherical_map {
+                map.resilient_error_floor = floor;
+            }
+            assert!(config.validate().is_ok(), "valid floor {floor}");
+        }
+        for floor in [
+            9_999.0,
+            18_001.0,
+            f64::NAN,
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+        ] {
+            if let Some(map) = &mut config.spherical_map {
+                map.resilient_error_floor = floor;
+            }
+            assert!(config.validate().is_err(), "invalid floor {floor}");
         }
     }
 }

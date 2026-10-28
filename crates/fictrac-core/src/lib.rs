@@ -25,4 +25,4 @@ pub enum Error {
 }
 pub type Result<T> = std::result::Result<T, Error>;
 
-pub use diagnostics::{DebugViews, Diagnostics};
+pub use diagnostics::{DebugViews, Diagnostics, TemporalEvidence};

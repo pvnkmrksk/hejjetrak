@@ -1,0 +1,26 @@
+# Supplied raw.avi, 640 x 480, 100 FPS. User-provided full-image vertical FOV: 47 deg.
+# Rim fitted using shared Rust calibrated-ray solver; pinhole lens assumption.
+# Camera/ROI coordinates only: no physically aligned lab square is visible.
+# c2a_r is identity for comparison; anatomical/world trajectory axes unverified.
+src_fn           : /media/pkaushi/Pavan/raw.avi
+src_fps          : -1
+vfov             : 47
+fisheye          : n
+roi_circ         : { 342, 114, 463, 164, 514, 286, 463, 409, 342, 459, 220, 408, 170, 286, 220, 164 }
+roi_c            : { 0.03600279982549754, 0.07631136607934809, 0.9964338281149576 }
+roi_r            : 0.30091335364466654
+roi_ignr         : { }
+c2a_r            : { 0, 0, 0 }
+c2a_t            : { 0, 0, 0 }
+opt_do_global    : n
+max_bad_frames   : -1
+rust_engine      : spherical
+do_display       : n
+save_raw         : n
+save_debug       : n
+sock_port        : 0
+zmq_port         : 0
+output_fn        : raw47
+
+# Scene-specific allowance validated against the same-config FicTrac replay.
+# Other videos retain the default floor 10000; no physical ground truth is available.

@@ -55,6 +55,12 @@ pub struct Tracker {
     heading: f64,
 }
 impl Tracker {
+    /// Evidence for the latest independent appearance check, when attempted.
+    pub fn temporal_evidence(&self) -> Option<&crate::TemporalEvidence> {
+        self.spherical
+            .as_ref()
+            .and_then(|tracker| tracker.temporal_evidence())
+    }
     pub fn new(config: Config) -> Result<Self> {
         let geometry = Geometry::new(config)?;
         let lab = DQuat::from_scaled_axis(DVec3::from_array(geometry.config.camera_to_lab));

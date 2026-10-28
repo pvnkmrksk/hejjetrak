@@ -199,7 +199,10 @@ fn track(
     let mut diagnostics = if media.active() {
         Some(fictrac_core::Diagnostics::new(
             loaded.config.clone(),
-            document.number("q_factor", 6.) as usize,
+            document.number(
+                "q_factor",
+                fictrac_core::MapSettings::default().quality as f64,
+            ) as usize,
             document.number("thr_ratio", 1.25),
             document.number("thr_win_pc", 0.25),
         )?)

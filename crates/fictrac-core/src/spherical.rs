@@ -1,4 +1,6 @@
 //! FicTrac-style accumulated atlas, bounded local fitting and deterministic global recovery.
+use crate::diagnostics::LearningPolicy;
+use crate::diagnostics::TemporalEvidence;
 use crate::{Config, DebugViews, Diagnostics, Error, GrayFrame, MapSettings, Result, TrackRow};
 use bobyqa::{Bobyqa, Config as SolverConfig};
 use glam::{DMat3, DQuat, DVec3};
@@ -45,6 +47,7 @@ pub(crate) struct MapTracker {
     previous_time: Option<f64>,
     prepared_delta_ms: f64,
     solver: Bobyqa,
+    temporal_solver: Bobyqa,
     local_stride: usize,
     settings: MapSettings,
     bound: f64,
@@ -53,6 +56,9 @@ pub(crate) struct MapTracker {
     ready: bool,
     clean_map: bool,
     template: Vec<u8>,
+    temporal_map: Vec<u8>,
+    temporal_valid: bool,
+    prepared_temporal: Option<TemporalEvidence>,
     recovery: crate::resilience::Recovery,
     pub views: Option<DebugViews>,
 }
@@ -65,7 +71,16 @@ pub(crate) struct Estimate {
     pub samples: usize,
     pub status: &'static str,
 }
+#[derive(Clone, Copy)]
+enum CapturePrediction {
+    Normal,
+    Extended,
+    Ambiguous,
+}
 impl MapTracker {
+    pub fn temporal_evidence(&self) -> Option<&TemporalEvidence> {
+        self.prepared_temporal.as_ref()
+    }
     pub fn new(config: &Config, settings: MapSettings) -> Result<Self> {
         let sampler = Diagnostics::new(
             config.clone(),
@@ -89,7 +104,15 @@ impl MapTracker {
         solver_config.max_fun = settings.max_evaluations - if local_stride > 1 { 2 } else { 0 };
         let solver =
             Bobyqa::new(3, solver_config).map_err(|e| Error::Config(format!("BOBYQA: {e}")))?;
+        let mut temporal_config = SolverConfig::new(3);
+        temporal_config.rho_begin =
+            (config.max_rotation * 0.5).min(0.04f64.max(settings.tolerance * 2.));
+        temporal_config.rho_end = settings.tolerance;
+        temporal_config.max_fun = settings.max_evaluations;
+        let temporal_solver = Bobyqa::new(3, temporal_config)
+            .map_err(|e| Error::Config(format!("temporal BOBYQA: {e}")))?;
         let template = sampler.map.clone();
+        let temporal_map = vec![128; template.len()];
         let atlas_sites: Vec<_> = sampler
             .points
             .iter()
@@ -109,6 +132,7 @@ impl MapTracker {
             previous_time: None,
             prepared_delta_ms: 0.0,
             solver,
+            temporal_solver,
             local_stride,
             settings,
             bound: config.max_rotation,
@@ -117,11 +141,16 @@ impl MapTracker {
             ready: false,
             clean_map: true,
             template,
+            temporal_map,
+            temporal_valid: false,
+            prepared_temporal: None,
             recovery: crate::resilience::Recovery::default(),
             views: None,
         })
     }
     pub fn reset(&mut self) {
+        self.temporal_valid = false;
+        self.prepared_temporal = None;
         if !self.settings.global_search {
             self.sampler.map.clone_from(&self.template);
             self.clean_map = true;
@@ -145,6 +174,8 @@ impl MapTracker {
             )));
         }
         self.template = template.pixels;
+        self.temporal_valid = false;
+        self.prepared_temporal = None;
         self.sampler.map.clone_from(&self.template);
         self.clean_map = false;
         self.ready = false;
@@ -166,9 +197,36 @@ impl MapTracker {
         }
     }
     pub fn estimate(&mut self, frame: &GrayFrame) -> Estimate {
+        self.prepared_temporal = None;
+        let previous_interval_ms = self.prepared_delta_ms;
         self.prepared_delta_ms = self
             .previous_time
             .map_or(0.0, |previous| frame.timestamp_ms() - previous);
+        let mut prediction = CapturePrediction::Normal;
+        if self.settings.resilient && previous_interval_ms > 0.0 {
+            let scale = self.prepared_delta_ms / previous_interval_ms;
+            if scale > 1.8 {
+                prediction = CapturePrediction::Extended;
+            }
+            let predicted = if scale > 1.8 {
+                self.recovery
+                    .recent_motion_prediction(self.prepared_delta_ms)
+                    .unwrap_or(self.guess * scale)
+            } else if scale < 1.0 / 1.8 {
+                self.guess * scale
+            } else {
+                self.guess
+            };
+            // Keep the whole bounded search on the principal rotation branch.
+            // A longer interval is not permission to infer an unseen full turn.
+            self.guess =
+                if predicted.is_finite() && predicted.length() + self.bound * 3.0f64.sqrt() < PI {
+                    predicted
+                } else {
+                    prediction = CapturePrediction::Ambiguous;
+                    DVec3::ZERO
+                };
+        }
         self.previous_time = Some(frame.timestamp_ms());
         let roi = self.sampler.prepare(frame);
         self.prepared_edge = if self.settings.resilient {
@@ -176,11 +234,11 @@ impl MapTracker {
         } else {
             0.0
         };
-        let estimate = self.estimate_roi(&roi, self.prepared_edge);
+        let estimate = self.estimate_roi(&roi, self.prepared_edge, prediction);
         self.prepared_roi = Some(roi);
         estimate
     }
-    fn estimate_roi(&mut self, roi: &[u8], edge: f64) -> Estimate {
+    fn estimate_roi(&mut self, roi: &[u8], edge: f64, prediction: CapturePrediction) -> Estimate {
         let basis = self.sampler.basis;
         let count = self.active_sites.len();
         let failure = |error| Estimate {
@@ -206,6 +264,17 @@ impl MapTracker {
             return failure(65025.0);
         }
         if !self.ready && (!self.settings.global_search || self.clean_map) {
+            if self.settings.resilient && self.clean_map {
+                let informative = self
+                    .sampler
+                    .informative_sites(roi)
+                    .iter()
+                    .filter(|site| **site)
+                    .count();
+                if informative * 2 < count {
+                    return failure(65025.0);
+                }
+            }
             return Estimate {
                 rotation: DVec3::ZERO,
                 absolute: None,
@@ -226,6 +295,11 @@ impl MapTracker {
             local_stride: self.local_stride,
         };
         let orientation = self.orientation;
+        if self.settings.resilient && matches!(prediction, CapturePrediction::Ambiguous) {
+            self.recovery.reject();
+            return failure(objective.cost(orientation, 1));
+        }
+        let extended_interval = matches!(prediction, CapturePrediction::Extended);
         if self.settings.resilient && self.recovery.lost_frames > 0 {
             let (pose, error) = self.recovery.reacquire(
                 &objective,
@@ -252,24 +326,19 @@ impl MapTracker {
             };
         }
         let mut x = self.guess.to_array();
-        let lower = x.map(|v| v - self.bound);
-        let upper = x.map(|v| v + self.bound);
-        let error = if self.ready {
+        let mut error = if self.ready {
             let seed = x;
-            let error = self
-                .solver
-                .minimize(
-                    |x| {
-                        objective.local_cost(
-                            DQuat::from_scaled_axis(DVec3::new(x[0], x[1], x[2])) * orientation,
-                        )
-                    },
-                    &mut x,
-                    &lower,
-                    &upper,
-                )
-                .f;
-            if objective.local_stride > 1 {
+            let fitted = minimize_local(
+                &mut self.solver,
+                &objective,
+                seed,
+                orientation,
+                self.bound,
+                self.settings.resilient && extended_interval,
+            );
+            x = fitted.0;
+            let error = fitted.1;
+            if (self.settings.resilient && extended_interval) || objective.local_stride > 1 {
                 let (checked, error) = objective.checked_candidate(seed, x, orientation);
                 x = checked;
                 error
@@ -279,7 +348,75 @@ impl MapTracker {
         } else {
             1e12
         };
-        let score_good = acceptable(
+        let limit = if self.settings.resilient {
+            self.recovery.limit(&self.settings)
+        } else {
+            self.settings.max_error
+        };
+        // An appearance change can bias the atlas objective before its score
+        // fails outright. Refine against the last accepted observation only
+        // when the usual fit or motion consistency is uncertain. No reference
+        // survives a rejection, and both fits retain the configured window.
+        let motion = DVec3::from_array(x);
+        if self.settings.resilient
+            && self.temporal_valid
+            && self.recovery.stable_motion_history()
+            && (!acceptable(error, limit)
+                || (!self
+                    .recovery
+                    .motion_ok(motion.length(), self.prepared_delta_ms)
+                    && !self
+                        .recovery
+                        .accepted_ramp_ok(motion, self.prepared_delta_ms)))
+        {
+            let original_evidence = objective.temporal_evidence(
+                DQuat::from_scaled_axis(motion) * orientation,
+                &self.temporal_map,
+                self.sampler.size,
+            );
+            let temporal_objective = AtlasObjective {
+                map: &self.temporal_map,
+                local_stride: 1,
+                ..objective
+            };
+            let prediction = self.guess.to_array();
+            let (seed, _) = temporal_objective.checked_candidate(prediction, x, orientation);
+            let lower = prediction.map(|value| value - self.bound);
+            let upper = prediction.map(|value| value + self.bound);
+            let mut refined = seed;
+            self.temporal_solver.minimize(
+                |candidate| {
+                    temporal_objective.local_cost(
+                        DQuat::from_scaled_axis(DVec3::new(
+                            candidate[0],
+                            candidate[1],
+                            candidate[2],
+                        )) * orientation,
+                    )
+                },
+                &mut refined,
+                &lower,
+                &upper,
+            );
+            let (refined, _) = temporal_objective.checked_candidate(seed, refined, orientation);
+            let rotation = DQuat::from_scaled_axis(DVec3::from_array(refined)) * orientation;
+            let evidence =
+                objective.temporal_evidence(rotation, &self.temporal_map, self.sampler.size);
+            let improved = evidence.verified
+                && evidence.binary_mse.is_some_and(|score| {
+                    original_evidence
+                        .binary_mse
+                        .is_none_or(|old| score < old * 0.9)
+                });
+            if improved {
+                x = refined;
+                error = objective.cost(rotation, 1);
+                self.prepared_temporal = Some(evidence);
+            } else {
+                self.prepared_temporal = Some(original_evidence);
+            }
+        }
+        let strict_score_good = acceptable(
             error,
             if self.settings.resilient {
                 self.recovery.limit(&self.settings)
@@ -288,6 +425,29 @@ impl MapTracker {
             },
         );
         let motion = DVec3::from_array(x);
+        if !strict_score_good
+            && self.settings.resilient
+            && self.temporal_valid
+            && self.prepared_temporal.is_none()
+        {
+            self.prepared_temporal = Some(objective.temporal_evidence(
+                DQuat::from_scaled_axis(motion) * orientation,
+                &self.temporal_map,
+                self.sampler.size,
+            ));
+        }
+        // A quiet startup must not permanently force the learned atlas's
+        // appearance ceiling onto a genuinely moving ball. An independent
+        // consecutive-image check may support a fit against an informative
+        // persistent atlas despite changed appearance. Explicit user caps
+        // still win, and this cannot authorize a motion-history outlier.
+        let score_good = strict_score_good
+            || (self.settings.resilient
+                && self.temporal_valid
+                && self.prepared_temporal.as_ref().is_some_and(|evidence| {
+                    self.recovery
+                        .temporal_score_ok(error, &self.settings, evidence)
+                }));
         let local_good = score_good
             && (!self.settings.resilient
                 || self
@@ -348,8 +508,14 @@ impl MapTracker {
         }
     }
     pub fn commit(&mut self, frame: &GrayFrame, row: &TrackRow, legacy: bool) {
-        let allow_learning =
-            row.accepted && (!self.settings.resilient || self.recovery.allow_learning(row.status));
+        self.temporal_valid = false;
+        let learning = if !row.accepted {
+            LearningPolicy::Frozen
+        } else if self.settings.resilient {
+            self.recovery.learning_policy(row.status)
+        } else {
+            LearningPolicy::Full
+        };
         if row.accepted {
             let absolute = DQuat::from_scaled_axis(DVec3::from_array(row.absolute_camera));
             self.orientation = if legacy {
@@ -369,14 +535,35 @@ impl MapTracker {
                     self.prepared_delta_ms,
                 );
             }
-            if self.settings.resilient && allow_learning && self.prepared_roi.is_some() {
+            if self.settings.resilient
+                && learning == LearningPolicy::Full
+                && self.prepared_roi.is_some()
+            {
                 self.recovery
                     .observe(row.error, self.prepared_edge, self.orientation);
             }
         }
         self.views = Some(if let Some(roi) = self.prepared_roi.take() {
-            self.sampler
-                .update_prepared(frame, Some(row), roi, allow_learning)
+            if row.accepted && self.settings.resilient {
+                self.temporal_map.fill(128);
+                let inverse = DMat3::from_quat(self.orientation.inverse());
+                let projection =
+                    AtlasProjection::new(self.sampler.map_width, self.sampler.map_height);
+                for &(point, index) in &self.active_sites {
+                    self.temporal_map[projection.index(inverse * point)] = roi[index];
+                }
+                self.temporal_valid = true;
+            }
+            self.sampler.update_prepared(
+                frame,
+                Some(row),
+                roi,
+                if self.settings.resilient && learning == LearningPolicy::Full {
+                    LearningPolicy::Guarded
+                } else {
+                    learning
+                },
+            )
         } else {
             self.sampler.update(frame, Some(row))
         });
@@ -384,6 +571,32 @@ impl MapTracker {
 }
 fn acceptable(error: f64, threshold: f64) -> bool {
     error.is_finite() && error < 1e11 && (threshold < 0.0 || error <= threshold)
+}
+fn minimize_local(
+    solver: &mut Bobyqa,
+    objective: &AtlasObjective<'_>,
+    seed: [f64; 3],
+    orientation: DQuat,
+    bound: f64,
+    smooth: bool,
+) -> ([f64; 3], f64) {
+    let mut x = seed;
+    let lower = seed.map(|v| v - bound);
+    let upper = seed.map(|v| v + bound);
+    let outcome = solver.minimize(
+        |x| {
+            let rotation = DQuat::from_scaled_axis(DVec3::new(x[0], x[1], x[2])) * orientation;
+            if smooth {
+                objective.smooth_cost(rotation)
+            } else {
+                objective.local_cost(rotation)
+            }
+        },
+        &mut x,
+        &lower,
+        &upper,
+    );
+    (x, outcome.f)
 }
 pub(crate) struct AtlasObjective<'a> {
     sites: &'a [Option<DVec3>],
@@ -396,6 +609,102 @@ pub(crate) struct AtlasObjective<'a> {
     local_stride: usize,
 }
 impl AtlasObjective<'_> {
+    fn smooth_cost(&self, rotation: DQuat) -> f64 {
+        let inverse = DMat3::from_quat(rotation.inverse());
+        let mut squared = 0.0;
+        let mut good = 0usize;
+        for &(point, index) in self.active_sites {
+            let p = inverse * point;
+            let x = (PI - p.x.atan2(p.z)) * (self.width as f64 / TAU) - 0.5;
+            let y = ((p.y + 1.0) * (self.height as f64 * 0.5) - 0.5)
+                .clamp(0.0, (self.height - 1) as f64);
+            let fx = x.floor();
+            let fy = y.floor();
+            let x0 = fx.rem_euclid(self.width as f64) as usize;
+            let x1 = (x0 + 1) % self.width;
+            let y0 = fy as usize;
+            let y1 = (y0 + 1).min(self.height - 1);
+            let tx = x - fx;
+            let ty = y - fy;
+            let mut value = 0.0;
+            let mut weight = 0.0;
+            for (cell, w) in [
+                (y0 * self.width + x0, (1.0 - tx) * (1.0 - ty)),
+                (y0 * self.width + x1, tx * (1.0 - ty)),
+                (y1 * self.width + x0, (1.0 - tx) * ty),
+                (y1 * self.width + x1, tx * ty),
+            ] {
+                if self.map[cell] != 128 {
+                    value += f64::from(self.map[cell]) * w;
+                    weight += w;
+                }
+            }
+            if weight >= 0.5 {
+                squared += (f64::from(self.roi[index]) - value / weight).powi(2);
+                good += 1;
+            }
+        }
+        if good * 4 <= self.active_sites.len() {
+            1e12
+        } else {
+            squared / good as f64
+        }
+    }
+    fn temporal_evidence(&self, rotation: DQuat, map: &[u8], size: usize) -> TemporalEvidence {
+        let inverse = DMat3::from_quat(rotation.inverse());
+        let projection = AtlasProjection::new(self.width, self.height);
+        let mut count = [0usize; 36];
+        let mut squared = [0.0; 36];
+        let mut persistent_known = 0usize;
+        let (mut image_sum, mut map_sum, mut map_squared) = (0., 0., 0.);
+        for &(point, index) in self.active_sites {
+            let projected = projection.index(inverse * point);
+            let persistent = self.map[projected];
+            if persistent != 128 {
+                persistent_known += 1;
+                image_sum += f64::from(self.roi[index]);
+                map_sum += f64::from(persistent);
+                map_squared += f64::from(persistent).powi(2);
+            }
+            let value = map[projected];
+            if value == 128 {
+                continue;
+            }
+            let tile = ((index / size) * 6 / size).min(5) * 6 + ((index % size) * 6 / size).min(5);
+            count[tile] += 1;
+            squared[tile] += (f64::from(self.roi[index]) - f64::from(value)).powi(2);
+        }
+        let known: usize = count.iter().sum();
+        let total: f64 = squared.iter().sum();
+        let supported: usize = count
+            .iter()
+            .zip(squared)
+            .filter_map(|(&count, error)| {
+                (count >= 8 && error <= 16_000.0 * count as f64).then_some(count)
+            })
+            .sum();
+        let verified = known * 2 >= self.active_sites.len()
+            && known >= 32
+            && total <= 10_000.0 * known as f64
+            && supported * 100 >= known * 85;
+        TemporalEvidence {
+            known_samples: known,
+            possible_samples: self.active_sites.len(),
+            binary_mse: (known > 0).then(|| total / known as f64),
+            spatially_supported_fraction: supported as f64 / known.max(1) as f64,
+            verified,
+            persistent_known_samples: persistent_known,
+            persistent_chance_mse: (persistent_known > 0).then(|| {
+                let count = persistent_known as f64;
+                // ROI observations are binary, hence E[I²] = 255 E[I].
+                // E[(I-M)²] under independence retains the actual marginal
+                // contrast and atlas confidence instead of assuming 50/50.
+                ((255. * image_sum + map_squared) / count
+                    - 2. * (image_sum / count) * (map_sum / count))
+                    .max(0.)
+            }),
+        }
+    }
     pub(crate) fn checked_candidate(
         &self,
         seed: [f64; 3],
@@ -626,7 +935,7 @@ mod projection_tests {
             .recovery
             .reject_motion_candidate(held, visible_increment, 10.0);
         let map = tracker.sampler.map.clone();
-        let estimate = tracker.estimate_roi(&roi, 0.1);
+        let estimate = tracker.estimate_roi(&roi, 0.1, CapturePrediction::Normal);
         assert_eq!(estimate.status, "relocalized");
         assert!(estimate.accepted);
         assert_eq!(estimate.rotation, DVec3::ZERO);
@@ -698,6 +1007,85 @@ mod projection_tests {
             roi.iter().filter(|v| **v == 255).count() as f64 * 65025.0 / roi.len() as f64;
         assert_eq!(error, expected);
         assert!(!acceptable(error, 12000.0));
+    }
+    #[test]
+    fn temporal_support_requires_distributed_agreement_and_enough_known_surface() {
+        let size = 60usize;
+        let mut sites = Vec::new();
+        let mut active = Vec::new();
+        let mut map = vec![128; 180 * 90];
+        let mut roi = Vec::new();
+        let projection = AtlasProjection::new(180, 90);
+        for y in 0..size {
+            for x in 0..size {
+                let py = -0.8 + 1.6 * y as f64 / size as f64;
+                let lon = -2.8 + 5.6 * x as f64 / size as f64;
+                let radius = (1. - py * py).sqrt();
+                let point = DVec3::new(radius * lon.sin(), py, radius * lon.cos());
+                let value = if (x + y) % 2 == 0 { 0 } else { 255 };
+                map[projection.index(point)] = value;
+                sites.push(Some(point));
+                active.push((point, roi.len()));
+                roi.push(value);
+            }
+        }
+        let evidence = |roi: &[u8], map: &[u8]| {
+            AtlasObjective {
+                sites: &sites,
+                active_sites: &active,
+                roi,
+                map,
+                width: 180,
+                height: 90,
+                count: active.len(),
+                local_stride: 1,
+            }
+            .temporal_evidence(DQuat::IDENTITY, map, size)
+        };
+        let matched = evidence(&roi, &map);
+        assert!(matched.verified);
+        assert_eq!(matched.persistent_known_samples, active.len());
+        assert!(
+            matched
+                .persistent_chance_mse
+                .is_some_and(|value| (value - 65025. / 2.).abs() < 1e-9)
+        );
+        let mut distributed = roi.clone();
+        for i in (0..distributed.len()).step_by(20) {
+            distributed[i] = 255 - distributed[i];
+        }
+        assert!(
+            evidence(&distributed, &map).verified,
+            "small distributed threshold differences are supported"
+        );
+        let mut localized = roi.clone();
+        for y in (0..size).step_by(3) {
+            for x in 0..12 {
+                localized[y * size + x] = 255 - localized[y * size + x];
+            }
+        }
+        let localized = evidence(&localized, &map);
+        assert!(
+            localized.binary_mse.is_some_and(|score| score < 10_000.),
+            "fixture must defeat a scalar-only check"
+        );
+        assert!(
+            !localized.verified,
+            "localized inconsistent region bypassed spatial check"
+        );
+        let sparse: Vec<_> = map
+            .iter()
+            .enumerate()
+            .map(|(i, v)| if i % 5 == 0 { *v } else { 128 })
+            .collect();
+        assert!(
+            !evidence(&roi, &sparse).verified,
+            "unknown surface cannot establish independent support"
+        );
+        let unknown = evidence(&roi, &vec![128; map.len()]);
+        assert!(!unknown.verified);
+        assert_eq!(unknown.persistent_known_samples, 0);
+        assert_eq!(unknown.persistent_chance_mse, None);
     }
     #[test]
     fn interpolated_projection_matches_precise_bins_including_boundaries() {

@@ -485,7 +485,11 @@ fn engine(
     }
     let diagnostics = Diagnostics::new(
         loaded.config.clone(),
-        doc.number("q_factor", 6.0).clamp(1.0, 30.0) as usize,
+        doc.number(
+            "q_factor",
+            fictrac_core::MapSettings::default().quality as f64,
+        )
+        .clamp(1.0, 30.0) as usize,
         doc.number("thr_ratio", 1.25),
         doc.number("thr_win_pc", 0.25),
     )

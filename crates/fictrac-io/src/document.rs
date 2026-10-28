@@ -325,7 +325,7 @@ pub fn parameter_description(key: &str) -> (&'static str, &'static str) {
         ),
         "opt_max_err" => (
             "Tracking",
-            "Reject fits above binary-map mean squared error; a nonpositive value disables this gate.",
+            "Reject fits above binary-map mean squared error. Negative disables this explicit limit; resilient tracking retains its adaptive ceiling.",
         ),
         "opt_do_global" | "opt_global_evals" => (
             "Tracking",
@@ -338,6 +338,10 @@ pub fn parameter_description(key: &str) -> (&'static str, &'static str) {
         "rust_resilient" => (
             "Tracking",
             "Preserve the learned atlas through occlusion, reject unreliable frames, and confirm bounded automatic recovery. Enabled by default. n restores legacy permissive/error/reset behavior; max_bad_frames automatic clearing is suppressed while enabled.",
+        ),
+        "rust_resilient_error_floor" => (
+            "Tracking",
+            "Lower bound for the resilient adaptive binary-map MSE ceiling, 10000..18000; default 10000. Scene-specific opt-in for changed image appearance. The 18000 ceiling and explicit opt_max_err hard cap still apply; motion, texture and recovery checks remain enabled.",
         ),
         "sphere_map_fn" => (
             "Tracking",

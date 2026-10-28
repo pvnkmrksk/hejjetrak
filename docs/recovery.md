@@ -17,6 +17,99 @@ rate change uses the stronger four-image confirmation described below. The
 `tracked` rows measure new relative movement. No trajectory is invented across
 the hidden interval. See [the output contract](output.md).
 
+## Acceleration with a partly learned atlas
+
+A stationary startup learns only the visible side of the ball. Freezing every
+atlas cell for the eight-row acceleration probation could then prevent a
+correctly recovered turn from learning its newly visible side. The fit lost
+known surface before probation expired and could remain stuck despite clear
+images. Increasing the optimization budget did not fix that failure.
+
+After the existing four-image acceleration confirmation, the relocalized image
+and the next eight accepted tracked images may now initialize genuinely unseen
+atlas cells. Each cell receives its ordinary first-hit confidence once. All
+already observed cells, including cells added earlier in probation, remain
+unchanged until full learning resumes. A neutral value of 128 counts as unseen
+only when it also has no teaching history; imported nonneutral cells remain
+protected even though template imports reset ages. Imported 128 retains the
+template format's existing unseen meaning.
+
+Error, edge and known-view histories remain frozen throughout probation.
+Rejected images cannot initialize or change cells, and rejection clears this
+special teaching permission. Ordinary occlusion recovery retains its complete
+three-row teaching deferral. Image-error limits, motion gates, four-image
+confirmation, optimizer budgets and zero-delta recovery semantics are unchanged.
+The optimizer and displayed/exported atlas still use the same committed map.
+This does not resolve the ambiguity of a consistently plausible false view.
+
+Two cold-start known-motion regressions use 40 stationary images followed by
+90 images at 0.20 rad/frame. Both recover on image four, measure all 86 later
+increments and grow their learned surface without rewriting known cells during
+probation. They retain the existing 0.008 rad/component RMS gate. One preserves the
+historical 50 evaluations and quality six; the other uses 150 evaluations and
+quality twelve to distinguish the teaching failure from solver precision.
+
+## Guarded initialization and appearance adaptation
+
+Default quality remains six; the shared local evaluation budget is now 100.
+Actual-default sharp/exposure-blurred fast-motion regressions retain the same
+0.008 rad/component gate as the explicit historical configurations.
+
+Before a clean atlas can initialize, at least half the active ROI sites must
+have local mixed evidence: a cross neighborhood of radius `max(ROI width / 8, 1)`
+needs at least two black and two white samples. Uniform unsupported regions are
+not stamped into new atlas cells. During ordinary resilient learning, an image
+with that support across at least half the active ROI can teach marking interiors at the ordinary confidence rate.
+A lower-support accepted view requires local mixed support for each new cell;
+it cannot stamp its entire uniform panel into the atlas. Existing cells retain
+their usual confidence update and mature-cell inertia; no cells are cleared.
+Acceleration probation's new-surface-only updates always require local support.
+Neutral atlas value 128 can therefore mean unsupported as well as unseen.
+This guard does not distinguish an unrelated textured obstruction from a ball
+at first observation.
+
+A quiet startup can also make accepted error history too strict for subsequent
+appearance changes. When the persistent-map full MSE exceeds its adaptive limit,
+a separate previous-accepted-image map can verify the same proposed pose. It
+requires at least 32 known sites, at least half of all possible sites known,
+binary MSE at most 10000, and at least 85% of known samples in spatial tiles
+with at least eight samples and MSE at most 16000 (a 6 by 6 tile grid). Acceptance
+also requires three consecutive accepted motion observations or the equivalent
+three visible increments already established by strong four-image acceleration
+confirmation. Its temporal score must be less than 75% of the persistent score,
+and the explicit `opt_max_err` cap always applies. Persistent MSE at most 18000
+retains the earlier route. Above 18000, at least 32 persistent samples and at
+least half of the possible sites must be known, and persistent MSE must be at
+most 85% of the independent image/map-marginal score:
+`E[I²] - 2 E[I] E[M] + E[M²]`. For binary ROI observations `E[I²] = 255 E[I]`.
+This measures whether the atlas still contains information about the image;
+it is not a new reported error scale. Empty, nonfinite or zero null scores
+cannot authorize the higher-error route. Texture and motion guards still apply.
+A supported accepted frame learns normally under guarded seeding and updates
+accepted quality history. Recovery probation continues to limit learning as above.
+
+This single-image temporal reference is invalidated by rejection, reset and
+map import. It cannot bridge an unmeasured interval or bypass recovery
+confirmation. An uncertain primary fit (score failure or motion-history outlier)
+can first be refined against that last accepted binary observation. The better temporal
+seed of the original prediction and primary candidate starts a second bounded
+BOBYQA fit with a finer initial step; the full configured prediction window
+is retained. It is selected only with spatial verification and at least 10%
+better temporal MSE, then scored against the complete persistent atlas. The
+same final motion, appearance and explicit-cap gates apply. Healthy local
+fitting and legacy opt-out retain their previous numerical objective.
+Each optimizer is capped by `opt_max_evals`; the fallback adds at most five
+complete comparison scores and two complete evidence passes. This is bounded
+extra computation, not an unchanged total per-frame evaluation count.
+
+The reported full persistent-map MSE is never replaced by its smaller temporal
+score. Strong-confirmation probation retains existing-cell protection and
+new-surface-only learning; it no longer demands three redundant tracked rows
+before validating the already confirmed rate's blurred appearance. Rejection
+revokes that permission immediately. [Current take validation](take-validation.md)
+records the fast-motion result and repeated masking controls; the
+[earlier masking assessment](masking-validation.md) retains its original scope.
+
 ## Continuous acceleration and long-lived reference views
 
 Resilient healthy fitting now uses the complete ROI throughout the original
@@ -90,6 +183,17 @@ robust median never loosens the previous ceiling. These are binary map MSE
 units, not pixel distances or physical accuracy. Ordinary clean tracking still
 uses `opt_max_evals` and complete final scoring.
 
+The per-video `rust_resilient_error_floor` setting can raise the lower bound of
+both adaptive ceilings from its unchanged default 10000, up to 18000. The upper
+bound remains 18000, and a nonnegative `opt_max_err` remains a hard cap even
+below the chosen floor. This is an explicit scene-specific allowance for image
+appearance changes, not a new error unit or an accuracy guarantee. It leaves
+motion, texture, confirmation and atlas protections active. The default and an
+explicit value of 10000 retain that ceiling formula exactly. The independent
+current-source temporal verification path described above can support an
+otherwise out-of-ceiling local fit; the floor setting alone does not do so. Invalid/nonfinite
+values fail configuration validation before tracking state changes.
+
 A separate accepted-motion guard addresses low-error textured impostors. After
 eight accepted tracked motions, it estimates rotation rate from the last 32
 accepted rotation magnitudes divided by their processed-frame intervals.
@@ -123,14 +227,15 @@ absolute displacement across the hidden interval, and invents no gap trajectory.
 motion retains its actual complete-ROI MSE, even if low; a small image error alone
 therefore does not imply an accepted measurement.
 
-After a confirmed `relocalized` row, that row and the next three accepted
+After an ordinary confirmed `relocalized` row, that row and the next three accepted
 `tracked` rows do not update the atlas, error/edge learning or known-view bank.
 Their accepted relative motion still updates path/output normally; accepted
 tracked motion history continues to update. This short atlas-learning probation
 keeps a newly recovered pose from immediately rewriting its own reference.
-Ordinary teaching resumes afterward. Acceleration-epoch recovery instead freezes
-atlas/error/edge/known-view teaching for **eight** following accepted tracked
-rows, matching motion-history bootstrap. Rejected rows change none of those
+Ordinary teaching resumes afterward. Acceleration-epoch recovery instead protects
+existing atlas cells and freezes error/edge/known-view teaching for **eight**
+following accepted tracked rows, matching motion-history bootstrap. Current
+source permits the first-hit new-surface teaching described above. Rejected rows change none of those
 learned histories, pose, path or integrated displacement.
 
 Accepted orientations form a bounded bank of up to 256 known views, separated by

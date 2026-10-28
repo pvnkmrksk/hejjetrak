@@ -1,5 +1,82 @@
 # Behavioral parity assessment
 
+## Live capture intervals and rim accuracy — 2026-10-28
+
+The live 47° follow-up separates a small source-rim calibration error from the
+predictor's handling of irregular capture intervals. A refit at the same FOV
+restores stable complete-video agreement with FicTrac. Time-aware bounded
+prediction then tracks all 4407 increments in a real-video fixture with 57
+controlled three-image omissions; all full/rolling component comparisons pass
+the existing 0.020 rad limit. Known-motion gap accuracy retains the 0.008 rad
+limit. No claim of physical ground truth or measurable hidden full turns is
+made. [Evidence and limitations](take-validation.md#live-47-follow-up-2026-10-28).
+
+The Linux user also reports that **Save and close** can repeat its confirmation
+instead of exiting. This report remains a separate GUI issue; the tracking
+change does not claim to fix it. The live config was saved with the ordinary
+Save action and verified clean on disk and in session state.
+
+## New supplied 17°/47° takes — 2026-10-27
+
+The new 6075-image 47° take reproduces a large fast-motion failure with the
+previous defaults and unchanged saved calibration. Current source adds bounded
+previous-accepted-image refinement, a persistent-marginal null-match guard for
+verified fits above the base 18000 MSE ceiling, and reuses already established
+four-image motion confirmation during acceleration probation. These are Rust
+engine changes; source calibration and numeric tracking settings are retained.
+
+The final replay measures 6070 increments, with three unaccepted images and one
+zero-delta recovery during hand contact. All 3413 clear reference-defined fast
+images are tracked and every clear rolling 100-image component check passes the
+unchanged 0.020 rad limit. The unexcluded worst window is still 0.020179 rad;
+it is retained alongside hand annotations selected from input images. Neither
+FicTrac nor the Rust output supplies physical ground truth. The 17° take has
+7205 numeric rows but only 64 recorded images, so it cannot establish performance
+on its missing high-speed interval. Existing full 17° VR3 gates still pass.
+
+A short native 47° take contains 1038/1038 tracked/encoded rows at 100.9 delivered
+frames/s; its observed motion is narrower than the supplied recording's full
+speed range. A separate complete native 6075-image replay agrees with CLI in all
+25 numeric columns and shared quality fields. [Methods, configs, live scope,
+continued occlusion limits and reproduction](take-validation.md) retain exact
+source/binary/input hashes and the difference between reference agreement and
+physical accuracy. No installed application or rig file is replaced.
+
+## Earlier partial-atlas/default follow-up — 2026-10-27
+
+Shared defaults retain quality six and the existing prediction window/error
+floor, increase the local budget to 100, and add guarded seeding plus bounded
+independent temporal appearance verification. Explicit old config values remain
+respected. The [masking assessment](masking-validation.md) contains 240
+known-motion cases, 72 real-image panel controls, full missing-data evidence and
+remaining textured-obstruction/cold-start ambiguity. These are acceptance and
+learning extensions, not upstream numerical identity or universal occlusion
+parity. Optical and lab-axis calibration remain necessary.
+
+With calibration only, the supplied video now has 3552 measured relative rows,
+ten unaccepted images and two zero-delta relocalizations. There is still 120 ms
+of unmeasured motion. Same-config original FicTrac component RMS disagreement
+is 0.005836/0.004236/0.008116 rad and complete path RMS is 0.378505 sphere rad;
+neither program supplies physical ground truth. The final full VR3 replay
+retains all 4678 pre-hand and all 410 fast-section measurements and passes every
+unchanged rolling/reference gate. Rejected seeding prototypes that broke those
+gates are not retained. Native/CLI full-video numeric outputs agree exactly.
+
+## Initial supplied 47-degree raw-video experiment — 2026-10-27
+
+Current source permits first-hit teaching of unseen surface after strong
+acceleration confirmation while preserving existing atlas cells during
+probation. An explicit per-video `rust_resilient_error_floor` can raise the
+adaptive MSE ceiling's lower bound from its unchanged default 10000 through
+18000; the upper ceiling, explicit error hard cap and other guards remain.
+These are documented acceptance/learning choices, not numerical identity with
+upstream. On the supplied 3,565-image clip, the dedicated fitted config leaves
+three unaccepted images and one zero-delta recovery instead of main's 2,202
+unaccepted images. Same-config FicTrac comparison, complete trajectory
+discrepancy, the missing interval and unverified lab axes remain explicit in
+[the raw-video validation](raw-video-validation.md). No physical ground truth
+or general scientific-parity claim is available for this recording.
+
 ## Published v0.3.2 graphics patch
 
 [v0.3.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.2), source

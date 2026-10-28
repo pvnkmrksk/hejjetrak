@@ -1172,11 +1172,7 @@ impl Session {
                 self.set_calibration_panel(true);
             }
         });
-        let fields = self.document().map(|d| {
-            d.fields()
-                .map(|(k, v)| (k.to_owned(), v.to_owned()))
-                .collect::<Vec<_>>()
-        });
+        let fields = self.document().map(|d| settings_fields(&d));
         match fields {
             Ok(fields) => {
                 for category in [
@@ -1185,7 +1181,7 @@ impl Session {
                     "Output & recording",
                     "Advanced & compatibility",
                 ] {
-                    egui::CollapsingHeader::new(category).show(ui, |ui| {
+                    egui::CollapsingHeader::new(category).default_open(category == "Tracking & quality").show(ui, |ui| {
                         let mut changes = vec![];
                         if category == "Tracking & quality" {
                             let mut resilient = self.document().map(|doc| doc.get("rust_resilient").is_none() || doc.boolean("rust_resilient")).unwrap_or(true);
@@ -1293,7 +1289,7 @@ impl Session {
         egui::Grid::new(("zmq-controls", self.id)).num_columns(2).spacing([12.0, 6.0]).show(ui, |ui| {
             ui.label("Publisher");
             let mut enabled = port.parse::<i32>().is_ok_and(|value| value > 0);
-            if ui.checkbox(&mut enabled, "Enabled").on_hover_text("Publish accepted measurements on localhost. Recording continues with no receiver connected.").changed() {
+            if ui.checkbox(&mut enabled, "Enabled").on_hover_text("Publish accepted measurements on the selected bind address. Recording continues with no receiver connected.").changed() {
                 if enabled {
                     let suggested = self.zmq_resume_port.or_else(|| self.id.checked_add(9870).and_then(|value| i32::try_from(value).ok()).filter(|value| *value <= 65535));
                     if let Some(value) = suggested {
@@ -1341,6 +1337,14 @@ impl Session {
                 .on_hover_text("Bounded live-message queue. A slow or absent receiver cannot block tracking or recording; drops are reported separately.");
             ui.end_row();
         });
+        if port.parse::<i32>().is_ok_and(|value| value > 0)
+            && (host.eq_ignore_ascii_case("localhost")
+                || host
+                    .parse::<std::net::IpAddr>()
+                    .is_ok_and(|ip| ip.is_loopback()))
+        {
+            ui.small("Local clients only. For a VR computer on the LAN, set Bind address to 0.0.0.0; the receiver connects to this tracking computer's LAN IP and port.");
+        }
         if mode == "legacy_matrex_vr" {
             ui.small("x/y: cumulative displacement in sphere radians · yaw: degrees · z/pitch/roll: 0. Unity applies the sphere radius.");
         } else {
@@ -2639,12 +2643,48 @@ value}
     }
 }
 
+/// Show effective tracking defaults without adding fields to the saved document.
+/// Explicit values, including incomplete edits, always retain their exact text.
+fn settings_fields(document: &fictrac_io::ConfigDocument) -> Vec<(String, String)> {
+    let map = fictrac_core::MapSettings::default();
+    let mut fields = document
+        .fields()
+        .map(|(key, value)| (key.to_owned(), value.to_owned()))
+        .collect::<std::collections::BTreeMap<_, _>>();
+    for (key, value) in [
+        ("q_factor", map.quality.to_string()),
+        ("thr_ratio", map.threshold_ratio.to_string()),
+        ("thr_win_pc", map.threshold_window.to_string()),
+        ("thr_rgb_tfrm", "gray".into()),
+        ("opt_bound", Config::default().max_rotation.to_string()),
+        ("opt_tol", map.tolerance.to_string()),
+        ("opt_max_evals", map.max_evaluations.to_string()),
+        ("opt_max_err", map.max_error.to_string()),
+        (
+            "opt_do_global",
+            if map.global_search { "y" } else { "n" }.into(),
+        ),
+        ("opt_global_evals", map.global_evaluations.to_string()),
+        ("max_bad_frames", map.max_bad_frames.to_string()),
+        (
+            "rust_resilient_error_floor",
+            map.resilient_error_floor.to_string(),
+        ),
+    ] {
+        fields.entry(key.into()).or_insert(value);
+    }
+    fields.into_iter().collect()
+}
+
 fn field_category(key: &str) -> &'static str {
     if key.starts_with("roi_") || key.starts_with("c2a_") || matches!(key, "vfov" | "fisheye") {
         "Geometry & calibration"
     } else if key.starts_with("opt_")
         || key.starts_with("thr_")
-        || matches!(key, "q_factor" | "max_bad_frames" | "rust_engine")
+        || matches!(
+            key,
+            "q_factor" | "max_bad_frames" | "rust_engine" | "rust_resilient_error_floor"
+        )
     {
         "Tracking & quality"
     } else if key.starts_with("save_")
@@ -2685,6 +2725,46 @@ mod tests {
     use crate::runtime::ViewFrame;
     use fictrac_io::ConfigDocument;
     use std::sync::Arc;
+    #[test]
+    fn omitted_tracking_controls_show_effective_defaults_without_editing_config()
+    -> Result<(), String> {
+        let text = "src_fn : 0\nvfov : 47\nroi_c : {0, 0, 1}\nroi_r : 0.3\nc2a_r : {0, 0, 0}\n";
+        let mut document = ConfigDocument::parse(text.into()).map_err(|e| e.to_string())?;
+        let fields = settings_fields(&document)
+            .into_iter()
+            .collect::<std::collections::BTreeMap<_, _>>();
+        let loaded = load_config_text(text, 640, 480).map_err(|e| e.to_string())?;
+        let map = loaded
+            .config
+            .spherical_map
+            .ok_or("missing spherical settings")?;
+        for (key, expected) in [
+            ("thr_ratio", map.threshold_ratio.to_string()),
+            ("thr_win_pc", map.threshold_window.to_string()),
+            ("opt_max_evals", map.max_evaluations.to_string()),
+            ("opt_max_err", map.max_error.to_string()),
+            ("opt_bound", loaded.config.max_rotation.to_string()),
+        ] {
+            assert_eq!(fields.get(key), Some(&expected));
+            assert_eq!(field_category(key), "Tracking & quality");
+        }
+        assert_eq!(document.text(), text);
+        document.set("thr_ratio", "1.").map_err(|e| e.to_string())?;
+        document
+            .set("opt_max_evals", "invalid draft")
+            .map_err(|e| e.to_string())?;
+        let before = document.text().to_owned();
+        let fields = settings_fields(&document)
+            .into_iter()
+            .collect::<std::collections::BTreeMap<_, _>>();
+        assert_eq!(fields.get("thr_ratio").map(String::as_str), Some("1."));
+        assert_eq!(
+            fields.get("opt_max_evals").map(String::as_str),
+            Some("invalid draft")
+        );
+        assert_eq!(document.text(), before);
+        Ok(())
+    }
     fn session() -> Result<Session, String> {
         let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
         let doc = ConfigDocument::parse(

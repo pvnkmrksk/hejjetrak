@@ -13,6 +13,8 @@ fn config(global: bool) -> Config {
             global_evaluations: 100_000,
             max_error: 12_000.0,
             max_evaluations: 150,
+            // Keep the original 180x90 template and numerical fixture fixed.
+            quality: 6,
             ..MapSettings::default()
         }),
         legacy_roi_coordinates: true,
@@ -66,6 +68,18 @@ fn render_template(
         }
     }
     GrayFrame::new(c.width, c.height, pixels, time)
+}
+
+fn assert_known_atlas_preserved(before: &SphereTemplate, after: &SphereTemplate) {
+    assert_eq!((before.width, before.height), (after.width, after.height));
+    for (index, (old, new)) in before.pixels.iter().zip(&after.pixels).enumerate() {
+        if *old != 128 {
+            assert_eq!(
+                old, new,
+                "probation changed previously known atlas cell {index}"
+            );
+        }
+    }
 }
 #[test]
 fn imported_template_relocalizes_large_unknown_pose_without_inventing_motion() -> Result {
@@ -692,10 +706,18 @@ fn sustained_faster_known_motion_can_establish_a_new_rate_without_erasing_atlas(
     let mut measured = 0;
     let mut tracked_since_recovery = 0;
     for j in 1..=90 {
+        let before = tracker.sphere_template().ok_or("missing previous atlas")?;
         let pose = DQuat::from_scaled_axis(fast * j as f64) * start;
         let row = tracker.process(render_template(&c, &texture, pose, (59 + j) as f64 * 10.0)?)?;
         if recovered.is_none() {
-            assert_eq!(tracker.sphere_template().as_ref(), Some(&atlas));
+            if !row.accepted {
+                assert_eq!(tracker.sphere_template().as_ref(), Some(&atlas));
+            } else {
+                assert_known_atlas_preserved(
+                    &before,
+                    &tracker.sphere_template().ok_or("missing atlas")?,
+                );
+            }
             assert_eq!(row.position, last.position);
             assert_eq!(row.integrated, last.integrated);
             assert_eq!(row.delta_camera, [0.0; 3]);
@@ -712,10 +734,9 @@ fn sustained_faster_known_motion_can_establish_a_new_rate_without_erasing_atlas(
             );
             tracked_since_recovery += 1;
             if tracked_since_recovery <= 8 {
-                assert_eq!(
-                    tracker.sphere_template().as_ref(),
-                    Some(&atlas),
-                    "fast bootstrap rewrote atlas"
+                assert_known_atlas_preserved(
+                    &before,
+                    &tracker.sphere_template().ok_or("missing atlas")?,
                 );
             }
             let error = DVec3::from_array(row.delta_camera) - fast;
@@ -739,6 +760,108 @@ fn sustained_faster_known_motion_can_establish_a_new_rate_without_erasing_atlas(
 
 #[test]
 fn fast_motion_recovery_uses_held_velocity_with_sharp_and_exposure_blurred_images() -> Result {
+    fast_motion_recovery(50, 6)
+}
+
+#[test]
+fn current_defaults_recover_sharp_and_exposure_blurred_fast_motion() -> Result {
+    let defaults = MapSettings::default();
+    fast_motion_recovery(defaults.max_evaluations, defaults.quality)
+}
+
+#[test]
+fn fast_motion_prediction_follows_longer_capture_intervals() -> Result {
+    let mut c = config(false);
+    c.spherical_map = Some(MapSettings::default());
+    let texture = known_template()?;
+    let mut tracker = Tracker::new(c.clone())?;
+    let mut angle = 0.0;
+    let mut time = 0.0;
+    let mut squared = DVec3::ZERO;
+    let mut all_squared = DVec3::ZERO;
+    let mut gaps = 0;
+    for i in 0..180 {
+        let factor = match i {
+            61 | 121 => 4.0,
+            91 | 151 => 3.0,
+            _ => 1.0,
+        };
+        let delta = if i == 0 { 0.0 } else { 0.2 * factor };
+        angle += delta;
+        time += 10.0 * factor;
+        let row = tracker.process(render_template(
+            &c,
+            &texture,
+            DQuat::from_rotation_x(angle),
+            time,
+        )?)?;
+        assert!(
+            row.accepted,
+            "frame {i}, interval factor {factor}: {} {}",
+            row.status, row.error
+        );
+        if i > 0 {
+            let error = DVec3::from_array(row.delta_camera) - DVec3::new(delta, 0.0, 0.0);
+            all_squared += error * error;
+        }
+        if factor > 1.0 {
+            assert_eq!(
+                row.status, "tracked",
+                "capture gap must remain a measured image interval"
+            );
+            let error = DVec3::from_array(row.delta_camera) - DVec3::new(delta, 0.0, 0.0);
+            squared += error * error;
+            gaps += 1;
+        }
+    }
+    let rms = (squared / f64::from(gaps)).to_array().map(f64::sqrt);
+    eprintln!("capture-gap component RMS={rms:?}");
+    assert!(
+        rms.iter().all(|v| *v < 0.008),
+        "capture-gap component RMS {rms:?}"
+    );
+    let all_rms = (all_squared / 179.0).to_array().map(f64::sqrt);
+    assert!(
+        all_rms.iter().all(|v| *v < 0.008),
+        "full capture-sequence component RMS {all_rms:?}"
+    );
+    Ok(())
+}
+
+#[test]
+fn capture_gap_cannot_publish_an_ambiguous_full_turn_prediction() -> Result {
+    let mut c = config(false);
+    c.spherical_map = Some(MapSettings::default());
+    let texture = known_template()?;
+    let mut tracker = Tracker::new(c.clone())?;
+    let mut last = None;
+    for i in 0..80 {
+        let row = tracker.process(render_template(
+            &c,
+            &texture,
+            DQuat::from_rotation_x(0.2 * i as f64),
+            i as f64 * 10.0,
+        )?)?;
+        assert!(row.accepted, "warmup {i}: {}", row.status);
+        last = Some(row);
+    }
+    let before = last.ok_or("missing accepted warmup")?;
+    let atlas = tracker.sphere_template().ok_or("missing atlas")?;
+    let row = tracker.process(render_template(
+        &c,
+        &texture,
+        DQuat::from_rotation_x(0.2 * 79.0 + 3.2),
+        950.0,
+    )?)?;
+    assert!(!row.accepted);
+    assert_eq!(row.delta_camera, [0.0; 3]);
+    assert_eq!(row.position, before.position);
+    assert_eq!(row.integrated, before.integrated);
+    assert_eq!(tracker.sphere_template().as_ref(), Some(&atlas));
+    Ok(())
+}
+
+fn fast_motion_recovery(evaluations: usize, quality: usize) -> Result {
     for exposure_fraction in [0.0, 0.5] {
         let mut c = config(false);
         c.max_rotation = 0.35;
@@ -746,7 +869,8 @@ fn fast_motion_recovery_uses_held_velocity_with_sharp_and_exposure_blurred_image
             m.resilient = true;
             // Exercise the actual default local-fit budget rather than relying
             // on the larger budget in the older acceleration fixture.
-            m.max_evaluations = 50;
+            m.max_evaluations = evaluations;
+            m.quality = quality;
             m.max_error = -1.0;
         }
         let texture = known_template()?;
@@ -771,6 +895,7 @@ fn fast_motion_recovery_uses_held_velocity_with_sharp_and_exposure_blurred_image
         let mut measured = 0;
         let mut squared = DVec3::ZERO;
         for i in 1..=90 {
+            let before = tracker.sphere_template().ok_or("missing previous atlas")?;
             let time = (329 + i) as f64 * interval_ms;
             // Nine symmetric exposure samples have a known midpoint pose.
             // This is correlated optical blur, not a fabricated occluder.
@@ -792,7 +917,14 @@ fn fast_motion_recovery_uses_held_velocity_with_sharp_and_exposure_blurred_image
             }
             let row = tracker.process(GrayFrame::new(c.width, c.height, pixels, time)?)?;
             if recovered.is_none() {
-                assert_eq!(tracker.sphere_template().as_ref(), Some(&atlas));
+                if !row.accepted {
+                    assert_eq!(tracker.sphere_template().as_ref(), Some(&atlas));
+                } else {
+                    assert_known_atlas_preserved(
+                        &before,
+                        &tracker.sphere_template().ok_or("missing atlas")?,
+                    );
+                }
                 assert_eq!(row.position, last.position);
                 assert_eq!(row.integrated, last.integrated);
                 assert_eq!(row.delta_camera, [0.0; 3]);
@@ -810,7 +942,10 @@ fn fast_motion_recovery_uses_held_velocity_with_sharp_and_exposure_blurred_image
                 );
                 measured += 1;
                 if measured <= 8 {
-                    assert_eq!(tracker.sphere_template().as_ref(), Some(&atlas));
+                    assert_known_atlas_preserved(
+                        &before,
+                        &tracker.sphere_template().ok_or("missing atlas")?,
+                    );
                 }
                 let error = DVec3::from_array(row.delta_camera) - fast;
                 squared += error * error;
@@ -830,5 +965,130 @@ fn fast_motion_recovery_uses_held_velocity_with_sharp_and_exposure_blurred_image
             "exposure {exposure_fraction}, fast component RMS {rms:?}"
         );
     }
+    Ok(())
+}
+
+#[test]
+fn cold_partial_atlas_keeps_learning_after_sustained_acceleration() -> Result {
+    cold_partial_atlas_acceleration(50, 6)
+}
+
+#[test]
+fn cold_partial_atlas_keeps_learning_with_current_defaults() -> Result {
+    let defaults = MapSettings::default();
+    cold_partial_atlas_acceleration(defaults.max_evaluations, defaults.quality)
+}
+
+#[test]
+fn cold_partial_atlas_keeps_learning_with_finer_atlas_and_generous_budget() -> Result {
+    cold_partial_atlas_acceleration(150, 12)
+}
+
+fn cold_partial_atlas_acceleration(evaluations: usize, quality: usize) -> Result {
+    let mut c = config(false);
+    c.max_rotation = 0.35;
+    if let Some(m) = &mut c.spherical_map {
+        m.resilient = true;
+        m.max_evaluations = evaluations;
+        m.quality = quality;
+        m.max_error = -1.0;
+    }
+    let texture = known_template()?;
+    let mut tracker = Tracker::new(c.clone())?;
+    // A stationary startup learns only the initially visible surface. The
+    // full-turn warmups in the older fast-motion fixtures cannot exercise a
+    // confirmed motion running out of learned surface during probation.
+    let mut last = None;
+    for i in 0..40 {
+        let row = tracker.process(render_template(
+            &c,
+            &texture,
+            DQuat::IDENTITY,
+            i as f64 * 10.0,
+        )?)?;
+        assert!(
+            row.accepted,
+            "stationary startup {i}: {} {}",
+            row.status, row.error
+        );
+        last = Some(row);
+    }
+    let last = last.ok_or("missing stationary startup")?;
+    let initial_atlas = tracker.sphere_template().ok_or("missing initial atlas")?;
+    let initial_coverage = initial_atlas
+        .pixels
+        .iter()
+        .filter(|value| **value != 128)
+        .count();
+    let delta = DVec3::X * 0.20;
+    let mut recovered = None;
+    let mut measured = 0;
+    let mut gaps_after_recovery = 0;
+    let mut tracked_since_recovery = 0;
+    let mut squared = DVec3::ZERO;
+    for i in 1..=90 {
+        let before = tracker.sphere_template().ok_or("missing previous atlas")?;
+        let row = tracker.process(render_template(
+            &c,
+            &texture,
+            DQuat::from_scaled_axis(delta * i as f64),
+            (39 + i) as f64 * 10.0,
+        )?)?;
+        let atlas = tracker.sphere_template().ok_or("missing moving atlas")?;
+        if recovered.is_none() {
+            if !row.accepted {
+                assert_eq!(atlas, initial_atlas);
+            } else {
+                assert_known_atlas_preserved(&before, &atlas);
+            }
+            assert_eq!(row.position, last.position);
+            assert_eq!(row.integrated, last.integrated);
+            assert_eq!(row.delta_camera, [0.0; 3]);
+            if row.accepted {
+                assert_eq!(row.status, "relocalized");
+                assert!(i >= 4, "cold acceleration bypassed confirmation");
+                recovered = Some(i);
+            }
+        } else if row.status == "tracked" && row.accepted {
+            tracked_since_recovery += 1;
+            if tracked_since_recovery <= 8 {
+                assert_known_atlas_preserved(&before, &atlas);
+            }
+            let error = DVec3::from_array(row.delta_camera) - delta;
+            squared += error * error;
+            measured += 1;
+        } else {
+            if !row.accepted {
+                assert_eq!(before, atlas, "unaccepted cold frame taught the atlas");
+            }
+            gaps_after_recovery += 1;
+        }
+    }
+    let atlas = tracker.sphere_template().ok_or("missing final atlas")?;
+    let final_coverage = atlas.pixels.iter().filter(|value| **value != 128).count();
+    let rms = (squared / measured.max(1) as f64).to_array().map(f64::sqrt);
+    eprintln!(
+        "cold recovery={recovered:?} measured={measured} later_gaps={gaps_after_recovery} coverage={initial_coverage}->{final_coverage} RMS={rms:?}"
+    );
+    assert!(
+        recovered.is_some_and(|frame| frame <= 12),
+        "cold acceleration did not recover promptly: {recovered:?}"
+    );
+    assert_eq!(
+        gaps_after_recovery, 0,
+        "confirmed cold motion lost its learned surface"
+    );
+    assert!(
+        measured >= 75,
+        "cold acceleration measured only {measured} frames"
+    );
+    assert!(
+        final_coverage > initial_coverage,
+        "new visible surface was never learned"
+    );
+    assert!(
+        rms.iter().all(|value| *value < 0.008),
+        "cold acceleration component RMS {rms:?}"
+    );
     Ok(())
 }

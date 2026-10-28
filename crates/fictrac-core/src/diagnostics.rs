@@ -7,6 +7,14 @@ use std::f64::consts::{PI, TAU};
 // acquire extra inertia. At 100 FPS this requires at least ten seconds of
 // actual visibility; newly learned surfaces keep upstream's consolidation.
 const MATURE_TEACHING_FRAMES: u16 = 1024;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum LearningPolicy {
+    Frozen,
+    NewSurface,
+    Full,
+    Guarded,
+}
 #[derive(Clone, Debug)]
 pub struct DebugViews {
     pub roi: Vec<u8>,
@@ -16,6 +24,19 @@ pub struct DebugViews {
     pub roi_size: usize,
     pub map_width: usize,
     pub map_height: usize,
+}
+/// Independent consecutive-image support for an adaptive appearance decision.
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct TemporalEvidence {
+    pub known_samples: usize,
+    pub possible_samples: usize,
+    pub binary_mse: Option<f64>,
+    pub spatially_supported_fraction: f64,
+    pub verified: bool,
+    /// Persistent atlas support and MSE expected from independent image/map
+    /// marginals; a null match, not a replacement for reported fit MSE.
+    pub persistent_known_samples: usize,
+    pub persistent_chance_mse: Option<f64>,
 }
 pub struct Diagnostics {
     config: Config,
@@ -152,6 +173,19 @@ impl Diagnostics {
             }
         };
     }
+    fn teach_site(&mut self, index: usize, observation: u8, policy: LearningPolicy) {
+        if matches!(policy, LearningPolicy::Full | LearningPolicy::Guarded)
+            || (policy == LearningPolicy::NewSurface
+                && self.map[index] == 128
+                && self.learning_hits[index] == 0)
+        {
+            // A previously observed cell can pass through neutral 128; it is
+            // not new surface. Imported templates use 128 for unseen cells,
+            // while their nonneutral confidence values remain protected even
+            // though imports deliberately reset age history.
+            self.learn_site(index, observation);
+        }
+    }
     pub(crate) fn prepare(&self, frame: &GrayFrame) -> Vec<u8> {
         let n = self.size;
         let grey: Vec<_> = self
@@ -242,9 +276,41 @@ impl Diagnostics {
         }
         roi
     }
+    /// Uniform regions do not independently identify material surface. Leave
+    /// new cells there unknown until a visible pattern supports their seed.
+    pub(crate) fn informative_sites(&self, roi: &[u8]) -> Vec<bool> {
+        let n = self.size;
+        // Broad legitimate markings must retain support at the default small
+        // ROI. A tiny neighborhood confuses their interiors with an occluder
+        // and can leave a clean, low-resolution atlas too sparse to fit.
+        let radius = (n / 8).max(1);
+        (0..roi.len())
+            .map(|index| {
+                if roi[index] == 128 {
+                    return false;
+                }
+                let (x, y) = (index % n, index / n);
+                let mut black = 0usize;
+                let mut white = 0usize;
+                let mut count = |value| {
+                    black += usize::from(value == 0);
+                    white += usize::from(value == 255);
+                };
+                for xx in x.saturating_sub(radius)..=(x + radius).min(n - 1) {
+                    count(roi[y * n + xx]);
+                }
+                for yy in y.saturating_sub(radius)..=(y + radius).min(n - 1) {
+                    if yy != y {
+                        count(roi[yy * n + x]);
+                    }
+                }
+                black >= 2 && white >= 2
+            })
+            .collect()
+    }
     pub fn update(&mut self, frame: &GrayFrame, row: Option<&TrackRow>) -> DebugViews {
         let roi = self.prepare(frame);
-        self.update_prepared(frame, row, roi, true)
+        self.update_prepared(frame, row, roi, LearningPolicy::Full)
     }
     /// The atlas estimator and its committed map must use the same thresholded
     /// observation. Reuse it rather than sampling/filtering the image twice.
@@ -253,7 +319,7 @@ impl Diagnostics {
         frame: &GrayFrame,
         row: Option<&TrackRow>,
         roi: Vec<u8>,
-        allow_learning: bool,
+        learning: LearningPolicy,
     ) -> DebugViews {
         let n = self.size;
         let mw = self.map_width;
@@ -273,10 +339,29 @@ impl Diagnostics {
             .map(|r| exported_basis.inverse() * DVec3::from_array(r.delta_camera))
             .unwrap_or(DVec3::ZERO);
         let inverse_delta = DQuat::from_scaled_axis(-rotation);
-        let teach = allow_learning && row.is_none_or(|r| r.accepted);
-        if teach && self.resilient_learning {
+        let learning = if row.is_none_or(|r| r.accepted) {
+            learning
+        } else {
+            LearningPolicy::Frozen
+        };
+        if learning != LearningPolicy::Frozen && self.resilient_learning {
             self.begin_learning_frame();
         }
+        let informative = matches!(
+            learning,
+            LearningPolicy::Guarded | LearningPolicy::NewSurface
+        )
+        .then(|| self.informative_sites(&roi))
+        .filter(|sites| {
+            // A predominantly supported image can teach the ordinary interiors
+            // of its broad markings. Restricting every first hit to an edge
+            // leaves holes even in a clean ball and destabilizes fast fitting.
+            // Low-support partial views and acceleration probation still need
+            // independent local support for every newly seeded cell.
+            learning == LearningPolicy::NewSurface
+                || sites.iter().filter(|site| **site).count() * 2
+                    < self.points.iter().filter(|point| point.is_some()).count()
+        });
         for y in 0..n {
             for x in 0..n {
                 let i = y * n + x;
@@ -310,8 +395,9 @@ impl Diagnostics {
                 let my = (p.y + 1.0) * 0.5 * mh as f64;
                 let mi = (my.floor() as usize).min(mh - 1) * mw + (mx.floor() as usize).min(mw - 1);
                 instant[mi] = value;
-                if teach {
-                    self.learn_site(mi, value);
+                let unobserved = self.map[mi] == 128 && self.learning_hits[mi] == 0;
+                if !unobserved || informative.as_ref().is_none_or(|sites| sites[i]) {
+                    self.teach_site(mi, value, learning);
                 }
             }
         }
@@ -456,8 +542,9 @@ mod learning_tests {
             row.frame = frame;
             row.timestamp_ms = frame as f64 * 10.0;
             let image = base.clone().with_timestamp(row.timestamp_ms)?;
-            let views = protected.update_prepared(&image, Some(&row), roi.clone(), true);
-            legacy.update_prepared(&image, Some(&row), roi.clone(), true);
+            let views =
+                protected.update_prepared(&image, Some(&row), roi.clone(), LearningPolicy::Full);
+            legacy.update_prepared(&image, Some(&row), roi.clone(), LearningPolicy::Full);
             if frame == 299 {
                 observed = views
                     .instant
@@ -533,6 +620,84 @@ mod learning_tests {
         legacy.learning_hits[1] = 1000;
         legacy.learn_site(1, 0);
         assert_eq!(legacy.map[1], 64);
+        Ok(())
+    }
+
+    #[test]
+    fn new_surface_probation_never_rewrites_known_or_observed_neutral_cells() -> Result<()> {
+        let mut protected = diagnostics(true)?;
+        protected.begin_learning_frame();
+        protected.teach_site(0, 255, LearningPolicy::NewSurface);
+        assert_eq!(protected.map[0], 192);
+        assert_eq!(protected.learning_hits[0], 1);
+        protected.teach_site(0, 0, LearningPolicy::NewSurface);
+        assert_eq!(
+            protected.map[0], 192,
+            "a newly seen cell is now protected too"
+        );
+        assert_eq!(protected.learning_hits[0], 1);
+
+        // A nonneutral imported confidence cell has no age history but is
+        // already known. Observed neutral cells retain their age evidence.
+        protected.map[1] = 200;
+        protected.map[2] = 128;
+        protected.learning_hits[2] = 10;
+        protected.map[3] = 128;
+        protected.learning_hits[3] = 1600;
+        protected.teach_site(1, 0, LearningPolicy::NewSurface);
+        protected.teach_site(2, 255, LearningPolicy::NewSurface);
+        protected.teach_site(3, 0, LearningPolicy::NewSurface);
+        protected.teach_site(4, 255, LearningPolicy::Frozen);
+        assert_eq!(&protected.map[1..5], &[200, 128, 128, 128]);
+        assert_eq!(&protected.learning_hits[1..5], &[0, 10, 1600, 0]);
+        protected.teach_site(0, 255, LearningPolicy::Full);
+        assert_eq!(protected.map[0], 193, "ordinary consolidation resumes");
+        Ok(())
+    }
+
+    #[test]
+    fn unaccepted_row_cannot_add_new_surface_even_when_requested() -> Result<()> {
+        let mut protected = diagnostics(true)?;
+        let base = GrayFrame::new(160, 160, vec![0.5; 160 * 160], 0.0)?;
+        let mut row = Tracker::new(Config::default())?.process(base.clone())?;
+        row.accepted = false;
+        let initial = protected.map.clone();
+        let roi = vec![255; protected.size * protected.size];
+        protected.update_prepared(&base, Some(&row), roi, LearningPolicy::NewSurface);
+        assert_eq!(protected.map, initial);
+        assert_eq!(protected.learning_epoch, 0);
+        assert!(protected.learning_hits.iter().all(|hits| *hits == 0));
+        Ok(())
+    }
+
+    #[test]
+    fn guarded_first_hits_leave_uniform_surface_unknown_without_changing_legacy_learning()
+    -> Result<()> {
+        let mut guarded = diagnostics(true)?;
+        let mut legacy = diagnostics(false)?;
+        let image = GrayFrame::new(160, 160, vec![0.5; 160 * 160], 0.)?;
+        let roi = vec![255; guarded.size * guarded.size];
+        assert!(guarded.informative_sites(&roi).iter().all(|site| !*site));
+        guarded.update_prepared(&image, None, roi.clone(), LearningPolicy::Guarded);
+        legacy.update_prepared(&image, None, roi, LearningPolicy::Full);
+        assert!(guarded.map.iter().all(|value| *value == 128));
+        assert!(legacy.map.iter().any(|value| *value != 128));
+        let roi: Vec<_> = guarded
+            .points
+            .iter()
+            .enumerate()
+            .map(|(i, p)| {
+                if p.is_none() {
+                    128
+                } else if (i % guarded.size + i / guarded.size) % 2 == 0 {
+                    0
+                } else {
+                    255
+                }
+            })
+            .collect();
+        guarded.update_prepared(&image, None, roi, LearningPolicy::Guarded);
+        assert!(guarded.map.iter().filter(|value| **value != 128).count() > 32);
         Ok(())
     }
 

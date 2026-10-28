@@ -1,0 +1,25 @@
+{
+  "take-1793134575426458881": {
+    "input_sha256": "967bb9df59f7a427ddc9444107f39136b348fbd71a14fc0acb6be1de6a0641d5",
+    "occlusion_intervals": [
+      [
+        545,
+        625
+      ],
+      [
+        3298,
+        3369
+      ]
+    ],
+    "provenance": "Input-only upper-hand-presence annotation: >=100 pixels above grayscale60 in source rows0..109 outside fitted ball; intervals [545,625) and [3298,3369), visually checked on linear source images. Selected independently of tracker outputs. Original unexcluded metrics are retained separately.",
+    "expected_video_frames": 6075,
+    "vfov_deg": 47
+  },
+  "take-1793133880524532382": {
+    "input_sha256": "2dc0b797e378bc421ecf7fa1027b36b9763ef70eef34a328570ad02c70e2fef7",
+    "expected_video_frames": 64,
+    "vfov_deg": 17,
+    "occlusion_intervals": [],
+    "provenance": "Only a finalized64-image H264 prefix exists;7205 numeric rows survive. Encoder stopped_overload. No full-recording or high-speed claim."
+  }
+}
