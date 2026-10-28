@@ -1,5 +1,49 @@
 # HejjéTrac validation evidence
 
+## Enabled LAN publishing and Ubuntu graphics safeguards — 2026-10-28
+
+Source `f9b20f1` enables the shared ZeroMQ default at `0.0.0.0:9871`, serving
+localhost and IPv4 LAN interfaces. Explicit binds/disable settings and saved
+rig ports remain intact; copies increment an omitted effective port too.
+The desktop controls and agent schema expose the same defaults. CLI core JSON
+also uses them; `track --no-zmq` and the synthetic demo explicitly opt out for
+offline work. Numerical benchmark fixtures explicitly disable live publishing
+without changing their tracking settings or reference tolerances.
+
+Formatting, locked strict all-target Clippy and **314 workspace tests** pass,
+with no failed or ignored tests. An independent libzmq oracle receives all 300
+sample rows in native FT, single MATREX JSON and topic/JSON modes through both
+localhost and the machine's LAN address: **1800/1800 payloads match byte for
+byte**. These tests omit the bind host and use unused ephemeral ports; existing
+user publishers are preserved. The LAN-address subscriber runs on the same
+computer, so this check does not establish a remote firewall or friend-machine
+result. The legacy ZMTP 2 and output rollback regressions also pass.
+
+Actual Ubuntu 22.04.5 X11 windows render the bundled patterned-ball sample with
+the ordinary Mesa NV136 GL adapter and with explicit Mesa llvmpipe CPU graphics.
+The previews are visually inspected. Startup logs have mode 0600 and retain
+ready/exit evidence. Real child-process tests cover fragmented readiness,
+pre-window failure, startup timeout/reaping and refusal to restart a running
+session. Linux startup attempts are bounded to automatic, Vulkan and software
+modes, with a 20-second pre-ready timeout each. Explicit GPU overrides and the
+native stdio bridge remain under caller control; there is no automatic restart
+after readiness.
+
+A source-stamped portable archive and Debian package pass ABI/dependency,
+manifest and alias checks; all 330 registry notice packages retain license text.
+The extracted Debian binary also renders its bundled sample in software mode
+outside the checkout, without installation or camera access. The release
+120-image demo passes its unchanged 0.003 rad accuracy gate, and the complete
+300-image sample retains its existing 0.075/0.025/0.020 reference gates.
+
+The friend reports a window displaying corrupted/wallpaper contents. That
+machine has **not** been tested; software mode is a verified local fallback,
+not a confirmed diagnosis or cure for that machine. Readiness cannot detect
+incorrect displayed pixels. Incomplete-atlas sensitivity and the separate
+Save-and-close issue remain as documented. No engine changes follow the
+tracking commit `bd7d699` in this defaults/startup update.
+[Exact binaries, package hashes, checks and limitations](benchmarks/ubuntu-defaults-20261028.json).
+
 ## Live 47° capture-interval follow-up — 2026-10-28
 
 Final-source formatting, locked all-target strict Clippy and **303 workspace

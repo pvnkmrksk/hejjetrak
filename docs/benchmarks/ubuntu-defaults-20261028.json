@@ -1,0 +1,295 @@
+{
+  "date": "2026-10-28",
+  "tracking_commit": "bd7d699",
+  "scope": "Network defaults and Linux graphics startup; no tracking algorithm change after the tracking commit",
+  "platform": {
+    "os": "Ubuntu 22.04.5",
+    "architecture": "x86_64",
+    "kernel": "6.8.0-124-generic",
+    "session": "X11"
+  },
+  "defaults": {
+    "enabled": true,
+    "bind_host": "0.0.0.0",
+    "port": 9871,
+    "explicit_disable": [
+      0,
+      -1
+    ],
+    "explicit_settings_preserved": true,
+    "copied_rig_implicit_port": 9872,
+    "cli_json_default_enabled": true,
+    "explicit_offline_cli_switch": "track --no-zmq; demo opts out internally"
+  },
+  "wire": {
+    "oracle": "PyZMQ 25.1.1 / libzmq 4.3.4",
+    "input": "examples/sample.mp4",
+    "input_frames": 300,
+    "implicit_host": true,
+    "test_ports": "ephemeral; existing user publishers preserved",
+    "cases": [
+      {
+        "mode": "native_ft",
+        "framing": "single",
+        "bind_host": null,
+        "connect_host": "127.0.0.1",
+        "source_frames": 300,
+        "recorded_rows": 300,
+        "received_rows": 300,
+        "first_row_index": 0,
+        "last_row_index": 299,
+        "all_received_bytes_exact": true
+      },
+      {
+        "mode": "legacy_matrex_vr",
+        "framing": "single",
+        "bind_host": null,
+        "connect_host": "127.0.0.1",
+        "source_frames": 300,
+        "recorded_rows": 300,
+        "received_rows": 300,
+        "first_row_index": 0,
+        "last_row_index": 299,
+        "all_received_bytes_exact": true
+      },
+      {
+        "mode": "legacy_matrex_vr",
+        "framing": "topic_json",
+        "bind_host": null,
+        "connect_host": "127.0.0.1",
+        "source_frames": 300,
+        "recorded_rows": 300,
+        "received_rows": 300,
+        "first_row_index": 0,
+        "last_row_index": 299,
+        "all_received_bytes_exact": true
+      },
+      {
+        "mode": "native_ft",
+        "framing": "single",
+        "bind_host": null,
+        "connect_host": "10.126.17.125",
+        "source_frames": 300,
+        "recorded_rows": 300,
+        "received_rows": 300,
+        "first_row_index": 0,
+        "last_row_index": 299,
+        "all_received_bytes_exact": true
+      },
+      {
+        "mode": "legacy_matrex_vr",
+        "framing": "single",
+        "bind_host": null,
+        "connect_host": "10.126.17.125",
+        "source_frames": 300,
+        "recorded_rows": 300,
+        "received_rows": 300,
+        "first_row_index": 0,
+        "last_row_index": 299,
+        "all_received_bytes_exact": true
+      },
+      {
+        "mode": "legacy_matrex_vr",
+        "framing": "topic_json",
+        "bind_host": null,
+        "connect_host": "10.126.17.125",
+        "source_frames": 300,
+        "recorded_rows": 300,
+        "received_rows": 300,
+        "first_row_index": 0,
+        "last_row_index": 299,
+        "all_received_bytes_exact": true
+      }
+    ],
+    "scope_limit": "LAN-address subscriber runs on the publishing machine; this does not test the friend machine or a remote firewall"
+  },
+  "native": {
+    "cases": [
+      {
+        "case": "normal",
+        "exit_code": 0,
+        "screenshot": true,
+        "graphics": [
+          "Graphics: NV136 (Gl, Other)",
+          "Graphics driver:  \u00b7 4.3 (Core Profile) Mesa 23.2.1-1ubuntu3.1~22.04.4"
+        ]
+      },
+      {
+        "case": "software",
+        "exit_code": 0,
+        "screenshot": true,
+        "graphics": [
+          "Graphics: llvmpipe (LLVM 15.0.7, 256 bits) (Gl, Cpu)",
+          "Graphics driver:  \u00b7 4.5 (Core Profile) Mesa 23.2.1-1ubuntu3.1~22.04.4"
+        ]
+      }
+    ],
+    "logs": [
+      "state/hejjetrac/logs/session-1793217665515907995-1264168.log",
+      "state/hejjetrac/logs/session-1793217658209087664-1264145.log"
+    ],
+    "log_permissions": "0600",
+    "ready_and_clean_exit": true,
+    "camera_accessed": false
+  },
+  "binaries": {
+    "target/release/fictrac": "f8b60928eea4f0c4e12969f783708e96a35809468273852002502d93fe83258d",
+    "target/release/fictrac-desktop": "216782cb27677a7167d69f463ee723e6eb0ce55f6a7a09bad733c35ab3f342d1"
+  },
+  "limits": [
+    "Friend reports a window displaying corrupted/wallpaper contents; exact cause and fix not verified on that machine.",
+    "Software graphics explicitly uses Mesa CPU adapter and may reduce throughput.",
+    "Automatic retries cannot detect visually corrupted pixels in an otherwise ready window.",
+    "At most three pre-ready attempts of 20 seconds; no automatic restart after ready; stdio bridge is not supervised.",
+    "Incomplete-atlas tracking sensitivity and Save-and-close issue remain documented separately."
+  ],
+  "source_commit": "f9b20f163c9cafc11db5378d8892fea98ef9b29e",
+  "package": {
+    "source_commit": "f9b20f163c9cafc11db5378d8892fea98ef9b29e",
+    "linux_abi": {
+      "target_baseline": "Ubuntu 22.04 / glibc 2.35",
+      "glibc_ceiling": "2.35",
+      "binaries": [
+        {
+          "binary": "hejjetrac",
+          "required_glibc_versions": [
+            "2.2.5",
+            "2.3",
+            "2.3.2",
+            "2.3.4",
+            "2.4",
+            "2.7",
+            "2.9",
+            "2.10",
+            "2.14",
+            "2.15",
+            "2.16",
+            "2.17",
+            "2.18",
+            "2.25",
+            "2.27",
+            "2.28",
+            "2.29",
+            "2.30",
+            "2.32",
+            "2.33",
+            "2.34",
+            "2.35"
+          ],
+          "maximum_required_glibc": "2.35"
+        },
+        {
+          "binary": "hejjetrac-cli",
+          "required_glibc_versions": [
+            "2.2.5",
+            "2.3",
+            "2.3.2",
+            "2.3.4",
+            "2.4",
+            "2.7",
+            "2.9",
+            "2.10",
+            "2.14",
+            "2.16",
+            "2.17",
+            "2.18",
+            "2.25",
+            "2.28",
+            "2.29",
+            "2.30",
+            "2.32",
+            "2.33",
+            "2.34",
+            "2.35"
+          ],
+          "maximum_required_glibc": "2.35"
+        }
+      ]
+    },
+    "dependencies": "libc6 (>= 2.35), libgcc-s1 (>= 4.2), libudev1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0, libwayland-cursor0, libwayland-egl1, libx11-6, libx11-xcb1, libxcursor1, libxi6, libxrandr2, libegl1, libgles2, libvulkan1, libegl-mesa0, libgl1-mesa-dri",
+    "binary_manifest_verified": true,
+    "archive_paths_and_aliases_verified": true,
+    "artifacts": {
+      "dist/hejjetrac-linux-x86_64.tar.gz": {
+        "bytes": 25560649,
+        "sha256": "479d6dd7461196b6c805b75250d9d4e82d14646ec5ca6f46d134289e773a4b29"
+      },
+      "dist/hejjetrac-linux-amd64.deb": {
+        "bytes": 25536312,
+        "sha256": "7d1b874fdcc5d1915c198bdadf127f26a14ac589ae2002f10f193322a1b53ffb"
+      }
+    },
+    "extracted_deb_native_software_sample_passed": true,
+    "installation_performed": false
+  },
+  "release_demo": {
+    "frames": 120,
+    "expected_delta": [
+      0.006,
+      -0.009,
+      0.004
+    ],
+    "passed": true,
+    "rotation_component_rmse_rad": 0.0003040496948914138,
+    "tolerance_rad": 0.003
+  },
+  "sample_comparison": {
+    "comparison": {
+      "candidate_final_position": [
+        3.620053461636,
+        -2.627296315711
+      ],
+      "endpoint_error_sphere_rad": 0.054525318251027806,
+      "frames": 300,
+      "heading_rmse_rad": 0.01318481079068964,
+      "path_point_rmse_sphere_rad": 0.04480675139755788,
+      "reference_final_position": [
+        3.674266189723,
+        -2.6214661833162
+      ],
+      "rotation_component_rmse_rad": [
+        0.008760804755303081,
+        0.008292135984256042,
+        0.014210731643506284
+      ],
+      "timestamp_max_error_ms": 3.456079866737127e-11
+    },
+    "limits": {
+      "heading_rmse_rad": 0.025,
+      "path_rmse_sphere_rad": 0.075,
+      "rotation_component_rmse_rad": 0.02
+    },
+    "passed": true
+  },
+  "checks": {
+    "fmt": true,
+    "clippy_workspace_all_targets_locked_deny_warnings": true,
+    "package_helpers": {
+      "tests": 6,
+      "passed": true
+    },
+    "package_structure": {
+      "tests": 8,
+      "passed": true
+    },
+    "notice_registry_packages": 330,
+    "all_notice_text_present": true,
+    "workspace_tests": {
+      "passed": 314,
+      "failed": 0,
+      "ignored": 0,
+      "command": "cargo test --workspace --locked"
+    },
+    "log_sha256": {
+      "hejjetrac-defaults-fmt.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "hejjetrac-defaults-clippy-final.log": "7b573da0f782c6a3b87905a489c0aa06633479429dff5a766307fa02e0ce3af0",
+      "hejjetrac-defaults-workspace-final.log": "b7eefd818d8f15e6a75a8c8572c3b3ca05c423082d2e9cbcb60f127bec5165c0"
+    }
+  },
+  "build": {
+    "rust": "1.99.1",
+    "profile": "release, opt-level 3, thin LTO, codegen-units 1",
+    "tracking_engine_changes_since_bd7d699": false,
+    "scope": "Accuracy and functional validation; no new general performance claim"
+  }
+}

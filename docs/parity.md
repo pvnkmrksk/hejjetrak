@@ -1,5 +1,18 @@
 # Behavioral parity assessment
 
+## LAN defaults and Ubuntu graphics — 2026-10-28
+
+ZeroMQ now defaults to enabled on all IPv4 interfaces, including localhost,
+at port 9871. Explicit saved settings remain authoritative. Independent modern
+subscribers receive all 1800 real-video payloads unchanged across localhost/LAN
+address and the three supported wire forms. Linux software rendering, bounded
+pre-window retries and persistent diagnostics pass local native and fault tests.
+The friend's corrupted-window report remains unverified on that computer;
+a successfully opened but visually corrupted window requires explicit software
+mode because readiness cannot diagnose its pixels. This is startup/output work
+and does not extend scientific tracking or cross-platform parity claims.
+[Validation and limits](validation.md#enabled-lan-publishing-and-ubuntu-graphics-safeguards--2026-10-28).
+
 ## Live capture intervals and rim accuracy — 2026-10-28
 
 The live 47° follow-up separates a small source-rim calibration error from the
