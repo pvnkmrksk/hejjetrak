@@ -4,6 +4,18 @@
 
 The landing page resolves GitHub's latest published release at download time and shows the platform archive, release tag and available SHA-256 digest. Manual OS/chip choices remain available; browser architecture detection is not treated as infallible. If the release API is unavailable or an archive has not uploaded yet, use the visible GitHub release link rather than a guessed download.
 
+## v0.3.3 — 28 October 2026
+
+[v0.3.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.3) includes
+more robust fast-motion/partial-atlas fitting and capture-interval prediction,
+restored threshold controls, ZeroMQ enabled by default for localhost and IPv4
+LAN clients, and Linux software graphics mode with persistent diagnostics.
+Existing explicit output settings and saved rig ports remain authoritative.
+[Release notes](https://github.com/pvnkmrksk/hejjetrak/blob/v0.3.3/docs/release-v033.md)
+retain fixture-specific tracking evidence and outstanding limitations. Platform
+packages appear as their release jobs complete; offer only downloads actually
+present in the release.
+
 ## v0.3.2 — 27 October 2026
 
 [v0.3.2](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.2) is published
