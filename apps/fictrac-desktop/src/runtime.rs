@@ -2932,7 +2932,9 @@ mod tests {
     #[test]
     fn occupied_startup_output_keeps_preview_and_recording_then_retries_same_settings() -> Result<()>
     {
-        let busy = std::net::TcpListener::bind("127.0.0.1:0").map_err(|e| e.to_string())?;
+        // Match the effective publisher bind; localhost alone does not occupy
+        // the wildcard endpoint on every supported operating system.
+        let busy = std::net::TcpListener::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
         let port = busy.local_addr().map_err(|e| e.to_string())?.port();
         let (source, mut doc) = fixture().map_err(|e| e.to_string())?;
         if let SourceSpec::Video(path) = &source {
@@ -3022,7 +3024,7 @@ mod tests {
     }
     #[test]
     fn occupied_publisher_edit_keeps_native_tracker_source_and_queue_alive() -> Result<()> {
-        let busy = std::net::TcpListener::bind("127.0.0.1:0").map_err(|e| e.to_string())?;
+        let busy = std::net::TcpListener::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
         let (source, doc) = fixture().map_err(|e| e.to_string())?;
         let worker = Worker::start(source, doc.clone(), true)?;
         wait_for(&worker, |s| s.frames >= 3)?;

@@ -4,6 +4,15 @@
 
 The landing page resolves GitHub's latest published release at download time and shows the platform archive, release tag and available SHA-256 digest. Manual OS/chip choices remain available; browser architecture detection is not treated as infallible. If the release API is unavailable or an archive has not uploaded yet, use the visible GitHub release link rather than a guessed download.
 
+## v0.3.4 — 28 October 2026
+
+[v0.3.4](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.4) retains the
+v0.3.3 tracking, networking and Linux graphics changes and corrects portable
+busy-port test setup. Test reservations now match the wildcard publisher bind,
+so native checks exercise a real endpoint conflict on macOS as well as Linux
+and Windows. Numeric reference tolerances are unchanged.
+[Release notes](https://github.com/pvnkmrksk/hejjetrak/blob/v0.3.4/docs/release-v034.md).
+
 ## v0.3.3 — 28 October 2026
 
 [v0.3.3](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.3) includes

@@ -776,7 +776,7 @@ mod tests {
         session.send(Command::Pause(true));
         wait_for(&mut session, |s| s.snapshot.paused)?;
         let source_frames = session.snapshot.frames;
-        let busy = std::net::TcpListener::bind("127.0.0.1:0")?;
+        let busy = std::net::TcpListener::bind("0.0.0.0:0")?;
         session.fields(&[("zmq_port", busy.local_addr()?.port().to_string())])?;
         session.apply()?;
         wait_for(&mut session, |s| s.snapshot.command_error.is_some())?;
@@ -784,7 +784,7 @@ mod tests {
         assert!(session.error.contains("rollback succeeded"));
         assert_eq!(session.snapshot.frames, source_frames);
 
-        let free = std::net::TcpListener::bind("127.0.0.1:0")?;
+        let free = std::net::TcpListener::bind("0.0.0.0:0")?;
         let free_port = free.local_addr()?.port();
         drop(free);
         session.fields(&[("zmq_port", free_port.to_string())])?;

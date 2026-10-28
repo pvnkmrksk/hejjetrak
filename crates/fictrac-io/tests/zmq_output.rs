@@ -18,7 +18,9 @@ fn socket_test() -> Result<MutexGuard<'static, ()>, Box<dyn std::error::Error>> 
         .map_err(|_| "socket test lock poisoned".into())
 }
 fn port() -> Result<u16, Box<dyn std::error::Error>> {
-    let socket = TcpListener::bind("127.0.0.1:0")?;
+    // Reserve the publisher's actual wildcard endpoint: BSD/macOS can allow
+    // a loopback listener and a reusable wildcard listener on the same port.
+    let socket = TcpListener::bind("0.0.0.0:0")?;
     Ok(socket.local_addr()?.port())
 }
 fn row() -> TrackRow {
@@ -395,7 +397,7 @@ fn no_measurements_replay_after_handshake_or_empty_prefix_resubscribe() -> TestR
 #[test]
 fn occupied_pub_port_is_actionable_and_disabled_pub_opens_no_socket() -> TestResult {
     let _socket_test = socket_test()?;
-    let occupied = TcpListener::bind("127.0.0.1:0")?;
+    let occupied = TcpListener::bind("0.0.0.0:0")?;
     let port = occupied.local_addr()?.port();
     let doc = ConfigDocument::parse(format!("zmq_port:{port}\n"))?;
     let error = match OutputSinks::from_config(&doc) {
@@ -420,7 +422,7 @@ fn reconfigure_reuses_healthy_outputs_and_restores_previous_pub_after_busy_port(
     sinks.reconfigure(&old, &old)?;
     assert_eq!(sinks.status().zmq.ok_or("missing publisher")?.enqueued, 1);
 
-    let busy = TcpListener::bind("127.0.0.1:0")?;
+    let busy = TcpListener::bind("0.0.0.0:0")?;
     let mut replacement = ConfigDocument::parse(old.text().into())?;
     replacement.set("zmq_port", &busy.local_addr()?.port().to_string())?;
     let error = sinks
