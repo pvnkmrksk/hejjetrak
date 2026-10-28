@@ -21,7 +21,7 @@ LINUX_RUNTIME_DEPENDS = (
     'libudev1', 'libxkbcommon0', 'libxkbcommon-x11-0',
     'libwayland-client0', 'libwayland-cursor0', 'libwayland-egl1',
     'libx11-6', 'libx11-xcb1', 'libxcursor1', 'libxi6', 'libxrandr2',
-    'libegl1', 'libgles2', 'libvulkan1',
+    'libegl1', 'libgles2', 'libvulkan1', 'libegl-mesa0', 'libgl1-mesa-dri',
 )
 LINUX_GLIBC_CEILING = (2, 35)
 DESKTOP_ENTRY = """[Desktop Entry]
@@ -36,6 +36,11 @@ Terminal=false
 Categories=Science;Education;
 Keywords=FicTrac;tracking;camera;laboratory;
 StartupNotify=false
+Actions=SafeMode;
+
+[Desktop Action SafeMode]
+Name=Software graphics mode
+Exec=hejjetrac --safe-mode
 """
 
 

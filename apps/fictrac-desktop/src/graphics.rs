@@ -15,11 +15,12 @@ pub fn configure_setup(
     explicit: Option<wgpu::Backends>,
     x11: bool,
     adapter_name: Option<String>,
+    software: bool,
 ) {
     let backends = linux_backends(explicit, x11);
     setup.instance_descriptor.backends = backends;
     // Keep caller-provided selectors and native Wayland's automatic selection.
-    if setup.native_adapter_selector.is_some() || (!x11 && adapter_name.is_none()) {
+    if setup.native_adapter_selector.is_some() || (!x11 && adapter_name.is_none() && !software) {
         return;
     }
     let prefer_gles = x11 && explicit.is_none();
@@ -32,6 +33,7 @@ pub fn configure_setup(
             prefer_gles,
             power_preference,
             adapter_name.as_deref(),
+            software,
         )
     }));
 }
@@ -49,6 +51,7 @@ fn select_adapter_index(
     prefer_gles: bool,
     power_preference: wgpu::PowerPreference,
     adapter_name: Option<&str>,
+    software: bool,
 ) -> Option<usize> {
     let name_filter = adapter_name.map(str::to_lowercase);
     adapters
@@ -56,6 +59,7 @@ fn select_adapter_index(
         .enumerate()
         .filter(|(_, adapter)| {
             adapter.surface_compatible
+                && (!software || adapter.device_type == wgpu::DeviceType::Cpu)
                 && backends.contains(wgpu::Backends::from(adapter.backend))
                 && name_filter
                     .as_ref()
@@ -137,6 +141,7 @@ fn select_native_adapter(
     prefer_gles: bool,
     power_preference: wgpu::PowerPreference,
     adapter_name: Option<&str>,
+    software: bool,
 ) -> Result<wgpu::Adapter, String> {
     let information = adapters
         .iter()
@@ -164,10 +169,14 @@ fn select_native_adapter(
         prefer_gles,
         power_preference,
         adapter_name,
+        software,
     )
     .and_then(|index| adapters.get(index))
     .cloned()
-    .ok_or_else(|| selection_error(&candidates, backends, adapter_name))?;
+    .ok_or_else(|| {
+        let message = selection_error(&candidates, backends, adapter_name);
+        if software { format!("Mesa software graphics is unavailable. Install/repair the distribution's Mesa software-rendering drivers. {message}") } else { message }
+    })?;
     if prefer_gles && selected.get_info().backend == wgpu::Backend::Vulkan {
         eprintln!(
             "Graphics: no matching OpenGL adapter supports this window surface; using the compatible Vulkan adapter"
@@ -196,6 +205,7 @@ mod tests {
             true,
             wgpu::PowerPreference::HighPerformance,
             None,
+            false,
         )
     }
 
@@ -265,6 +275,7 @@ mod tests {
                     false,
                     wgpu::PowerPreference::HighPerformance,
                     None,
+                    false,
                 ),
                 expected
             );
@@ -276,6 +287,7 @@ mod tests {
                 false,
                 wgpu::PowerPreference::HighPerformance,
                 None,
+                false,
             ),
             None,
         );
@@ -295,6 +307,7 @@ mod tests {
                     true,
                     wgpu::PowerPreference::HighPerformance,
                     Some(name),
+                    false,
                 ),
                 expected
             );
@@ -319,16 +332,56 @@ mod tests {
             (wgpu::PowerPreference::None, 0),
         ] {
             assert_eq!(
-                select_adapter_index(&adapters, linux_backends(None, true), true, power, None),
+                select_adapter_index(
+                    &adapters,
+                    linux_backends(None, true),
+                    true,
+                    power,
+                    None,
+                    false
+                ),
                 Some(expected)
             );
         }
     }
 
     #[test]
+    fn software_mode_never_substitutes_a_hardware_adapter() {
+        let adapters = [
+            candidate("Hardware GLES", wgpu::Backend::Gl, true),
+            AdapterCandidate {
+                device_type: wgpu::DeviceType::Cpu,
+                ..candidate("llvmpipe", wgpu::Backend::Gl, true)
+            },
+        ];
+        assert_eq!(
+            select_adapter_index(
+                &adapters,
+                wgpu::Backends::GL,
+                false,
+                wgpu::PowerPreference::None,
+                None,
+                true
+            ),
+            Some(1)
+        );
+        assert_eq!(
+            select_adapter_index(
+                &adapters[..1],
+                wgpu::Backends::GL,
+                false,
+                wgpu::PowerPreference::None,
+                None,
+                true
+            ),
+            None
+        );
+    }
+
+    #[test]
     fn native_wayland_and_existing_selectors_keep_their_selection_path() {
         let mut setup = WgpuSetupCreateNew::default();
-        configure_setup(&mut setup, None, false, None);
+        configure_setup(&mut setup, None, false, None, false);
         assert!(setup.native_adapter_selector.is_none());
         assert_eq!(
             setup.instance_descriptor.backends,
@@ -337,7 +390,7 @@ mod tests {
         let existing: eframe::egui_wgpu::NativeAdapterSelectorMethod =
             Arc::new(|_, _| Err("caller-owned selector".into()));
         setup.native_adapter_selector = Some(existing.clone());
-        configure_setup(&mut setup, None, true, None);
+        configure_setup(&mut setup, None, true, None, false);
         assert!(
             setup
                 .native_adapter_selector

@@ -52,7 +52,7 @@ disconnecting does not change the tracker or close its recording.
 Equivalent configuration:
 
 ```text
-zmq_host           : 127.0.0.1
+zmq_host           : 0.0.0.0
 zmq_port           : 9871
 zmq_output_mode    : legacy_matrex_vr
 zmq_framing        : topic_json
@@ -61,7 +61,7 @@ zmq_queue_capacity : 256
 ```
 
 The publisher binds; Unity connects. Use a unique, unused port for each rig.
-The default bind address remains localhost. Set `zmq_port` to `-1` or `0` to disable the
+With omitted settings, publishing is enabled on `0.0.0.0:9871`, serving localhost and IPv4 LAN receivers. Set `zmq_port` to `-1` or `0` to disable the
 publisher. To retain native output, omit the new fields or set
 `zmq_output_mode : native_ft`; native FT always sends a single FT frame,
 regardless of a stored JSON framing preference. UDP and serial retain FT rows
@@ -69,8 +69,7 @@ in both modes.
 
 ### A VR receiver on another computer
 
-Set `zmq_host` to an interface address **on the tracking computer**, or explicitly
-use `0.0.0.0` / `*` to bind all its IPv4 interfaces. Numeric IPv6 interface
+The default `0.0.0.0` binds all IPv4 interfaces. An explicit `zmq_host` can restrict it to an interface address **on the tracking computer**, or `*` also binds all IPv4 interfaces. Numeric IPv6 interface
 addresses and `::` for IPv6 interfaces are also supported. Only `localhost` and
 numeric addresses are accepted; the publisher does not perform DNS resolution.
 Do not enter the remote VR computer's IP as the bind address.

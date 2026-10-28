@@ -41,7 +41,7 @@ def expected_json(line):
                            yaw=math.degrees(float(fields[17])), pitch=0.0, roll=0.0)).encode()
 
 
-def run_case(cli, work, mode, framing):
+def run_case(cli, work, mode, framing, bind_host, connect_host):
     case = work / (mode + "-" + framing)
     case.mkdir()
     with socket.socket() as reservation:
@@ -49,7 +49,8 @@ def run_case(cli, work, mode, framing):
         port = reservation.getsockname()[1]
     config = configure((ROOT / "examples/benchmark/config.txt").read_text(),
                        {"sock_output": "n", "sock_port": "-1", "zmq_port": str(port),
-                        "zmq_host": "127.0.0.1", **({} if mode == "native_ft" else {
+                        **({} if bind_host is None else {"zmq_host": bind_host}),
+                        **({} if mode == "native_ft" else {
                             "zmq_output_mode": mode, "zmq_framing": framing, "zmq_topic": "FT"})})
     (case / "config.txt").write_text(config)
     packets = []
@@ -58,7 +59,7 @@ def run_case(cli, work, mode, framing):
             sub.setsockopt(zmq.LINGER, 0)
             sub.setsockopt(zmq.RECONNECT_IVL, 10)
             sub.subscribe(b"FT" if mode == "native_ft" or framing == "topic_json" else b"{")
-            sub.connect(f"tcp://127.0.0.1:{port}")
+            sub.connect(f"tcp://{connect_host}:{port}")
             process = subprocess.Popen([str(cli), "track", "--config", str(case / "config.txt"),
                                         "--input", str(ROOT / "examples/sample.mp4"),
                                         "--output", str(case / "output")],
@@ -93,7 +94,8 @@ def run_case(cli, work, mode, framing):
     if not observed or any(a >= b for a, b in zip(observed, observed[1:])):
         raise RuntimeError("Subscriber received no rows, duplicates or reordered data")
     summary = json.loads((case / "output/summary.json").read_text())
-    return dict(mode=mode, framing=framing, source_frames=summary["frames"],
+    return dict(mode=mode, framing=framing, bind_host=bind_host,
+                connect_host=connect_host, source_frames=summary["frames"],
                 recorded_rows=len(rows), received_rows=len(observed),
                 first_row_index=observed[0], last_row_index=observed[-1],
                 all_received_bytes_exact=True)
@@ -104,6 +106,10 @@ def main():
     parser.add_argument("--cli", required=True, type=Path)
     parser.add_argument("--workdir", type=Path)
     parser.add_argument("--report", type=Path)
+    parser.add_argument("--implicit-bind", action="store_true",
+                        help="Omit zmq_host to exercise the shared wildcard default")
+    parser.add_argument("--connect-host", default="127.0.0.1",
+                        help="Subscriber's numeric address for the publishing computer")
     args = parser.parse_args()
     work = args.workdir or Path(tempfile.mkdtemp(prefix="hejjetrac-libzmq-"))
     if args.workdir:
@@ -113,7 +119,9 @@ def main():
                   cli_sha256=hashlib.sha256(cli.read_bytes()).hexdigest(),
                   input_sha256=hashlib.sha256((ROOT / "examples/sample.mp4").read_bytes()).hexdigest(),
                   scope="Modern libzmq wire oracle over all 300 real sample frames; no legacy VR acceptance claim",
-                  cases=[run_case(cli, work, mode, framing) for mode, framing in [
+                  cases=[run_case(cli, work, mode, framing,
+                                  None if args.implicit_bind else "127.0.0.1",
+                                  args.connect_host) for mode, framing in [
                       ("native_ft", "single"), ("legacy_matrex_vr", "single"),
                       ("legacy_matrex_vr", "topic_json")]])
     result = json.dumps(report, indent=2) + "\n"

@@ -455,7 +455,10 @@ impl Session {
                 .map(|d| d.number("sock_port", -1.0).to_string())
                 .unwrap_or_default(),
             self.document()
-                .map(|d| d.number("zmq_port", -1.0).to_string())
+                .map(|d| d
+                    .get("zmq_port")
+                    .unwrap_or(fictrac_io::DEFAULT_ZMQ_PORT)
+                    .to_owned())
                 .unwrap_or_default(),
             self.error,
             self.fallback_notice
@@ -1271,8 +1274,12 @@ impl Session {
         let original_mode = document.get("zmq_output_mode").unwrap_or("native_ft");
         let original_framing = document.get("zmq_framing").unwrap_or("single");
         let original_topic = document.get("zmq_topic").unwrap_or("FT");
-        let original_host = document.get("zmq_host").unwrap_or("127.0.0.1");
-        let original_port = document.get("zmq_port").unwrap_or("-1");
+        let original_host = document
+            .get("zmq_host")
+            .unwrap_or(fictrac_io::DEFAULT_ZMQ_HOST);
+        let original_port = document
+            .get("zmq_port")
+            .unwrap_or(fictrac_io::DEFAULT_ZMQ_PORT);
         let original_capacity = document.get("zmq_queue_capacity").unwrap_or("256");
         let mut mode = original_mode.to_owned();
         let mut framing = original_framing.to_owned();
@@ -2993,6 +3000,24 @@ mod tests {
         }
         Ok(())
     }
+    #[test]
+    fn omitted_zmq_fields_are_enabled_for_lan_without_editing_until_toggled() -> Result<(), String>
+    {
+        let mut session = session()?;
+        assert!(session.document()?.get("zmq_port").is_none());
+        assert!(session.document()?.get("zmq_host").is_none());
+        let before = session.history.text.clone();
+        let ctx = egui::Context::default();
+        let output = zmq_controls_frame(&ctx, &mut session, vec![]);
+        assert_eq!(session.history.text, before);
+        assert!(output.shapes.iter().any(|shape| matches!(&shape.shape, egui::Shape::Text(text) if text.galley.text() == "0.0.0.0")));
+        click_zmq_control(&ctx, &mut session, "Enabled")?;
+        assert_eq!(session.document()?.get("zmq_port"), Some("-1"));
+        click_zmq_control(&ctx, &mut session, "Enabled")?;
+        assert_eq!(session.document()?.get("zmq_port"), Some("9871"));
+        Ok(())
+    }
+
     #[test]
     fn matrex_controls_keep_native_default_and_edit_only_wire_settings() -> Result<(), String> {
         let mut session = session()?;

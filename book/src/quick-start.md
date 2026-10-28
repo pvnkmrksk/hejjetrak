@@ -36,7 +36,7 @@ Rejected and `recovering` frames are **missing motion**, not stationary measurem
 
 ## 5. Record or stream
 
-Use Record for data, raw video, diagnostic video or both. Pick a new destination, stop the take normally and keep its config and quality files. UDP and ZeroMQ can run simultaneously; each VR instance needs distinct ports. ZeroMQ defaults to localhost, with explicit local-interface/wildcard binds available for remote receivers. Read [recording](recording.md) and [output semantics](output.md) before using measurements in a closed loop.
+Use Record for data, raw video, diagnostic video or both. Pick a new destination, stop the take normally and keep its config and quality files. UDP and ZeroMQ can run simultaneously; each VR instance needs distinct ports. ZeroMQ defaults to enabled on `0.0.0.0:9871`, serving localhost and IPv4 LAN receivers. Read [recording](recording.md) and [output semantics](output.md) before using measurements in a closed loop.
 
 ## 6. Reopen your configuration
 

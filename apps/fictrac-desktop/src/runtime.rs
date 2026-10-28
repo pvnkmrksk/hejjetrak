@@ -1880,9 +1880,10 @@ mod tests {
     use std::net::UdpSocket;
     fn fixture() -> std::result::Result<(SourceSpec, ConfigDocument), Box<dyn std::error::Error>> {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let doc = ConfigDocument::parse(fs::read_to_string(
+        let mut doc = ConfigDocument::parse(fs::read_to_string(
             root.join("examples/upstream-config.txt"),
         )?)?;
+        doc.set("zmq_port", "0")?;
         Ok((SourceSpec::Video(root.join("examples/sample.mp4")), doc))
     }
     struct UnblockFinalizer(SyncSender<()>);
@@ -3012,7 +3013,7 @@ mod tests {
             .and_then(|s| s.zmq.as_ref())
             .ok_or("Recovered publisher is missing")?;
         assert!(publisher.worker_alive);
-        assert_eq!(publisher.endpoint, format!("tcp://127.0.0.1:{port}"));
+        assert_eq!(publisher.endpoint, format!("tcp://0.0.0.0:{port}"));
         worker.send(Command::Step)?;
         let advanced = wait_for(&worker, |s| s.frames == applied.frames + 1)?;
         assert!(advanced.row.as_ref().is_some_and(|row| row.accepted));
@@ -3250,7 +3251,7 @@ mod tests {
             );
         }
         fs::write(&input, bytes).map_err(|error| error.to_string())?;
-        let mut doc = ConfigDocument::parse("src_fps:120\nvfov:90\nroi_c:{0,0,1}\nroi_r:0.5\nc2a_r:{0,0,0}\nq_factor:2\nopt_max_evals:16\nopt_do_global:n\nopt_max_err:-1\nrust_resilient:n\n".into()).map_err(|error| error.to_string())?;
+        let mut doc = ConfigDocument::parse("zmq_port:0\nsrc_fps:120\nvfov:90\nroi_c:{0,0,1}\nroi_r:0.5\nc2a_r:{0,0,0}\nq_factor:2\nopt_max_evals:16\nopt_do_global:n\nopt_max_err:-1\nrust_resilient:n\n".into()).map_err(|error| error.to_string())?;
         // Validate actual source geometry before starting the worker. A16px
         // image has too few visible sites for the shared diagnostic sampler.
         engine(&doc, 64, 64, None)?;

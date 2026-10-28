@@ -83,7 +83,7 @@ impl OutputSinks {
             zmq_payload: ZmqPayloadSettings::default(),
         }
     }
-    /// Open explicitly configured outputs; disabled ports are never contacted.
+    /// Open configured outputs, including the default ZMQ publisher; explicitly disabled ports are never contacted.
     pub fn from_config(document: &ConfigDocument) -> Result<Self> {
         let zmq_settings = crate::zmq_output::ZmqSettings::parse(
             document.get("zmq_port"),

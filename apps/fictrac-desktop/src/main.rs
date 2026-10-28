@@ -4,6 +4,8 @@ mod control;
 #[cfg(any(target_os = "linux", test))]
 mod graphics;
 mod icons;
+#[cfg(target_os = "linux")]
+mod launch;
 mod runtime;
 mod session;
 mod startup;
@@ -48,6 +50,12 @@ struct Args {
     /// Accept agent JSONL commands on stdin and return structured responses on stdout.
     #[arg(long)]
     control_stdio: bool,
+    /// Use Mesa software graphics on Linux when a native GPU driver cannot start.
+    #[arg(long)]
+    safe_mode: bool,
+    /// Print Linux graphics environment and recent diagnostic-log locations, without opening a window.
+    #[arg(long)]
+    diagnostics: bool,
 }
 fn resource(relative: &str) -> Result<PathBuf, String> {
     let mut roots = vec![];
@@ -145,6 +153,7 @@ struct Desktop {
     tile_columns: usize,
     root_hidden: bool,
     startup_notice: String,
+    startup_frames: u8,
 }
 impl Desktop {
     fn camera_owners(&self, except: Option<u64>) -> std::collections::BTreeMap<u32, String> {
@@ -185,6 +194,7 @@ impl Desktop {
                 "Graphics: {} ({:?}, {:?})",
                 info.name, info.backend, info.device_type
             );
+            eprintln!("Graphics driver: {} · {}", info.driver, info.driver_info);
         }
         ui::configure_appearance(&cc.egui_ctx);
         let normal_startup = args.config.is_none() && !args.control_stdio;
@@ -290,6 +300,13 @@ impl Desktop {
                 window_origin.0,
                 window_origin.1,
             )));
+        let mut startup_notice = startup.notice;
+        if let Ok(mode) = std::env::var("HEJJETRAC_STARTUP_MODE") {
+            if !startup_notice.is_empty() {
+                startup_notice.push_str(". ");
+            }
+            startup_notice.push_str(&format!("Compatible {mode} graphics startup is active. Use --diagnostics to locate the startup log."));
+        }
         let mut app = Self {
             sessions: vec![first],
             next_id: 2,
@@ -302,7 +319,8 @@ impl Desktop {
             window_origin,
             tile_columns: grid.0 as usize,
             root_hidden: false,
-            startup_notice: startup.notice,
+            startup_notice,
+            startup_frames: 0,
         };
         for _ in 1..app.args.windows.clamp(1, 16) {
             app.spawn_from(app.sessions.len() - 1);
@@ -548,6 +566,16 @@ impl Desktop {
 }
 impl eframe::App for Desktop {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        if self.startup_frames < 2 {
+            self.startup_frames += 1;
+            #[cfg(target_os = "linux")]
+            if self.startup_frames == 2 {
+                eprintln!("{}", launch::READY);
+            }
+            if self.startup_frames < 2 {
+                ctx.request_repaint();
+            }
+        }
         self.refresh_camera_occupancy();
         if let Some(mut bridge) = self.control.take() {
             bridge.poll(self);
@@ -558,8 +586,7 @@ impl eframe::App for Desktop {
             // A delayed camera failure replaces its own notice. Keep the separate
             // bootstrap failure actionable until the preview has been saved.
             let first = &mut self.sessions[0];
-            if first.temporary_config
-                && !self.startup_notice.is_empty()
+            if !self.startup_notice.is_empty()
                 && !first.fallback_notice.contains(&self.startup_notice)
             {
                 if !first.fallback_notice.is_empty() {
@@ -787,6 +814,7 @@ fn configure_graphics(mut options: eframe::NativeOptions) -> Result<eframe::Nati
             wgpu::Backends::from_env(),
             x11,
             std::env::var("WGPU_ADAPTER_NAME").ok(),
+            std::env::var("HEJJETRAC_STARTUP_MODE").is_ok_and(|mode| mode == "Software"),
         );
     }
     Ok(options)
@@ -799,6 +827,19 @@ fn configure_graphics(options: eframe::NativeOptions) -> Result<eframe::NativeOp
 
 fn run() -> Result<(), String> {
     let args = Args::parse();
+    if args.diagnostics {
+        #[cfg(target_os = "linux")]
+        {
+            launch::print_diagnostics();
+            return Ok(());
+        }
+        #[cfg(not(target_os = "linux"))]
+        return Err("--diagnostics currently reports Linux startup details".into());
+    }
+    #[cfg(not(target_os = "linux"))]
+    if args.safe_mode {
+        return Err("--safe-mode currently applies to Linux graphics".into());
+    }
     if !(1..=16).contains(&args.windows) {
         return Err("--windows must be 1..16".into());
     }
@@ -870,6 +911,15 @@ fn run() -> Result<(), String> {
     .map_err(|e| e.to_string())
 }
 fn main() -> std::process::ExitCode {
+    #[cfg(target_os = "linux")]
+    match launch::supervise() {
+        Ok(Some(code)) => return code,
+        Ok(None) => {}
+        Err(error) => {
+            eprintln!("hejjetrac: {error}");
+            return std::process::ExitCode::FAILURE;
+        }
+    }
     match run() {
         Ok(()) => std::process::ExitCode::SUCCESS,
         Err(e) => {

@@ -59,7 +59,9 @@ fn instances_select_next_rig_and_increment_only_camera_sources() -> Result {
     assert!(path.is_none());
     let file = ConfigDocument::parse("src_fn : sample.mp4\n".into())?;
     let (copy, _) = file.next_instance(None)?;
-    assert_eq!(copy.text(), file.text());
+    assert_eq!(copy.get("src_fn"), file.get("src_fn"));
+    assert_eq!(copy.get("zmq_port"), Some("9872"));
+    assert_eq!(file.text(), "src_fn : sample.mp4\n");
     Ok(())
 }
 

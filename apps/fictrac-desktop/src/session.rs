@@ -322,9 +322,16 @@ impl Session {
             self.document()
                 .map(|doc| {
                     let port = |key| {
-                        doc.get(key)
-                            .filter(|value| !matches!(*value, "-1" | "0"))
-                            .unwrap_or("off")
+                        let value = doc.get(key).unwrap_or(if key == "zmq_port" {
+                            fictrac_io::DEFAULT_ZMQ_PORT
+                        } else {
+                            "off"
+                        });
+                        if matches!(value, "-1" | "0") {
+                            "off"
+                        } else {
+                            value
+                        }
                     };
                     (port("sock_port").to_owned(), port("zmq_port").to_owned())
                 })
@@ -800,7 +807,7 @@ mod tests {
             .as_ref()
             .and_then(|outputs| outputs.zmq.as_ref())
             .ok_or("Publisher status missing after successful apply")?;
-        assert_eq!(publisher.endpoint, format!("tcp://127.0.0.1:{free_port}"));
+        assert_eq!(publisher.endpoint, format!("tcp://0.0.0.0:{free_port}"));
         assert!(publisher.worker_alive);
         Ok(())
     }

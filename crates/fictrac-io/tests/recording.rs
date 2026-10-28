@@ -168,7 +168,7 @@ fn udp_and_dat_share_full_row_with_actual_sequence_and_omit_rejection()
     let receiver = std::net::UdpSocket::bind("127.0.0.1:0")?;
     receiver.set_read_timeout(Some(Duration::from_millis(150)))?;
     let config = ConfigDocument::parse(format!(
-        "sock_host : 127.0.0.1\nsock_port : {}\n",
+        "sock_host : 127.0.0.1\nsock_port : {}\nzmq_port : 0\n",
         receiver.local_addr()?.port()
     ))?;
     let mut sinks = OutputSinks::from_config(&config)?;

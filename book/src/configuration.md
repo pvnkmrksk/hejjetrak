@@ -11,7 +11,7 @@ fisheye       : n
 q_factor      : 6
 sock_host     : 127.0.0.1
 sock_port     : 1111
-zmq_host      : 127.0.0.1
+zmq_host      : 0.0.0.0
 zmq_port      : 9871
 ```
 
@@ -103,7 +103,7 @@ when the floor alone is raised.
 |---|---|
 | `sock_host`, `sock_port` | UDP destination; nonpositive port disables |
 | `com_port`, `com_baud` | Serial device and baud rate |
-| `zmq_host`, `zmq_port` | PUB bind on this computer: default localhost; explicit local numeric IP or `0.0.0.0` / `*` for IPv4 LAN receivers, `::` for IPv6 interfaces; nonpositive port disables |
+| `zmq_host`, `zmq_port` | Enabled PUB bind on this computer: default `0.0.0.0:9871` serves localhost and IPv4 LAN receivers; explicit local numeric IP, localhost, or `::` for IPv6 interfaces; nonpositive port disables |
 | `zmq_queue_capacity` | Bounded publish queue, 1–4096 rows; default 256 |
 | `zmq_output_mode` | `native_ft` default, or explicit `legacy_matrex_vr` JSON |
 | `zmq_framing` | `single` JSON frame or `topic_json` multipart; native FT always sends one FT frame |

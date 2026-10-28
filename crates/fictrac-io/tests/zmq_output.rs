@@ -115,14 +115,20 @@ fn explicit_wildcard_bind_serves_modern_and_legacy_subscribers_with_unchanged_by
 {
     let _socket_test = socket_test()?;
     for (host, mode, prefix) in [
+        ("", "native_ft", "FT, "),
         ("0.0.0.0", "native_ft", "FT, "),
         ("*", "legacy_matrex_vr", "{"),
     ] {
         let reservation = TcpListener::bind("0.0.0.0:0")?;
         let port = reservation.local_addr()?.port();
         drop(reservation);
+        let host_line = if host.is_empty() {
+            String::new()
+        } else {
+            format!("zmq_host:{host}\n")
+        };
         let document = ConfigDocument::parse(format!(
-            "zmq_host:{host}\nzmq_port:{port}\nzmq_output_mode:{mode}\n"
+            "{host_line}zmq_port:{port}\nzmq_output_mode:{mode}\n"
         ))?;
         let mut sinks = OutputSinks::from_config(&document)?;
         assert_eq!(
@@ -427,7 +433,7 @@ fn reconfigure_reuses_healthy_outputs_and_restores_previous_pub_after_busy_port(
             .contains("previous output settings restored")
     );
     let restored = sinks.status().zmq.ok_or("publisher was lost on rollback")?;
-    assert_eq!(restored.endpoint, format!("tcp://127.0.0.1:{old_port}"));
+    assert_eq!(restored.endpoint, format!("tcp://0.0.0.0:{old_port}"));
     assert!(restored.worker_alive);
     assert_eq!(restored.failures, 0);
 
@@ -548,5 +554,16 @@ fn root_vr_configs_and_fallback_use_independent_ports_labels_and_sources() -> Te
     assert_eq!(copy.get("rust_instance_name"), Some("VR6"));
     document.set("zmq_port", "65535")?;
     assert!(document.next_instance(None).is_err());
+    Ok(())
+}
+
+#[test]
+fn implicit_publisher_port_is_incremented_when_copying_a_rig() -> TestResult {
+    let original = "src_fn:0\n# Keep calibration and unknown fields intact.\n";
+    let document = ConfigDocument::parse(original.into())?;
+    let (copy, _) = document.next_instance(None)?;
+    assert_eq!(copy.get("zmq_port"), Some("9872"));
+    assert_eq!(copy.get("src_fn"), Some("1"));
+    assert_eq!(document.text(), original);
     Ok(())
 }

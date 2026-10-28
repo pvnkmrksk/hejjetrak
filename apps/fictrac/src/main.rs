@@ -70,6 +70,9 @@ enum Command {
         output: PathBuf,
         #[arg(long)]
         max_frames: Option<usize>,
+        /// Explicitly disable ZeroMQ for an offline run, including core JSON configs.
+        #[arg(long)]
+        no_zmq: bool,
     },
     /// Print stream metadata; optionally decode every frame and save first luma image.
     Inspect {
@@ -144,6 +147,7 @@ fn track(
     config_path: &Path,
     output: &Path,
     max_frames: Option<usize>,
+    no_zmq: bool,
 ) -> Result<Summary> {
     let wall = Instant::now();
     if max_frames.is_some_and(|n| n < 2) {
@@ -155,11 +159,14 @@ fn track(
         eprintln!("warning: {warning}");
     }
     let text = fs::read_to_string(config_path)?;
-    let document = if text.trim_start().starts_with('{') {
+    let mut document = if text.trim_start().starts_with('{') {
         fictrac_io::ConfigDocument::parse(String::new())?
     } else {
         fictrac_io::ConfigDocument::parse(text)?
     };
+    if no_zmq {
+        document.set("zmq_port", "0")?;
+    }
     let requested_fps = document.number("src_fps", -1.);
     let media_enabled = document.boolean("save_raw") || document.boolean("save_debug");
     if media_enabled || loaded.config.spherical_map.is_some() {
@@ -419,6 +426,7 @@ fn run() -> Result<()> {
             input,
             output,
             max_frames,
+            no_zmq,
         } => {
             let input = match input {
                 Some(p) => p,
@@ -433,7 +441,7 @@ fn run() -> Result<()> {
                     }
                 }
             };
-            track(&input, &config, &output, max_frames)?;
+            track(&input, &config, &output, max_frames, no_zmq)?;
         }
         Command::Inspect {
             input,
@@ -523,6 +531,7 @@ fn run() -> Result<()> {
                 &output.join("config.json"),
                 &output.join("tracking"),
                 None,
+                true,
             )?;
             let text = fs::read_to_string(output.join("tracking/tracking.dat"))?;
             if text.lines().count() != frames {

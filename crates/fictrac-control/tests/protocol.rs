@@ -708,6 +708,10 @@ fn matrex_recording_processes_the_real_video_with_no_subscriber_or_half_greeting
     use std::io::Write;
     let temp = Temp::new()?;
     let discovery = fictrac_control::schema();
+    let defaults = &discovery["capabilities"]["zmq_output"];
+    assert_eq!(defaults["default_enabled"], true);
+    assert_eq!(defaults["default_host"], "0.0.0.0");
+    assert_eq!(defaults["default_port"], 9871);
     assert_eq!(
         discovery["capabilities"]["zmq_output"]["default_mode"],
         "native_ft"

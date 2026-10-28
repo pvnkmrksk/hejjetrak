@@ -970,9 +970,10 @@ mod tests {
         Ok(p)
     }
     fn session() -> Result<Session> {
-        let doc =
+        let mut doc =
             ConfigDocument::parse(include_str!("../../../examples/upstream-config.txt").to_owned())
                 .map_err(display)?;
+        doc.set("zmq_port", "0").map_err(display)?;
         Ok(Session::new(1, doc, None))
     }
     #[test]
@@ -1109,6 +1110,7 @@ mod tests {
             window_size: crate::Pair(520., 480.),
             root_hidden: false,
             startup_notice: String::new(),
+            startup_frames: 0,
         };
         let request =
             serde_json::from_value(json!({"id":"root-close","command":"close","session":1}))?;

@@ -160,12 +160,12 @@ Serial and UDP receive the same accepted-only newline-terminated `FT, ` plus ful
 HejjéTrac can publish the same accepted measurement over UDP and ZeroMQ at the same time. Set the ordinary `sock_host`/`sock_port` for UDP and these additional legacy-text fields for ZeroMQ:
 
 ```text
-zmq_host           : 127.0.0.1
+zmq_host           : 0.0.0.0
 zmq_port           : 9871
 zmq_queue_capacity : 256
 ```
 
-`zmq_port : -1` or `0` disables the publisher. `zmq_host` is an address **on the publishing computer**, defaulting to `127.0.0.1`. `localhost` and numeric IPv4/IPv6 interface addresses are accepted. An explicit `0.0.0.0` or `*` binds all IPv4 interfaces, while `::` binds IPv6 interfaces; no DNS resolution occurs. For a remote receiver, bind a local LAN interface or wildcard and have the receiver connect to the publishing computer's LAN IP. Do not bind the receiver's IP. The TCP endpoint is a **PUB bind**, with one publisher per unused port; stop that rig's Python republisher before reusing its bind port. The default `zmq_output_mode : native_ft` sends exactly one UTF-8 frame: the identical newline-terminated `FT, ` prefix and complete 25-column row used for UDP and serial. In native mode there is no multipart topic, JSON wrapper, added column or coordinate conversion. The explicit `legacy_matrex_vr` mode below changes only ZeroMQ; UDP/serial retain their FT rows. A subscriber can filter on the byte prefix `FT, `. Rejected measurements remain in `all-frames.dat` and `quality.csv` and are omitted from both live transports, preserving the legacy decision.
+The desktop and CLI use these defaults, including core JSON configurations. For an offline CLI run, `track --no-zmq` explicitly disables publishing; the synthetic `demo` uses this explicit opt-out internally. Omitting the port enables publishing on `9871`. `zmq_port : -1` or `0` explicitly disables the publisher. `zmq_host` is an address **on the publishing computer**, defaulting to `0.0.0.0` (all IPv4 interfaces, including localhost). `localhost` and numeric IPv4/IPv6 interface addresses are accepted. An explicit `0.0.0.0` or `*` binds all IPv4 interfaces, while `::` binds IPv6 interfaces; no DNS resolution occurs. For a remote receiver, bind a local LAN interface or wildcard and have the receiver connect to the publishing computer's LAN IP. Do not bind the receiver's IP. The TCP endpoint is a **PUB bind**, with one publisher per unused port; stop that rig's Python republisher before reusing its bind port. The default `zmq_output_mode : native_ft` sends exactly one UTF-8 frame: the identical newline-terminated `FT, ` prefix and complete 25-column row used for UDP and serial. In native mode there is no multipart topic, JSON wrapper, added column or coordinate conversion. The explicit `legacy_matrex_vr` mode below changes only ZeroMQ; UDP/serial retain their FT rows. A subscriber can filter on the byte prefix `FT, `. Rejected measurements remain in `all-frames.dat` and `quality.csv` and are omitted from both live transports, preserving the legacy decision.
 
 The publisher implements the TCP PUB/SUB subset of ZMTP entirely in Rust; it does not link libzmq or launch another process. It negotiates ZMTP 2.0 for the original NetMQ 4.0.0.1 DLL and NULL-authenticated ZMTP 3 with modern subscribers. The `zeromq` crate is an independent test subscriber, not the production publisher. A dedicated worker owns the socket. Tracking submits one complete, atomically framed message with a nonblocking bounded queue operation. Capacity defaults to 256 rows and accepts 1–4096; a row is limited to 16 KiB. A full queue discards that live row and reports the drop while numeric data recording continues. UDP and ZeroMQ are independent best-effort outputs: one output's failure does not turn a measurement into zero motion or stop the numerical engine.
 
@@ -208,7 +208,7 @@ while True:
 This explicit mode reproduces the [Python republisher](https://github.com/pvnkmrksk/fictrac/blob/10fc4472af1fc9062b9bf5a92738e835b98cc3ec/VR_array/socket_zmq_republisher.py), without a Python runtime or republisher process:
 
 ```text
-zmq_host        : 127.0.0.1
+zmq_host        : 0.0.0.0
 zmq_port        : 9871
 zmq_output_mode : legacy_matrex_vr
 zmq_framing     : topic_json

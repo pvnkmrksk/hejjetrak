@@ -18,6 +18,8 @@ const DEFAULT_CAPACITY: usize = 256;
 const MAX_CAPACITY: usize = 4096;
 const MAX_WIRE_BYTES: usize = 16_384;
 const CLOSE_DRAIN: Duration = Duration::from_millis(50);
+pub const DEFAULT_ZMQ_HOST: &str = "0.0.0.0";
+pub const DEFAULT_ZMQ_PORT: &str = "9871";
 
 #[derive(Clone, Debug)]
 pub(crate) struct ZmqSettings {
@@ -31,12 +33,11 @@ impl ZmqSettings {
         capacity: Option<&str>,
     ) -> Result<Option<Self>> {
         let port = port
-            .map(str::parse::<i32>)
-            .transpose()
+            .unwrap_or(DEFAULT_ZMQ_PORT)
+            .parse::<i32>()
             .map_err(|_| {
                 Error::Config("zmq_port must be an integer: -1/0 disables, 1..65535 enables".into())
-            })?
-            .unwrap_or(-1);
+            })?;
         if !(-1..=65535).contains(&port) {
             return Err(Error::Config(
                 "zmq_port must be -1/0 (disabled) or 1..65535".into(),
@@ -52,7 +53,7 @@ impl ZmqSettings {
                 "zmq_queue_capacity must be in 1..4096".into(),
             ));
         }
-        let host = host.unwrap_or("127.0.0.1");
+        let host = host.unwrap_or(DEFAULT_ZMQ_HOST);
         let address = if host == "*" {
             IpAddr::from([0, 0, 0, 0])
         } else if host.eq_ignore_ascii_case("localhost") {
@@ -235,11 +236,16 @@ impl Drop for ZmqOutput {
 mod tests {
     use super::*;
     #[test]
-    fn publisher_bind_addresses_keep_local_default_and_accept_explicit_lan_without_dns()
-    -> Result<()> {
+    fn publisher_defaults_enable_loopback_and_lan_and_preserve_explicit_overrides() -> Result<()> {
         let default = ZmqSettings::parse(Some("9872"), None, None)?
             .ok_or_else(|| Error::Config("default publisher unexpectedly disabled".into()))?;
-        assert_eq!(default.endpoint, "tcp://127.0.0.1:9872");
+        assert_eq!(default.endpoint, "tcp://0.0.0.0:9872");
+        assert_eq!(
+            ZmqSettings::parse(None, None, None)?
+                .ok_or_else(|| Error::Config("missing default publisher".into()))?
+                .endpoint,
+            "tcp://0.0.0.0:9871"
+        );
         for (host, endpoint) in [
             ("localhost", "tcp://127.0.0.1:9872"),
             ("10.126.17.125", "tcp://10.126.17.125:9872"),

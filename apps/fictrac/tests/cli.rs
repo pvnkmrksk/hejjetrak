@@ -26,6 +26,20 @@ impl Drop for Temp {
 fn cli() -> Command {
     Command::new(env!("CARGO_BIN_EXE_fictrac"))
 }
+fn offline_config(temp: &Temp) -> std::result::Result<PathBuf, Box<dyn std::error::Error>> {
+    let examples = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples");
+    let mut doc = fictrac_io::ConfigDocument::parse(fs::read_to_string(
+        examples.join("upstream-config.txt"),
+    )?)?;
+    doc.set(
+        "src_fn",
+        &fs::canonicalize(examples.join("sample.mp4"))?.to_string_lossy(),
+    )?;
+    doc.set("zmq_port", "0")?;
+    let path = temp.0.join("offline-config.txt");
+    fs::write(&path, doc.text())?;
+    Ok(path)
+}
 #[test]
 fn demo_proves_full_pipeline_and_refuses_overwrite() -> Result {
     let temp = Temp::new()?;
@@ -55,8 +69,7 @@ fn demo_proves_full_pipeline_and_refuses_overwrite() -> Result {
 fn tracks_original_config_and_exports_complete_artifacts() -> Result {
     let temp = Temp::new()?;
     let p = temp.0.join("sample");
-    let config =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/upstream-config.txt");
+    let config = offline_config(&temp)?;
     let result = cli()
         .args(["track", "--config"])
         .arg(&config)
@@ -113,7 +126,7 @@ fn decode_failure_retains_partial_files_without_success_summary() -> Result {
     data.extend(b"FRAME\nshort");
     fs::write(&input, data)?;
     let result = cli()
-        .args(["track", "--config"])
+        .args(["track", "--no-zmq", "--config"])
         .arg(config)
         .arg("--input")
         .arg(input)
@@ -146,8 +159,7 @@ fn default_demo_works_in_a_fresh_directory() -> Result {
 #[test]
 fn legacy_video_invocation_and_lossless_config_edit_work() -> Result {
     let temp = Temp::new()?;
-    let config =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../examples/upstream-config.txt");
+    let config = offline_config(&temp)?;
     let edited = temp.0.join("edited.txt");
     let out = cli()
         .arg("config")
@@ -236,6 +248,7 @@ fn legacy_default_directory_honors_output_prefix_and_input_stem() -> Result {
         "src_fn",
         &fs::canonicalize(example.join("sample.mp4"))?.to_string_lossy(),
     )?;
+    doc.set("zmq_port", "0")?;
     doc.set("output_fn", "nested/animal-session")?;
     let config = temp.0.join("config.txt");
     fs::write(&config, doc.text())?;

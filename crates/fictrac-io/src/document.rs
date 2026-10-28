@@ -187,7 +187,10 @@ impl ConfigDocument {
             next.set("src_fn", &id.to_string())?;
         }
         for key in ["sock_port", "zmq_port"] {
-            if let Some(value) = self.get(key) {
+            if let Some(value) = self
+                .get(key)
+                .or_else(|| (key == "zmq_port").then_some(crate::DEFAULT_ZMQ_PORT))
+            {
                 let port = value.parse::<i32>().map_err(|_| {
                     Error::Config(format!(
                         "{key} must be an integer before copying this instance"
@@ -377,7 +380,7 @@ pub fn parameter_description(key: &str) -> (&'static str, &'static str) {
         ),
         "zmq_host" | "zmq_port" => (
             "Output",
-            "Pure Rust ZeroMQ PUB bind on this computer. Default localhost; select a numeric local interface IP or wildcard (0.0.0.0 / * for IPv4, :: for IPv6) for LAN receivers. This is not the receiver address. Port -1/0 disables; each rig needs an unused port (VR1..4: 9871..9874). Native FT is default; legacy MATREX VR JSON is explicit.",
+            "Pure Rust ZeroMQ PUB bind on this computer. Enabled by default on 0.0.0.0:9871 for localhost and IPv4 LAN receivers. This is not the receiver address. Port -1/0 disables; each rig needs an unused port (VR1..4: 9871..9874). Explicit local-only or IPv6 binds are supported. Native FT is default; legacy MATREX VR JSON is explicit.",
         ),
         "zmq_queue_capacity" => (
             "Output",
