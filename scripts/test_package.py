@@ -95,9 +95,14 @@ class DebianPackageTests(unittest.TestCase):
                     if entry.issym():
                         self.assertTrue(entry.linkname.startswith('../lib/hejjetrak/')
                                         or entry.linkname in ('hejjetrac', 'hejjetrac-cli'))
-                data.extractall(extracted)
-                for name in ('hejjetrac-cli', 'hejjetrak-cli'):
-                    self.assertEqual((extracted / 'usr/bin' / name).read_text(), 'test fixture hejjetrac-cli')
+                # Debian's POSIX installation links are validated above on all
+                # hosts. Dereference them on their supported filesystem; the
+                # Windows application archive ships regular executable copies.
+                if os.name == 'posix':
+                    data.extractall(extracted)
+                    for name in ('hejjetrac-cli', 'hejjetrak-cli'):
+                        self.assertEqual((extracted / 'usr/bin' / name).read_text(),
+                                         'test fixture hejjetrac-cli')
             # A different ar implementation must understand the actual package too.
             external_ar = shutil.which('ar') or shutil.which('llvm-ar')
             if external_ar:
