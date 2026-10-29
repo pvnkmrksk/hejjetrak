@@ -95,10 +95,15 @@ jobs:
         # proving the actual packager is byte-identical. Rust sources, fixtures,
         # optimizer tolerances and packaged application code remain at source_ref.
         run: |
-          cmp scripts/package.py .release-tools/scripts/package.py
-          cp .release-tools/scripts/test_package.py scripts/test_package.py
-          echo "Packaging regression driver from workflow revision $GITHUB_SHA"
-          sha256sum scripts/test_package.py
+          python - <<'PY'
+          import hashlib, os, shutil
+          from pathlib import Path
+          if Path('scripts/package.py').read_bytes() != Path('.release-tools/scripts/package.py').read_bytes():
+              raise SystemExit('Frozen application packager differs from the validation driver version')
+          shutil.copyfile('.release-tools/scripts/test_package.py', 'scripts/test_package.py')
+          print('Packaging regression driver from workflow revision', os.environ['GITHUB_SHA'])
+          print('Driver SHA256:', hashlib.sha256(Path('scripts/test_package.py').read_bytes()).hexdigest())
+          PY
       - name: Package and development-tool regressions
         shell: bash
         run: |
