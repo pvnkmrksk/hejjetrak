@@ -4,7 +4,7 @@
 
 The landing page resolves GitHub's latest published release at download time and shows the platform archive, release tag and available SHA-256 digest. Manual OS/chip choices remain available; browser architecture detection is not treated as infallible. If the release API is unavailable or an archive has not uploaded yet, use the visible GitHub release link rather than a guessed download.
 
-## v0.3.5 — 28 October 2026
+## v0.3.5 — 29 October 2026
 
 [v0.3.5](https://github.com/pvnkmrksk/hejjetrak/releases/tag/v0.3.5) includes the
 fast-motion tracking, LAN publishing defaults and Linux graphics safeguards,
